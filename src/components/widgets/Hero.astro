@@ -1,7 +1,8 @@
 ---
-import Image from '~/components/common/Image.astro';
+import { Image } from 'astro:assets';
 import Button from '~/components/ui/Button.astro';
 import type { CallToAction } from '~/types';
+import heroImage from '../../assets/images/herov2.jpeg';
 
 export interface Props {
   id?: string;
@@ -20,11 +21,13 @@ const {
   tagline,
   content = await Astro.slots.render('content'),
   actions = await Astro.slots.render('actions'),
-  image = await Astro.slots.render('image'),
 } = Astro.props;
 ---
 
-<section class="relative md:-mt-[76px] not-prose" {...id ? { id } : {}}>
+<section class="not-prose" {...id ? { id } : {}}>
+  <div class="absolute bg-teal-300">
+    <Image src={heroImage} alt="Hero Image" class="relative inset-0 w-screen h-max" />
+  </div>
   <div class="absolute inset-0 pointer-events-none" aria-hidden="true"></div>
   <div class="relative max-w-7xl mx-auto px-4 sm:px-6">
     <div class="pt-0 md:pt-[76px] pointer-events-none"></div>
@@ -65,27 +68,6 @@ const {
           }
         </div>
         {content && <Fragment set:html={content} />}
-      </div>
-      <div>
-        {
-          image && (
-            <div class="relative m-auto max-w-5xl">
-              {typeof image === 'string' ? (
-                <Fragment set:html={image} />
-              ) : (
-                <Image
-                  class="mx-auto rounded-md w-full"
-                  widths={[400, 768, 1024, 2040]}
-                  sizes="(max-width: 767px) 400px, (max-width: 1023px) 768px, (max-width: 2039px) 1024px, 2040px"
-                  loading="eager"
-                  width={1024}
-                  height={576}
-                  {...image}
-                />
-              )}
-            </div>
-          )
-        }
       </div>
     </div>
   </div>
