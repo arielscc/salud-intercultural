@@ -45,8 +45,13 @@ export type Service = {
 };
 
 export type FAQ = {
+  id: string;
   question: string;
   answer: string;
+  category: "appointments" | "location" | "contact" | "treatments" | "pricing";
+  active: boolean;
+  featured: boolean;
+  order: number;
 };
 
 export type Testimonial = {

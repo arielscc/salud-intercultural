@@ -1,5 +1,5 @@
 import { clinic } from "@/data/clinic";
-import { faqs } from "@/data/faqs";
+import { activeFaqs } from "@/data/faqs";
 import { services } from "@/data/services";
 import { siteUrl } from "@/lib/seo";
 
@@ -32,7 +32,7 @@ export function getStructuredData() {
   const faqPage = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: faqs.map((faq) => ({
+    mainEntity: activeFaqs.map((faq) => ({
       "@type": "Question",
       name: faq.question,
       acceptedAnswer: {
