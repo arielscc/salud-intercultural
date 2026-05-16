@@ -1,4 +1,5 @@
 import type { IconName } from "@/types/landing";
+import { featuredTeamMembers } from "@/data/team";
 
 export const aboutContent = {
   seo: {
@@ -70,22 +71,7 @@ export const aboutContent = {
       "Promover prevención y decisiones informadas."
     ]
   },
-  team: [
-    {
-      name: "Dra. Cinthia Jessica Chipana Chipana",
-      role: "Equipo profesional",
-      specialty: "Medicina natural, tradicional e integrativa",
-      description:
-        "Perfil preparado para incorporar fotografía, trayectoria, especialidad y contenido editable desde el panel."
-    },
-    {
-      name: "Dr. Jhonn Franco Chipana Chipana",
-      role: "Equipo profesional",
-      specialty: "Atención integral y terapias complementarias",
-      description:
-        "Perfil preparado para mostrar información profesional, áreas de atención y fotografía institucional."
-    }
-  ],
+  team: featuredTeamMembers,
   gallery: [
     {
       src: "https://images.unsplash.com/photo-1471193945509-9ad0617afabf?auto=format&fit=crop&w=900&q=85",

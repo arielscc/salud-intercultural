@@ -54,4 +54,20 @@ export type Testimonial = {
   author: string;
 };
 
+export type TeamMember = {
+  id: string;
+  name: string;
+  slug: string;
+  photo: string;
+  photoAlt: string;
+  role: string;
+  specialty: string;
+  description: string;
+  credentials: string[];
+  focusAreas: string[];
+  active: boolean;
+  featured: boolean;
+  order: number;
+};
+
 export type IconMap = Record<IconName, LucideIcon>;
