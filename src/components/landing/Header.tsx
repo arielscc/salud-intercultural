@@ -4,7 +4,6 @@ import { Menu, MessageCircle, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Container } from "@/components/shared/Container";
 import { Button } from "@/components/shared/Button";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { primaryPublicRoutes } from "@/config/routes";
@@ -31,67 +30,64 @@ export function Header() {
         scrolled || open ? "bg-surface/88 shadow-sm backdrop-blur-xl" : "bg-transparent"
       )}
     >
-      <Container className="flex h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-3" aria-label="Ir al inicio">
+      <div className="grid h-20 w-full grid-cols-[1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8 xl:grid-cols-[minmax(18rem,1fr)_auto_minmax(18rem,1fr)]">
+        <Link href="/" className="flex min-w-0 items-center gap-3 justify-self-start" aria-label="Ir al inicio">
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-lg font-bold text-white shadow-soft">
             SI
           </span>
           <span className="min-w-0">
-            <span className="block font-sora text-sm font-semibold text-text sm:text-base">
-              {siteConfig.name}
+            <span className="block font-sora text-sm font-semibold leading-tight text-text sm:text-base">
+              Salud Intercultural
             </span>
-            <span className="block text-xs font-medium text-muted">
-              Medicina natural e integrativa
+            <span className="block max-w-[13rem] text-xs font-medium leading-snug text-muted sm:max-w-none">
+              Clínica de medicina natural y tradicional.
             </span>
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Navegación principal">
-          {primaryPublicRoutes.map((item) => {
-            const active = pathname === item.href;
+        <div className="hidden items-center gap-3 justify-self-center xl:flex">
+          <nav className="flex items-center gap-1" aria-label="Navegación principal">
+            {primaryPublicRoutes.map((item) => {
+              const active = pathname === item.href;
 
-            return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "rounded-full px-3 py-2 text-sm font-semibold transition hover:bg-surface-soft hover:text-primary-dark",
-                active ? "bg-surface-soft text-primary-dark" : "text-muted"
-              )}
-              aria-current={active ? "page" : undefined}
-            >
-              {item.label}
-            </Link>
-            );
-          })}
-        </nav>
-
-        <div className="hidden items-center gap-3 lg:flex">
-          <ThemeToggle />
-          <Button href={createWhatsAppLink(siteConfig.primaryCta.message)} target="_blank" rel="noreferrer">
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "rounded-full px-3 py-2 text-sm font-semibold transition hover:bg-surface-soft hover:text-primary-dark",
+                    active ? "bg-surface-soft text-primary-dark" : "text-muted"
+                  )}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <Button href={createWhatsAppLink(siteConfig.primaryCta.message)} target="_blank" rel="noreferrer" size="sm">
             <MessageCircle className="mr-2 h-4 w-4" />
-            {siteConfig.primaryCta.label}
+            Agenda tu cita
           </Button>
         </div>
 
-        <button
-          type="button"
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-text shadow-sm lg:hidden"
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </Container>
+        <div className="flex items-center gap-2 justify-self-end">
+          <button
+            type="button"
+            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-text shadow-sm xl:hidden"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+          <ThemeToggle />
+        </div>
+      </div>
 
       {open ? (
-        <div className="border-t border-border bg-surface/95 px-4 py-4 shadow-soft backdrop-blur-xl lg:hidden">
+        <div className="border-t border-border bg-surface/95 px-4 py-4 shadow-soft backdrop-blur-xl xl:hidden">
           <nav className="mx-auto grid max-w-7xl gap-2" aria-label="Navegación móvil">
-            <div className="mb-2 flex items-center justify-between rounded-2xl bg-surface-soft px-4 py-3">
-              <span className="text-sm font-semibold text-text">Tema</span>
-              <ThemeToggle />
-            </div>
             {primaryPublicRoutes.map((item) => {
               const active = pathname === item.href;
 
@@ -117,7 +113,7 @@ export function Header() {
               className="mt-2 w-full"
             >
               <MessageCircle className="mr-2 h-4 w-4" />
-              {siteConfig.primaryCta.label}
+              Agenda tu cita
             </Button>
           </nav>
         </div>
