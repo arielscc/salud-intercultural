@@ -1,0 +1,42 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# production
+build/
+dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# environment files
+.env
+.env*.local
+
+# package-manager drift
+package-lock.json
+yarn.lock
+
+# editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# deployment
+.vercel/
+.netlify/
+
+# local Codex metadata
+.agents/
+.codex/

@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  scroll-behavior: smooth;
+  --color-primary: 5 154 178;
+  --color-primary-dark: 3 107 124;
+  --color-secondary: 15 118 110;
+  --color-accent: 217 119 6;
+  --color-background: 247 251 252;
+  --color-surface: 255 255 255;
+  --color-surface-soft: 234 249 252;
+  --color-text: 13 38 48;
+  --color-muted: 100 116 139;
+  --color-border: 215 233 238;
+  --color-success: 22 163 74;
+  --hero-end: 238 248 250;
+  --shadow-brand: 5 154 178;
+  --shadow-strong: 13 38 48;
+}
+
+.dark {
+  color-scheme: dark;
+  --color-primary: 5 154 178;
+  --color-primary-dark: 111 219 236;
+  --color-secondary: 84 216 193;
+  --color-accent: 245 158 11;
+  --color-background: 7 18 24;
+  --color-surface: 12 29 38;
+  --color-surface-soft: 16 48 58;
+  --color-text: 235 248 250;
+  --color-muted: 151 170 178;
+  --color-border: 35 68 78;
+  --color-success: 34 197 94;
+  --hero-end: 11 35 45;
+  --shadow-brand: 0 0 0;
+  --shadow-strong: 0 0 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: rgb(var(--color-background));
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--color-background));
+  color: rgb(var(--color-text));
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.font-sora {
+  font-family: var(--font-sora), var(--font-inter), system-ui, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgb(var(--color-primary) / 0.2);
+}
+
+.premium-grid {
+  background-image:
+    linear-gradient(rgb(var(--color-primary) / 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--color-primary) / 0.065) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.glass {
+  background: rgb(var(--color-surface) / 0.76);
+  border: 1px solid rgb(var(--color-border) / 0.82);
+  box-shadow: 0 20px 70px rgb(var(--color-primary) / 0.11);
+  backdrop-filter: blur(18px);
+}
+
+.dark .bg-white {
+  background-color: rgb(var(--color-surface));
+}
+
+.dark .bg-background {
+  background-color: rgb(var(--color-background));
+}
+
+.dark .bg-surface-soft {
+  background-color: rgb(var(--color-surface-soft));
+}
+
+.dark .text-text {
+  color: rgb(var(--color-text));
+}
+
+.dark .text-muted {
+  color: rgb(var(--color-muted));
+}
+
+.dark .border-border {
+  border-color: rgb(var(--color-border));
+}
+
+.dark input,
+.dark textarea {
+  background-color: rgb(var(--color-surface));
+  color: rgb(var(--color-text));
+}
+
+.dark iframe {
+  filter: saturate(0.82) brightness(0.8);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
