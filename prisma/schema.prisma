@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Lead {
+  id        String     @id @default(cuid())
+  name      String?
+  phone     String
+  message   String?
+  interest  String?
+  source    LeadSource @default(website)
+  status    LeadStatus @default(new)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([source])
+}
+
+enum LeadSource {
+  website
+  whatsapp
+  facebook
+  tiktok
+  google
+  call
+}
+
+enum LeadStatus {
+  new
+  contacted
+  scheduled
+  closed
+  lost
+}

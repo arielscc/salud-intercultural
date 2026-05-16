@@ -12,6 +12,10 @@ dist/
 # TypeScript
 *.tsbuildinfo
 
+# generated code
+src/generated/
+src/types/payload-types.ts
+
 # logs
 *.log
 npm-debug.log*

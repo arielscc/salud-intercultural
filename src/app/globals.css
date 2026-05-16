@@ -19,6 +19,16 @@
   --hero-end: 238 248 250;
   --shadow-brand: 5 154 178;
   --shadow-strong: 13 38 48;
+  --foreground: 196 57% 12%;
+  --muted-foreground: 215 16% 47%;
+  --card: 0 0% 100%;
+  --card-foreground: 196 57% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 196 57% 12%;
+  --input: 191 39% 89%;
+  --ring: 188 95% 36%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
 }
 
 .dark {
@@ -37,6 +47,16 @@
   --hero-end: 11 35 45;
   --shadow-brand: 0 0 0;
   --shadow-strong: 0 0 0;
+  --foreground: 190 43% 95%;
+  --muted-foreground: 195 16% 65%;
+  --card: 197 52% 10%;
+  --card-foreground: 190 43% 95%;
+  --popover: 197 52% 10%;
+  --popover-foreground: 190 43% 95%;
+  --input: 192 38% 22%;
+  --ring: 188 95% 68%;
+  --destructive: 0 63% 50%;
+  --destructive-foreground: 0 0% 98%;
 }
 
 * {

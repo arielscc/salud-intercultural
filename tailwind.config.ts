@@ -10,12 +10,28 @@ const config: Config = {
         secondary: "rgb(var(--color-secondary) / <alpha-value>)",
         accent: "rgb(var(--color-accent) / <alpha-value>)",
         background: "rgb(var(--color-background) / <alpha-value>)",
+        foreground: "hsl(var(--foreground))",
         surface: "rgb(var(--color-surface) / <alpha-value>)",
         "surface-soft": "rgb(var(--color-surface-soft) / <alpha-value>)",
         text: "rgb(var(--color-text) / <alpha-value>)",
         muted: "rgb(var(--color-muted) / <alpha-value>)",
+        "muted-foreground": "hsl(var(--muted-foreground))",
         border: "rgb(var(--color-border) / <alpha-value>)",
-        success: "rgb(var(--color-success) / <alpha-value>)"
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        success: "rgb(var(--color-success) / <alpha-value>)",
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))"
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))"
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))"
+        }
       },
       boxShadow: {
         soft: "0 18px 70px rgb(var(--shadow-brand) / 0.14)",

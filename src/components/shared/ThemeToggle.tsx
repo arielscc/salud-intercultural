@@ -12,14 +12,17 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") {
+      return "light";
+    }
+
+    return window.localStorage.getItem("theme") === "dark" ? "dark" : "light";
+  });
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem("theme");
-    const initialTheme: Theme = storedTheme === "dark" ? "dark" : "light";
-    setTheme(initialTheme);
-    applyTheme(initialTheme);
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   const nextTheme = theme === "light" ? "dark" : "light";
 
@@ -29,7 +32,6 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label={`Cambiar a modo ${nextTheme === "dark" ? "oscuro" : "claro"}`}
       onClick={() => {
         setTheme(nextTheme);
-        applyTheme(nextTheme);
         window.localStorage.setItem("theme", nextTheme);
       }}
       className={cn(
