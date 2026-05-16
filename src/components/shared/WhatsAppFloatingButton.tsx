@@ -1,10 +1,11 @@
 import { MessageCircle } from "lucide-react";
-import { createWhatsAppLink, defaultWhatsAppMessage } from "@/lib/whatsapp";
+import { siteConfig } from "@/config/site";
+import { createWhatsAppLink } from "@/lib/whatsapp";
 
 export function WhatsAppFloatingButton() {
   return (
     <a
-      href={createWhatsAppLink(defaultWhatsAppMessage)}
+      href={createWhatsAppLink(siteConfig.primaryCta.message)}
       target="_blank"
       rel="noreferrer"
       aria-label="Escribir por WhatsApp"

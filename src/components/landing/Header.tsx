@@ -1,24 +1,19 @@
 "use client";
 
 import { Menu, MessageCircle, X } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Container } from "@/components/shared/Container";
 import { Button } from "@/components/shared/Button";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { clinic } from "@/data/clinic";
+import { primaryPublicRoutes } from "@/config/routes";
+import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/cn";
-import { createWhatsAppLink, defaultWhatsAppMessage } from "@/lib/whatsapp";
-
-const nav = [
-  { href: "#inicio", label: "Inicio" },
-  { href: "#servicios", label: "Servicios" },
-  { href: "#tratamientos", label: "Tratamientos" },
-  { href: "#nosotros", label: "Nosotros" },
-  { href: "#testimonios", label: "Testimonios" },
-  { href: "#contacto", label: "Contacto" }
-];
+import { createWhatsAppLink } from "@/lib/whatsapp";
 
 export function Header() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -33,41 +28,49 @@ export function Header() {
     <header
       className={cn(
         "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
-        scrolled ? "bg-surface/82 shadow-sm backdrop-blur-xl" : "bg-transparent"
+        scrolled || open ? "bg-surface/88 shadow-sm backdrop-blur-xl" : "bg-transparent"
       )}
     >
       <Container className="flex h-20 items-center justify-between">
-        <a href="#inicio" className="flex items-center gap-3" aria-label="Ir al inicio">
+        <Link href="/" className="flex items-center gap-3" aria-label="Ir al inicio">
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-lg font-bold text-white shadow-soft">
             SI
           </span>
           <span className="min-w-0">
             <span className="block font-sora text-sm font-semibold text-text sm:text-base">
-              {clinic.shortName}
+              {siteConfig.name}
             </span>
             <span className="block text-xs font-medium text-muted">
               Medicina natural e integrativa
             </span>
           </span>
-        </a>
+        </Link>
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Navegación principal">
-          {nav.map((item) => (
-            <a
+          {primaryPublicRoutes.map((item) => {
+            const active = pathname === item.href;
+
+            return (
+            <Link
               key={item.href}
               href={item.href}
-              className="rounded-full px-4 py-2 text-sm font-semibold text-muted transition hover:bg-surface-soft hover:text-primary-dark"
+              className={cn(
+                "rounded-full px-3 py-2 text-sm font-semibold transition hover:bg-surface-soft hover:text-primary-dark",
+                active ? "bg-surface-soft text-primary-dark" : "text-muted"
+              )}
+              aria-current={active ? "page" : undefined}
             >
               {item.label}
-            </a>
-          ))}
+            </Link>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
           <ThemeToggle />
-          <Button href={createWhatsAppLink(defaultWhatsAppMessage)} target="_blank" rel="noreferrer">
+          <Button href={createWhatsAppLink(siteConfig.primaryCta.message)} target="_blank" rel="noreferrer">
             <MessageCircle className="mr-2 h-4 w-4" />
-            Agendar por WhatsApp
+            {siteConfig.primaryCta.label}
           </Button>
         </div>
 
@@ -89,24 +92,32 @@ export function Header() {
               <span className="text-sm font-semibold text-text">Tema</span>
               <ThemeToggle />
             </div>
-            {nav.map((item) => (
-              <a
+            {primaryPublicRoutes.map((item) => {
+              const active = pathname === item.href;
+
+              return (
+              <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-2xl px-4 py-3 text-sm font-semibold text-text hover:bg-surface-soft"
+                className={cn(
+                  "rounded-2xl px-4 py-3 text-sm font-semibold hover:bg-surface-soft",
+                  active ? "bg-surface-soft text-primary-dark" : "text-text"
+                )}
+                aria-current={active ? "page" : undefined}
               >
                 {item.label}
-              </a>
-            ))}
+              </Link>
+              );
+            })}
             <Button
-              href={createWhatsAppLink(defaultWhatsAppMessage)}
+              href={createWhatsAppLink(siteConfig.primaryCta.message)}
               target="_blank"
               rel="noreferrer"
               className="mt-2 w-full"
             >
               <MessageCircle className="mr-2 h-4 w-4" />
-              Agendar por WhatsApp
+              {siteConfig.primaryCta.label}
             </Button>
           </nav>
         </div>

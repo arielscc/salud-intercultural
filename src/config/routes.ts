@@ -1,15 +1,18 @@
 export const publicRoutes = [
-  { href: "/", label: "Inicio" },
-  { href: "/nosotros", label: "Nosotros" },
-  { href: "/servicios", label: "Servicios" },
-  { href: "/tratamientos", label: "Tratamientos" },
-  { href: "/equipo", label: "Equipo" },
-  { href: "/testimonios", label: "Testimonios" },
-  { href: "/preguntas-frecuentes", label: "Preguntas frecuentes" },
-  { href: "/contacto", label: "Contacto" },
-  { href: "/politica-privacidad", label: "Politica de privacidad" },
-  { href: "/terminos-condiciones", label: "Terminos y condiciones" }
+  { href: "/", label: "Inicio", secondary: false },
+  { href: "/nosotros", label: "Nosotros", secondary: false },
+  { href: "/servicios", label: "Servicios", secondary: false },
+  { href: "/tratamientos", label: "Tratamientos", secondary: false },
+  { href: "/equipo", label: "Equipo", secondary: false },
+  { href: "/testimonios", label: "Testimonios", secondary: false },
+  { href: "/preguntas-frecuentes", label: "Preguntas frecuentes", secondary: false },
+  { href: "/contacto", label: "Contacto", secondary: false },
+  { href: "/politica-privacidad", label: "Politica de privacidad", secondary: true },
+  { href: "/terminos-condiciones", label: "Terminos y condiciones", secondary: true }
 ] as const;
+
+export const primaryPublicRoutes = publicRoutes.filter((route) => !route.secondary);
+export const legalPublicRoutes = publicRoutes.filter((route) => route.secondary);
 
 export const adminRoutes = [
   { href: "/admin", label: "Dashboard" },
