@@ -8,19 +8,153 @@ datasource db {
 }
 
 model Lead {
-  id        String     @id @default(cuid())
-  name      String?
-  phone     String
-  message   String?
-  interest  String?
-  source    LeadSource @default(website)
-  status    LeadStatus @default(new)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id          String     @id @default(cuid())
+  name        String?
+  phone       String
+  email       String?
+  message     String?
+  interest    String?
+  source      LeadSource @default(website)
+  status      LeadStatus @default(new)
+  pagePath    String?
+  notes       String?
+  contactedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@index([createdAt])
+  @@index([phone])
   @@index([status])
   @@index([source])
+}
+
+model Service {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  description     String
+  image           String?
+  imageAlt        String?
+  icon            String?
+  benefits        String[] @default([])
+  relatedProblems String[] @default([])
+  whatsappMessage String?
+  active          Boolean  @default(true)
+  featured        Boolean  @default(false)
+  order           Int      @default(0)
+  seoTitle        String?
+  seoDescription  String?
+  seoKeywords     String[] @default([])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([active, order])
+  @@index([featured, order])
+}
+
+model TreatmentTopic {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  summary         String
+  description     String?
+  image           String?
+  imageAlt        String?
+  symptoms        String[] @default([])
+  guidance        String[] @default([])
+  ctaLabel        String?
+  whatsappMessage String?
+  active          Boolean  @default(true)
+  featured        Boolean  @default(false)
+  order           Int      @default(0)
+  seoTitle        String?
+  seoDescription  String?
+  seoKeywords     String[] @default([])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([active, order])
+  @@index([featured, order])
+}
+
+model TeamMember {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  photo          String?
+  photoAlt       String?
+  role           String
+  specialty      String
+  description    String
+  credentials    String[] @default([])
+  focusAreas     String[] @default([])
+  active         Boolean  @default(true)
+  featured       Boolean  @default(false)
+  order          Int      @default(0)
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([active, order])
+  @@index([featured, order])
+}
+
+model Testimonial {
+  id             String    @id @default(cuid())
+  author         String
+  quote          String
+  treatmentType  String
+  rating         Int?
+  publishedAt    DateTime?
+  privacyNotice  String?
+  active         Boolean   @default(true)
+  featured       Boolean   @default(false)
+  order          Int       @default(0)
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String[]  @default([])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([active, order])
+  @@index([featured, order])
+}
+
+model Faq {
+  id             String      @id @default(cuid())
+  question       String
+  answer         String
+  category       FaqCategory @default(treatments)
+  active         Boolean     @default(true)
+  featured       Boolean     @default(false)
+  order          Int         @default(0)
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String[]    @default([])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([active, order])
+  @@index([featured, order])
+  @@index([category, order])
+}
+
+model SiteSetting {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  name           String
+  value          Json
+  description    String?
+  active         Boolean  @default(true)
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([active])
 }
 
 enum LeadSource {
@@ -38,4 +172,12 @@ enum LeadStatus {
   scheduled
   closed
   lost
+}
+
+enum FaqCategory {
+  appointments
+  location
+  contact
+  treatments
+  pricing
 }
