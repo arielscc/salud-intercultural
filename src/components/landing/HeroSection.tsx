@@ -4,6 +4,7 @@ import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { clinic } from "@/data/clinic";
+import { homeContent } from "@/data/home";
 import { fadeScale, fadeUp } from "@/lib/motion";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 import { motion } from "framer-motion";
@@ -23,36 +24,40 @@ export function HeroSection() {
           variants={fadeUp}
         >
           <div className="flex flex-wrap gap-2">
-            <Badge>Atención integral</Badge>
-            <Badge>Enfoque natural e intercultural</Badge>
-            <Badge>Ubicados en El Alto</Badge>
+            {homeContent.hero.eyebrow.map((item) => (
+              <Badge key={item}>{item}</Badge>
+            ))}
           </div>
           <h1 className="mt-7 max-w-4xl font-sora text-4xl font-semibold leading-[1.05] tracking-normal text-text sm:text-5xl lg:text-6xl">
-            Medicina natural y tradicional para cuidar tu salud de forma
-            integral
+            {homeContent.hero.title}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-            En Salud Intercultural combinamos orientación médica, terapias
-            naturales y sabiduría ancestral andina para acompañarte con una
-            atención humana, preventiva y personalizada.
+            {homeContent.hero.description}
           </p>
+          <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
+            {["Evaluación individual", "Terapias complementarias", "Seguimiento humano"].map((item) => (
+              <div key={item} className="rounded-2xl border border-border bg-surface/78 px-4 py-3 text-sm font-semibold text-text shadow-sm backdrop-blur">
+                {item}
+              </div>
+            ))}
+          </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
-              href={createWhatsAppLink("Hola, quiero agendar una valoración.")}
+              href={createWhatsAppLink(homeContent.hero.primaryCta.message)}
               target="_blank"
               rel="noreferrer"
               size="lg"
             >
-              Solicitar valoración por WhatsApp
+              {homeContent.hero.primaryCta.label}
             </Button>
             <Button href={`tel:${clinic.phoneSecondary}`} variant="secondary" size="lg">
               <Phone className="mr-2 h-4 w-4" />
-              Llamar ahora
+              {homeContent.hero.secondaryCta.label}
             </Button>
           </div>
           <p className="mt-5 flex max-w-xl items-center gap-2 text-sm text-muted">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            Cada tratamiento se orienta según una evaluación individual.
+            {homeContent.hero.trustNote}
           </p>
         </motion.div>
 

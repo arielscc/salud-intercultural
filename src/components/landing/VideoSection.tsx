@@ -2,6 +2,7 @@ import { Play, Video } from "lucide-react";
 import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { homeContent } from "@/data/home";
 import { clinic } from "@/data/clinic";
 
 export function VideoSection() {
@@ -20,13 +21,13 @@ export function VideoSection() {
             <span className="grid h-16 w-16 place-items-center rounded-full bg-white/18 backdrop-blur">
               <Play className="h-7 w-7 fill-white" />
             </span>
-            <p className="mt-5 font-sora text-2xl font-semibold">Contenido audiovisual en preparación</p>
+            <p className="mt-5 font-sora text-2xl font-semibold">{homeContent.featuredVideo.title}</p>
             <p className="mt-3 max-w-lg text-sm leading-6 text-white/82">
-              Espacio listo para videos educativos, orientación preventiva y testimonios autorizados.
+              {homeContent.featuredVideo.description}
             </p>
             <Button href={clinic.social.tiktok} target="_blank" rel="noreferrer" variant="light" className="mt-6">
               <Video className="mr-2 h-4 w-4" />
-              Ver en TikTok
+              {homeContent.featuredVideo.ctaLabel}
             </Button>
           </div>
         </div>

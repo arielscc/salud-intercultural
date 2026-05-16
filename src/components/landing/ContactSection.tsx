@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, MessageCircle, Phone } from "lucide-react";
+import { CheckCircle2, Mail, MessageCircle, Phone } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/shared/Button";
@@ -15,7 +16,8 @@ const contactSchema = z.object({
   name: z.string().min(2, "Ingresa tu nombre."),
   phone: z.string().min(6, "Ingresa un teléfono válido."),
   reason: z.string().min(3, "Indica el motivo de consulta."),
-  message: z.string().min(8, "Escribe un mensaje breve.")
+  message: z.string().min(8, "Escribe un mensaje breve."),
+  website: z.string().optional()
 });
 
 type ContactForm = z.infer<typeof contactSchema>;
@@ -24,14 +26,36 @@ export function ContactSection() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors }
   } = useForm<ContactForm>({
     resolver: zodResolver(contactSchema)
   });
+  const [submitState, setSubmitState] = useState<"idle" | "loading" | "success" | "error">("idle");
 
-  const onSubmit = (data: ContactForm) => {
-    const message = `Hola, quiero realizar una consulta.\n\nNombre: ${data.name}\nTeléfono: ${data.phone}\nMotivo: ${data.reason}\nMensaje: ${data.message}`;
-    window.open(createWhatsAppLink(message), "_blank", "noopener,noreferrer");
+  const onSubmit = async (data: ContactForm) => {
+    setSubmitState("loading");
+
+    const response = await fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: data.name,
+        phone: data.phone,
+        interest: data.reason,
+        message: data.message,
+        source: "website",
+        website: ""
+      })
+    });
+
+    if (!response.ok) {
+      setSubmitState("error");
+      return;
+    }
+
+    setSubmitState("success");
+    reset();
   };
 
   return (
@@ -70,7 +94,7 @@ export function ContactSection() {
           <form onSubmit={handleSubmit(onSubmit)} className="rounded-[2rem] border border-border bg-background p-6 shadow-soft">
             <h3 className="font-sora text-2xl font-semibold text-text">Enviar consulta</h3>
             <p className="mt-2 text-sm leading-6 text-muted">
-              El mensaje se enviará por WhatsApp para coordinar una valoración.
+              Tu consulta se registrará para seguimiento y también puedes continuar por WhatsApp.
             </p>
             <div className="mt-6 grid gap-4">
               {[
@@ -98,14 +122,46 @@ export function ContactSection() {
                 />
                 {errors.message ? <span className="text-xs text-accent">{errors.message.message}</span> : null}
               </label>
+              <input
+                {...register("website")}
+                className="hidden"
+                tabIndex={-1}
+                autoComplete="off"
+              />
             </div>
             <button
               type="submit"
+              disabled={submitState === "loading"}
               className="focus-ring mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5 hover:bg-primary-dark active:scale-[0.99]"
             >
-              <Mail className="mr-2 h-4 w-4" />
-              Enviar consulta
+              {submitState === "loading" ? (
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
+              {submitState === "loading" ? "Registrando consulta..." : "Enviar consulta"}
             </button>
+            {submitState === "success" ? (
+              <div className="mt-4 rounded-2xl border border-success/25 bg-success/10 p-4 text-sm leading-6 text-text">
+                <p className="flex items-center gap-2 font-semibold">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  Consulta registrada correctamente.
+                </p>
+                <a
+                  href={createWhatsAppLink("Hola, acabo de enviar una consulta desde el sitio web.")}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex font-semibold text-primary-dark hover:text-primary"
+                >
+                  Continuar por WhatsApp
+                </a>
+              </div>
+            ) : null}
+            {submitState === "error" ? (
+              <p className="mt-4 rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-sm font-semibold text-text">
+                No pudimos registrar la consulta. Inténtalo nuevamente o escríbenos por WhatsApp.
+              </p>
+            ) : null}
             <p className="mt-4 text-xs leading-5 text-muted">
               La información enviada es orientativa y no reemplaza una consulta profesional.
             </p>

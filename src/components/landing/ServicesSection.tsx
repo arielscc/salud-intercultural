@@ -6,17 +6,22 @@ import { AnimatedCard, staggerContainer } from "@/components/shared/AnimatedCard
 import { Container } from "@/components/shared/Container";
 import { Icon } from "@/components/shared/Icon";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { homeContent } from "@/data/home";
 import { services } from "@/data/services";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
 export function ServicesSection() {
+  const featuredServices = homeContent.featuredServiceSlugs
+    .map((slug) => services.find((service) => service.slug === slug))
+    .filter((service): service is (typeof services)[number] => Boolean(service));
+
   return (
     <section id="servicios" className="bg-surface py-24">
       <Container>
         <SectionHeader
           eyebrow="Servicios"
-          title="Servicios principales de la clínica"
-          description="Tratamientos y terapias complementarias orientadas al bienestar integral del paciente."
+          title="Servicios destacados de la clínica"
+          description="Selección inicial preparada para administrarse desde CMS y orientar la conversión hacia consulta."
         />
         <motion.div
           variants={staggerContainer}
@@ -25,7 +30,7 @@ export function ServicesSection() {
           viewport={{ once: true, amount: 0.15 }}
           className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
         >
-          {services.map((service) => (
+          {featuredServices.map((service) => (
             <AnimatedCard key={service.slug} className="flex min-h-[360px] flex-col">
               <div className="flex items-start justify-between gap-4">
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
