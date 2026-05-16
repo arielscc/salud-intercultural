@@ -7,8 +7,8 @@ export const publicRoutes = [
   { href: "/testimonios", label: "Testimonios", secondary: false },
   { href: "/preguntas-frecuentes", label: "Preguntas frecuentes", secondary: false },
   { href: "/contacto", label: "Contacto", secondary: false },
-  { href: "/politica-privacidad", label: "Politica de privacidad", secondary: true },
-  { href: "/terminos-condiciones", label: "Terminos y condiciones", secondary: true }
+  { href: "/politica-privacidad", label: "Política de privacidad", secondary: true },
+  { href: "/terminos-condiciones", label: "Términos y condiciones", secondary: true }
 ] as const;
 
 export const primaryPublicRoutes = publicRoutes.filter((route) => !route.secondary);
