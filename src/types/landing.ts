@@ -28,12 +28,20 @@ export type Problem = {
 
 export type Service = {
   slug: string;
+  image: string;
+  imageAlt: string;
   title: string;
   description: string;
   benefits: string[];
   relatedProblems: string[];
   whatsappMessage: string;
   icon: IconName;
+  active: boolean;
+  featured: boolean;
+  seo: {
+    title: string;
+    description: string;
+  };
 };
 
 export type FAQ = {
