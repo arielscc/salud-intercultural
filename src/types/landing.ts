@@ -50,8 +50,16 @@ export type FAQ = {
 };
 
 export type Testimonial = {
+  id: string;
   quote: string;
   author: string;
+  treatmentType: string;
+  rating?: number;
+  date?: string;
+  active: boolean;
+  featured: boolean;
+  order: number;
+  privacyNotice?: string;
 };
 
 export type TeamMember = {
