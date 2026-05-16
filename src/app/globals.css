@@ -16,6 +16,7 @@
   --color-muted: 100 116 139;
   --color-border: 215 233 238;
   --color-success: 22 163 74;
+  --color-error: 220 38 38;
   --hero-end: 238 248 250;
   --shadow-brand: 5 154 178;
   --shadow-strong: 13 38 48;
@@ -44,6 +45,7 @@
   --color-muted: 151 170 178;
   --color-border: 35 68 78;
   --color-success: 34 197 94;
+  --color-error: 248 113 113;
   --hero-end: 11 35 45;
   --shadow-brand: 0 0 0;
   --shadow-strong: 0 0 0;
@@ -137,6 +139,42 @@ a {
 
 .text-balance {
   text-wrap: balance;
+}
+
+@layer components {
+  .public-section {
+    @apply relative overflow-hidden py-20 sm:py-24;
+  }
+
+  .premium-card {
+    @apply rounded-[1.75rem] border border-border bg-surface p-5 shadow-soft transition duration-200 sm:p-6;
+  }
+
+  .premium-card-interactive {
+    @apply hover:-translate-y-1 hover:border-primary/25 hover:shadow-lift active:translate-y-0 active:scale-[0.99];
+  }
+
+  .premium-gradient-soft {
+    background:
+      radial-gradient(circle at 12% 12%, rgb(var(--color-primary) / 0.14), transparent 28%),
+      radial-gradient(circle at 88% 4%, rgb(var(--color-accent) / 0.12), transparent 30%),
+      linear-gradient(180deg, rgb(var(--color-background)), rgb(var(--color-surface-soft)));
+  }
+
+  .premium-hero-surface {
+    background:
+      radial-gradient(circle at 16% 18%, rgb(var(--color-primary) / 0.18), transparent 32%),
+      radial-gradient(circle at 86% 10%, rgb(var(--color-secondary) / 0.13), transparent 30%),
+      linear-gradient(135deg, rgb(var(--color-background)) 0%, rgb(var(--color-surface-soft)) 48%, rgb(var(--hero-end)) 100%);
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .control-field {
+    @apply min-h-12 rounded-2xl border border-border bg-surface px-4 text-sm text-text outline-none transition placeholder:text-muted/70 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-55;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

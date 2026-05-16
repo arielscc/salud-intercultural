@@ -23,7 +23,7 @@ export function SectionHeader({
       )}
     >
       {eyebrow ? <Badge>{eyebrow}</Badge> : null}
-      <h2 className="mt-4 font-sora text-3xl font-semibold leading-tight tracking-normal text-text sm:text-4xl">
+      <h2 className="text-balance mt-4 font-sora text-3xl font-semibold leading-tight tracking-normal text-text sm:text-4xl">
         {title}
       </h2>
       {description ? (

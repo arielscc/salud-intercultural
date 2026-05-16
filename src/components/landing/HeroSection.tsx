@@ -4,6 +4,7 @@ import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { clinic } from "@/data/clinic";
+import { fadeScale, fadeUp } from "@/lib/motion";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 import { motion } from "framer-motion";
 import { CalendarCheck, MapPin, Phone, ShieldCheck } from "lucide-react";
@@ -13,13 +14,13 @@ export function HeroSection() {
   return (
     <section
       id="inicio"
-      className="relative overflow-hidden bg-hero-radial pt-28 premium-grid"
+      className="public-section premium-hero-surface premium-grid pt-28"
     >
       <Container className="grid min-h-[760px] items-center gap-12 pb-20 pt-10 lg:grid-cols-[1.02fr_0.98fr]">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
         >
           <div className="flex flex-wrap gap-2">
             <Badge>Atención integral</Badge>
@@ -40,10 +41,11 @@ export function HeroSection() {
               href={createWhatsAppLink("Hola, quiero agendar una valoración.")}
               target="_blank"
               rel="noreferrer"
+              size="lg"
             >
               Solicitar valoración por WhatsApp
             </Button>
-            <Button href={`tel:${clinic.phoneSecondary}`} variant="secondary">
+            <Button href={`tel:${clinic.phoneSecondary}`} variant="secondary" size="lg">
               <Phone className="mr-2 h-4 w-4" />
               Llamar ahora
             </Button>
@@ -55,9 +57,9 @@ export function HeroSection() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.12 }}
+          initial="hidden"
+          animate="visible"
+          variants={fadeScale}
           className="relative"
         >
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-border bg-surface shadow-lift">
@@ -78,7 +80,7 @@ export function HeroSection() {
               </p>
             </div>
           </div>
-          <div className="glass absolute bottom-32 left-3 right-3 rounded-3xl p-5 sm:left-auto sm:right-6 sm:w-80">
+          <div className="glass absolute bottom-32 left-3 right-3 rounded-[1.75rem] p-5 sm:left-auto sm:right-6 sm:w-80">
             <div className="flex items-start gap-3">
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface-soft text-primary">
                 <MapPin className="h-5 w-5" />

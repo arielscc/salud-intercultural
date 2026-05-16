@@ -82,7 +82,7 @@ export function ContactSection() {
                   {label}
                   <input
                     {...register(name as keyof ContactForm)}
-                    className="min-h-12 rounded-2xl border border-border bg-surface px-4 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    className="control-field"
                   />
                   {errors[name as keyof ContactForm] ? (
                     <span className="text-xs text-accent">{errors[name as keyof ContactForm]?.message}</span>
@@ -94,14 +94,14 @@ export function ContactSection() {
                 <textarea
                   {...register("message")}
                   rows={5}
-                  className="rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className="control-field py-3"
                 />
                 {errors.message ? <span className="text-xs text-accent">{errors.message.message}</span> : null}
               </label>
             </div>
             <button
               type="submit"
-              className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5 hover:bg-primary-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className="focus-ring mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5 hover:bg-primary-dark active:scale-[0.99]"
             >
               <Mail className="mr-2 h-4 w-4" />
               Enviar consulta
