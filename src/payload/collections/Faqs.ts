@@ -12,22 +12,30 @@ export const Faqs: CollectionConfig = {
   admin: {
     defaultColumns: ["question", "category", "active", "featured", "order"],
     group: "Contenido V2",
+    listSearchableFields: ["question", "answer"],
+    pagination: {
+      defaultLimit: 10,
+      limits: [10, 25, 50]
+    },
     useAsTitle: "question"
   },
   access: {
     ...authenticatedCollectionAccess,
     read: publicOrAuthenticatedActiveRead
   },
+  defaultSort: "order",
   fields: [
     {
       name: "question",
       type: "text",
+      maxLength: 120,
       required: true,
       label: "Pregunta"
     },
     {
       name: "answer",
       type: "textarea",
+      maxLength: 360,
       required: true,
       label: "Respuesta"
     },

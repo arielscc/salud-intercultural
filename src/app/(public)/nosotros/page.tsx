@@ -7,6 +7,7 @@ import { Icon } from "@/components/shared/Icon";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { aboutContent } from "@/data/about";
+import { imagePlaceholder, publicImageSizes } from "@/lib/images";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 import { siteUrl } from "@/lib/seo";
 
@@ -61,7 +62,9 @@ export default function NosotrosPage() {
                 alt={aboutContent.hero.imageAlt}
                 fill
                 priority
-                sizes="(min-width: 1024px) 46vw, 100vw"
+                placeholder="blur"
+                blurDataURL={imagePlaceholder}
+                sizes={publicImageSizes.hero}
                 className="object-cover"
               />
             </div>
@@ -198,7 +201,9 @@ export default function NosotrosPage() {
                   src={image.src}
                   alt={image.alt}
                   fill
-                  sizes="(min-width: 768px) 33vw, 100vw"
+                  placeholder="blur"
+                  blurDataURL={imagePlaceholder}
+                  sizes={publicImageSizes.gallery}
                   className="object-cover"
                 />
               </div>

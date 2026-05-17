@@ -7,6 +7,7 @@ import { services as fallbackServices } from "@/data/services";
 import { teamMembers as fallbackTeamMembers } from "@/data/team";
 import { testimonials as fallbackTestimonials } from "@/data/testimonials";
 import { seo as fallbackSeo, siteUrl } from "@/lib/seo";
+import { getImageAlt } from "@/lib/images";
 import type {
   FAQ,
   IconName,
@@ -16,6 +17,7 @@ import type {
 } from "@/types/landing";
 import type {
   Faq as PayloadFaq,
+  HomeContent,
   Media,
   Page,
   Service as PayloadService,
@@ -70,6 +72,10 @@ function mediaUrl(image?: (number | null) | Media) {
   return typeof image === "object" && image?.url ? image.url : undefined;
 }
 
+function mediaAlt(image?: (number | null) | Media) {
+  return typeof image === "object" && image?.alt ? image.alt : undefined;
+}
+
 function seoFromPayload(
   payloadSeo: { title?: string | null; description?: string | null } | undefined,
   fallback: { title: string; description: string }
@@ -87,7 +93,7 @@ function mapService(doc: PayloadService): Service {
   return {
     slug: doc.slug,
     image: mediaUrl(doc.image) ?? doc.imageUrl ?? fallback?.image ?? defaultImage,
-    imageAlt: doc.imageAlt ?? fallback?.imageAlt ?? doc.title,
+    imageAlt: getImageAlt(doc.imageAlt ?? mediaAlt(doc.image) ?? fallback?.imageAlt, doc.title),
     title: doc.title,
     description: doc.description,
     benefits: listText(doc.benefits),
@@ -110,7 +116,7 @@ function mapTeamMember(doc: PayloadTeamMember): TeamMember {
     slug: doc.slug,
     name: doc.name,
     photo: mediaUrl(doc.image) ?? doc.imageUrl ?? fallback?.photo ?? defaultImage,
-    photoAlt: doc.imageAlt ?? fallback?.photoAlt ?? doc.name,
+    photoAlt: getImageAlt(doc.imageAlt ?? mediaAlt(doc.image) ?? fallback?.photoAlt, doc.name),
     role: doc.role,
     specialty: doc.specialty,
     description: doc.description,
@@ -290,6 +296,16 @@ function mapSiteSettings(settings: SiteSetting): SiteSettings {
 export async function getPublicHomeContent(): Promise<PublicContent<PublicHomeContent>> {
   try {
     const payload = await getPayloadClient();
+    const home = await payload.findGlobal({
+      slug: "home-content",
+      depth: 1,
+      overrideAccess: false
+    });
+
+    if (home?.hero?.title) {
+      return withCms(mapHomeContent(home));
+    }
+
     const result = await payload.find({
       collection: "pages",
       depth: 1,
@@ -332,6 +348,48 @@ export async function getPublicHomeContent(): Promise<PublicContent<PublicHomeCo
   }
 }
 
+function mapHomeContent(home: HomeContent): PublicHomeContent {
+  const featuredServiceSlugs =
+    home.featuredServices
+      ?.map((service) => (typeof service === "object" ? service.slug : null))
+      .filter((slug): slug is string => Boolean(slug)) ??
+    fallbackHomeContent.featuredServiceSlugs;
+
+  return {
+    ...fallbackHomeContent,
+    hero: {
+      eyebrow:
+        home.hero.eyebrow?.map((item) => item.text).filter(Boolean) ??
+        fallbackHomeContent.hero.eyebrow,
+      title: home.hero.title || fallbackHomeContent.hero.title,
+      description: home.hero.description || fallbackHomeContent.hero.description,
+      primaryCta: {
+        label: home.hero.primaryCta?.label || fallbackHomeContent.hero.primaryCta.label,
+        message: home.hero.primaryCta?.message || fallbackHomeContent.hero.primaryCta.message
+      },
+      secondaryCta: {
+        label: home.hero.secondaryCta?.label || fallbackHomeContent.hero.secondaryCta.label
+      },
+      trustNote: home.hero.trustNote || fallbackHomeContent.hero.trustNote
+    },
+    stats:
+      home.stats?.map((stat) => ({ value: stat.value, label: stat.label })) ??
+      fallbackHomeContent.stats,
+    featuredServiceSlugs,
+    featuredVideo: {
+      title: home.featuredVideo?.title || fallbackHomeContent.featuredVideo.title,
+      description:
+        home.featuredVideo?.description || fallbackHomeContent.featuredVideo.description,
+      ctaLabel: home.featuredVideo?.ctaLabel || fallbackHomeContent.featuredVideo.ctaLabel
+    },
+    editableBlocks:
+      home.editableBlocks?.map((block) => ({
+        title: block.title,
+        description: block.description
+      })) ?? fallbackHomeContent.editableBlocks
+  };
+}
+
 export async function getPublicPage(slug: string): Promise<PublicContent<Page | null>> {
   try {
     const payload = await getPayloadClient();
@@ -357,6 +415,36 @@ export async function getPublicPageMetadata(
   slug: string,
   fallback: { title: string; description: string; path: string }
 ) {
+  if (slug === "home") {
+    try {
+      const payload = await getPayloadClient();
+      const home = await payload.findGlobal({
+        slug: "home-content",
+        depth: 0,
+        overrideAccess: false
+      });
+      const title = home.seo?.title || fallback.title;
+      const description = home.seo?.description || fallback.description;
+      const canonical = `${siteUrl}${fallback.path}`;
+
+      return {
+        title,
+        description,
+        alternates: {
+          canonical
+        },
+        openGraph: {
+          title,
+          description,
+          url: canonical,
+          type: "website"
+        }
+      };
+    } catch {
+      // Page metadata below keeps the existing fallback behavior if the global is unavailable.
+    }
+  }
+
   const page = await getPublicPage(slug);
   const title = page.data?.seo?.title || fallback.title;
   const description = page.data?.seo?.description || fallback.description;

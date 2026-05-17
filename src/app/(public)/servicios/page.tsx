@@ -11,6 +11,7 @@ import {
   getPublicPageMetadata,
   getPublicServices
 } from "@/lib/cms/public-content";
+import { imagePlaceholder, publicImageSizes } from "@/lib/images";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
 export const revalidate = 60;
@@ -83,7 +84,9 @@ export default async function ServiciosPage() {
                     src={service.image}
                     alt={service.imageAlt}
                     fill
-                    sizes="(min-width: 1024px) 33vw, 100vw"
+                    placeholder="blur"
+                    blurDataURL={imagePlaceholder}
+                    sizes={publicImageSizes.serviceCard}
                     className="object-cover"
                   />
                 </div>
@@ -133,7 +136,9 @@ export default async function ServiciosPage() {
                     src={service.image}
                     alt={service.imageAlt}
                     fill
-                    sizes="(min-width: 1024px) 220px, 100vw"
+                    placeholder="blur"
+                    blurDataURL={imagePlaceholder}
+                    sizes={publicImageSizes.serviceThumb}
                     className="object-cover"
                   />
                 </div>

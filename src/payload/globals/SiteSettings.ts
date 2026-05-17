@@ -18,10 +18,10 @@ export const SiteSettings: GlobalConfig = {
       type: "group",
       label: "Marca",
       fields: [
-        { name: "name", type: "text", required: true, label: "Nombre" },
-        { name: "legalName", type: "text", label: "Razón social" },
-        { name: "slogan", type: "text", label: "Slogan" },
-        { name: "description", type: "textarea", label: "Descripción" }
+        { name: "name", type: "text", maxLength: 70, required: true, label: "Nombre" },
+        { name: "legalName", type: "text", maxLength: 120, label: "Razón social" },
+        { name: "slogan", type: "text", maxLength: 80, label: "Slogan" },
+        { name: "description", type: "textarea", maxLength: 220, label: "Descripción" }
       ]
     },
     {
@@ -29,13 +29,13 @@ export const SiteSettings: GlobalConfig = {
       type: "group",
       label: "Contacto",
       fields: [
-        { name: "whatsapp", type: "text", required: true, label: "WhatsApp" },
-        { name: "phone", type: "text", required: true, label: "Teléfono" },
+        { name: "whatsapp", type: "text", maxLength: 24, required: true, label: "WhatsApp" },
+        { name: "phone", type: "text", maxLength: 24, required: true, label: "Teléfono" },
         { name: "email", type: "email", label: "Email" },
-        { name: "address", type: "text", label: "Dirección" },
-        { name: "zone", type: "text", label: "Zona" },
-        { name: "city", type: "text", label: "Ciudad" },
-        { name: "schedule", type: "text", label: "Horario" },
+        { name: "address", type: "text", maxLength: 140, label: "Dirección" },
+        { name: "zone", type: "text", maxLength: 80, label: "Zona" },
+        { name: "city", type: "text", maxLength: 80, label: "Ciudad" },
+        { name: "schedule", type: "text", maxLength: 80, label: "Horario" },
         { name: "mapsUrl", type: "text", label: "URL Google Maps" }
       ]
     },
@@ -47,11 +47,13 @@ export const SiteSettings: GlobalConfig = {
         {
           name: "defaultWhatsAppMessage",
           type: "text",
+          maxLength: 180,
           label: "Mensaje WhatsApp por defecto"
         },
         {
           name: "afterLeadWhatsAppMessage",
           type: "text",
+          maxLength: 180,
           label: "Mensaje WhatsApp después de enviar lead"
         }
       ]

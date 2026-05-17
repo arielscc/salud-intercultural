@@ -12,12 +12,18 @@ export const Pages: CollectionConfig = {
   admin: {
     defaultColumns: ["title", "slug", "active", "updatedAt"],
     group: "Contenido V2",
+    listSearchableFields: ["title", "summary", "content"],
+    pagination: {
+      defaultLimit: 10,
+      limits: [10, 25, 50]
+    },
     useAsTitle: "title"
   },
   access: {
     ...authenticatedCollectionAccess,
     read: publicOrAuthenticatedActiveRead
   },
+  defaultSort: "order",
   versions: {
     drafts: true
   },
@@ -26,12 +32,14 @@ export const Pages: CollectionConfig = {
     {
       name: "title",
       type: "text",
+      maxLength: 90,
       required: true,
       label: "Título"
     },
     {
       name: "summary",
       type: "textarea",
+      maxLength: 220,
       label: "Resumen"
     },
     {
@@ -42,6 +50,7 @@ export const Pages: CollectionConfig = {
         {
           name: "eyebrow",
           type: "text",
+          maxLength: 48,
           label: "Eyebrow"
         },
         ...imageFields
@@ -50,6 +59,7 @@ export const Pages: CollectionConfig = {
     {
       name: "content",
       type: "textarea",
+      maxLength: 1200,
       label: "Contenido"
     },
     ...statusOrderFields,

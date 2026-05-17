@@ -24,23 +24,31 @@ export const Services: CollectionConfig = {
   admin: {
     defaultColumns: ["title", "active", "featured", "order", "updatedAt"],
     group: "Contenido V2",
+    listSearchableFields: ["title", "description", "whatsappMessage"],
+    pagination: {
+      defaultLimit: 10,
+      limits: [10, 25, 50]
+    },
     useAsTitle: "title"
   },
   access: {
     ...authenticatedCollectionAccess,
     read: publicOrAuthenticatedActiveRead
   },
+  defaultSort: "order",
   fields: [
     slugField,
     {
       name: "title",
       type: "text",
+      maxLength: 90,
       required: true,
       label: "Título"
     },
     {
       name: "description",
       type: "textarea",
+      maxLength: 260,
       required: true,
       label: "Descripción"
     },
@@ -56,6 +64,7 @@ export const Services: CollectionConfig = {
     {
       name: "whatsappMessage",
       type: "text",
+      maxLength: 180,
       label: "Mensaje prellenado de WhatsApp"
     },
     ...statusOrderFields,

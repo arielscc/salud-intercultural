@@ -7,6 +7,7 @@ import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { getPublicPageMetadata, getPublicTeamMembers } from "@/lib/cms/public-content";
+import { imagePlaceholder, publicImageSizes } from "@/lib/images";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
 export const revalidate = 60;
@@ -86,7 +87,9 @@ export default async function EquipoPage() {
                       src={member.photo}
                       alt={member.photoAlt}
                       fill
-                      sizes="(min-width: 1024px) 260px, 100vw"
+                      placeholder="blur"
+                      blurDataURL={imagePlaceholder}
+                      sizes={publicImageSizes.teamPortrait}
                       className="object-cover"
                     />
                   </div>

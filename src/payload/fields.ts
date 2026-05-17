@@ -8,7 +8,8 @@ export const slugField: Field = {
   index: true,
   admin: {
     description: "Identificador para URLs y referencias internas."
-  }
+  },
+  maxLength: 90
 };
 
 export const statusOrderFields: Field[] = [
@@ -31,6 +32,7 @@ export const statusOrderFields: Field[] = [
     type: "number",
     defaultValue: 0,
     index: true,
+    min: 0,
     label: "Orden"
   }
 ];
@@ -72,11 +74,15 @@ export const imageFields: Field[] = [
     name: "image",
     type: "relationship",
     relationTo: "media",
-    label: "Imagen"
+    label: "Imagen CMS",
+    admin: {
+      description: "Prioridad visual recomendada. Payload genera miniatura, card, retrato y hero."
+    }
   },
   {
     name: "imageUrl",
     type: "text",
+    maxLength: 500,
     label: "URL externa de imagen",
     admin: {
       description: "Fallback temporal para imágenes externas existentes."
@@ -85,6 +91,11 @@ export const imageFields: Field[] = [
   {
     name: "imageAlt",
     type: "text",
+    admin: {
+      description: "Obligatorio aunque exista imagen CMS; se usa como fallback accesible del contenido."
+    },
+    maxLength: 140,
+    required: true,
     label: "Texto alternativo"
   }
 ];
@@ -93,10 +104,12 @@ export const listTextField = (name: string, label: string): Field => ({
   name,
   type: "array",
   label,
+  minRows: 1,
   fields: [
     {
       name: "text",
       type: "text",
+      maxLength: 140,
       required: true
     }
   ]

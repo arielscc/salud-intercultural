@@ -5,6 +5,7 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { clinic } from "@/data/clinic";
 import { homeContent } from "@/data/home";
+import { imagePlaceholder, publicImageSizes } from "@/lib/images";
 import { fadeScale, fadeUp } from "@/lib/motion";
 import type { PublicHomeContent } from "@/lib/cms/public-content";
 import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
@@ -86,7 +87,9 @@ export function HeroSection({ content = homeContent }: HeroSectionProps) {
               alt="Profesional de salud conversando con una paciente en consulta"
               fill
               priority
-              sizes="(min-width: 1024px) 46vw, 100vw"
+              placeholder="blur"
+              blurDataURL={imagePlaceholder}
+              sizes={publicImageSizes.hero}
               className="object-cover"
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-dark/72 to-transparent p-7 text-white">

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { HandHeart, Leaf, Sparkles } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { imagePlaceholder, publicImageSizes } from "@/lib/images";
 
 export function AboutSection() {
   return (
@@ -22,7 +23,9 @@ export function AboutSection() {
               src="https://images.unsplash.com/photo-1471193945509-9ad0617afabf?auto=format&fit=crop&w=1100&q=85"
               alt="Plantas medicinales y elementos naturales usados con enfoque responsable"
               fill
-              sizes="(min-width: 1024px) 42vw, 100vw"
+              placeholder="blur"
+              blurDataURL={imagePlaceholder}
+              sizes={publicImageSizes.aboutFeature}
               className="object-cover"
             />
           </div>

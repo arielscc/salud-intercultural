@@ -12,29 +12,38 @@ export const Testimonials: CollectionConfig = {
   admin: {
     defaultColumns: ["author", "treatmentType", "active", "featured", "order"],
     group: "Contenido V2",
+    listSearchableFields: ["author", "quote", "treatmentType"],
+    pagination: {
+      defaultLimit: 10,
+      limits: [10, 25, 50]
+    },
     useAsTitle: "author"
   },
   access: {
     ...authenticatedCollectionAccess,
     read: publicOrAuthenticatedActiveRead
   },
+  defaultSort: "order",
   fields: [
     slugField,
     {
       name: "author",
       type: "text",
+      maxLength: 80,
       required: true,
       label: "Autor"
     },
     {
       name: "quote",
       type: "textarea",
+      maxLength: 320,
       required: true,
       label: "Testimonio"
     },
     {
       name: "treatmentType",
       type: "text",
+      maxLength: 90,
       required: true,
       label: "Tipo de tratamiento"
     },
@@ -53,6 +62,7 @@ export const Testimonials: CollectionConfig = {
     {
       name: "privacyNotice",
       type: "textarea",
+      maxLength: 180,
       label: "Aviso de privacidad"
     },
     ...statusOrderFields,

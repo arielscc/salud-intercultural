@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { postgresAdapter } from "@payloadcms/db-postgres";
 import { buildConfig } from "payload";
+import sharp from "sharp";
 import { collections } from "./src/payload/collections/index.ts";
 import { globals } from "./src/payload/globals/index.ts";
 
@@ -38,6 +39,7 @@ export default buildConfig({
   }),
   globals,
   secret: process.env.PAYLOAD_SECRET || "development-payload-secret",
+  sharp,
   typescript: {
     outputFile: path.resolve(dirname, "src/types/payload-types.ts")
   }
