@@ -6,12 +6,17 @@ import { Container } from "@/components/shared/Container";
 import { clinic } from "@/data/clinic";
 import { homeContent } from "@/data/home";
 import { fadeScale, fadeUp } from "@/lib/motion";
+import type { PublicHomeContent } from "@/lib/cms/public-content";
 import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
 import { motion } from "framer-motion";
 import { CalendarCheck, MapPin, Phone, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 
-export function HeroSection() {
+type HeroSectionProps = {
+  content?: PublicHomeContent;
+};
+
+export function HeroSection({ content = homeContent }: HeroSectionProps) {
   return (
     <section
       id="inicio"
@@ -24,15 +29,15 @@ export function HeroSection() {
           variants={fadeUp}
         >
           <div className="flex flex-wrap gap-2">
-            {homeContent.hero.eyebrow.map((item) => (
+            {content.hero.eyebrow.map((item) => (
               <Badge key={item}>{item}</Badge>
             ))}
           </div>
           <h1 className="mt-7 max-w-4xl font-sora text-4xl font-semibold leading-[1.05] tracking-normal text-text sm:text-5xl lg:text-6xl">
-            {homeContent.hero.title}
+            {content.hero.title}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-            {homeContent.hero.description}
+            {content.hero.description}
           </p>
           <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
             {["Evaluación individual", "Terapias complementarias", "Seguimiento humano"].map((item) => (
@@ -43,14 +48,14 @@ export function HeroSection() {
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
-              href={createWhatsAppLink(homeContent.hero.primaryCta.message)}
+              href={createWhatsAppLink(content.hero.primaryCta.message)}
               target="_blank"
               rel="noreferrer"
               size="lg"
               data-conversion-action="whatsapp_click"
               data-conversion-label="home_hero_whatsapp"
             >
-              {homeContent.hero.primaryCta.label}
+              {content.hero.primaryCta.label}
             </Button>
             <Button
               href={createCallLink(clinic.phoneSecondary)}
@@ -60,12 +65,12 @@ export function HeroSection() {
               data-conversion-label="home_hero_call"
             >
               <Phone className="mr-2 h-4 w-4" />
-              {homeContent.hero.secondaryCta.label}
+              {content.hero.secondaryCta.label}
             </Button>
           </div>
           <p className="mt-5 flex max-w-xl items-center gap-2 text-sm text-muted">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            {homeContent.hero.trustNote}
+            {content.hero.trustNote}
           </p>
         </motion.div>
 

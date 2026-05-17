@@ -13,24 +13,53 @@ import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { TrustBar } from "@/components/landing/TrustBar";
 import { VideoSection } from "@/components/landing/VideoSection";
 import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
+import {
+  getFeaturedFaqs,
+  getFeaturedTestimonials,
+  getPublicFaqs,
+  getPublicHomeContent,
+  getPublicPageMetadata,
+  getPublicServices,
+  getPublicTestimonials
+} from "@/lib/cms/public-content";
 
-export default function Home() {
+export const revalidate = 60;
+
+export async function generateMetadata() {
+  return getPublicPageMetadata("home", {
+    title: "Clínica de Medicina Natural y Tradicional en El Alto | Salud Intercultural",
+    description:
+      "Salud Intercultural es una clínica de medicina natural, tradicional e integrativa en El Alto. Atención personalizada, terapias complementarias y orientación integral.",
+    path: "/"
+  });
+}
+
+export default async function Home() {
+  const [home, services, testimonials, faqs] = await Promise.all([
+    getPublicHomeContent(),
+    getPublicServices(),
+    getPublicTestimonials(),
+    getPublicFaqs()
+  ]);
+
+  const homeData = home.data;
+
   return (
     <>
-      <SEOJsonLd />
+      <SEOJsonLd services={services.data} faqs={faqs.data} />
       <main>
-        <HeroSection />
+        <HeroSection content={homeData} />
         <TrustBar />
-        <HomeStatsSection />
+        <HomeStatsSection content={homeData} />
         <ProblemsSection />
-        <ServicesSection />
+        <ServicesSection content={homeData} services={services.data} />
         <AboutSection />
         <BenefitsSection />
-        <HomeEditableBlocksSection />
+        <HomeEditableBlocksSection content={homeData} />
         <ProcessSection />
-        <TestimonialsSection />
-        <VideoSection />
-        <FAQSection />
+        <TestimonialsSection testimonials={getFeaturedTestimonials(testimonials.data)} />
+        <VideoSection content={homeData} />
+        <FAQSection faqs={getFeaturedFaqs(faqs.data)} />
         <ContactSection />
         <FinalCTASection />
       </main>

@@ -6,30 +6,29 @@ import { Container } from "@/components/shared/Container";
 import { Icon } from "@/components/shared/Icon";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { services } from "@/data/services";
+import {
+  getFeaturedServices,
+  getPublicPageMetadata,
+  getPublicServices
+} from "@/lib/cms/public-content";
 import { createWhatsAppLink } from "@/lib/whatsapp";
-import { siteUrl } from "@/lib/seo";
 
-const activeServices = services.filter((service) => service.active);
-const featuredServices = activeServices.filter((service) => service.featured);
+export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: "Servicios de medicina natural e integrativa | Salud Intercultural",
-  description:
-    "Conoce los servicios principales de Salud Intercultural: consulta médica, sueroterapia, ozonoterapia, terapias complementarias y tratamientos naturales personalizados en El Alto.",
-  alternates: {
-    canonical: `${siteUrl}/servicios`
-  },
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  return getPublicPageMetadata("servicios", {
     title: "Servicios de medicina natural e integrativa | Salud Intercultural",
     description:
-      "Listado general de servicios de Salud Intercultural en El Alto, sin páginas individuales por tratamiento todavía.",
-    url: `${siteUrl}/servicios`,
-    type: "website"
-  }
-};
+      "Conoce los servicios principales de Salud Intercultural: consulta médica, sueroterapia, ozonoterapia, terapias complementarias y tratamientos naturales personalizados en El Alto.",
+    path: "/servicios"
+  });
+}
 
-export default function ServiciosPage() {
+export default async function ServiciosPage() {
+  const services = await getPublicServices();
+  const activeServices = services.data.filter((service) => service.active);
+  const featuredServices = getFeaturedServices(activeServices);
+
   return (
     <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
@@ -77,7 +76,7 @@ export default function ServiciosPage() {
             description="Selección principal para conversión. En el panel se podrá activar o desactivar qué servicios aparecen como destacados."
           />
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {featuredServices.map((service) => (
+            {featuredServices.length > 0 ? featuredServices.map((service) => (
               <PremiumCard key={service.slug} interactive className="overflow-hidden p-0">
                 <div className="relative aspect-[16/10]">
                   <Image
@@ -109,7 +108,12 @@ export default function ServiciosPage() {
                   </Button>
                 </div>
               </PremiumCard>
-            ))}
+            )) : (
+              <PremiumCard tone="empty" className="lg:col-span-3">
+                <p className="font-sora text-lg font-semibold text-text">No hay servicios destacados publicados.</p>
+                <p className="mt-2 text-sm leading-7 text-muted">Cuando se marque un servicio como destacado en el CMS aparecerá en esta sección.</p>
+              </PremiumCard>
+            )}
           </div>
         </Container>
       </section>
@@ -122,7 +126,7 @@ export default function ServiciosPage() {
             description="Listado administrable preparado para Payload CMS. Los servicios inactivos no se muestran públicamente."
           />
           <div className="mt-12 grid gap-6 md:grid-cols-2">
-            {activeServices.map((service) => (
+            {activeServices.length > 0 ? activeServices.map((service) => (
               <PremiumCard key={service.slug} className="grid gap-5 lg:grid-cols-[13rem_1fr]">
                 <div className="relative min-h-56 overflow-hidden rounded-[1.5rem] bg-surface-soft lg:min-h-full">
                   <Image
@@ -184,7 +188,12 @@ export default function ServiciosPage() {
                   </Button>
                 </div>
               </PremiumCard>
-            ))}
+            )) : (
+              <PremiumCard tone="empty" className="md:col-span-2">
+                <p className="font-sora text-lg font-semibold text-text">No hay servicios publicados.</p>
+                <p className="mt-2 text-sm leading-7 text-muted">El sitio mantiene un fallback local cuando el CMS está vacío o no disponible.</p>
+              </PremiumCard>
+            )}
           </div>
         </Container>
       </section>

@@ -4,13 +4,17 @@ import { MessageCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { createContextualWhatsAppLink, createWhatsAppMessage } from "@/lib/whatsapp";
 
-export function WhatsAppFloatingButton() {
+type WhatsAppFloatingButtonProps = {
+  phone?: string;
+};
+
+export function WhatsAppFloatingButton({ phone }: WhatsAppFloatingButtonProps) {
   const pathname = usePathname();
   const message = createWhatsAppMessage({ pagePath: pathname });
 
   return (
     <a
-      href={createContextualWhatsAppLink({ pagePath: pathname })}
+      href={createContextualWhatsAppLink({ pagePath: pathname }, phone)}
       target="_blank"
       rel="noreferrer"
       aria-label="Escribir por WhatsApp"

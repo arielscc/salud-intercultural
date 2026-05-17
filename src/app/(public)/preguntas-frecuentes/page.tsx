@@ -6,40 +6,42 @@ import { Container } from "@/components/shared/Container";
 import { FaqFilterList } from "@/components/public/FaqFilterList";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { activeFaqs, faqCategories, faqs, featuredFaqs } from "@/data/faqs";
-import { siteUrl } from "@/lib/seo";
+import { faqCategories } from "@/data/faqs";
+import {
+  getFeaturedFaqs,
+  getPublicFaqs,
+  getPublicPageMetadata
+} from "@/lib/cms/public-content";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
-  title: "Preguntas frecuentes | Salud Intercultural",
-  description:
-    "Resuelve dudas frecuentes sobre citas, ubicación, WhatsApp, llamadas, tratamientos personalizados, costos y atención en Salud Intercultural.",
-  alternates: {
-    canonical: `${siteUrl}/preguntas-frecuentes`
-  },
-  openGraph: {
+export const revalidate = 60;
+
+export async function generateMetadata(): Promise<Metadata> {
+  return getPublicPageMetadata("preguntas-frecuentes", {
     title: "Preguntas frecuentes | Salud Intercultural",
     description:
-      "FAQ institucional con categorías, preguntas destacadas, contenido administrable y Schema FAQ para SEO.",
-    url: `${siteUrl}/preguntas-frecuentes`,
-    type: "website"
-  }
-};
+      "Resuelve dudas frecuentes sobre citas, ubicación, WhatsApp, llamadas, tratamientos personalizados, costos y atención en Salud Intercultural.",
+    path: "/preguntas-frecuentes"
+  });
+}
 
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: activeFaqs.map((faq) => ({
-    "@type": "Question",
-    name: faq.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: faq.answer
-    }
-  }))
-};
+export default async function PreguntasFrecuentesPage() {
+  const faqs = await getPublicFaqs();
+  const activeFaqs = faqs.data.filter((faq) => faq.active);
+  const featuredFaqs = getFeaturedFaqs(activeFaqs);
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: activeFaqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer
+      }
+    }))
+  };
 
-export default function PreguntasFrecuentesPage() {
   return (
     <>
       <script
@@ -149,7 +151,7 @@ export default function PreguntasFrecuentesPage() {
               <div>
                 <p className="font-sora text-2xl font-semibold">¿No encontraste tu duda?</p>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-white/76">
-                  Hay {faqs.length} preguntas configuradas en la estructura base y {activeFaqs.length} visibles. Si necesitas una respuesta personalizada, escríbenos o agenda una consulta.
+                  Hay {faqs.data.length} preguntas disponibles y {activeFaqs.length} visibles. Si necesitas una respuesta personalizada, escríbenos o agenda una consulta.
                 </p>
               </div>
               <Button

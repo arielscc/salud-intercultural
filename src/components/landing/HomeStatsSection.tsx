@@ -4,8 +4,13 @@ import { motion } from "framer-motion";
 import { Container } from "@/components/shared/Container";
 import { homeContent } from "@/data/home";
 import { fadeUp, staggerContainer } from "@/lib/motion";
+import type { PublicHomeContent } from "@/lib/cms/public-content";
 
-export function HomeStatsSection() {
+type HomeStatsSectionProps = {
+  content?: PublicHomeContent;
+};
+
+export function HomeStatsSection({ content = homeContent }: HomeStatsSectionProps) {
   return (
     <section className="bg-surface py-12">
       <Container>
@@ -16,7 +21,7 @@ export function HomeStatsSection() {
           viewport={{ once: true, amount: 0.25 }}
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
-          {homeContent.stats.map((stat) => (
+          {content.stats.map((stat) => (
             <motion.div
               key={stat.label}
               variants={fadeUp}

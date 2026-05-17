@@ -6,9 +6,16 @@ import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { homeContent } from "@/data/home";
+import type { PublicHomeContent } from "@/lib/cms/public-content";
 import { fadeUp, staggerContainer } from "@/lib/motion";
 
-export function HomeEditableBlocksSection() {
+type HomeEditableBlocksSectionProps = {
+  content?: PublicHomeContent;
+};
+
+export function HomeEditableBlocksSection({
+  content = homeContent
+}: HomeEditableBlocksSectionProps) {
   return (
     <section className="premium-gradient-soft py-20 sm:py-24">
       <Container>
@@ -24,7 +31,7 @@ export function HomeEditableBlocksSection() {
           viewport={{ once: true, amount: 0.2 }}
           className="mt-12 grid gap-5 md:grid-cols-3"
         >
-          {homeContent.editableBlocks.map((block) => (
+          {content.editableBlocks.map((block) => (
             <motion.div key={block.title} variants={fadeUp}>
               <PremiumCard className="h-full">
                 <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">

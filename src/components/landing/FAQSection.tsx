@@ -4,10 +4,15 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { featuredFaqs } from "@/data/faqs";
+import { featuredFaqs as fallbackFeaturedFaqs } from "@/data/faqs";
 import { cn } from "@/lib/cn";
+import type { FAQ } from "@/types/landing";
 
-export function FAQSection() {
+type FAQSectionProps = {
+  faqs?: FAQ[];
+};
+
+export function FAQSection({ faqs = fallbackFeaturedFaqs }: FAQSectionProps) {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
@@ -15,7 +20,7 @@ export function FAQSection() {
       <Container>
         <SectionHeader eyebrow="Preguntas frecuentes" title="Preguntas frecuentes" />
         <div className="mx-auto mt-12 max-w-4xl divide-y divide-border overflow-hidden rounded-[2rem] border border-border bg-surface shadow-soft">
-          {featuredFaqs.map((faq, index) => {
+          {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
             return (
               <div key={faq.id}>

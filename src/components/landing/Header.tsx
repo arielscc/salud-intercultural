@@ -7,10 +7,16 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/shared/Button";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { primaryPublicRoutes } from "@/config/routes";
+import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/cn";
+import type { SiteSettings } from "@/lib/cms/public-content";
 import { createContextualWhatsAppLink } from "@/lib/whatsapp";
 
-export function Header() {
+type HeaderProps = {
+  site?: SiteSettings;
+};
+
+export function Header({ site = siteConfig }: HeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -36,10 +42,10 @@ export function Header() {
           </span>
           <span className="min-w-0">
             <span className="block font-sora text-sm font-semibold leading-tight text-text sm:text-base">
-              Salud Intercultural
+              {site.name}
             </span>
             <span className="block max-w-[13rem] text-xs font-medium leading-snug text-muted sm:max-w-none">
-              Clínica de medicina natural y tradicional.
+              {site.slogan}
             </span>
           </span>
         </Link>
@@ -65,7 +71,7 @@ export function Header() {
             })}
           </nav>
           <Button
-            href={createContextualWhatsAppLink({ pagePath: pathname })}
+            href={createContextualWhatsAppLink({ pagePath: pathname }, site.conversion.whatsappPhone)}
             target="_blank"
             rel="noreferrer"
             size="sm"
@@ -113,7 +119,7 @@ export function Header() {
               );
             })}
             <Button
-              href={createContextualWhatsAppLink({ pagePath: pathname })}
+              href={createContextualWhatsAppLink({ pagePath: pathname }, site.conversion.whatsappPhone)}
               target="_blank"
               rel="noreferrer"
               className="mt-2 w-full"

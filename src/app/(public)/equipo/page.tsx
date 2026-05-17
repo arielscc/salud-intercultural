@@ -6,27 +6,24 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { activeTeamMembers, teamMembers } from "@/data/team";
-import { siteUrl } from "@/lib/seo";
+import { getPublicPageMetadata, getPublicTeamMembers } from "@/lib/cms/public-content";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
-  title: "Equipo médico | Salud Intercultural",
-  description:
-    "Conoce al equipo médico de Salud Intercultural: Dra. Cinthia Jessica Chipana Chipana, Dr. Jhonn Franco Chipana Chipana y perfiles futuros administrables desde el panel.",
-  alternates: {
-    canonical: `${siteUrl}/equipo`
-  },
-  openGraph: {
+export const revalidate = 60;
+
+export async function generateMetadata(): Promise<Metadata> {
+  return getPublicPageMetadata("equipo", {
     title: "Equipo médico | Salud Intercultural",
     description:
-      "Equipo profesional de Salud Intercultural preparado para gestión dinámica desde el panel administrativo.",
-    url: `${siteUrl}/equipo`,
-    type: "website"
-  }
-};
+      "Conoce al equipo médico de Salud Intercultural: perfiles profesionales activos administrables desde el panel.",
+    path: "/equipo"
+  });
+}
 
-export default function EquipoPage() {
+export default async function EquipoPage() {
+  const teamMembers = await getPublicTeamMembers();
+  const activeTeamMembers = teamMembers.data.filter((member) => member.active);
+
   return (
     <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
@@ -81,7 +78,7 @@ export default function EquipoPage() {
             description="Perfiles dinámicos basados en una estructura preparada para CMS y panel administrativo."
           />
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            {activeTeamMembers.map((member) => (
+            {activeTeamMembers.length > 0 ? activeTeamMembers.map((member) => (
               <PremiumCard key={member.id} interactive className="overflow-hidden p-0">
                 <div className="grid gap-0 md:grid-cols-[16rem_1fr]">
                   <div className="relative min-h-80 bg-surface-soft md:min-h-full">
@@ -137,7 +134,12 @@ export default function EquipoPage() {
                   </div>
                 </div>
               </PremiumCard>
-            ))}
+            )) : (
+              <PremiumCard tone="empty" className="lg:col-span-2">
+                <p className="font-sora text-lg font-semibold text-text">No hay perfiles activos publicados.</p>
+                <p className="mt-2 text-sm leading-7 text-muted">Activa integrantes en el CMS para mostrarlos en el sitio público.</p>
+              </PremiumCard>
+            )}
           </div>
         </Container>
       </section>
@@ -183,7 +185,7 @@ export default function EquipoPage() {
             <div>
               <p className="font-sora text-2xl font-semibold">Equipo administrable en V2</p>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-white/76">
-                Hay {teamMembers.length} perfiles configurados en la estructura base, de los cuales {activeTeamMembers.length} se muestran públicamente. La siguiente integración podrá reemplazar este fallback por contenido desde Payload CMS.
+                Hay {teamMembers.data.length} perfiles disponibles, de los cuales {activeTeamMembers.length} se muestran públicamente. El contenido se obtiene desde Payload CMS o desde fallback local controlado.
               </p>
             </div>
             <Button

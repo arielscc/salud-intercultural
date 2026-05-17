@@ -2,10 +2,14 @@ import { Phone } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { createCallLink } from "@/lib/whatsapp";
 
-export function CallFloatingButton() {
+type CallFloatingButtonProps = {
+  phone?: string;
+};
+
+export function CallFloatingButton({ phone = siteConfig.contact.phone }: CallFloatingButtonProps) {
   return (
     <a
-      href={createCallLink(siteConfig.contact.phone)}
+      href={createCallLink(phone)}
       aria-label="Llamar ahora"
       data-conversion-action="call_click"
       data-conversion-label="floating_call"

@@ -15,73 +15,70 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { siteConfig } from "@/config/site";
-import { clinic } from "@/data/clinic";
-import { siteUrl } from "@/lib/seo";
+import { getPublicPageMetadata, getSiteSettings } from "@/lib/cms/public-content";
 import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
-  title: "Contacto | Salud Intercultural",
-  description:
-    "Contacta a Salud Intercultural por WhatsApp, llamada o formulario. Encuentra dirección, horarios, mapa y canales oficiales en El Alto.",
-  alternates: {
-    canonical: `${siteUrl}/contacto`
-  },
-  openGraph: {
+export const revalidate = 60;
+
+export async function generateMetadata(): Promise<Metadata> {
+  return getPublicPageMetadata("contacto", {
     title: "Contacto | Salud Intercultural",
     description:
-      "Canales de contacto, formulario de leads, WhatsApp, llamada, dirección, horarios y mapa de Salud Intercultural.",
-    url: `${siteUrl}/contacto`,
-    type: "website"
-  }
-};
+      "Contacta a Salud Intercultural por WhatsApp, llamada o formulario. Encuentra dirección, horarios, mapa y canales oficiales en El Alto.",
+    path: "/contacto"
+  });
+}
 
-const contactChannels = [
-  {
-    label: "WhatsApp",
-    value: siteConfig.contact.whatsapp,
-    description: "Canal principal para agendar y resolver dudas rápidas.",
-    href: createWhatsAppLink("Hola, quiero agendar una valoración en Salud Intercultural."),
-    icon: MessageCircle,
-    external: true
-  },
-  {
-    label: "Llamada",
-    value: siteConfig.contact.phone,
-    description: "Contacto directo para consultas o coordinación de visita.",
-    href: createCallLink(siteConfig.contact.phone),
-    icon: Phone,
-    external: false
-  },
-  {
-    label: "Correo",
-    value: siteConfig.contact.email,
-    description: "Canal institucional para mensajes no urgentes.",
-    href: `mailto:${siteConfig.contact.email}`,
-    icon: Mail,
-    external: false
-  }
-] as const;
+export default async function ContactoPage() {
+  const siteSettings = await getSiteSettings();
+  const site = siteSettings.data;
+  const contactChannels = [
+    {
+      label: "WhatsApp",
+      value: site.contact.whatsapp,
+      description: "Canal principal para agendar y resolver dudas rápidas.",
+      href: createWhatsAppLink(
+        "Hola, quiero agendar una valoración en Salud Intercultural.",
+        site.conversion.whatsappPhone
+      ),
+      icon: MessageCircle,
+      external: true
+    },
+    {
+      label: "Llamada",
+      value: site.contact.phone,
+      description: "Contacto directo para consultas o coordinación de visita.",
+      href: createCallLink(site.contact.phone),
+      icon: Phone,
+      external: false
+    },
+    {
+      label: "Correo",
+      value: site.contact.email,
+      description: "Canal institucional para mensajes no urgentes.",
+      href: `mailto:${site.contact.email}`,
+      icon: Mail,
+      external: false
+    }
+  ] as const;
+  const locationDetails = [
+    {
+      label: "Dirección",
+      value: site.contact.address,
+      icon: MapPin
+    },
+    {
+      label: "Zona",
+      value: `${site.contact.zone}, ${site.contact.city}`,
+      icon: MapPin
+    },
+    {
+      label: "Horario",
+      value: site.contact.schedule,
+      icon: CalendarClock
+    }
+  ] as const;
 
-const locationDetails = [
-  {
-    label: "Dirección",
-    value: siteConfig.contact.address,
-    icon: MapPin
-  },
-  {
-    label: "Zona",
-    value: `${siteConfig.contact.zone}, ${siteConfig.contact.city}`,
-    icon: MapPin
-  },
-  {
-    label: "Horario",
-    value: siteConfig.contact.schedule,
-    icon: CalendarClock
-  }
-] as const;
-
-export default function ContactoPage() {
   return (
     <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
@@ -98,7 +95,10 @@ export default function ContactoPage() {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
-                href={createWhatsAppLink("Hola, quiero agendar una consulta en Salud Intercultural.")}
+                href={createWhatsAppLink(
+                  "Hola, quiero agendar una consulta en Salud Intercultural.",
+                  site.conversion.whatsappPhone
+                )}
                 target="_blank"
                 rel="noreferrer"
                 data-conversion-action="whatsapp_click"
@@ -108,7 +108,7 @@ export default function ContactoPage() {
                 Escribir por WhatsApp
               </Button>
               <Button
-                href={createCallLink(siteConfig.contact.phone)}
+                href={createCallLink(site.contact.phone)}
                 variant="secondary"
                 data-conversion-action="call_click"
                 data-conversion-label="contact_hero_call"
@@ -120,10 +120,10 @@ export default function ContactoPage() {
           </div>
           <PremiumCard tone="glass">
             <p className="font-sora text-2xl font-semibold text-primary-dark">
-              {clinic.shortName}
+              {site.name}
             </p>
             <p className="mt-3 text-sm leading-7 text-muted">
-              {siteConfig.contact.zone}, {siteConfig.contact.city}. Atención de lunes a sábado con coordinación previa recomendada.
+              {site.contact.zone}, {site.contact.city}. {site.contact.schedule}.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Badge>WhatsApp</Badge>

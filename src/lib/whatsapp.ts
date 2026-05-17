@@ -37,13 +37,19 @@ export function createWhatsAppMessage(context: WhatsAppMessageContext = {}) {
   return defaultWhatsAppMessage;
 }
 
-export function createWhatsAppLink(message: string = defaultWhatsAppMessage) {
-  const phone = normalizePhoneNumber(siteConfig.conversion.whatsappPhone);
+export function createWhatsAppLink(
+  message: string = defaultWhatsAppMessage,
+  phoneNumber: string = siteConfig.conversion.whatsappPhone
+) {
+  const phone = normalizePhoneNumber(phoneNumber);
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
-export function createContextualWhatsAppLink(context: WhatsAppMessageContext = {}) {
-  return createWhatsAppLink(createWhatsAppMessage(context));
+export function createContextualWhatsAppLink(
+  context: WhatsAppMessageContext = {},
+  phoneNumber?: string
+) {
+  return createWhatsAppLink(createWhatsAppMessage(context), phoneNumber);
 }
 
 export function createCallLink(phone: string = siteConfig.conversion.callPhone) {

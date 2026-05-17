@@ -5,25 +5,22 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { activeTestimonials, testimonials } from "@/data/testimonials";
-import { siteUrl } from "@/lib/seo";
+import {
+  getPublicPageMetadata,
+  getPublicTestimonials
+} from "@/lib/cms/public-content";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
-  title: "Testimonios de pacientes | Salud Intercultural",
-  description:
-    "Experiencias de pacientes de Salud Intercultural. Testimonios con identidad reservada, motivo de consulta, valoración opcional y estructura administrable desde panel.",
-  alternates: {
-    canonical: `${siteUrl}/testimonios`
-  },
-  openGraph: {
+export const revalidate = 60;
+
+export async function generateMetadata(): Promise<Metadata> {
+  return getPublicPageMetadata("testimonios", {
     title: "Testimonios de pacientes | Salud Intercultural",
     description:
-      "Página de prueba social y confianza con testimonios activos preparados para administración desde CMS.",
-    url: `${siteUrl}/testimonios`,
-    type: "website"
-  }
-};
+      "Experiencias de pacientes de Salud Intercultural con identidad reservada, motivo de consulta y valoración opcional.",
+    path: "/testimonios"
+  });
+}
 
 function formatDate(date?: string) {
   if (!date) {
@@ -36,7 +33,10 @@ function formatDate(date?: string) {
   }).format(new Date(`${date}T00:00:00`));
 }
 
-export default function TestimoniosPage() {
+export default async function TestimoniosPage() {
+  const testimonials = await getPublicTestimonials();
+  const activeTestimonials = testimonials.data.filter((testimonial) => testimonial.active);
+
   return (
     <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
@@ -91,7 +91,7 @@ export default function TestimoniosPage() {
             description="Cada testimonio tiene motivo de consulta, autor visible o iniciales, valoración opcional, fecha opcional, estado y orden de aparición."
           />
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {activeTestimonials.map((testimonial) => (
+            {activeTestimonials.length > 0 ? activeTestimonials.map((testimonial) => (
               <PremiumCard key={testimonial.id} interactive className="flex h-full flex-col">
                 <div className="flex items-start justify-between gap-4">
                   <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
@@ -135,7 +135,12 @@ export default function TestimoniosPage() {
                   ) : null}
                 </div>
               </PremiumCard>
-            ))}
+            )) : (
+              <PremiumCard tone="empty" className="lg:col-span-3">
+                <p className="font-sora text-lg font-semibold text-text">No hay testimonios publicados.</p>
+                <p className="mt-2 text-sm leading-7 text-muted">Cuando existan testimonios activos en el CMS aparecerán en esta sección.</p>
+              </PremiumCard>
+            )}
           </div>
         </Container>
       </section>
@@ -181,7 +186,7 @@ export default function TestimoniosPage() {
             <div>
               <p className="font-sora text-2xl font-semibold">Testimonios administrables en V2</p>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-white/76">
-                Hay {testimonials.length} testimonios configurados en la estructura base, de los cuales {activeTestimonials.length} se muestran públicamente. La integración con CMS podrá editar autor, motivo, rating, fecha, estado, destacado y orden.
+                Hay {testimonials.data.length} testimonios disponibles, de los cuales {activeTestimonials.length} se muestran públicamente. El CMS puede editar autor, motivo, rating, fecha, estado, destacado y orden.
               </p>
             </div>
             <Button href="/contacto" variant="light">

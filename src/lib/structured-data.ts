@@ -2,8 +2,17 @@ import { clinic } from "@/data/clinic";
 import { activeFaqs } from "@/data/faqs";
 import { services } from "@/data/services";
 import { siteUrl } from "@/lib/seo";
+import type { FAQ, Service } from "@/types/landing";
 
-export function getStructuredData() {
+type StructuredDataInput = {
+  faqs?: FAQ[];
+  services?: Service[];
+};
+
+export function getStructuredData(input: StructuredDataInput = {}) {
+  const publicFaqs = input.faqs ?? activeFaqs;
+  const publicServices = input.services ?? services;
+
   const organization = {
     "@context": "https://schema.org",
     "@type": ["MedicalBusiness", "LocalBusiness", "Organization"],
@@ -32,7 +41,7 @@ export function getStructuredData() {
   const faqPage = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: activeFaqs.map((faq) => ({
+    mainEntity: publicFaqs.map((faq) => ({
       "@type": "Question",
       name: faq.question,
       acceptedAnswer: {
@@ -45,7 +54,7 @@ export function getStructuredData() {
   const serviceGraph = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: services.map((service, index) => ({
+    itemListElement: publicServices.map((service, index) => ({
       "@type": "ListItem",
       position: index + 1,
       item: {

@@ -4,8 +4,13 @@ import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { homeContent } from "@/data/home";
 import { clinic } from "@/data/clinic";
+import type { PublicHomeContent } from "@/lib/cms/public-content";
 
-export function VideoSection() {
+type VideoSectionProps = {
+  content?: PublicHomeContent;
+};
+
+export function VideoSection({ content = homeContent }: VideoSectionProps) {
   return (
     <section className="py-24">
       <Container className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
@@ -21,13 +26,13 @@ export function VideoSection() {
             <span className="grid h-16 w-16 place-items-center rounded-full bg-white/18 backdrop-blur">
               <Play className="h-7 w-7 fill-white" />
             </span>
-            <p className="mt-5 font-sora text-2xl font-semibold">{homeContent.featuredVideo.title}</p>
+            <p className="mt-5 font-sora text-2xl font-semibold">{content.featuredVideo.title}</p>
             <p className="mt-3 max-w-lg text-sm leading-6 text-white/82">
-              {homeContent.featuredVideo.description}
+              {content.featuredVideo.description}
             </p>
             <Button href={clinic.social.tiktok} target="_blank" rel="noreferrer" variant="light" className="mt-6">
               <Video className="mr-2 h-4 w-4" />
-              {homeContent.featuredVideo.ctaLabel}
+              {content.featuredVideo.ctaLabel}
             </Button>
           </div>
         </div>

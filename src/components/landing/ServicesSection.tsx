@@ -7,13 +7,27 @@ import { Container } from "@/components/shared/Container";
 import { Icon } from "@/components/shared/Icon";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { homeContent } from "@/data/home";
-import { services } from "@/data/services";
+import { services as fallbackServices } from "@/data/services";
 import { createWhatsAppLink } from "@/lib/whatsapp";
+import type { PublicHomeContent } from "@/lib/cms/public-content";
+import type { Service } from "@/types/landing";
 
-export function ServicesSection() {
-  const featuredServices = homeContent.featuredServiceSlugs
-    .map((slug) => services.find((service) => service.slug === slug))
-    .filter((service): service is (typeof services)[number] => Boolean(service));
+type ServicesSectionProps = {
+  content?: PublicHomeContent;
+  services?: Service[];
+};
+
+export function ServicesSection({
+  content = homeContent,
+  services = fallbackServices
+}: ServicesSectionProps) {
+  const activeServices = services.filter((service) => service.active);
+  const featuredServices = content.featuredServiceSlugs
+    .map((slug) => activeServices.find((service) => service.slug === slug))
+    .filter((service): service is Service => Boolean(service));
+  const visibleServices = featuredServices.length
+    ? featuredServices
+    : activeServices.filter((service) => service.featured).slice(0, 6);
 
   return (
     <section id="servicios" className="bg-surface py-24">
@@ -30,7 +44,7 @@ export function ServicesSection() {
           viewport={{ once: true, amount: 0.15 }}
           className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
         >
-          {featuredServices.map((service) => (
+          {visibleServices.map((service) => (
             <AnimatedCard key={service.slug} className="flex min-h-[360px] flex-col">
               <div className="flex items-start justify-between gap-4">
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">

@@ -4,9 +4,16 @@ import { Quote, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { featuredTestimonials } from "@/data/testimonials";
+import { featuredTestimonials as fallbackFeaturedTestimonials } from "@/data/testimonials";
+import type { Testimonial } from "@/types/landing";
 
-export function TestimonialsSection() {
+type TestimonialsSectionProps = {
+  testimonials?: Testimonial[];
+};
+
+export function TestimonialsSection({
+  testimonials = fallbackFeaturedTestimonials
+}: TestimonialsSectionProps) {
   return (
     <section id="testimonios" className="bg-surface py-24">
       <Container>
@@ -16,7 +23,7 @@ export function TestimonialsSection() {
           description="Testimonios de muestra preparados para reemplazarse por experiencias reales autorizadas."
         />
         <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {featuredTestimonials.map((testimonial, index) => (
+          {testimonials.map((testimonial, index) => (
             <motion.article
               key={testimonial.id}
               initial={{ opacity: 0, y: 18 }}
