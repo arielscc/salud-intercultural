@@ -42,7 +42,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${inter.variable} ${sora.variable}`}>
+    <html
+      lang="es"
+      className={`${inter.variable} ${sora.variable}`}
+      data-theme="light"
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{

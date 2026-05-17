@@ -1,7 +1,7 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { cn } from "@/lib/cn";
 
 type Theme = "light" | "dark";
@@ -11,18 +11,32 @@ function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
 }
 
+function getStoredTheme(): Theme {
+  return window.localStorage.getItem("theme") === "dark" ? "dark" : "light";
+}
+
+function getServerTheme(): Theme {
+  return "light";
+}
+
+function subscribeToThemeChanges(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("themechange", callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("themechange", callback);
+  };
+}
+
 export function ThemeToggle({ className }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") {
-      return "light";
-    }
+  const theme = useSyncExternalStore(subscribeToThemeChanges, getStoredTheme, getServerTheme);
 
-    return window.localStorage.getItem("theme") === "dark" ? "dark" : "light";
-  });
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+  function updateTheme(nextTheme: Theme) {
+    window.localStorage.setItem("theme", nextTheme);
+    applyTheme(nextTheme);
+    window.dispatchEvent(new Event("themechange"));
+  }
 
   const nextTheme = theme === "light" ? "dark" : "light";
 
@@ -31,8 +45,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       type="button"
       aria-label={`Cambiar a modo ${nextTheme === "dark" ? "oscuro" : "claro"}`}
       onClick={() => {
-        setTheme(nextTheme);
-        window.localStorage.setItem("theme", nextTheme);
+        updateTheme(nextTheme);
       }}
       className={cn(
         "inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-text shadow-sm transition hover:-translate-y-0.5 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",

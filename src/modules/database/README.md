@@ -15,7 +15,7 @@ Shared database access layer for the V2 modular monolith.
 Create a local `.env` file with:
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=verify-full"
 ```
 
 For Neon on Vercel/serverless, prefer the pooled connection string.
