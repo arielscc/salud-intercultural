@@ -1,9 +1,23 @@
 import type { CollectionConfig } from "payload";
 import { adminOrEditor, isAdmin, isAuthenticated } from "../access.ts";
 
+const adminSessionSeconds = Number(process.env.ADMIN_SESSION_SECONDS ?? 60 * 60 * 8);
+const adminLockMinutes = Number(process.env.ADMIN_LOCK_MINUTES ?? 10);
+
 export const Users: CollectionConfig = {
   slug: "users",
-  auth: true,
+  auth: {
+    cookies: {
+      sameSite: "Lax",
+      secure: process.env.NODE_ENV === "production"
+    },
+    lockTime: adminLockMinutes * 60 * 1000,
+    maxLoginAttempts: 5,
+    tokenExpiration: Number.isFinite(adminSessionSeconds)
+      ? adminSessionSeconds
+      : 60 * 60 * 8,
+    useSessions: true
+  },
   admin: {
     group: "Administración",
     useAsTitle: "email"
