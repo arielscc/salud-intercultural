@@ -2,7 +2,7 @@ import { MapPin, MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { clinic } from "@/data/clinic";
-import { createWhatsAppLink } from "@/lib/whatsapp";
+import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
 
 export function FinalCTASection() {
   return (
@@ -16,11 +16,24 @@ export function FinalCTASection() {
             Escríbenos por WhatsApp y cuéntanos qué problema deseas consultar. Te orientaremos para agendar una valoración en la clínica.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Button href={createWhatsAppLink("Hola, quiero agendar una valoración.")} target="_blank" rel="noreferrer" variant="light">
+            <Button
+              href={createWhatsAppLink("Hola, quiero agendar una valoración.")}
+              target="_blank"
+              rel="noreferrer"
+              variant="light"
+              data-conversion-action="whatsapp_click"
+              data-conversion-label="final_cta_whatsapp"
+            >
               <MessageCircle className="mr-2 h-4 w-4" />
               Solicitar valoración
             </Button>
-            <Button href={`tel:${clinic.phoneSecondary}`} variant="secondary" className="border-white/35 bg-white/10 text-white hover:bg-white/18">
+            <Button
+              href={createCallLink(clinic.phoneSecondary)}
+              variant="secondary"
+              className="border-white/35 bg-white/10 text-white hover:bg-white/18"
+              data-conversion-action="call_click"
+              data-conversion-label="final_cta_call"
+            >
               <Phone className="mr-2 h-4 w-4" />
               Llamar ahora
             </Button>

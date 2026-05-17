@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/shared/Button";
+import { siteConfig } from "@/config/site";
 import { createLeadSchema, type CreateLeadInput } from "@/features/leads/schemas/lead.schema";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
@@ -168,12 +169,14 @@ export function ContactLeadForm({
             {feedbackMessage}
           </p>
           <Button
-            href={createWhatsAppLink("Hola, acabo de enviar una consulta desde el sitio web.")}
+            href={createWhatsAppLink(siteConfig.conversion.afterLeadWhatsAppMessage)}
             target="_blank"
             rel="noreferrer"
             variant="ghost"
             size="sm"
             className="mt-2 px-0 text-primary-dark hover:bg-transparent hover:text-primary"
+            data-conversion-action="whatsapp_click"
+            data-conversion-label="lead_success_whatsapp"
           >
             <MessageCircle className="mr-2 h-4 w-4" />
             Continuar por WhatsApp

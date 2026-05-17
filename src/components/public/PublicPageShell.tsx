@@ -3,7 +3,7 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { siteConfig } from "@/config/site";
-import { createWhatsAppLink } from "@/lib/whatsapp";
+import { createContextualWhatsAppLink } from "@/lib/whatsapp";
 
 type PublicPageShellProps = {
   eyebrow: string;
@@ -34,9 +34,11 @@ export function PublicPageShell({
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
-                href={createWhatsAppLink(siteConfig.primaryCta.message)}
+                href={createContextualWhatsAppLink({ pagePath: `/${eyebrow.toLowerCase()}` })}
                 target="_blank"
                 rel="noreferrer"
+                data-conversion-action="whatsapp_click"
+                data-conversion-label="page_shell_whatsapp"
               >
                 <MessageCircle className="mr-2 h-4 w-4" />
                 {siteConfig.primaryCta.label}

@@ -7,7 +7,7 @@ import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { MapSection } from "@/components/landing/MapSection";
 import { clinic } from "@/data/clinic";
-import { createWhatsAppLink } from "@/lib/whatsapp";
+import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
 
 export function ContactSection() {
   return (
@@ -30,11 +30,22 @@ export function ContactSection() {
                 <p>Correo: {clinic.email}</p>
               </div>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Button href={createWhatsAppLink("Hola, quiero agendar una valoración.")} target="_blank" rel="noreferrer">
+                <Button
+                  href={createWhatsAppLink("Hola, quiero agendar una valoración.")}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-conversion-action="whatsapp_click"
+                  data-conversion-label="home_contact_whatsapp"
+                >
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Escribir por WhatsApp
                 </Button>
-                <Button href={`tel:${clinic.phoneSecondary}`} variant="secondary">
+                <Button
+                  href={createCallLink(clinic.phoneSecondary)}
+                  variant="secondary"
+                  data-conversion-action="call_click"
+                  data-conversion-label="home_contact_call"
+                >
                   <Phone className="mr-2 h-4 w-4" />
                   Llamar ahora
                 </Button>

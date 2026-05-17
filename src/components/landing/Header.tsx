@@ -7,9 +7,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/shared/Button";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { primaryPublicRoutes } from "@/config/routes";
-import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/cn";
-import { createWhatsAppLink } from "@/lib/whatsapp";
+import { createContextualWhatsAppLink } from "@/lib/whatsapp";
 
 export function Header() {
   const pathname = usePathname();
@@ -65,7 +64,14 @@ export function Header() {
               );
             })}
           </nav>
-          <Button href={createWhatsAppLink(siteConfig.primaryCta.message)} target="_blank" rel="noreferrer" size="sm">
+          <Button
+            href={createContextualWhatsAppLink({ pagePath: pathname })}
+            target="_blank"
+            rel="noreferrer"
+            size="sm"
+            data-conversion-action="whatsapp_click"
+            data-conversion-label="header_whatsapp"
+          >
             <MessageCircle className="mr-2 h-4 w-4" />
             Agenda tu cita
           </Button>
@@ -107,10 +113,12 @@ export function Header() {
               );
             })}
             <Button
-              href={createWhatsAppLink(siteConfig.primaryCta.message)}
+              href={createContextualWhatsAppLink({ pagePath: pathname })}
               target="_blank"
               rel="noreferrer"
               className="mt-2 w-full"
+              data-conversion-action="whatsapp_click"
+              data-conversion-label="mobile_menu_whatsapp"
             >
               <MessageCircle className="mr-2 h-4 w-4" />
               Agenda tu cita

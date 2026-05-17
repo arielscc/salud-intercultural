@@ -6,7 +6,7 @@ import { Container } from "@/components/shared/Container";
 import { clinic } from "@/data/clinic";
 import { homeContent } from "@/data/home";
 import { fadeScale, fadeUp } from "@/lib/motion";
-import { createWhatsAppLink } from "@/lib/whatsapp";
+import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
 import { motion } from "framer-motion";
 import { CalendarCheck, MapPin, Phone, ShieldCheck } from "lucide-react";
 import Image from "next/image";
@@ -47,10 +47,18 @@ export function HeroSection() {
               target="_blank"
               rel="noreferrer"
               size="lg"
+              data-conversion-action="whatsapp_click"
+              data-conversion-label="home_hero_whatsapp"
             >
               {homeContent.hero.primaryCta.label}
             </Button>
-            <Button href={`tel:${clinic.phoneSecondary}`} variant="secondary" size="lg">
+            <Button
+              href={createCallLink(clinic.phoneSecondary)}
+              variant="secondary"
+              size="lg"
+              data-conversion-action="call_click"
+              data-conversion-label="home_hero_call"
+            >
               <Phone className="mr-2 h-4 w-4" />
               {homeContent.hero.secondaryCta.label}
             </Button>

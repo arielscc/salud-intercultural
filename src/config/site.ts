@@ -16,6 +16,13 @@ export const siteConfig = {
     schedule: clinic.schedule,
     mapsUrl: clinic.mapsUrl
   },
+  conversion: {
+    whatsappPhone: clinic.whatsapp,
+    callPhone: clinic.phoneSecondary,
+    schedule: clinic.schedule,
+    defaultWhatsAppMessage: "Hola, quiero agendar una valoración.",
+    afterLeadWhatsAppMessage: "Hola, acabo de enviar una consulta desde el sitio web."
+  },
   social: clinic.social,
   primaryCta: {
     label: "Agendar por WhatsApp",

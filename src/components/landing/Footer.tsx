@@ -7,7 +7,7 @@ import { services } from "@/data/services";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-primary-dark py-14 text-white">
+    <footer className="border-t border-border bg-primary-dark pb-[calc(7rem+env(safe-area-inset-bottom))] pt-14 text-white sm:py-14">
       <Container className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
         <div>
           <div className="flex items-center gap-3">

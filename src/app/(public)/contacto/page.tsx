@@ -18,7 +18,7 @@ import { SectionHeader } from "@/components/shared/SectionHeader";
 import { siteConfig } from "@/config/site";
 import { clinic } from "@/data/clinic";
 import { siteUrl } from "@/lib/seo";
-import { createWhatsAppLink } from "@/lib/whatsapp";
+import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "Contacto | Salud Intercultural",
@@ -49,7 +49,7 @@ const contactChannels = [
     label: "Llamada",
     value: siteConfig.contact.phone,
     description: "Contacto directo para consultas o coordinación de visita.",
-    href: `tel:${siteConfig.contact.phone}`,
+    href: createCallLink(siteConfig.contact.phone),
     icon: Phone,
     external: false
   },
@@ -101,11 +101,18 @@ export default function ContactoPage() {
                 href={createWhatsAppLink("Hola, quiero agendar una consulta en Salud Intercultural.")}
                 target="_blank"
                 rel="noreferrer"
+                data-conversion-action="whatsapp_click"
+                data-conversion-label="contact_hero_whatsapp"
               >
                 <MessageCircle className="mr-2 h-4 w-4" />
                 Escribir por WhatsApp
               </Button>
-              <Button href={`tel:${siteConfig.contact.phone}`} variant="secondary">
+              <Button
+                href={createCallLink(siteConfig.contact.phone)}
+                variant="secondary"
+                data-conversion-action="call_click"
+                data-conversion-label="contact_hero_call"
+              >
                 <Phone className="mr-2 h-4 w-4" />
                 Llamar ahora
               </Button>
