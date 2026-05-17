@@ -1,6 +1,8 @@
 import type { CollectionConfig } from "payload";
 import { adminOrEditor, isAdmin } from "../access.ts";
 
+const contactedStatuses = ["contacted", "scheduled", "closed"] as const;
+
 export const LeadSubmissions: CollectionConfig = {
   slug: "lead-submissions",
   labels: {
@@ -8,8 +10,29 @@ export const LeadSubmissions: CollectionConfig = {
     singular: "Lead"
   },
   admin: {
-    defaultColumns: ["name", "phone", "source", "status", "createdAt"],
+    components: {
+      beforeList: [
+        {
+          path: "@/payload/admin/LeadListIntro",
+          exportName: "LeadListIntro"
+        }
+      ],
+      edit: {
+        beforeDocumentControls: [
+          {
+            path: "@/payload/admin/LeadDetailActions",
+            exportName: "LeadDetailActions"
+          }
+        ]
+      }
+    },
+    defaultColumns: ["name", "phone", "source", "status", "contactedAt", "createdAt"],
     group: "Comercial",
+    listSearchableFields: ["name", "phone", "email"],
+    pagination: {
+      defaultLimit: 10,
+      limits: [10, 25, 50]
+    },
     useAsTitle: "phone"
   },
   access: {
@@ -18,6 +41,7 @@ export const LeadSubmissions: CollectionConfig = {
     read: adminOrEditor,
     update: adminOrEditor
   },
+  defaultSort: "-createdAt",
   fields: [
     {
       name: "name",
@@ -87,5 +111,23 @@ export const LeadSubmissions: CollectionConfig = {
       type: "date",
       label: "Fecha de contacto"
     }
-  ]
+  ],
+  hooks: {
+    beforeChange: [
+      ({ data, originalDoc, operation }) => {
+        if (
+          operation === "update" &&
+          contactedStatuses.includes(data.status) &&
+          data.status !== originalDoc?.status
+        ) {
+          return {
+            ...data,
+            contactedAt: new Date().toISOString()
+          };
+        }
+
+        return data;
+      }
+    ]
+  }
 };
