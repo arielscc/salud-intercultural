@@ -11,6 +11,20 @@ const dirname = path.dirname(filename);
 export default buildConfig({
   admin: {
     user: "users",
+    components: {
+      afterNavLinks: [
+        {
+          path: "@/payload/admin/AdminQuickLinks",
+          exportName: "AdminQuickLinks"
+        }
+      ],
+      beforeDashboard: [
+        {
+          path: "@/payload/admin/AdminDashboard",
+          exportName: "AdminDashboard"
+        }
+      ]
+    },
     importMap: {
       baseDir: path.resolve(dirname)
     }
