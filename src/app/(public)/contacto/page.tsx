@@ -211,7 +211,7 @@ export default function ContactoPage() {
                 Registro para seguimiento
               </h2>
               <p className="mt-3 text-sm leading-7 text-muted">
-                La información enviada queda preparada para el sistema de leads. En esta etapa se usa persistencia temporal de desarrollo y luego se conectará a PostgreSQL/CMS.
+                La información enviada se valida en cliente y servidor, queda registrada en PostgreSQL como lead nuevo e incluye fuente y página de origen.
               </p>
             </PremiumCard>
           </div>

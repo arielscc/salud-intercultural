@@ -10,6 +10,7 @@ export type CreateLeadRecordInput = {
   interest?: string;
   message?: string;
   source?: LeadSource;
+  status?: LeadStatus;
   pagePath?: string;
 };
 
@@ -23,6 +24,7 @@ export async function createLeadRecord(input: CreateLeadRecordInput) {
         interest: input.interest,
         message: input.message,
         source: input.source ?? "website",
+        status: input.status ?? "new",
         pagePath: input.pagePath
       }
     })

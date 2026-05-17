@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, CheckCircle2, Mail, MessageCircle } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/shared/Button";
@@ -12,13 +13,16 @@ type ContactLeadFormProps = {
   origin: "home" | "contact";
   title?: string;
   description?: string;
+  source?: CreateLeadInput["source"];
 };
 
 export function ContactLeadForm({
   origin,
   title = "Enviar consulta",
-  description = "Tu consulta se registrará para seguimiento y también puedes continuar por WhatsApp."
+  description = "Tu consulta se registrará para seguimiento y también puedes continuar por WhatsApp.",
+  source = "website"
 }: ContactLeadFormProps) {
+  const pathname = usePathname();
   const {
     register,
     handleSubmit,
@@ -27,35 +31,62 @@ export function ContactLeadForm({
   } = useForm<CreateLeadInput>({
     resolver: zodResolver(createLeadSchema),
     defaultValues: {
-      source: "website",
+      source,
+      status: "new",
+      pagePath: pathname,
       website: ""
     }
   });
   const [submitState, setSubmitState] = useState<"idle" | "loading" | "success" | "error">(
     "idle"
   );
+  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const onSubmit = async (data: CreateLeadInput) => {
     setSubmitState("loading");
+    setFeedbackMessage("");
 
-    const response = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...data,
-        source: "website",
-        website: data.website ?? ""
-      })
-    });
+    const payload = {
+      ...data,
+      source,
+      status: "new",
+      pagePath: pathname,
+      website: data.website ?? ""
+    };
+
+    let response: Response;
+
+    try {
+      response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch {
+      setSubmitState("error");
+      setFeedbackMessage(
+        "No pudimos registrar la consulta. Inténtalo nuevamente o escríbenos por WhatsApp."
+      );
+      return;
+    }
+
+    const result = (await response.json().catch(() => null)) as { message?: string } | null;
 
     if (!response.ok) {
       setSubmitState("error");
+      setFeedbackMessage(
+        result?.message ??
+          "No pudimos registrar la consulta. Inténtalo nuevamente o escríbenos por WhatsApp."
+      );
       return;
     }
 
     setSubmitState("success");
+    setFeedbackMessage(result?.message ?? "Consulta registrada correctamente.");
     reset({
-      source: "website",
+      source,
+      status: "new",
+      pagePath: pathname,
       website: ""
     });
   };
@@ -85,6 +116,14 @@ export function ContactLeadForm({
         </label>
 
         <label className="grid gap-2 text-sm font-semibold text-text">
+          Email opcional
+          <input {...register("email")} className="control-field" autoComplete="email" />
+          {errors.email ? (
+            <span className="text-xs text-accent">{errors.email.message}</span>
+          ) : null}
+        </label>
+
+        <label className="grid gap-2 text-sm font-semibold text-text">
           Motivo de consulta
           <input {...register("interest")} className="control-field" />
           {errors.interest ? (
@@ -100,7 +139,9 @@ export function ContactLeadForm({
           ) : null}
         </label>
 
-        <input {...register("source")} type="hidden" value="website" />
+        <input {...register("source")} type="hidden" value={source} />
+        <input {...register("status")} type="hidden" value="new" />
+        <input {...register("pagePath")} type="hidden" value={pathname} />
         <label className="hidden">
           Sitio web
           <input {...register("website")} tabIndex={-1} autoComplete="off" />
@@ -124,7 +165,7 @@ export function ContactLeadForm({
         <div className="mt-4 rounded-2xl border border-success/25 bg-success/10 p-4 text-sm leading-6 text-text">
           <p className="flex items-center gap-2 font-semibold">
             <CheckCircle2 className="h-4 w-4 text-success" />
-            Consulta registrada correctamente.
+            {feedbackMessage}
           </p>
           <Button
             href={createWhatsAppLink("Hola, acabo de enviar una consulta desde el sitio web.")}
@@ -143,7 +184,7 @@ export function ContactLeadForm({
       {submitState === "error" ? (
         <p className="mt-4 flex items-start gap-2 rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-sm font-semibold leading-6 text-text">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          No pudimos registrar la consulta. Inténtalo nuevamente o escríbenos por WhatsApp.
+          {feedbackMessage}
         </p>
       ) : null}
 
