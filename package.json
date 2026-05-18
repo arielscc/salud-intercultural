@@ -11,9 +11,12 @@
     "typecheck": "prisma generate && payload generate:types && next typegen && tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset",
     "db:seed": "tsx prisma/seed.ts",
+    "seed": "pnpm db:seed && pnpm payload:seed",
     "db:studio": "prisma studio",
     "payload": "payload",
+    "payload:seed": "tsx scripts/seed-payload.ts",
     "payload:generate-types": "payload generate:types"
   },
   "dependencies": {
