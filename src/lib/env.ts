@@ -48,10 +48,8 @@ export const privateEnvSchema = z.object({
   PAYLOAD_PUBLIC_SERVER_URL: optionalUrl,
   PAYLOAD_DB_SCHEMA: z.preprocess(emptyToUndefined, z.string().default("payload")),
   ADMIN_EMAIL: optionalEmail,
-  ADMIN_PASSWORD: z.preprocess(
-    emptyToUndefined,
-    z.string().min(12, "ADMIN_PASSWORD should be at least 12 characters.").optional()
-  ),
+  ADMIN_PASSWORD: optionalString,
+  ADMIN_RESET_PASSWORD_ON_SEED: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false")),
   ADMIN_SESSION_SECONDS: z.coerce.number().int().positive().default(28800),
   ADMIN_LOCK_MINUTES: z.coerce.number().int().positive().default(10),
   GOOGLE_SITE_VERIFICATION: optionalString,
