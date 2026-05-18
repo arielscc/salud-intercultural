@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Container } from "@/components/shared/Container";
 import { homeContent } from "@/data/home";
-import { fadeUp, staggerContainer } from "@/lib/motion";
+import { cardReveal, motionViewport, staggerContainer } from "@/lib/motion";
 import type { PublicHomeContent } from "@/lib/cms/public-content";
 
 type HomeStatsSectionProps = {
@@ -18,13 +18,13 @@ export function HomeStatsSection({ content = homeContent }: HomeStatsSectionProp
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.25 }}
+          viewport={motionViewport}
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           {content.stats.map((stat) => (
             <motion.div
               key={stat.label}
-              variants={fadeUp}
+              variants={cardReveal}
               className="rounded-[1.5rem] border border-border bg-background p-5 text-center shadow-soft"
             >
               <p className="font-sora text-3xl font-semibold text-primary-dark">

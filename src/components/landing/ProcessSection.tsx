@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { cardReveal, motionViewport, staggerContainer } from "@/lib/motion";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
 const steps = [
@@ -18,14 +19,17 @@ export function ProcessSection() {
     <section className="py-24">
       <Container>
         <SectionHeader eyebrow="Proceso" title="Tu camino hacia una atención más integral" />
-        <div className="mt-12 grid gap-5 lg:grid-cols-4">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={motionViewport}
+          className="mt-12 grid gap-5 lg:grid-cols-4"
+        >
           {steps.map(([title, text], index) => (
             <motion.div
               key={title}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45, delay: index * 0.06 }}
+              variants={cardReveal}
               className="relative rounded-3xl border border-border bg-surface p-6 shadow-soft"
             >
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-sm font-bold text-white">
@@ -35,7 +39,7 @@ export function ProcessSection() {
               <p className="mt-3 text-sm leading-7 text-muted">{text}</p>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
         <div className="mt-10 text-center">
           <Button href={createWhatsAppLink("Hola, quiero agendar una valoración.")} target="_blank" rel="noreferrer">
             Agendar una valoración

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { featuredTestimonials as fallbackFeaturedTestimonials } from "@/data/testimonials";
+import { cardReveal, motionViewport, staggerContainer } from "@/lib/motion";
 import type { Testimonial } from "@/types/landing";
 
 type TestimonialsSectionProps = {
@@ -22,20 +23,23 @@ export function TestimonialsSection({
           title="Pacientes que confiaron en nuestra atención"
           description="Testimonios de muestra preparados para reemplazarse por experiencias reales autorizadas."
         />
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {testimonials.map((testimonial, index) => (
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={motionViewport}
+          className="mt-12 grid gap-5 md:grid-cols-3"
+        >
+          {testimonials.map((testimonial) => (
             <motion.article
               key={testimonial.id}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45, delay: index * 0.08 }}
+              variants={cardReveal}
               className="rounded-3xl border border-border bg-background p-6 shadow-soft"
             >
-              <Quote className="h-8 w-8 text-primary" />
+              <Quote className="h-8 w-8 text-primary" aria-hidden="true" />
               <div className="mt-5 flex gap-1 text-accent" aria-label="Valoración positiva">
                 {Array.from({ length: testimonial.rating ?? 5 }).map((_, starIndex) => (
-                  <Star key={starIndex} className="h-4 w-4 fill-current" />
+                  <Star key={starIndex} className="h-4 w-4 fill-current" aria-hidden="true" />
                 ))}
               </div>
               <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary-dark">
@@ -45,7 +49,7 @@ export function TestimonialsSection({
               <p className="mt-5 text-sm font-semibold text-muted">— {testimonial.author}</p>
             </motion.article>
           ))}
-        </div>
+        </motion.div>
       </Container>
     </section>
   );

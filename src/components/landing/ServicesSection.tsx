@@ -2,13 +2,14 @@
 
 import { ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { AnimatedCard, staggerContainer } from "@/components/shared/AnimatedCard";
+import { AnimatedCard } from "@/components/shared/AnimatedCard";
 import { Container } from "@/components/shared/Container";
 import { Icon } from "@/components/shared/Icon";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { homeContent } from "@/data/home";
 import { services as fallbackServices } from "@/data/services";
 import { createWhatsAppLink } from "@/lib/whatsapp";
+import { motionViewport, staggerContainer } from "@/lib/motion";
 import type { PublicHomeContent } from "@/lib/cms/public-content";
 import type { Service } from "@/types/landing";
 
@@ -41,7 +42,7 @@ export function ServicesSection({
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.15 }}
+          viewport={motionViewport}
           className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
         >
           {visibleServices.map((service) => (
@@ -74,7 +75,7 @@ export function ServicesSection({
                 className="mt-auto inline-flex items-center gap-2 pt-6 text-sm font-semibold text-primary-dark hover:text-primary"
               >
                 Consultar por WhatsApp
-                <ArrowUpRight className="h-4 w-4" />
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               </a>
             </AnimatedCard>
           ))}

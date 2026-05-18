@@ -1,5 +1,3 @@
-"use client";
-
 import { MessageCircle, Phone } from "lucide-react";
 import { ContactLeadForm } from "@/components/public/ContactLeadForm";
 import { Button } from "@/components/shared/Button";

@@ -6,7 +6,7 @@ import { Container } from "@/components/shared/Container";
 import { clinic } from "@/data/clinic";
 import { homeContent } from "@/data/home";
 import { imagePlaceholder, publicImageSizes } from "@/lib/images";
-import { fadeScale, fadeUp } from "@/lib/motion";
+import { mediaReveal, sectionReveal } from "@/lib/motion";
 import type { PublicHomeContent } from "@/lib/cms/public-content";
 import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
 import { motion } from "framer-motion";
@@ -24,11 +24,7 @@ export function HeroSection({ content = homeContent }: HeroSectionProps) {
       className="public-section premium-hero-surface premium-grid pt-28"
     >
       <Container className="grid min-h-[760px] items-center gap-12 pb-20 pt-10 lg:grid-cols-[1.02fr_0.98fr]">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-        >
+        <motion.div initial="hidden" animate="visible" variants={sectionReveal}>
           <div className="flex flex-wrap gap-2">
             {content.hero.eyebrow.map((item) => (
               <Badge key={item}>{item}</Badge>
@@ -75,12 +71,7 @@ export function HeroSection({ content = homeContent }: HeroSectionProps) {
           </p>
         </motion.div>
 
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeScale}
-          className="relative"
-        >
+        <motion.div initial="hidden" animate="visible" variants={mediaReveal} className="relative">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-border bg-surface shadow-lift">
             <Image
               src="https://images.unsplash.com/photo-1550831107-1553da8c8464?auto=format&fit=crop&w=1200&q=85"

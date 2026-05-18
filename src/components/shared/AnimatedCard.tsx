@@ -2,9 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { fadeUp } from "@/lib/motion";
-
-export { fadeUp, staggerContainer } from "@/lib/motion";
+import { cardReveal } from "@/lib/motion";
 
 export function AnimatedCard({
   children,
@@ -15,7 +13,7 @@ export function AnimatedCard({
 }) {
   return (
     <motion.div
-      variants={fadeUp}
+      variants={cardReveal}
       className={cn(
         "premium-card premium-card-interactive",
         className

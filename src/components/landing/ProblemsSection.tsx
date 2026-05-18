@@ -2,12 +2,13 @@
 
 import { ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { AnimatedCard, staggerContainer } from "@/components/shared/AnimatedCard";
+import { AnimatedCard } from "@/components/shared/AnimatedCard";
 import { Container } from "@/components/shared/Container";
 import { Icon } from "@/components/shared/Icon";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { problems } from "@/data/problems";
 import { createWhatsAppLink } from "@/lib/whatsapp";
+import { motionViewport, staggerContainer } from "@/lib/motion";
 
 export function ProblemsSection() {
   return (
@@ -22,7 +23,7 @@ export function ProblemsSection() {
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.18 }}
+          viewport={motionViewport}
           className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3"
         >
           {problems.map((problem) => (
@@ -42,7 +43,7 @@ export function ProblemsSection() {
                 className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary-dark hover:text-primary"
               >
                 {problem.cta}
-                <ArrowUpRight className="h-4 w-4" />
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               </a>
             </AnimatedCard>
           ))}

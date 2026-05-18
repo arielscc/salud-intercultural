@@ -6,8 +6,8 @@ import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { homeContent } from "@/data/home";
+import { cardReveal, motionViewport, staggerContainer } from "@/lib/motion";
 import type { PublicHomeContent } from "@/lib/cms/public-content";
-import { fadeUp, staggerContainer } from "@/lib/motion";
 
 type HomeEditableBlocksSectionProps = {
   content?: PublicHomeContent;
@@ -28,14 +28,14 @@ export function HomeEditableBlocksSection({
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
+          viewport={motionViewport}
           className="mt-12 grid gap-5 md:grid-cols-3"
         >
           {content.editableBlocks.map((block) => (
-            <motion.div key={block.title} variants={fadeUp}>
+            <motion.div key={block.title} variants={cardReveal}>
               <PremiumCard className="h-full">
                 <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-                  <Settings2 className="h-5 w-5" />
+                  <Settings2 className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <h3 className="mt-5 font-sora text-xl font-semibold text-text">
                   {block.title}

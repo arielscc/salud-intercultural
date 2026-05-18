@@ -6,16 +6,17 @@ import { HandHeart, Leaf, Sparkles } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { imagePlaceholder, publicImageSizes } from "@/lib/images";
+import { mediaReveal, motionViewport, sectionReveal } from "@/lib/motion";
 
 export function AboutSection() {
   return (
     <section id="nosotros" className="overflow-hidden py-24">
       <Container className="grid items-center gap-12 lg:grid-cols-[0.95fr_1.05fr]">
         <motion.div
-          initial={{ opacity: 0, x: -24 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.55 }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={motionViewport}
+          variants={mediaReveal}
           className="relative"
         >
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-border bg-surface shadow-soft">
@@ -38,10 +39,10 @@ export function AboutSection() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.55 }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={motionViewport}
+          variants={sectionReveal}
         >
           <SectionHeader
             align="left"
