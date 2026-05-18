@@ -2,6 +2,7 @@
   "name": "salud-intercultural-landing",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@11.1.2",
   "scripts": {
     "dev": "next dev",
@@ -16,11 +17,13 @@
     "seed": "pnpm db:seed && pnpm payload:seed",
     "db:studio": "prisma studio",
     "payload": "payload",
-    "payload:seed": "tsx scripts/seed-payload.ts",
+    "payload:seed": "node --import tsx scripts/seed-payload.ts",
+    "payload:seed:staging": "DOTENV_CONFIG_PATH=.env.staging pnpm payload:seed",
     "payload:generate-types": "payload generate:types"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
+    "@next/env": "16.2.6",
     "@payloadcms/db-postgres": "^3.84.1",
     "@payloadcms/next": "^3.84.1",
     "@payloadcms/richtext-lexical": "^3.84.1",

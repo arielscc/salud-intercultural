@@ -11,7 +11,13 @@ const iconOptions = [
   "sparkles",
   "stethoscope",
   "shieldCheck",
+  "mapPin",
   "messageCircle",
+  "phone",
+  "users",
+  "calendarCheck",
+  "handHeart",
+  "brain",
   "apple"
 ].map((value) => ({ label: value, value }));
 

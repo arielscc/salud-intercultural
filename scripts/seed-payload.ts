@@ -112,6 +112,22 @@ function textRows(items: readonly string[]) {
   return items.map((text) => ({ text }));
 }
 
+function limitText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function seoData(seo: { title?: string; description?: string }) {
+  return {
+    ...seo,
+    title: seo.title ? limitText(seo.title, 70) : undefined,
+    description: seo.description ? limitText(seo.description, 170) : undefined
+  };
+}
+
 async function upsertBySlug<T extends Record<string, unknown>>(
   payload: PayloadClient,
   collection: "pages" | "services" | "team-members" | "testimonials",
@@ -163,10 +179,10 @@ async function upsertFaq(payload: PayloadClient, faq: (typeof faqs)[number]) {
     active: faq.active,
     featured: faq.featured,
     order: faq.order,
-    seo: {
+    seo: seoData({
       title: `${faq.question} | Salud Intercultural`,
       description: faq.answer
-    }
+    })
   };
 
   if (existing.docs[0]) {
@@ -188,6 +204,7 @@ async function upsertFaq(payload: PayloadClient, faq: (typeof faqs)[number]) {
 async function seedAdmin(payload: PayloadClient) {
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
+  const shouldResetPassword = process.env.ADMIN_RESET_PASSWORD_ON_SEED === "true";
 
   if (!email || !password) {
     return;
@@ -210,6 +227,7 @@ async function seedAdmin(payload: PayloadClient) {
       id: existing.docs[0].id,
       data: {
         name: "Administrador Salud Intercultural",
+        ...(shouldResetPassword ? { password } : {}),
         role: "admin"
       },
       overrideAccess: true
@@ -246,7 +264,7 @@ async function seedServices(payload: PayloadClient) {
       active: service.active,
       featured: service.featured,
       order: index + 1,
-      seo: service.seo
+      seo: seoData(service.seo)
     });
     seeded.push(doc as SeededServiceDoc);
   }
@@ -269,10 +287,10 @@ async function seedTeamMembers(payload: PayloadClient) {
       active: member.active,
       featured: member.featured,
       order: member.order,
-      seo: {
+      seo: seoData({
         title: `${member.name} | Salud Intercultural`,
         description: member.description
-      }
+      })
     });
   }
 }
@@ -290,10 +308,10 @@ async function seedTestimonials(payload: PayloadClient) {
       active: testimonial.active,
       featured: testimonial.featured,
       order: testimonial.order,
-      seo: {
+      seo: seoData({
         title: `${testimonial.treatmentType} | Salud Intercultural`,
         description: testimonial.quote
-      }
+      })
     });
   }
 }
@@ -319,7 +337,7 @@ async function seedPages(payload: PayloadClient) {
       active: true,
       featured: page.slug === "home",
       order: page.order,
-      seo: page.seo
+      seo: seoData(page.seo)
     });
   }
 }
@@ -342,8 +360,8 @@ async function seedGlobals(payload: PayloadClient, serviceDocs: SeededServiceDoc
       conversion: siteConfig.conversion,
       social: siteConfig.social,
       seo: {
-        title: seo.title,
-        description: seo.description,
+        title: limitText(seo.title, 70),
+        description: limitText(seo.description, 170),
         keywords: seo.keywords.map((keyword) => ({ keyword }))
       }
     },
@@ -366,8 +384,8 @@ async function seedGlobals(payload: PayloadClient, serviceDocs: SeededServiceDoc
       featuredVideo: homeContent.featuredVideo,
       editableBlocks: homeContent.editableBlocks.map((block) => ({ ...block })),
       seo: {
-        title: seo.title,
-        description: seo.description,
+        title: limitText(seo.title, 70),
+        description: limitText(seo.description, 170),
         keywords: seo.keywords.map((keyword) => ({ keyword }))
       }
     },
@@ -389,7 +407,11 @@ async function main() {
   console.log("Payload seed completed.");
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
