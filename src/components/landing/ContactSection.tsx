@@ -23,8 +23,8 @@ export function ContactSection() {
               <div className="mt-5 space-y-3 text-sm leading-7 text-muted">
                 <p>{clinic.zone}, {clinic.displayAddress}</p>
                 <p>{clinic.schedule}</p>
-                <p>WhatsApp: {clinic.whatsapp}</p>
-                <p>Teléfono secundario: {clinic.phoneSecondary}</p>
+                <p>Principal WhatsApp y llamadas: {clinic.whatsapp}</p>
+                <p>Alternativo WhatsApp y llamadas: {clinic.phoneSecondary}</p>
                 <p>Correo: {clinic.email}</p>
               </div>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -39,7 +39,7 @@ export function ContactSection() {
                   Escribir por WhatsApp
                 </Button>
                 <Button
-                  href={createCallLink(clinic.phoneSecondary)}
+                  href={createCallLink(clinic.whatsapp)}
                   variant="secondary"
                   data-conversion-action="call_click"
                   data-conversion-label="home_contact_call"

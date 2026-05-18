@@ -28,7 +28,7 @@ export function FinalCTASection() {
               Solicitar valoración
             </Button>
             <Button
-              href={createCallLink(clinic.phoneSecondary)}
+              href={createCallLink(clinic.whatsapp)}
               variant="secondary"
               className="border-white/35 bg-white/10 text-white hover:bg-white/18"
               data-conversion-action="call_click"

@@ -55,7 +55,7 @@ export function HeroSection({ content = homeContent }: HeroSectionProps) {
               {content.hero.primaryCta.label}
             </Button>
             <Button
-              href={createCallLink(clinic.phoneSecondary)}
+              href={createCallLink(clinic.whatsapp)}
               variant="secondary"
               size="lg"
               data-conversion-action="call_click"

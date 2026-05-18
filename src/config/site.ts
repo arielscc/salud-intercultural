@@ -8,7 +8,7 @@ export const siteConfig = {
     "Clínica de medicina natural, tradicional e integrativa en El Alto, con atención humana y orientación personalizada.",
   contact: {
     whatsapp: clinic.whatsapp,
-    phone: clinic.phoneSecondary,
+    phone: clinic.whatsapp,
     email: clinic.email,
     address: clinic.displayAddress,
     zone: clinic.zone,
@@ -18,7 +18,7 @@ export const siteConfig = {
   },
   conversion: {
     whatsappPhone: clinic.whatsapp,
-    callPhone: clinic.phoneSecondary,
+    callPhone: clinic.whatsapp,
     schedule: clinic.schedule,
     defaultWhatsAppMessage: "Hola, quiero agendar una valoración.",
     afterLeadWhatsAppMessage: "Hola, acabo de enviar una consulta desde el sitio web."
