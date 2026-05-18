@@ -5,6 +5,7 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { Icon } from "@/components/shared/Icon";
 import { PremiumCard } from "@/components/shared/PremiumCard";
+import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import {
   getFeaturedServices,
@@ -31,7 +32,16 @@ export default async function ServiciosPage() {
   const featuredServices = getFeaturedServices(activeServices);
 
   return (
-    <main className="pt-20">
+    <>
+      <SEOJsonLd
+        breadcrumbs={[
+          { name: "Inicio", path: "/" },
+          { name: "Servicios", path: "/servicios" }
+        ]}
+        includeFaqs={false}
+        services={activeServices}
+      />
+      <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
         <Container className="grid items-end gap-10 lg:grid-cols-[1fr_0.78fr]">
           <div>
@@ -223,6 +233,7 @@ export default async function ServiciosPage() {
           </PremiumCard>
         </Container>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

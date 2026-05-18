@@ -5,29 +5,31 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { Icon } from "@/components/shared/Icon";
 import { PremiumCard } from "@/components/shared/PremiumCard";
+import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { aboutContent } from "@/data/about";
 import { imagePlaceholder, publicImageSizes } from "@/lib/images";
 import { createWhatsAppLink } from "@/lib/whatsapp";
-import { siteUrl } from "@/lib/seo";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: aboutContent.seo.title,
   description: aboutContent.seo.description,
-  alternates: {
-    canonical: `${siteUrl}/nosotros`
-  },
-  openGraph: {
-    title: aboutContent.seo.title,
-    description: aboutContent.seo.description,
-    url: `${siteUrl}/nosotros`,
-    type: "website"
-  }
-};
+  path: "/nosotros"
+});
 
 export default function NosotrosPage() {
   return (
-    <main className="pt-20">
+    <>
+      <SEOJsonLd
+        breadcrumbs={[
+          { name: "Inicio", path: "/" },
+          { name: "Nosotros", path: "/nosotros" }
+        ]}
+        includeFaqs={false}
+        includeServices={false}
+      />
+      <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
         <Container className="grid items-center gap-10 lg:grid-cols-[1.02fr_0.98fr]">
           <div>
@@ -228,6 +230,7 @@ export default function NosotrosPage() {
           </PremiumCard>
         </Container>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

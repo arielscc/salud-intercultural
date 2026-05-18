@@ -4,29 +4,31 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { Icon } from "@/components/shared/Icon";
 import { PremiumCard } from "@/components/shared/PremiumCard";
+import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { problems } from "@/data/problems";
 import { treatmentsContent } from "@/data/treatments";
-import { siteUrl } from "@/lib/seo";
+import { createPageMetadata } from "@/lib/seo";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: treatmentsContent.seo.title,
   description: treatmentsContent.seo.description,
-  alternates: {
-    canonical: `${siteUrl}/tratamientos`
-  },
-  openGraph: {
-    title: treatmentsContent.seo.title,
-    description: treatmentsContent.seo.description,
-    url: `${siteUrl}/tratamientos`,
-    type: "website"
-  }
-};
+  path: "/tratamientos"
+});
 
 export default function TratamientosPage() {
   return (
-    <main className="pt-20">
+    <>
+      <SEOJsonLd
+        breadcrumbs={[
+          { name: "Inicio", path: "/" },
+          { name: "Tratamientos", path: "/tratamientos" }
+        ]}
+        includeFaqs={false}
+        includeServices={false}
+      />
+      <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
         <Container className="grid items-end gap-10 lg:grid-cols-[1fr_0.78fr]">
           <div>
@@ -185,6 +187,7 @@ export default function TratamientosPage() {
           </PremiumCard>
         </Container>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

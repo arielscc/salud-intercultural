@@ -4,26 +4,18 @@ import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
+import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { siteConfig } from "@/config/site";
-import { siteUrl } from "@/lib/seo";
+import { createPageMetadata } from "@/lib/seo";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Política de privacidad | Salud Intercultural",
   description:
     "Información sobre el tratamiento de datos personales enviados por formularios, WhatsApp, llamadas y otros canales de contacto de Salud Intercultural.",
-  alternates: {
-    canonical: `${siteUrl}/politica-privacidad`
-  },
-  openGraph: {
-    title: "Política de privacidad | Salud Intercultural",
-    description:
-      "Base legal mínima sobre privacidad, datos personales y canales de contacto de Salud Intercultural.",
-    url: `${siteUrl}/politica-privacidad`,
-    type: "website"
-  }
-};
+  path: "/politica-privacidad"
+});
 
 const privacySections = [
   {
@@ -54,7 +46,17 @@ const privacySections = [
 
 export default function PoliticaPrivacidadPage() {
   return (
-    <main className="pt-20">
+    <>
+      <SEOJsonLd
+        breadcrumbs={[
+          { name: "Inicio", path: "/" },
+          { name: "Politica de privacidad", path: "/politica-privacidad" }
+        ]}
+        includeBusiness={false}
+        includeFaqs={false}
+        includeServices={false}
+      />
+      <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
         <Container className="grid items-end gap-10 lg:grid-cols-[1fr_0.78fr]">
           <div>
@@ -142,6 +144,7 @@ export default function PoliticaPrivacidadPage() {
           </PremiumCard>
         </Container>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

@@ -1,24 +1,36 @@
 import { clinic } from "@/data/clinic";
 import { activeFaqs } from "@/data/faqs";
 import { services } from "@/data/services";
-import { siteUrl } from "@/lib/seo";
+import { absoluteUrl, siteName, siteUrl } from "@/lib/seo";
 import type { FAQ, Service } from "@/types/landing";
 
+type BreadcrumbItem = {
+  name: string;
+  path: string;
+};
+
 type StructuredDataInput = {
+  breadcrumbs?: BreadcrumbItem[];
   faqs?: FAQ[];
+  includeBusiness?: boolean;
+  includeFaqs?: boolean;
+  includeServices?: boolean;
   services?: Service[];
 };
 
 export function getStructuredData(input: StructuredDataInput = {}) {
   const publicFaqs = input.faqs ?? activeFaqs;
   const publicServices = input.services ?? services;
+  const breadcrumbs = input.breadcrumbs ?? [{ name: "Inicio", path: "/" }];
 
   const organization = {
     "@context": "https://schema.org",
-    "@type": ["MedicalBusiness", "LocalBusiness", "Organization"],
+    "@type": ["MedicalClinic", "MedicalBusiness", "LocalBusiness", "Organization"],
     name: "Clínica de Medicina Natural y Tradicional Salud Intercultural",
     alternateName: clinic.shortName,
     url: siteUrl,
+    logo: `${siteUrl}/og-salud-intercultural.jpg`,
+    image: `${siteUrl}/og-salud-intercultural.jpg`,
     telephone: clinic.whatsapp,
     email: clinic.email,
     address: {
@@ -35,7 +47,8 @@ export function getStructuredData(input: StructuredDataInput = {}) {
       "Medicina natural",
       "Medicina tradicional",
       "Terapias complementarias"
-    ]
+    ],
+    priceRange: "$$"
   };
 
   const faqPage = {
@@ -61,8 +74,9 @@ export function getStructuredData(input: StructuredDataInput = {}) {
         "@type": "Service",
         name: service.title,
         description: service.description,
+        url: absoluteUrl("/servicios"),
         provider: {
-          "@type": "MedicalBusiness",
+          "@type": "MedicalClinic",
           name: clinic.shortName
         },
         areaServed: "El Alto, La Paz, Bolivia"
@@ -70,18 +84,28 @@ export function getStructuredData(input: StructuredDataInput = {}) {
     }))
   };
 
-  const breadcrumbs = {
+  const breadcrumbList = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    itemListElement: [
-      {
+    itemListElement: breadcrumbs.map((item, index) => ({
         "@type": "ListItem",
-        position: 1,
-        name: "Inicio",
-        item: siteUrl
-      }
-    ]
+        position: index + 1,
+        name: item.name,
+        item: absoluteUrl(item.path)
+      }))
   };
 
-  return [organization, faqPage, serviceGraph, breadcrumbs];
+  return [
+    input.includeBusiness === false ? null : organization,
+    input.includeFaqs === false ? null : faqPage,
+    input.includeServices === false ? null : serviceGraph,
+    breadcrumbList,
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: siteName,
+      url: siteUrl,
+      inLanguage: "es-BO"
+    }
+  ].filter(Boolean);
 }

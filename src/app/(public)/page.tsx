@@ -46,7 +46,11 @@ export default async function Home() {
 
   return (
     <>
-      <SEOJsonLd services={services.data} faqs={faqs.data} />
+      <SEOJsonLd
+        breadcrumbs={[{ name: "Inicio", path: "/" }]}
+        services={services.data}
+        faqs={faqs.data}
+      />
       <main>
         <HeroSection content={homeData} />
         <TrustBar />

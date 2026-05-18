@@ -5,6 +5,7 @@ import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
+import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { getPublicPageMetadata, getPublicTeamMembers } from "@/lib/cms/public-content";
 import { imagePlaceholder, publicImageSizes } from "@/lib/images";
@@ -26,7 +27,16 @@ export default async function EquipoPage() {
   const activeTeamMembers = teamMembers.data.filter((member) => member.active);
 
   return (
-    <main className="pt-20">
+    <>
+      <SEOJsonLd
+        breadcrumbs={[
+          { name: "Inicio", path: "/" },
+          { name: "Equipo", path: "/equipo" }
+        ]}
+        includeFaqs={false}
+        includeServices={false}
+      />
+      <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
         <Container className="grid items-end gap-10 lg:grid-cols-[1fr_0.78fr]">
           <div>
@@ -202,6 +212,7 @@ export default async function EquipoPage() {
           </PremiumCard>
         </Container>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

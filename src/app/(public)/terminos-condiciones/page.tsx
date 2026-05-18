@@ -4,26 +4,18 @@ import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { PremiumCard } from "@/components/shared/PremiumCard";
+import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { siteConfig } from "@/config/site";
-import { siteUrl } from "@/lib/seo";
+import { createPageMetadata } from "@/lib/seo";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Términos y condiciones | Salud Intercultural",
   description:
     "Condiciones generales de uso del sitio de Salud Intercultural, alcance informativo del contenido publicado y límites de responsabilidad.",
-  alternates: {
-    canonical: `${siteUrl}/terminos-condiciones`
-  },
-  openGraph: {
-    title: "Términos y condiciones | Salud Intercultural",
-    description:
-      "Base legal mínima sobre uso del sitio, contenido informativo y atención profesional en Salud Intercultural.",
-    url: `${siteUrl}/terminos-condiciones`,
-    type: "website"
-  }
-};
+  path: "/terminos-condiciones"
+});
 
 const termsSections = [
   {
@@ -54,7 +46,17 @@ const termsSections = [
 
 export default function TerminosCondicionesPage() {
   return (
-    <main className="pt-20">
+    <>
+      <SEOJsonLd
+        breadcrumbs={[
+          { name: "Inicio", path: "/" },
+          { name: "Terminos y condiciones", path: "/terminos-condiciones" }
+        ]}
+        includeBusiness={false}
+        includeFaqs={false}
+        includeServices={false}
+      />
+      <main className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
         <Container className="grid items-end gap-10 lg:grid-cols-[1fr_0.78fr]">
           <div>
@@ -142,6 +144,7 @@ export default function TerminosCondicionesPage() {
           </PremiumCard>
         </Container>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

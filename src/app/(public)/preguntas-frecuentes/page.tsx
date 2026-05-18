@@ -5,6 +5,7 @@ import { Button } from "@/components/shared/Button";
 import { Container } from "@/components/shared/Container";
 import { FaqFilterList } from "@/components/public/FaqFilterList";
 import { PremiumCard } from "@/components/shared/PremiumCard";
+import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { faqCategories } from "@/data/faqs";
 import {
@@ -29,24 +30,15 @@ export default async function PreguntasFrecuentesPage() {
   const faqs = await getPublicFaqs();
   const activeFaqs = faqs.data.filter((faq) => faq.active);
   const featuredFaqs = getFeaturedFaqs(activeFaqs);
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: activeFaqs.map((faq) => ({
-      "@type": "Question",
-      name: faq.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: faq.answer
-      }
-    }))
-  };
-
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      <SEOJsonLd
+        breadcrumbs={[
+          { name: "Inicio", path: "/" },
+          { name: "Preguntas frecuentes", path: "/preguntas-frecuentes" }
+        ]}
+        faqs={activeFaqs}
+        includeServices={false}
       />
       <main className="pt-20">
         <section className="premium-hero-surface premium-grid py-20 sm:py-24">

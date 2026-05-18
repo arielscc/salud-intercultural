@@ -2,14 +2,32 @@ import { getStructuredData } from "@/lib/structured-data";
 import type { FAQ, Service } from "@/types/landing";
 
 type SEOJsonLdProps = {
+  breadcrumbs?: { name: string; path: string }[];
   faqs?: FAQ[];
+  includeBusiness?: boolean;
+  includeFaqs?: boolean;
+  includeServices?: boolean;
   services?: Service[];
 };
 
-export function SEOJsonLd({ faqs, services }: SEOJsonLdProps) {
+export function SEOJsonLd({
+  breadcrumbs,
+  faqs,
+  includeBusiness,
+  includeFaqs,
+  includeServices,
+  services
+}: SEOJsonLdProps) {
   return (
     <>
-      {getStructuredData({ faqs, services }).map((item, index) => (
+      {getStructuredData({
+        breadcrumbs,
+        faqs,
+        includeBusiness,
+        includeFaqs,
+        includeServices,
+        services
+      }).map((item, index) => (
         <script
           key={index}
           type="application/ld+json"

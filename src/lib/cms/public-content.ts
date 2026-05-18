@@ -6,7 +6,7 @@ import { homeContent as fallbackHomeContent } from "@/data/home";
 import { services as fallbackServices } from "@/data/services";
 import { teamMembers as fallbackTeamMembers } from "@/data/team";
 import { testimonials as fallbackTestimonials } from "@/data/testimonials";
-import { seo as fallbackSeo, siteUrl } from "@/lib/seo";
+import { createPageMetadata, seo as fallbackSeo } from "@/lib/seo";
 import { getImageAlt } from "@/lib/images";
 import type {
   FAQ,
@@ -425,21 +425,11 @@ export async function getPublicPageMetadata(
       });
       const title = home.seo?.title || fallback.title;
       const description = home.seo?.description || fallback.description;
-      const canonical = `${siteUrl}${fallback.path}`;
-
-      return {
+      return createPageMetadata({
         title,
         description,
-        alternates: {
-          canonical
-        },
-        openGraph: {
-          title,
-          description,
-          url: canonical,
-          type: "website"
-        }
-      };
+        path: fallback.path
+      });
     } catch {
       // Page metadata below keeps the existing fallback behavior if the global is unavailable.
     }
@@ -448,21 +438,11 @@ export async function getPublicPageMetadata(
   const page = await getPublicPage(slug);
   const title = page.data?.seo?.title || fallback.title;
   const description = page.data?.seo?.description || fallback.description;
-  const canonical = `${siteUrl}${fallback.path}`;
-
-  return {
+  return createPageMetadata({
     title,
     description,
-    alternates: {
-      canonical
-    },
-    openGraph: {
-      title,
-      description,
-      url: canonical,
-      type: "website"
-    }
-  };
+    path: fallback.path
+  });
 }
 
 export function getFeaturedServices(services: Service[], slugs?: readonly string[]) {
