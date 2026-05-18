@@ -55,12 +55,17 @@ const fallbackSettings: SiteSettings = fallbackSiteConfig;
 const defaultServiceIcon: IconName = "stethoscope";
 const defaultImage =
   "https://images.unsplash.com/photo-1550831107-1553da8c8464?auto=format&fit=crop&w=1000&q=85";
+const isProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "CMS content unavailable";
 }
 
 async function getPayloadClient() {
+  if (isProductionBuild && process.env.CMS_READS_DURING_BUILD !== "true") {
+    throw new Error("CMS reads skipped during production build.");
+  }
+
   return getPayload({ config });
 }
 

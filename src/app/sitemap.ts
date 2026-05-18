@@ -6,6 +6,13 @@ import { publicSeoRoutes, siteUrl } from "@/lib/seo";
 export const revalidate = 3600;
 
 async function getCmsPageRoutes() {
+  if (
+    process.env.NEXT_PHASE === "phase-production-build" &&
+    process.env.CMS_READS_DURING_BUILD !== "true"
+  ) {
+    return [];
+  }
+
   try {
     const payload = await getPayload({ config });
     const result = await payload.find({
