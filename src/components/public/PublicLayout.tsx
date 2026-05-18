@@ -1,8 +1,8 @@
 import { Footer } from "@/components/landing/Footer";
 import { Header } from "@/components/landing/Header";
 import { CallFloatingButton } from "@/components/shared/CallFloatingButton";
-import { ConversionTracker } from "@/components/shared/ConversionTracker";
 import { WhatsAppFloatingButton } from "@/components/shared/WhatsAppFloatingButton";
+import { AnalyticsPageView, AnalyticsScripts, ConversionTracker } from "@/features/analytics";
 import { getPublicServices, getSiteSettings } from "@/lib/cms/public-content";
 
 export async function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -14,6 +14,8 @@ export async function PublicLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <>
+      <AnalyticsScripts />
+      <AnalyticsPageView />
       <ConversionTracker />
       <Header site={site} />
       {children}

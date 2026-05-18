@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/shared/Button";
 import { siteConfig } from "@/config/site";
+import { trackLeadFormSubmit } from "@/features/analytics";
 import { createLeadSchema, type CreateLeadInput } from "@/features/leads/schemas/lead.schema";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
@@ -84,6 +85,11 @@ export function ContactLeadForm({
 
     setSubmitState("success");
     setFeedbackMessage(result?.message ?? "Consulta registrada correctamente.");
+    trackLeadFormSubmit({
+      formOrigin: origin,
+      pagePath: pathname,
+      source
+    });
     reset({
       source,
       status: "new",
