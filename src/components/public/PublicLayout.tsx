@@ -14,6 +14,9 @@ export async function PublicLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <>
+      <a href="#contenido-principal" className="skip-link">
+        Saltar al contenido principal
+      </a>
       <AnalyticsScripts />
       <AnalyticsPageView />
       <ConversionTracker />

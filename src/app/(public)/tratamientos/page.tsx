@@ -28,7 +28,7 @@ export default function TratamientosPage() {
         includeFaqs={false}
         includeServices={false}
       />
-      <main className="pt-20">
+      <main id="contenido-principal" tabIndex={-1} className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
         <Container className="grid items-end gap-10 lg:grid-cols-[1fr_0.78fr]">
           <div>

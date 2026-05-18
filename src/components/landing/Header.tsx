@@ -16,6 +16,8 @@ type HeaderProps = {
   site?: SiteSettings;
 };
 
+const mobileMenuId = "mobile-public-navigation";
+
 export function Header({ site = siteConfig }: HeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -28,6 +30,21 @@ export function Header({ site = siteConfig }: HeaderProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   return (
     <header
       className={cn(
@@ -36,7 +53,7 @@ export function Header({ site = siteConfig }: HeaderProps) {
       )}
     >
       <div className="grid h-20 w-full grid-cols-[1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8 xl:grid-cols-[minmax(18rem,1fr)_auto_minmax(18rem,1fr)]">
-        <Link href="/" className="flex min-w-0 items-center gap-3 justify-self-start" aria-label="Ir al inicio">
+        <Link href="/" className="focus-ring flex min-w-0 items-center gap-3 justify-self-start rounded-2xl" aria-label="Ir al inicio">
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-lg font-bold text-white shadow-soft">
             SI
           </span>
@@ -60,7 +77,7 @@ export function Header({ site = siteConfig }: HeaderProps) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "rounded-full px-3 py-2 text-sm font-semibold transition hover:bg-surface-soft hover:text-primary-dark",
+                    "focus-ring rounded-full px-3 py-2 text-sm font-semibold transition hover:bg-surface-soft hover:text-primary-dark",
                     active ? "bg-surface-soft text-primary-dark" : "text-muted"
                   )}
                   aria-current={active ? "page" : undefined}
@@ -87,18 +104,19 @@ export function Header({ site = siteConfig }: HeaderProps) {
           <button
             type="button"
             aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            aria-controls={mobileMenuId}
             aria-expanded={open}
             onClick={() => setOpen((value) => !value)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-text shadow-sm xl:hidden"
+            className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-text shadow-sm xl:hidden"
           >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {open ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
           </button>
           <ThemeToggle />
         </div>
       </div>
 
       {open ? (
-        <div className="border-t border-border bg-surface/95 px-4 py-4 shadow-soft backdrop-blur-xl xl:hidden">
+        <div id={mobileMenuId} className="border-t border-border bg-surface/95 px-4 py-4 shadow-soft backdrop-blur-xl xl:hidden">
           <nav className="mx-auto grid max-w-7xl gap-2" aria-label="Navegación móvil">
             {primaryPublicRoutes.map((item) => {
               const active = pathname === item.href;
@@ -109,7 +127,7 @@ export function Header({ site = siteConfig }: HeaderProps) {
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "rounded-2xl px-4 py-3 text-sm font-semibold hover:bg-surface-soft",
+                  "focus-ring rounded-2xl px-4 py-3 text-sm font-semibold hover:bg-surface-soft",
                   active ? "bg-surface-soft text-primary-dark" : "text-text"
                 )}
                 aria-current={active ? "page" : undefined}

@@ -74,6 +74,13 @@ body {
   background: rgb(var(--color-background));
   color: rgb(var(--color-text));
   font-family: var(--font-inter), system-ui, sans-serif;
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 640px) {
+  body {
+    padding-bottom: 0;
+  }
 }
 
 .font-sora {
@@ -175,6 +182,10 @@ a {
   .control-field {
     @apply min-h-12 rounded-2xl border border-border bg-surface px-4 text-sm text-text outline-none transition placeholder:text-muted/70 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-55;
   }
+
+  .skip-link {
+    @apply focus-ring fixed left-4 top-4 z-[100] -translate-y-24 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lift transition focus:translate-y-0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -185,5 +196,6 @@ a {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    transform: none !important;
   }
 }

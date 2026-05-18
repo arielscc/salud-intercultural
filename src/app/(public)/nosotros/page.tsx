@@ -29,7 +29,7 @@ export default function NosotrosPage() {
         includeFaqs={false}
         includeServices={false}
       />
-      <main className="pt-20">
+      <main id="contenido-principal" tabIndex={-1} className="pt-20">
       <section className="premium-hero-surface premium-grid py-20 sm:py-24">
         <Container className="grid items-center gap-10 lg:grid-cols-[1.02fr_0.98fr]">
           <div>

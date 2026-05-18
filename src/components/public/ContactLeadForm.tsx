@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, CheckCircle2, Mail, MessageCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/shared/Button";
 import { siteConfig } from "@/config/site";
@@ -25,6 +25,7 @@ export function ContactLeadForm({
   source = "website"
 }: ContactLeadFormProps) {
   const pathname = usePathname();
+  const formId = useId();
   const {
     register,
     handleSubmit,
@@ -103,46 +104,83 @@ export function ContactLeadForm({
       onSubmit={handleSubmit(onSubmit)}
       className="rounded-[2rem] border border-border bg-background p-6 shadow-soft"
       data-lead-origin={origin}
+      noValidate
     >
       <h3 className="font-sora text-2xl font-semibold text-text">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
 
       <div className="mt-6 grid gap-4">
-        <label className="grid gap-2 text-sm font-semibold text-text">
+        <label htmlFor={`${formId}-name`} className="grid gap-2 text-sm font-semibold text-text">
           Nombre
-          <input {...register("name")} className="control-field" autoComplete="name" />
-          {errors.name ? <span className="text-xs text-accent">{errors.name.message}</span> : null}
+          <input
+            {...register("name")}
+            id={`${formId}-name`}
+            className="control-field"
+            autoComplete="name"
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? `${formId}-name-error` : undefined}
+          />
+          {errors.name ? <span id={`${formId}-name-error`} className="text-xs text-accent">{errors.name.message}</span> : null}
         </label>
 
-        <label className="grid gap-2 text-sm font-semibold text-text">
+        <label htmlFor={`${formId}-phone`} className="grid gap-2 text-sm font-semibold text-text">
           Teléfono
-          <input {...register("phone")} className="control-field" autoComplete="tel" />
+          <input
+            {...register("phone")}
+            id={`${formId}-phone`}
+            className="control-field"
+            autoComplete="tel"
+            inputMode="tel"
+            aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? `${formId}-phone-error` : undefined}
+          />
           {errors.phone ? (
-            <span className="text-xs text-accent">{errors.phone.message}</span>
+            <span id={`${formId}-phone-error`} className="text-xs text-accent">{errors.phone.message}</span>
           ) : null}
         </label>
 
-        <label className="grid gap-2 text-sm font-semibold text-text">
+        <label htmlFor={`${formId}-email`} className="grid gap-2 text-sm font-semibold text-text">
           Email opcional
-          <input {...register("email")} className="control-field" autoComplete="email" />
+          <input
+            {...register("email")}
+            id={`${formId}-email`}
+            className="control-field"
+            autoComplete="email"
+            inputMode="email"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? `${formId}-email-error` : undefined}
+          />
           {errors.email ? (
-            <span className="text-xs text-accent">{errors.email.message}</span>
+            <span id={`${formId}-email-error`} className="text-xs text-accent">{errors.email.message}</span>
           ) : null}
         </label>
 
-        <label className="grid gap-2 text-sm font-semibold text-text">
+        <label htmlFor={`${formId}-interest`} className="grid gap-2 text-sm font-semibold text-text">
           Motivo de consulta
-          <input {...register("interest")} className="control-field" />
+          <input
+            {...register("interest")}
+            id={`${formId}-interest`}
+            className="control-field"
+            aria-invalid={Boolean(errors.interest)}
+            aria-describedby={errors.interest ? `${formId}-interest-error` : undefined}
+          />
           {errors.interest ? (
-            <span className="text-xs text-accent">{errors.interest.message}</span>
+            <span id={`${formId}-interest-error`} className="text-xs text-accent">{errors.interest.message}</span>
           ) : null}
         </label>
 
-        <label className="grid gap-2 text-sm font-semibold text-text">
+        <label htmlFor={`${formId}-message`} className="grid gap-2 text-sm font-semibold text-text">
           Mensaje
-          <textarea {...register("message")} rows={5} className="control-field py-3" />
+          <textarea
+            {...register("message")}
+            id={`${formId}-message`}
+            rows={5}
+            className="control-field py-3"
+            aria-invalid={Boolean(errors.message)}
+            aria-describedby={errors.message ? `${formId}-message-error` : undefined}
+          />
           {errors.message ? (
-            <span className="text-xs text-accent">{errors.message.message}</span>
+            <span id={`${formId}-message-error`} className="text-xs text-accent">{errors.message.message}</span>
           ) : null}
         </label>
 
@@ -158,20 +196,21 @@ export function ContactLeadForm({
       <button
         type="submit"
         disabled={submitState === "loading"}
+        aria-busy={submitState === "loading"}
         className="focus-ring mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5 hover:bg-primary-dark active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60"
       >
         {submitState === "loading" ? (
-          <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
         ) : (
-          <Mail className="mr-2 h-4 w-4" />
+          <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
         )}
         {submitState === "loading" ? "Registrando consulta..." : "Enviar consulta"}
       </button>
 
       {submitState === "success" ? (
-        <div className="mt-4 rounded-2xl border border-success/25 bg-success/10 p-4 text-sm leading-6 text-text">
+        <div className="mt-4 rounded-2xl border border-success/25 bg-success/10 p-4 text-sm leading-6 text-text" role="status" aria-live="polite">
           <p className="flex items-center gap-2 font-semibold">
-            <CheckCircle2 className="h-4 w-4 text-success" />
+            <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
             {feedbackMessage}
           </p>
           <Button
@@ -184,15 +223,15 @@ export function ContactLeadForm({
             data-conversion-action="whatsapp_click"
             data-conversion-label="lead_success_whatsapp"
           >
-            <MessageCircle className="mr-2 h-4 w-4" />
+            <MessageCircle className="mr-2 h-4 w-4" aria-hidden="true" />
             Continuar por WhatsApp
           </Button>
         </div>
       ) : null}
 
       {submitState === "error" ? (
-        <p className="mt-4 flex items-start gap-2 rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-sm font-semibold leading-6 text-text">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+        <p className="mt-4 flex items-start gap-2 rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-sm font-semibold leading-6 text-text" role="alert">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
           {feedbackMessage}
         </p>
       ) : null}

@@ -51,7 +51,7 @@ export default async function Home() {
         services={services.data}
         faqs={faqs.data}
       />
-      <main>
+      <main id="contenido-principal" tabIndex={-1}>
         <HeroSection content={homeData} />
         <TrustBar />
         <HomeStatsSection content={homeData} />
