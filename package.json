@@ -5,15 +5,16 @@
   "packageManager": "pnpm@11.1.2",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && payload generate:types && next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "prisma generate && next typegen && tsc --noEmit",
+    "typecheck": "prisma generate && payload generate:types && next typegen && tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "payload": "payload"
+    "payload": "payload",
+    "payload:generate-types": "payload generate:types"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
