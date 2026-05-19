@@ -1,3 +1,6 @@
+const googleMapsUrl =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_URL || "https://maps.app.goo.gl/Y6Uy1aftdg8346P28";
+
 export const clinic = {
   name: 'Clínica de Medicina Natural y Tradicional "Salud Intercultural"',
   shortName: "Salud Intercultural",
@@ -14,8 +17,7 @@ export const clinic = {
     tiktok: "https://www.tiktok.com/@clinicademedicinanatural",
     facebook: "https://www.facebook.com/ClinicaDeMedicinaNaturalYTradicional/"
   },
-  mapsUrl:
-    "https://www.google.com/maps/search/?api=1&query=Cruce%20Villa%20Adela%20Av.%20A%20calle%206%20Av.%20Bolivia%20El%20Alto%20Bolivia",
+  mapsUrl: googleMapsUrl,
   mapsEmbed:
-    "https://www.google.com/maps?q=Cruce%20Villa%20Adela%20Av.%20A%20calle%206%20Av.%20Bolivia%20El%20Alto%20Bolivia&output=embed"
+    "https://www.google.com/maps?q=-16.5337401,-68.1910863&z=17&output=embed"
 } as const;
