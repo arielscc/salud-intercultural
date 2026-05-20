@@ -11,8 +11,8 @@ Checklist:
 3. [x] Confirmar variables de staging en Vercel si usaras deploys de prueba.
 4. [x] Generar un `PAYLOAD_SECRET` distinto para produccion.
 5. [x] Crear o confirmar usuario admin inicial de Payload.
-6. [ ] Mantener Analytics, Meta Pixel y Search Console como opcionales hasta tener dominio final.
-7. [ ] Usar la URL de Vercel como `NEXT_PUBLIC_SITE_URL` mientras no exista dominio comprado.
+6. [x] Mantener Analytics, Meta Pixel y Search Console como opcionales hasta activarlos en produccion.
+7. [x] Reemplazar la URL publica de Vercel por el dominio final `https://saludintercultural.com`.
 
 Como hacerlo:
 
@@ -26,18 +26,18 @@ NEXT_PUBLIC_META_PIXEL_ID=""
 GOOGLE_SITE_VERIFICATION=""
 ```
 
-Para produccion, puedes dejarlos vacios hasta comprar el dominio final. Si decides activar alguno ahora, sigue las secciones 4, 5 y 6 de este documento.
+Para produccion, puedes dejarlos vacios hasta activar medicion y verificacion del dominio final. Si decides activar alguno ahora, sigue las secciones 4, 5 y 6 de este documento.
 
-### 7. Usar La URL De Vercel Mientras No Haya Dominio
+### 7. Usar El Dominio Final En Produccion
 
 En produccion usa:
 
 ```env
-NEXT_PUBLIC_SITE_URL="https://salud-intercultural.vercel.app"
-PAYLOAD_PUBLIC_SERVER_URL="https://salud-intercultural.vercel.app"
+NEXT_PUBLIC_SITE_URL="https://saludintercultural.com"
+PAYLOAD_PUBLIC_SERVER_URL="https://saludintercultural.com"
 ```
 
-En staging usa la URL real del deployment de la rama `staging`. Si la URL real no es esta, reemplazala:
+La URL de Vercel queda como fallback tecnico, no como URL canonica publica. En staging usa la URL real del deployment de la rama `staging`. Si la URL real no es esta, reemplazala:
 
 ```env
 NEXT_PUBLIC_SITE_URL="https://salud-intercultural-staging.vercel.app"
@@ -66,8 +66,8 @@ No hay tareas pendientes en esta seccion.
 Variables principales de produccion:
 
 ```env
-NEXT_PUBLIC_SITE_URL="https://salud-intercultural.vercel.app"
-PAYLOAD_PUBLIC_SERVER_URL="https://salud-intercultural.vercel.app"
+NEXT_PUBLIC_SITE_URL="https://saludintercultural.com"
+PAYLOAD_PUBLIC_SERVER_URL="https://saludintercultural.com"
 DATABASE_URL="postgresql://..."
 PAYLOAD_SECRET="..."
 PAYLOAD_DB_SCHEMA="payload"
@@ -175,7 +175,7 @@ Hazlo solo cuando staging ya este probado.
 ```env
 DATABASE_URL="postgresql://..."
 PAYLOAD_SECRET="secret-de-produccion"
-PAYLOAD_PUBLIC_SERVER_URL="https://salud-intercultural.vercel.app"
+PAYLOAD_PUBLIC_SERVER_URL="https://saludintercultural.com"
 PAYLOAD_DB_SCHEMA="payload"
 ADMIN_EMAIL="tu-email-admin"
 ADMIN_PASSWORD="clave-segura"
@@ -205,7 +205,7 @@ https://salud-intercultural-staging.vercel.app/admin
 1. Abre:
 
 ```txt
-https://salud-intercultural.vercel.app/admin
+https://saludintercultural.com/admin
 ```
 
 2. Entra con el usuario admin de produccion.
@@ -241,13 +241,13 @@ Como hacerlo:
 ### 3. Web Stream Creado
 
 1. Crea un Web Stream.
-2. Mientras no tengas dominio, usa:
+2. Usa el dominio final:
 
 ```txt
-https://salud-intercultural.vercel.app
+https://saludintercultural.com
 ```
 
-3. Cuando compres dominio, actualiza esta URL al dominio final.
+3. Mantén esta URL alineada con `NEXT_PUBLIC_SITE_URL`.
 
 ### 4. Measurement ID Copiado
 
@@ -327,19 +327,19 @@ Checklist:
 2. [x] Metodo de verificacion elegido.
 3. [x] Verificación completada mediante archivo HTML.
 4. [x] Sitemap enviado.
-5. [x] Dominio final verificado cuando exista.
+5. [ ] Dominio final verificado por DNS.
 
 Como hacerlo:
 
 ### 1. Propiedad Creada
 
-Mientras no tengas dominio, puedes crear propiedad `URL prefix` con:
+Crea una propiedad `Domain` para `saludintercultural.com`. Si necesitas una propiedad `URL prefix`, usa:
 
 ```txt
-https://salud-intercultural.vercel.app
+https://saludintercultural.com
 ```
 
-Si prefieres esperar al dominio final, deja esta tarea pendiente.
+La verificacion recomendada para propiedad `Domain` es por DNS en Cloudflare.
 
 ### 2. Metodo De Verificacion Elegido
 
@@ -363,12 +363,12 @@ No configures Search Console para staging.
 Cuando la propiedad este verificada, envia:
 
 ```txt
-https://salud-intercultural.vercel.app/sitemap.xml
+https://saludintercultural.com/sitemap.xml
 ```
 
-### 5. Dominio Final Verificado Cuando Exista
+### 5. Dominio Final Verificado Por DNS
 
-Cuando compres dominio:
+Con el dominio ya comprado:
 
 1. Crea propiedad tipo `Domain`.
 2. Verifica por DNS.
@@ -442,7 +442,7 @@ En mobile, WhatsApp debe abrir chat y llamada debe abrir el marcador telefonico.
 Abre:
 
 ```txt
-https://salud-intercultural.vercel.app
+https://saludintercultural.com
 ```
 
 Repite las mismas pruebas de staging.
@@ -496,16 +496,16 @@ Abre produccion y confirma que el CTA de mapa lleva a la ubicacion correcta.
 
 ## 9. Dominio Y DNS
 
-Puedes dejar esta parte para despues porque el sitio ya esta desplegado en Vercel.
+El dominio final comprado es `saludintercultural.com`. El proyecto queda preparado para usarlo como URL canonica de produccion.
 
-Checklist futuro:
+Checklist:
 
-1. [ ] Dominio comprado.
+1. [x] Dominio comprado.
 2. [ ] Dominio agregado en Vercel.
 3. [ ] DNS apuntando a Vercel.
 4. [ ] SSL activo.
-5. [ ] `NEXT_PUBLIC_SITE_URL` actualizado al dominio final.
-6. [ ] `PAYLOAD_PUBLIC_SERVER_URL` actualizado al dominio final.
+5. [x] `NEXT_PUBLIC_SITE_URL` documentado con el dominio final.
+6. [x] `PAYLOAD_PUBLIC_SERVER_URL` documentado con el dominio final.
 7. [ ] Search Console configurado para dominio final.
 8. [ ] Analytics y Meta actualizados o revisados.
 9. [ ] Sitemap reenviado.
@@ -514,26 +514,45 @@ Como hacerlo:
 
 ### 1. Dominio Comprado
 
-Compra el dominio cuando definas el nombre final.
+Comprado en Cloudflare:
+
+```txt
+saludintercultural.com
+```
 
 ### 2. Dominio Agregado En Vercel
 
-En Vercel, ve a `Project` > `Settings` > `Domains` y agrega el dominio.
+En Vercel, ve a `Project` > `Settings` > `Domains` y agrega:
+
+```txt
+saludintercultural.com
+www.saludintercultural.com
+```
+
+Configura `saludintercultural.com` como dominio primario. Si Vercel muestra valores DNS especificos para este proyecto, usa esos valores sobre los genericos.
 
 ### 3. DNS Apuntando A Vercel
 
-Sigue las instrucciones DNS de Vercel en tu proveedor de dominio.
+En Cloudflare, crea o ajusta estos registros DNS:
+
+```txt
+Tipo  Nombre  Valor
+A     @       76.76.21.21
+CNAME www     cname.vercel-dns-0.com
+```
+
+Deja ambos registros en modo `DNS only` mientras Vercel valida el dominio y emite SSL. Si ya existen registros `A`, `AAAA` o `CNAME` para `@` o `www`, elimina los duplicados que apunten a otro hosting antes de validar.
 
 ### 4. SSL Activo
 
-Espera a que Vercel active SSL.
+Espera a que Vercel active SSL para `saludintercultural.com` y `www.saludintercultural.com`. Luego confirma que ambos cargan con `https`.
 
 ### 5. `NEXT_PUBLIC_SITE_URL` Actualizado
 
 En Vercel `Production`, cambia:
 
 ```env
-NEXT_PUBLIC_SITE_URL="https://tudominio.com"
+NEXT_PUBLIC_SITE_URL="https://saludintercultural.com"
 ```
 
 ### 6. `PAYLOAD_PUBLIC_SERVER_URL` Actualizado
@@ -541,21 +560,35 @@ NEXT_PUBLIC_SITE_URL="https://tudominio.com"
 En Vercel `Production`, cambia:
 
 ```env
-PAYLOAD_PUBLIC_SERVER_URL="https://tudominio.com"
+PAYLOAD_PUBLIC_SERVER_URL="https://saludintercultural.com"
 ```
+
+Despues de cambiar variables, ejecuta un redeploy manual de Production.
 
 ### 7. Search Console Configurado
 
-Crea propiedad de dominio final y verifica por DNS.
+Crea una propiedad `Domain` para:
+
+```txt
+saludintercultural.com
+```
+
+Verifica por DNS en Cloudflare con el TXT que entregue Google. Cuando Google confirme propiedad, envia el sitemap del dominio final.
 
 ### 8. Analytics Y Meta Revisados
 
-Actualiza la URL del sitio en GA4 y Meta si corresponde.
+En GA4, actualiza el Web Stream a:
+
+```txt
+https://saludintercultural.com
+```
+
+En Meta Events Manager, revisa que el dominio del sitio sea `saludintercultural.com` si Meta solicita verificacion o configuracion de eventos.
 
 ### 9. Sitemap Reenviado
 
 Envia:
 
 ```txt
-https://tudominio.com/sitemap.xml
+https://saludintercultural.com/sitemap.xml
 ```

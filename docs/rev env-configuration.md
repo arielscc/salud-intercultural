@@ -101,21 +101,21 @@ git push origin staging
 
 ## Produccion En Vercel
 
-Mientras no tengas dominio comprado, usa la URL estable de Vercel como URL publica:
+El dominio final de produccion es:
+
+```env
+NEXT_PUBLIC_SITE_URL="https://saludintercultural.com"
+PAYLOAD_PUBLIC_SERVER_URL="https://saludintercultural.com"
+```
+
+La URL estable de Vercel queda solo como fallback tecnico para diagnostico o rollback:
 
 ```env
 NEXT_PUBLIC_SITE_URL="https://salud-intercultural.vercel.app"
 PAYLOAD_PUBLIC_SERVER_URL="https://salud-intercultural.vercel.app"
 ```
 
-Cuando compres el dominio, cambia ambas variables al dominio final:
-
-```env
-NEXT_PUBLIC_SITE_URL="https://tudominio.com"
-PAYLOAD_PUBLIC_SERVER_URL="https://tudominio.com"
-```
-
-Tambien debes revisar `robots.ts`, `sitemap.ts`, Search Console, Analytics y Meta Pixel despues de cambiar dominio.
+Despues de cambiar el dominio en Vercel, revisa `robots.ts`, `sitemap.ts`, Search Console, Analytics y Meta Pixel.
 
 Produccion se actualiza solo desde `main`. Cuando staging este aprobado:
 
