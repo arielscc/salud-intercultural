@@ -287,6 +287,26 @@ Este documento resume los cambios implementados hasta la Tarea 31 de la V2 de Sa
 - Render basico de paginas clave: Home y Contacto con contenido CMS mockeado.
 - Fixtures reutilizables en `tests/fixtures`.
 
+## Tarea 33: QA Funcional Del Sitio Publico
+
+- Se revisaron las rutas publicas obligatorias: `/`, `/nosotros`, `/servicios`, `/tratamientos`, `/equipo`, `/testimonios`, `/preguntas-frecuentes`, `/contacto`, `/politica-privacidad` y `/terminos-condiciones`.
+- Todas las rutas publicas respondieron `200` en servidor local.
+- Se validaron `robots.txt` y `sitemap.xml` con respuesta `200`.
+- Se revisaron titulos, H1, meta description, canonical y JSON-LD en las paginas publicas.
+- Se valido que cada pagina publica tenga un solo H1 principal.
+- Se revisaron enlaces internos generados desde header, footer, legales, CTAs y contenido; todos respondieron `200`.
+- Se revisaron CTAs de WhatsApp, llamada, contacto, servicios, FAQs y legales.
+- Se reviso el formulario de leads: payload invalido responde `400` con errores de campo y payload valido sin base de datos responde `500` controlado con mensaje generico.
+- Se revisaron estados empty existentes para servicios destacados, servicios activos, FAQs filtradas y contenido administrable.
+- Se revisaron patrones responsive mobile/tablet/desktop en header, menu movil, grids, formularios, botones flotantes y footer.
+- Se corrigio la capa CMS/fallback para evitar errores de consola al renderizar paginas publicas o sitemap cuando PostgreSQL/Payload no esta disponible en local.
+- Se reutilizo el fallback local sin inicializar Payload cuando la base de datos CMS no es alcanzable.
+- Se mantuvo sitemap con rutas estaticas cuando CMS no esta disponible.
+- Se validaron pruebas automatizadas con `pnpm test`.
+- Se valido lint con `pnpm lint`.
+- Se valido typecheck con `DATABASE_URL=postgresql://user:password@localhost:5432/clinica_codex pnpm typecheck`.
+- Se valido build de produccion con `DATABASE_URL=postgresql://user:password@localhost:5432/clinica_codex pnpm run build` fuera del sandbox.
+
 
 
 El archivo `docs/guia-implementacion-v2.md` existe como guia de referencia y no fue modificado al crear este registro.

@@ -1,6 +1,5 @@
-import config from "@payload-config";
 import type { MetadataRoute } from "next";
-import { getPayload } from "payload";
+import { getPayloadClient } from "@/lib/cms/public-content";
 import { publicSeoRoutes, siteUrl } from "@/lib/seo";
 
 export const revalidate = 3600;
@@ -14,7 +13,7 @@ async function getCmsPageRoutes() {
   }
 
   try {
-    const payload = await getPayload({ config });
+    const payload = await getPayloadClient();
     const result = await payload.find({
       collection: "pages",
       depth: 0,

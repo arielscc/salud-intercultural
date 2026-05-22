@@ -1,4 +1,5 @@
 import config from "@payload-config";
+import net from "node:net";
 import { getPayload } from "payload";
 import { siteConfig as fallbackSiteConfig } from "@/config/site";
 import { faqs as fallbackFaqs } from "@/data/faqs";
@@ -56,14 +57,61 @@ const defaultServiceIcon: IconName = "stethoscope";
 const defaultImage =
   "https://images.unsplash.com/photo-1550831107-1553da8c8464?auto=format&fit=crop&w=1000&q=85";
 const isProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
+let payloadDatabaseReachability: Promise<boolean> | undefined;
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "CMS content unavailable";
 }
 
-async function getPayloadClient() {
+async function isPayloadDatabaseReachable() {
+  if (payloadDatabaseReachability) {
+    return payloadDatabaseReachability;
+  }
+
+  payloadDatabaseReachability = new Promise((resolve) => {
+    const databaseUrl = process.env.DATABASE_URL;
+
+    if (!databaseUrl) {
+      resolve(false);
+      return;
+    }
+
+    let url: URL;
+
+    try {
+      url = new URL(databaseUrl);
+    } catch {
+      resolve(false);
+      return;
+    }
+
+    const socket = net.createConnection({
+      host: url.hostname,
+      port: Number(url.port || 5432)
+    });
+
+    const finish = (reachable: boolean) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(reachable);
+    };
+
+    socket.setTimeout(250);
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
+    socket.once("timeout", () => finish(false));
+  });
+
+  return payloadDatabaseReachability;
+}
+
+export async function getPayloadClient() {
   if (isProductionBuild && process.env.CMS_READS_DURING_BUILD !== "true") {
     throw new Error("CMS reads skipped during production build.");
+  }
+
+  if (!(await isPayloadDatabaseReachable())) {
+    throw new Error("CMS database unavailable.");
   }
 
   return getPayload({ config });
