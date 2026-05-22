@@ -47,6 +47,7 @@ export const privateEnvSchema = z.object({
   ),
   PAYLOAD_PUBLIC_SERVER_URL: optionalUrl,
   PAYLOAD_DB_SCHEMA: z.preprocess(emptyToUndefined, z.string().default("payload")),
+  BLOB_READ_WRITE_TOKEN: optionalString,
   ADMIN_EMAIL: optionalEmail,
   ADMIN_PASSWORD: optionalString,
   ADMIN_RESET_PASSWORD_ON_SEED: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false")),

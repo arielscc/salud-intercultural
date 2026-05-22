@@ -45,14 +45,14 @@ export const Media: CollectionConfig = {
       }
     ],
     staticDir: "public/media",
-    mimeTypes: ["image/*"]
+    mimeTypes: ["image/*", "video/*"]
   },
   fields: [
     {
       name: "alt",
       type: "text",
       admin: {
-        description: "Obligatorio para accesibilidad y SEO. Describe la imagen sin repetir el titulo."
+        description: "Obligatorio para accesibilidad y SEO. Describe la imagen o video sin repetir el titulo."
       },
       maxLength: 140,
       required: true,

@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { postgresAdapter } from "@payloadcms/db-postgres";
 import { buildConfig } from "payload";
+import { vercelBlobStorage } from "@payloadcms/storage-vercel-blob";
 import sharp from "sharp";
 import { collections } from "./src/payload/collections/index.ts";
 import { globals } from "./src/payload/globals/index.ts";
@@ -38,6 +39,15 @@ export default buildConfig({
     schemaName: process.env.PAYLOAD_DB_SCHEMA || "payload"
   }),
   globals,
+  plugins: [
+    vercelBlobStorage({
+      enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      collections: {
+        media: true
+      },
+      token: process.env.BLOB_READ_WRITE_TOKEN
+    })
+  ],
   secret: process.env.PAYLOAD_SECRET || "development-payload-secret",
   sharp,
   typescript: {
