@@ -1,5 +1,6 @@
 const googleMapsUrl =
-  process.env.NEXT_PUBLIC_GOOGLE_MAPS_URL || "https://maps.app.goo.gl/Y6Uy1aftdg8346P28";
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_URL ||
+  "https://maps.app.goo.gl/Y6Uy1aftdg8346P28";
 
 export const clinic = {
   name: 'Clínica de Medicina Natural y Tradicional "Salud Intercultural"',
@@ -15,9 +16,9 @@ export const clinic = {
   schedule: "Lunes a sábado — 09:00 a 18:00",
   social: {
     tiktok: "https://www.tiktok.com/@clinicademedicinanatural",
-    facebook: "https://www.facebook.com/ClinicaDeMedicinaNaturalYTradicional/"
+    facebook: "https://www.facebook.com/ClinicaDeMedicinaNaturalYTradicional/",
   },
   mapsUrl: googleMapsUrl,
   mapsEmbed:
-    "https://www.google.com/maps?q=-16.5337401,-68.1910863&z=17&output=embed"
+    "https://www.google.com/maps?q=-16.5337401,-68.1910863&z=17&output=embed",
 } as const;

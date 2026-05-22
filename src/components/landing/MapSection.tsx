@@ -1,6 +1,6 @@
-import { MapPin } from "lucide-react";
 import { Button } from "@/components/shared/Button";
 import { clinic } from "@/data/clinic";
+import { MapPin } from "lucide-react";
 
 export function MapSection() {
   return (
@@ -11,12 +11,20 @@ export function MapSection() {
             <MapPin className="h-5 w-5" />
           </span>
           <div>
-            <p className="font-sora font-semibold text-text">Cruce Villa Adela</p>
+            <p className="font-sora font-semibold text-text">
+              Cruce Villa Adela
+            </p>
             <p className="text-sm text-muted">El Alto, Bolivia</p>
           </div>
         </div>
-        <Button href={clinic.mapsUrl} target="_blank" rel="noreferrer" variant="secondary" className="hidden sm:inline-flex">
-          Abrir mapa
+        <Button
+          href={clinic.mapsUrl}
+          target="_blank"
+          rel="noreferrer"
+          variant="secondary"
+          className="hidden sm:inline-flex"
+        >
+          Abrir con Google Maps
         </Button>
       </div>
       <iframe
