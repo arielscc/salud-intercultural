@@ -278,4 +278,15 @@ Este documento resume los cambios implementados hasta la Tarea 31 de la V2 de Sa
 - Se simplifico `docs/env-services-checklist.md` para mostrar solo pendientes numerados con instrucciones por numero.
 - Se agrego `@next/env` como dependencia directa para que los scripts `tsx` puedan importar Payload correctamente al ejecutar seeds.
 
+## Tarea 32: Testing Base
+
+- Helpers criticos: WhatsApp/call links y paginacion.
+- Schemas Zod de leads: defaults, validaciones, campos opcionales y sanitizacion.
+- Formulario publico de leads: validacion cliente, submit exitoso, error de API y tracking.
+- Route handler `/api/leads`: payload invalido, honeypot, rate limit, persistencia exitosa y fallo de persistencia.
+- Render basico de paginas clave: Home y Contacto con contenido CMS mockeado.
+- Fixtures reutilizables en `tests/fixtures`.
+
+
+
 El archivo `docs/guia-implementacion-v2.md` existe como guia de referencia y no fue modificado al crear este registro.
