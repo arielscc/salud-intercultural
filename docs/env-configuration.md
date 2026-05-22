@@ -80,8 +80,8 @@ pnpm seed
 Usa staging para probar cambios antes de produccion. En Git sera la rama `staging`. En Vercel, este ambiente se implementa con un Preview Deployment generado desde la rama `staging`, pero en la documentacion y operacion del proyecto lo llamaremos solo `staging`.
 
 ```env
-NEXT_PUBLIC_SITE_URL="https://staging-salud-intercultural.vercel.app"
-PAYLOAD_PUBLIC_SERVER_URL="https://staging-salud-intercultural.vercel.app"
+NEXT_PUBLIC_SITE_URL="https://staging.saludintercultural.com"
+PAYLOAD_PUBLIC_SERVER_URL="https://staging.saludintercultural.com"
 CMS_READS_DURING_BUILD="false"
 ```
 
