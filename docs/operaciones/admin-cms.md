@@ -90,6 +90,8 @@ BLOB_READ_WRITE_TOKEN=""
 
 Las imagenes pueden usarse en campos CMS y se sirven desde Blob. Los videos se administran como media, pero no se renderizan con `next/image`.
 
+Mas detalle: [media e imagenes](./media.md).
+
 ## Fallbacks
 
 El sitio publico usa contenido CMS si esta disponible. Si Payload o PostgreSQL no estan disponibles, usa datos fallback desde `src/data`.
