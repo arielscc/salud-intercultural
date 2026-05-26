@@ -29,5 +29,5 @@ Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarr
 
 ## DocumentaciaIn relacionada
 
-- [Arquitectura V2](../architecture-v2.md)
+- [Arquitectura V2](../arquitectura/arquitectura-v2.md)
 - [Checklist dominio](../domain-platforms-setup-checklist.md)
