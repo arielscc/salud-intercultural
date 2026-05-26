@@ -315,7 +315,7 @@ Ubicacion:
 src/lib/env.ts
 src/config
 .env.example
-docs/operaciones/variables-entorno.md
+docs/operations/environment-variables.md
 ```
 
 Reglas:
@@ -328,9 +328,9 @@ Reglas:
 ## Documentacion
 
 ```txt
-docs/arquitectura/   referencias tecnicas
-docs/diseno/         sistema visual y referencias UI
-docs/operaciones/    procedimientos operativos y QA
+docs/architecture/   referencias tecnicas
+docs/design/         sistema visual y referencias UI
+docs/operations/    procedimientos operativos y QA
 docs/rev ...         guia/historial de implementacion
 ```
 

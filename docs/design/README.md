@@ -4,4 +4,4 @@ Referencias de diseno para mantener coherencia visual y de experiencia en el sit
 
 ## Guias
 
-1. [Sistema visual publico](./sistema-visual-publico.md)
+1. [Sistema visual publico](./public-visual-system.md)

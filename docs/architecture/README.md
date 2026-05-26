@@ -4,4 +4,4 @@ Referencias tecnicas vivas sobre la estructura del proyecto y sus decisiones pri
 
 ## Guias
 
-1. [Arquitectura V2](./arquitectura-v2.md)
+1. [Arquitectura V2](./architecture-v2.md)

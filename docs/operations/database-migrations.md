@@ -1,6 +1,6 @@
 # Base De Datos Y Migraciones
 
-El proyecto usa Prisma para datos operativos y Payload con PostgreSQL. La conexiaIn se controla con `DATABASE_URL`.
+El proyecto usa Prisma para datos operativos y Payload con PostgreSQL. La conexion se controla con `DATABASE_URL`.
 
 ## Generar cliente
 
@@ -16,7 +16,7 @@ Tambiaon se ejecuta dentro de `pnpm typecheck` y `pnpm run build`.
 pnpm db:migrate
 ```
 
-Usar saIlo contra bases locales o de desarrollo.
+Usar solo contra bases locales o de desarrollo.
 
 ## Migraciones remotas
 
@@ -24,7 +24,7 @@ Usar saIlo contra bases locales o de desarrollo.
 pnpm db:deploy
 ```
 
-Usar para staging y producciaIn. No usa migraciones interactivas.
+Usar para staging y produccion. No usa migraciones interactivas.
 
 ## Reset local
 
@@ -32,7 +32,7 @@ Usar para staging y producciaIn. No usa migraciones interactivas.
 pnpm db:reset
 ```
 
-No ejecutar contra staging o producciaIn.
+No ejecutar contra staging o produccion.
 
 ## Prisma Studio
 
@@ -40,7 +40,7 @@ No ejecutar contra staging o producciaIn.
 pnpm db:studio
 ```
 
-a til para inspecciaIn taocnica, no para operaciaIn diaria del CMS.
+Util para inspeccion tecnica, no para operacion diaria del CMS.
 
 ## Modelos Prisma principales
 
@@ -50,7 +50,7 @@ a til para inspecciaIn taocnica, no para operaciaIn diaria del CMS.
 - `TeamMember`: equipo.
 - `Testimonial`: testimonios.
 - `Faq`: preguntas frecuentes.
-- `SiteSetting`: configuraciaIn institucional base.
+- `SiteSetting`: configuracion institucional base.
 
 ## Payload
 

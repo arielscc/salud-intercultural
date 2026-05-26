@@ -3,11 +3,11 @@
 ## Requisitos
 
 - Node compatible con Next.js 16.
-- `pnpm` segaUn `packageManager` en `package.json`.
+- `pnpm` segun `packageManager` en `package.json`.
 - PostgreSQL local o una base Neon de desarrollo.
 - Variables locales en `.env`.
 
-## InstalaciaIn
+## Instalacion
 
 ```bash
 pnpm install
@@ -29,7 +29,7 @@ CMS_READS_DURING_BUILD="false"
 
 3. Dejar `BLOB_READ_WRITE_TOKEN` vacaAo en local si se quiere usar storage local en `public/media`.
 
-Maes detalle: [variables de entorno](./variables-entorno.md).
+Mas detalle: [variables de entorno](./environment-variables.md).
 
 ## Ejecutar
 
@@ -37,9 +37,9 @@ Maes detalle: [variables de entorno](./variables-entorno.md).
 pnpm dev
 ```
 
-Rutas aUtiles:
+Rutas utiles:
 
-- Sitio paUblico: `http://localhost:3000`
+- Sitio publico: `http://localhost:3000`
 - Admin Payload: `http://localhost:3000/admin`
 - API leads: `http://localhost:3000/api/leads`
 
@@ -52,11 +52,11 @@ pnpm typecheck
 pnpm run build
 ```
 
-Si `typecheck` o `build` fallan por `DATABASE_URL`, revisa que `.env` exista y apunte a una base PostgreSQL vaelida.
+Si `typecheck` o `build` fallan por `DATABASE_URL`, revisa que `.env` exista y apunte a una base PostgreSQL valida.
 
 ## Archivos principales
 
-- Rutas paUblicas: `src/app/(public)`
+- Rutas publicas: `src/app/(public)`
 - Admin y API Payload: `src/app/(payload)`
 - API leads: `src/app/api/leads/route.ts`
 - Payload config: `payload.config.ts`

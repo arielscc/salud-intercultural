@@ -48,7 +48,7 @@ pnpm typecheck
 pnpm run build
 ```
 
-Si `pnpm run build` falla con `DATABASE_URL`, revisar [errores comunes](./errores-comunes.md) y [variables de entorno](./variables-entorno.md).
+Si `pnpm run build` falla con `DATABASE_URL`, revisar [errores comunes](./troubleshooting.md) y [variables de entorno](./environment-variables.md).
 
 En staging o produccion:
 

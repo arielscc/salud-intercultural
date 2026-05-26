@@ -1,6 +1,6 @@
 # Leads
 
-Los leads llegan por el formulario paUblico y se guardan en Payload/DB mediante `/api/leads`.
+Los leads llegan por el formulario publico y se guardan en Payload/DB mediante `/api/leads`.
 
 ## Flujo
 
@@ -29,7 +29,7 @@ En `/admin`:
 1. Abrir grupo `Comercial`.
 2. Entrar a `Leads`.
 3. Buscar por nombre, telaofono o email.
-4. Usar acciones raepidas de WhatsApp o llamada en el detalle.
+4. Usar acciones rapidas de WhatsApp o llamada en el detalle.
 5. Actualizar estado y notas internas.
 
 ## API

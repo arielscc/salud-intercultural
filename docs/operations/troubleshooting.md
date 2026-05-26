@@ -8,7 +8,7 @@ SaAntoma:
 Cannot resolve environment variable: DATABASE_URL
 ```
 
-SoluciaIn:
+Solucion:
 
 1. Configurar `DATABASE_URL` en `.env` o en Vercel.
 2. Confirmar que use PostgreSQL.
@@ -29,7 +29,7 @@ Revisar:
 4. Conectividad a PostgreSQL.
 5. Logs de Vercel o consola local.
 
-El fallback estae implementado para que el sitio paUblico no se caiga si CMS no estae disponible.
+El fallback esta implementado para que el sitio publico no se caiga si CMS no esta disponible.
 
 ## Uploads De Media No Persisten
 
@@ -37,7 +37,7 @@ SaAntoma:
 
 - Imaegenes o videos subidos desde Payload no aparecen tras redeploy.
 
-SoluciaIn:
+Solucion:
 
 1. Configurar `BLOB_READ_WRITE_TOKEN` en Vercel.
 2. Hacer redeploy.
@@ -53,7 +53,7 @@ SaAntoma:
 Invalid src prop ... hostname is not configured
 ```
 
-SoluciaIn:
+Solucion:
 
 1. Confirmar que la URL pertenece a `*.public.blob.vercel-storage.com`.
 2. Revisar `next.config.mjs`.
@@ -79,8 +79,8 @@ Payload invaelido debe responder `400`; rate limit debe responder `429`.
 Revisar:
 
 1. Usuario existe en `users`.
-2. `PAYLOAD_SECRET` no cambiaI inesperadamente.
-3. Cookies seguras en producciaIn.
+2. `PAYLOAD_SECRET` no cambia inesperadamente.
+3. Cookies seguras en produccion.
 4. `ADMIN_SESSION_SECONDS` y `ADMIN_LOCK_MINUTES`.
 5. Si el usuario fue bloqueado por intentos fallidos.
 

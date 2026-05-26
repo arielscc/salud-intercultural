@@ -1,6 +1,6 @@
 # Sistema Visual Publico
 
-Referencia de diseno para la interfaz publica. Este documento no es una guia operativa; las validaciones de accesibilidad, performance y media viven en `docs/operaciones`.
+Referencia de diseno para la interfaz publica. Este documento no es una guia operativa; las validaciones de accesibilidad, performance y media viven en `docs/operations`.
 
 ## Direccion
 

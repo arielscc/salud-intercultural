@@ -4,13 +4,13 @@ El proyecto corre actualmente en Vercel.
 
 ## Ambientes
 
-- ProducciaIn: rama `main`.
+- Produccion: rama `main`.
 - Staging: Preview Deployment desde rama `staging`.
 - Desarrollo local: rama `develop`.
 
-Flujo completo de ramas: [flujo de ramas](./flujo-ramas.md).
+Flujo completo de ramas: [flujo de ramas](./branch-flow.md).
 
-## ConfiguraciaIn Vercel
+## Configuracion Vercel
 
 ```txt
 Framework preset: Next.js
@@ -21,7 +21,7 @@ Node.js version: 22.x
 
 ## Variables Requeridas
 
-Ver detalle en [variables de entorno](./variables-entorno.md).
+Ver detalle en [variables de entorno](./environment-variables.md).
 
 Claves para deploy:
 
@@ -60,14 +60,14 @@ Ejecutar contra la base del ambiente correspondiente.
 1. Merge de `develop` a `staging`.
 2. Push a remoto.
 3. Vercel genera Preview Deployment.
-4. Validar sitio paUblico, `/admin`, leads, CMS, media, sitemap y robots.
+4. Validar sitio publico, `/admin`, leads, CMS, media, sitemap y robots.
 
-## ProducciaIn
+## Produccion
 
 1. Confirmar staging aprobado.
 2. Merge de `staging` a `main`.
 3. Push a remoto.
-4. Vercel despliega producciaIn.
+4. Vercel despliega produccion.
 5. Revisar logs y rutas craAticas.
 
 ## Logs
@@ -81,7 +81,7 @@ Revisar en Vercel:
 
 ## Dominio
 
-ProducciaIn debe usar:
+Produccion debe usar:
 
 ```env
 NEXT_PUBLIC_SITE_URL="https://saludintercultural.com"

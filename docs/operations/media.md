@@ -74,5 +74,5 @@ Los valores compartidos viven en `src/lib/images.ts`.
 - `src/payload/fields.ts`
 - `next.config.mjs`
 - `payload.config.ts`
-- `docs/operaciones/variables-entorno.md`
-- `docs/operaciones/performance.md`
+- `docs/operations/environment-variables.md`
+- `docs/operations/performance.md`

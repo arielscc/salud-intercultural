@@ -61,7 +61,7 @@ El GraphQL Playground requiere sesion admin valida y redirige a `/admin/login` c
 
 ## Colecciones principales
 
-- `services`: servicios paUblicos.
+- `services`: servicios publicos.
 - `team-members`: equipo.
 - `testimonials`: testimonios.
 - `faqs`: preguntas frecuentes.
