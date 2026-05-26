@@ -2,7 +2,7 @@
 
 ## `DATABASE_URL` no configurado
 
-SaAntoma:
+Sintoma:
 
 ```txt
 Cannot resolve environment variable: DATABASE_URL
@@ -16,7 +16,7 @@ Solucion:
 
 ## Payload No Carga Contenido CMS
 
-SaAntoma:
+Sintoma:
 
 - El sitio muestra fallback local.
 - No aparece contenido administrado.
@@ -33,7 +33,7 @@ El fallback esta implementado para que el sitio publico no se caiga si CMS no es
 
 ## Uploads De Media No Persisten
 
-SaAntoma:
+Sintoma:
 
 - Imaegenes o videos subidos desde Payload no aparecen tras redeploy.
 
@@ -47,7 +47,7 @@ Sin `BLOB_READ_WRITE_TOKEN`, local usa `public/media`; Vercel necesita storage p
 
 ## `next/image` Rechaza Imagen De Blob
 
-SaAntoma:
+Sintoma:
 
 ```txt
 Invalid src prop ... hostname is not configured
@@ -61,7 +61,7 @@ Solucion:
 
 ## Leads Devuelven `500`
 
-SaAntoma:
+Sintoma:
 
 - Formulario vaelido responde error genaorico.
 

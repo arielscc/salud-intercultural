@@ -1,6 +1,15 @@
-# Operaciones V2
+# Operations
 
-Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarrolladores o personal tecnico.
+Guias operativas para correr, configurar, validar, publicar y mantener Salud Intercultural. Este directorio esta orientado a desarrolladores y personal tecnico responsable de ambientes, CMS, datos, deploy y QA.
+
+Usar este directorio para:
+
+- Desarrollo local, variables de entorno, base de datos, seeds y deploy.
+- Administracion de Payload CMS, media, leads, analytics y plataformas externas.
+- Checklists de accesibilidad, performance y troubleshooting.
+- Procedimientos repetibles que deben seguirse en V2 y servir como base para V3.
+
+No usar este directorio para roadmap, estado historico o decisiones de producto; eso vive en `docs/project`.
 
 ## Guias
 
@@ -30,5 +39,6 @@ Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarr
 
 ## Documentacion relacionada
 
-- [Arquitectura V2](../architecture/architecture-v2.md)
+- [Indice general de docs](../README.md)
+- [Arquitectura V2](../architecture/v2-architecture.md)
 - [Estado de implementacion V2](../project/v2-implementation-status.md)

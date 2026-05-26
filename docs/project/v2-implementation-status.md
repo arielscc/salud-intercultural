@@ -32,7 +32,7 @@ Estado por area:
 
 | Area | Estado | Evidencia |
 | --- | --- | --- |
-| Arquitectura modular | Implementado | `src/app`, `src/features`, `src/modules`, `src/lib`, `docs/architecture/architecture-v2.md` |
+| Arquitectura modular | Implementado | `src/app`, `src/features`, `src/modules`, `src/lib`, `docs/architecture/v2-architecture.md` |
 | Sistema visual publico | Implementado | `src/components/public`, `src/components/ui`, `docs/design/public-visual-system.md` |
 | Rutas publicas | Implementado | `src/app/(public)` |
 | Leads | Implementado | `src/features/leads`, `src/app/api/leads/route.ts`, `src/payload/collections/LeadSubmissions.ts` |
@@ -139,7 +139,7 @@ Disponibles en `package.json`:
 
 La documentacion vigente queda separada por responsabilidad:
 
-- Arquitectura: `docs/architecture/architecture-v2.md`
+- Arquitectura: `docs/architecture/v2-architecture.md`
 - Diseno visual: `docs/design/public-visual-system.md`
 - Operaciones: `docs/operations/README.md`
 - Plataformas externas: `docs/operations/external-platforms.md`

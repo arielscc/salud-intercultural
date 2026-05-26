@@ -8,7 +8,7 @@ El proyecto usa Prisma para datos operativos y Payload con PostgreSQL. La conexi
 pnpm db:generate
 ```
 
-Tambiaon se ejecuta dentro de `pnpm typecheck` y `pnpm run build`.
+Tambien se ejecuta dentro de `pnpm typecheck` y `pnpm run build`.
 
 ## Migraciones locales
 

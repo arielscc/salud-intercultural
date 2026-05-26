@@ -331,7 +331,7 @@ Reglas:
 docs/architecture/   referencias tecnicas
 docs/design/         sistema visual y referencias UI
 docs/operations/    procedimientos operativos y QA
-docs/rev ...         guia/historial de implementacion
+docs/project/       estado de version, backlog y preparacion V3
 ```
 
 ## Convenciones

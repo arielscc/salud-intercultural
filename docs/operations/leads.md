@@ -8,7 +8,7 @@ Los leads llegan por el formulario publico y se guardan en Payload/DB mediante `
 2. El submit envia `POST /api/leads`.
 3. El route handler valida con `createLeadSchema`.
 4. Se aplica honeypot con el campo `website`.
-5. Se aplica rate limit por IP y telaofono.
+5. Se aplica rate limit por IP y telefono.
 6. Se persiste con `createLeadRecord`.
 7. El lead aparece en `/admin` dentro de `lead-submissions`.
 
@@ -28,7 +28,7 @@ En `/admin`:
 
 1. Abrir grupo `Comercial`.
 2. Entrar a `Leads`.
-3. Buscar por nombre, telaofono o email.
+3. Buscar por nombre, telefono o email.
 4. Usar acciones rapidas de WhatsApp o llamada en el detalle.
 5. Actualizar estado y notas internas.
 
