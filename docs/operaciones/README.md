@@ -30,5 +30,4 @@ Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarr
 ## DocumentaciaIn relacionada
 
 - [Arquitectura V2](../architecture-v2.md)
-- [Seeds y reset local](../seeding-local.md)
 - [Checklist dominio](../domain-platforms-setup-checklist.md)
