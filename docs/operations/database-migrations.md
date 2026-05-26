@@ -54,7 +54,7 @@ Util para inspeccion tecnica, no para operacion diaria del CMS.
 
 ## Payload
 
-Payload usa PostgreSQL vaAa `@payloadcms/db-postgres` y el schema configurado en `PAYLOAD_DB_SCHEMA`.
+Payload usa PostgreSQL via `@payloadcms/db-postgres` y el schema configurado en `PAYLOAD_DB_SCHEMA`.
 
 Archivos relevantes:
 

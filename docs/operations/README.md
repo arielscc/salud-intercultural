@@ -14,9 +14,10 @@ Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarr
 8. [Analytics y eventos](./analytics.md)
 9. [Flujo de ramas](./branch-flow.md)
 10. [Deploy](./deploy.md)
-11. [Accesibilidad y UX responsive](./accessibility-responsive.md)
-12. [Performance y Core Web Vitals](./performance.md)
-13. [Errores comunes](./troubleshooting.md)
+11. [Plataformas externas](./external-platforms.md)
+12. [Accesibilidad y UX responsive](./accessibility-responsive.md)
+13. [Performance y Core Web Vitals](./performance.md)
+14. [Errores comunes](./troubleshooting.md)
 
 ## Flujo recomendado
 
@@ -30,4 +31,4 @@ Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarr
 ## Documentacion relacionada
 
 - [Arquitectura V2](../architecture/architecture-v2.md)
-- [Checklist dominio](../domain-platforms-setup-checklist.md)
+- [Estado de implementacion V2](../project/v2-implementation-status.md)

@@ -5,7 +5,7 @@ Los leads llegan por el formulario publico y se guardan en Payload/DB mediante `
 ## Flujo
 
 1. `ContactLeadForm` valida en cliente con React Hook Form y Zod.
-2. El submit envaAa `POST /api/leads`.
+2. El submit envia `POST /api/leads`.
 3. El route handler valida con `createLeadSchema`.
 4. Se aplica honeypot con el campo `website`.
 5. Se aplica rate limit por IP y telaofono.

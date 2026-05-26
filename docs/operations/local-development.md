@@ -27,7 +27,7 @@ PAYLOAD_DB_SCHEMA="payload"
 CMS_READS_DURING_BUILD="false"
 ```
 
-3. Dejar `BLOB_READ_WRITE_TOKEN` vacaAo en local si se quiere usar storage local en `public/media`.
+3. Dejar `BLOB_READ_WRITE_TOKEN` vacio en local si se quiere usar storage local en `public/media`.
 
 Mas detalle: [variables de entorno](./environment-variables.md).
 
