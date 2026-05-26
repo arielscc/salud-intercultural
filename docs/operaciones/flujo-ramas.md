@@ -1,6 +1,8 @@
 # Flujo De Ramas
 
-El proyecto usara tres niveles:
+Guia operativa para mover cambios entre desarrollo local, staging y produccion.
+
+## Resumen
 
 ```txt
 develop local -> staging -> main produccion
@@ -14,24 +16,9 @@ develop local -> staging -> main produccion
 | `staging` | Revision publicada antes de produccion. | Vercel Preview Deployment. |
 | `main` | Produccion. Solo recibe cambios aprobados desde staging. | Vercel Production. |
 
-## Preparacion Inicial
-
-Actualmente existe `main` y `staging`. Falta crear `develop`.
-
-Cuando no tengas cambios pendientes sin commit, crea `develop` desde `staging`:
-
-```bash
-git checkout staging
-git pull origin staging
-git checkout -b develop
-git push -u origin develop
-```
-
-Si prefieres que `develop` no exista en remoto, omite el ultimo comando. La recomendacion es subirla para tener respaldo.
-
 ## Trabajo Diario
 
-Trabaja siempre en `develop`:
+Trabajar normalmente en `develop`:
 
 ```bash
 git checkout develop
@@ -42,13 +29,14 @@ Antes de promover a staging:
 
 ```bash
 pnpm lint
+pnpm test
 pnpm typecheck
-pnpm build
+pnpm run build
 ```
 
 ## Promover A Staging
 
-Cuando local este bien:
+Cuando local este validado:
 
 ```bash
 git checkout staging
@@ -57,7 +45,7 @@ git merge develop
 git push origin staging
 ```
 
-Despues revisa el deployment de staging en Vercel. Aunque Vercel lo muestre como Preview, internamente lo tratamos como staging.
+Despues revisar el deployment de staging en Vercel. Aunque Vercel lo muestre como Preview, internamente se trata como staging.
 
 ## Promover A Produccion
 

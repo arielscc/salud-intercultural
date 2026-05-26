@@ -8,6 +8,8 @@ El proyecto corre actualmente en Vercel.
 - Staging: Preview Deployment desde rama `staging`.
 - Desarrollo local: rama `develop`.
 
+Flujo completo de ramas: [flujo de ramas](./flujo-ramas.md).
+
 ## ConfiguraciaIn Vercel
 
 ```txt

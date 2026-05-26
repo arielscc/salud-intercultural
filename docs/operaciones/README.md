@@ -12,10 +12,11 @@ Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarr
 6. [Media e imagenes](./media.md)
 7. [Leads](./leads.md)
 8. [Analytics y eventos](./analytics.md)
-9. [Deploy](./deploy.md)
-10. [Accesibilidad y UX responsive](./accesibilidad-responsive.md)
-11. [Performance y Core Web Vitals](./performance.md)
-12. [Errores comunes](./errores-comunes.md)
+9. [Flujo de ramas](./flujo-ramas.md)
+10. [Deploy](./deploy.md)
+11. [Accesibilidad y UX responsive](./accesibilidad-responsive.md)
+12. [Performance y Core Web Vitals](./performance.md)
+13. [Errores comunes](./errores-comunes.md)
 
 ## Flujo recomendado
 
