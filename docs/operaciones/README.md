@@ -11,8 +11,9 @@ Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarr
 5. [Admin y CMS](./admin-cms.md)
 6. [Leads](./leads.md)
 7. [Deploy](./deploy.md)
-8. [Performance y Core Web Vitals](./performance.md)
-9. [Errores comunes](./errores-comunes.md)
+8. [Accesibilidad y UX responsive](./accesibilidad-responsive.md)
+9. [Performance y Core Web Vitals](./performance.md)
+10. [Errores comunes](./errores-comunes.md)
 
 ## Flujo recomendado
 
@@ -20,7 +21,7 @@ Guias operativas para mantener Salud Intercultural V2. Estan orientadas a desarr
 2. Validar localmente con `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build`.
 3. Promover a `staging` para Preview Deployment.
 4. Validar admin, CMS, leads y sitio paUblico en staging.
-5. Revisar performance y Core Web Vitals en staging.
+5. Revisar accesibilidad, responsive y performance en staging.
 6. Promover a `main` para producciaIn.
 
 ## DocumentaciaIn relacionada
