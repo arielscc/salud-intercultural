@@ -19,14 +19,14 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Equipo | Payload | Payload Admin | Activo | `src/data/team.ts` queda como fallback/seed. |
 | Testimonios | Payload | Payload Admin | Activo | `src/data/testimonials.ts` queda como fallback/seed. |
 | FAQs | Payload | Payload Admin | Activo | `src/data/faqs.ts` queda como fallback/seed. |
-| Leads | Payload | Payload Admin | Activo | Collection `lead-submissions`. Prisma `Lead` es legacy. |
+| Leads | Payload | Payload Admin | Activo | Collection `lead-submissions`; sin modelo Prisma duplicado. |
 | Configuracion global | Payload | Payload Admin | Activo | Global `site-settings`; config estatica solo fallback. |
 | Home editable | Payload | Payload Admin | Activo | Global `home-content`; `src/data/home.ts` queda como fallback/seed. |
 | Media | Payload | Payload Admin | Activo | Storage local o Vercel Blob segun ambiente. |
 | Usuarios admin/editor | Payload | Payload Admin | Activo | Auth y permisos del CMS. |
 | Fallback publico | `src/data` | Codigo | Fallback | No debe editarse como contenido vivo del negocio. |
-| Pagina Nosotros | Pendiente | Pendiente | Decision requerida | Hoy usa `src/data/about.ts`; migrar a Payload o declararla estatica. |
-| Pagina Tratamientos | Pendiente | Pendiente | Decision requerida | Hoy usa `src/data/problems.ts` y `src/data/treatments.ts`. |
+| Pagina Nosotros | Payload | Payload Admin | Activo | `src/data/about.ts` queda como fallback/seed. |
+| Pagina Tratamientos | Payload | Payload Admin | Activo | `pages/tratamientos` y `treatment-topics`; `src/data/problems.ts` y `src/data/treatments.ts` quedan como fallback/seed. |
 | Citas futuras | Prisma | UI custom futura | Futuro | Reglas de disponibilidad, solapamientos y estados. |
 | Pagos/facturacion futura | Prisma | UI custom futura | Futuro | Requiere consistencia transaccional y auditoria. |
 | Inventario futuro | Prisma | UI custom futura | Futuro | Stock, movimientos y constraints. |
@@ -68,17 +68,56 @@ Usar Prisma cuando el dato:
 - Debe alimentar reportes o consultas agregadas no triviales.
 - No es contenido editorial.
 - No debe editarse como copia independiente desde Payload.
+- Necesita idempotencia, locks, estados tecnicos o consistencia entre varias tablas.
+- Requiere integrarse con jobs, conciliaciones o procesos internos que no pertenecen al CMS.
+
+No usar Prisma cuando el dato:
+
+- Es copy, SEO, bloques de paginas, media, FAQs, testimonios, servicios o contenido de marketing.
+- Se espera que el equipo lo edite desde el panel CMS existente.
+- Solo existe para renderizar una pagina publica y tolera fallback desde `src/data`.
+- Ya tiene una collection o global Payload como fuente de verdad.
+
+Si un dominio operativo necesita aparecer en Payload, Payload debe mostrar una vista derivada o enlace operacional. No debe mantener una segunda copia editable del mismo registro.
 
 Ejemplos futuros:
 
-- `Appointment`
-- `Payment`
-- `Invoice`
-- `InventoryItem`
-- `StockMovement`
-- `AuditEvent`
-- `IntegrationJob`
-- `WorkflowInstance`
+| Modelo futuro | Dominio | Motivo para Prisma | Nota de ownership |
+| --- | --- | --- | --- |
+| `Appointment` | Agenda/citas | Solapamientos, disponibilidad, estados y cambios transaccionales. | No crear collection Payload duplicada para operar citas. |
+| `Payment` | Pagos | Conciliacion, estados externos, idempotencia y registros financieros. | Payload puede enlazar o mostrar resumen derivado. |
+| `Invoice` | Facturacion | Numeracion, relaciones fuertes y constraints fiscales/operativas. | Mantener emision y estado en Prisma. |
+| `InventoryItem` | Inventario | Stock actual, SKU y constraints de unicidad. | El contenido descriptivo publico, si existe, va en Payload separado y derivado. |
+| `StockMovement` | Inventario | Movimientos append-only, auditoria y calculo de stock. | No editar movimientos como contenido CMS. |
+| `AuditEvent` | Auditoria | Eventos append-only, trazabilidad y consultas internas. | No exponer como collection editable. |
+| `IntegrationJob` | Integraciones | Retries, errores, idempotency keys y estados tecnicos. | Payload no debe ser cola de jobs. |
+| `WorkflowInstance` | Workflows | Transiciones, estados complejos y relaciones operativas. | La UI futura debe operar sobre Prisma. |
+
+## Decision Payload Vs Prisma
+
+Antes de crear una entidad nueva, aplicar este orden:
+
+1. Si es contenido editable o marketing, usar Payload.
+2. Si es fallback estatico o seed inicial, usar `src/data`.
+3. Si es transaccional, financiero, inventario, agenda, auditoria, integracion tecnica o workflow, usar Prisma.
+4. Si necesita aparecer en dos superficies, elegir una fuente de verdad y derivar la otra.
+5. Si la decision no es obvia, documentarla en este archivo antes de crear tablas, collections o seeds.
+
+Una nueva tabla Prisma debe declarar:
+
+- Dominio operativo.
+- Fuente de verdad.
+- UI/admin responsable.
+- Reglas de consistencia principales.
+- Relacion con Payload, si existe.
+- Migracion y estrategia de seed o datos iniciales.
+
+Una nueva collection Payload debe declarar:
+
+- Que no duplica una tabla Prisma editable.
+- Fallback en `src/data`, si aplica.
+- Ruta publica o pantalla admin que la consume.
+- Campos SEO/media si el contenido se publica.
 
 ## `src/data`
 
