@@ -41,9 +41,11 @@ For Neon on Vercel/serverless, prefer the pooled connection string.
 ```bash
 pnpm db:migrate
 pnpm db:generate
-pnpm db:seed
 pnpm db:studio
 ```
 
-`src/generated/prisma` is generated and ignored by git. Run `pnpm db:generate`
-after schema changes or after installing the project.
+`pnpm seed` loads the canonical Payload seed. Prisma does not currently have an
+operational seed because the legacy editorial models were removed.
+
+`src/generated/prisma` is generated. Run `pnpm db:generate` after schema changes
+or after installing the project.

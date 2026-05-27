@@ -67,10 +67,11 @@ Usa `.env.staging` mediante `DOTENV_CONFIG_PATH`.
 
 - Usuario admin opcional desde variables de entorno.
 - Servicios.
+- Tratamientos y problemas frecuentes.
 - Equipo.
 - Testimonios.
 - FAQs.
-- Paginas publicas base para SEO editable.
+- Paginas publicas base para SEO editable, incluyendo `nosotros` y `tratamientos`.
 - Global `site-settings`.
 - Global `home-content`.
 
