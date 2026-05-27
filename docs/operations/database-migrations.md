@@ -10,15 +10,38 @@ pnpm db:generate
 
 Tambien se ejecuta dentro de `pnpm typecheck` y `pnpm run build`.
 
-## Migraciones locales
+## Ambientes
+
+| Ambiente | Base / schema esperado | Comando principal | Notas |
+| --- | --- | --- | --- |
+| Local | `salud_intercultural_dev`, schema `public` | `pnpm db:migrate` | Desarrollo diario con `.env`. |
+| Test | `salud_intercultural_test`, schema `public` | `pnpm test:integration` | Resetea y aplica migraciones automaticamente. |
+| Staging | Base remota separada | `pnpm db:deploy` | Usar variables de staging. No usar reset. |
+| Produccion | Base remota de produccion | `pnpm db:deploy` | Ejecutar solo con cambio revisado. No usar reset. |
+
+Payload usa `PAYLOAD_DB_SCHEMA` en la misma base PostgreSQL:
+
+- Local: `payload`.
+- Test: `payload_test`.
+- Staging/produccion: `payload` salvo decision operativa distinta.
+
+## Migraciones Locales
 
 ```bash
 pnpm db:migrate
 ```
 
-Usar solo contra bases locales o de desarrollo.
+Usar solo contra bases locales o de desarrollo. Prisma lee `DATABASE_URL` desde `.env`.
 
-## Migraciones remotas
+## Migraciones De Test
+
+```bash
+pnpm test:integration
+```
+
+El flujo ejecuta `pnpm test:db:reset`, aplica migraciones sobre `salud_intercultural_test` y corre los tests de integracion.
+
+## Migraciones Remotas
 
 ```bash
 pnpm db:deploy
@@ -26,7 +49,14 @@ pnpm db:deploy
 
 Usar para staging y produccion. No usa migraciones interactivas.
 
-## Reset local
+Reglas:
+
+- Confirmar `DATABASE_URL` del ambiente antes de ejecutar.
+- No usar `pnpm db:migrate` contra staging o produccion.
+- No usar `pnpm db:reset` contra staging o produccion.
+- Revisar el SQL de migracion antes de desplegar cambios destructivos.
+
+## Reset Local
 
 ```bash
 pnpm db:reset

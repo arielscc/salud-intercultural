@@ -16,26 +16,28 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 1. [Desarrollo local](./local-development.md)
 2. [Variables de entorno](./environment-variables.md)
 3. [Base de datos y migraciones](./database-migrations.md)
-4. [Seeds y datos iniciales](./seeds.md)
-5. [Admin y CMS](./admin-cms.md)
-6. [Media e imagenes](./media.md)
-7. [Leads](./leads.md)
-8. [Analytics y eventos](./analytics.md)
-9. [Flujo de ramas](./branch-flow.md)
-10. [Deploy](./deploy.md)
-11. [Plataformas externas](./external-platforms.md)
-12. [Accesibilidad y UX responsive](./accessibility-responsive.md)
-13. [Performance y Core Web Vitals](./performance.md)
-14. [Errores comunes](./troubleshooting.md)
+4. [Testing](./testing.md)
+5. [Seeds y datos iniciales](./seeds.md)
+6. [Admin y CMS](./admin-cms.md)
+7. [Media e imagenes](./media.md)
+8. [Leads](./leads.md)
+9. [Analytics y eventos](./analytics.md)
+10. [Flujo de ramas](./branch-flow.md)
+11. [Deploy](./deploy.md)
+12. [Plataformas externas](./external-platforms.md)
+13. [Accesibilidad y UX responsive](./accessibility-responsive.md)
+14. [Performance y Core Web Vitals](./performance.md)
+15. [Errores comunes](./troubleshooting.md)
 
 ## Flujo recomendado
 
 1. Trabajar cambios en `develop`.
 2. Validar localmente con `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build`.
-3. Promover a `staging` para Preview Deployment.
-4. Validar admin, CMS, media, leads, analytics y sitio publico en staging.
-5. Revisar accesibilidad, responsive y performance en staging.
-6. Promover a `main` para produccion.
+3. Si el cambio toca DB, migraciones o queries, correr `pnpm test:integration`.
+4. Promover a `staging` para Preview Deployment.
+5. Validar admin, CMS, media, leads, analytics y sitio publico en staging.
+6. Revisar accesibilidad, responsive y performance en staging.
+7. Promover a `main` para produccion.
 
 ## Documentacion relacionada
 

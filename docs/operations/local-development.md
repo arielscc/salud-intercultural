@@ -106,23 +106,13 @@ La suite rapida no usa base real:
 pnpm test
 ```
 
-Los tests de integracion usan `salud_intercultural_test`.
-
-1. Levantar PostgreSQL local:
-
-```bash
-docker compose up -d postgres
-```
-
-2. Copiar `.env.test.example` a `.env.test`.
-3. Confirmar que `DATABASE_URL` apunte a `salud_intercultural_test`.
-4. Ejecutar:
+Los tests de integracion usan `salud_intercultural_test`:
 
 ```bash
 pnpm test:integration
 ```
 
-`pnpm test:integration` ejecuta primero `pnpm test:db:reset`, que valida que la URL sea local y que la base se llame `salud_intercultural_test` antes de correr `prisma migrate reset --force`.
+Mas detalle: [testing](./testing.md).
 
 Si `typecheck` o `build` fallan por `DATABASE_URL`, revisa que `.env` exista y apunte a una base PostgreSQL valida.
 
