@@ -90,7 +90,7 @@ CMS_READS_DURING_BUILD="false"
 pnpm seed
 ```
 
-`pnpm seed` carga solo el seed canonico de Payload. `pnpm db:seed:legacy` queda como flujo legacy de Prisma y no se ejecuta por defecto.
+`pnpm seed` carga solo el seed canonico de Payload.
 
 ## Test Local
 

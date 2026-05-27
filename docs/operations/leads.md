@@ -44,9 +44,8 @@ Ruta directa:
 
 - Fuente activa: Payload `lead-submissions`.
 - Tabla fisica local: `payload.lead_submissions`.
-- Tabla Prisma legacy: `public."Lead"`.
 
-La tabla Prisma `public."Lead"` existe por el modelo inicial de V2, cuando `/api/leads` escribia primero en Prisma. Ya no debe recibir nuevos registros ni usarse para operar leads. Si se necesita limpiar el modelo legacy, hacerlo en una migracion separada despues de confirmar que no hay reportes o scripts externos leyendo esa tabla.
+La tabla Prisma legacy `public."Lead"` fue eliminada. `/api/leads` persiste en Payload.
 
 ## API
 

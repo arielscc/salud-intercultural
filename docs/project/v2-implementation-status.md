@@ -12,7 +12,6 @@ Se verifico contra:
 - `payload.config.ts`
 - `prisma/schema.prisma`
 - `prisma/migrations`
-- `prisma/legacy-seed.ts`
 - `scripts/seed-payload.ts`
 - `src/app`
 - `src/features`
@@ -44,7 +43,7 @@ Estado por area:
 | Analytics | Implementado | `src/features/analytics` |
 | Accesibilidad responsive | Implementado y documentado | `docs/operations/accessibility-responsive.md` |
 | Performance base | Implementado y documentado | `docs/operations/performance.md` |
-| Seeds | Implementado | `prisma/legacy-seed.ts`, `scripts/seed-payload.ts` |
+| Seeds | Implementado | `scripts/seed-payload.ts` |
 | Env vars | Implementado | `.env.example`, `src/lib/env.ts` |
 | Testing base | Implementado | `tests`, `src/app/api/leads/route.test.ts`, script `pnpm test` |
 | Deploy operativo | Documentado | `docs/operations/deploy.md`, `docs/operations/external-platforms.md` |
@@ -76,15 +75,7 @@ Tambien existen:
 
 ## Datos Y CMS
 
-Prisma contiene modelos para:
-
-- `Lead`
-- `Service`
-- `TreatmentTopic`
-- `TeamMember`
-- `Testimonial`
-- `Faq`
-- `SiteSetting`
+Prisma no contiene modelos de contenido editorial legacy. Queda reservado para dominios operativos futuros.
 
 Payload contiene collections para:
 
@@ -94,6 +85,7 @@ Payload contiene collections para:
 - `testimonials`
 - `faqs`
 - `team-members`
+- `treatment-topics`
 - `pages`
 - `lead-submissions`
 
@@ -116,7 +108,6 @@ Disponibles en `package.json`:
 - `pnpm db:migrate`
 - `pnpm db:deploy`
 - `pnpm db:reset`
-- `pnpm db:seed:legacy`
 - `pnpm seed`
 - `pnpm db:studio`
 - `pnpm payload`

@@ -75,7 +75,7 @@ Cubre:
 - `getLeads`
 - `updateLeadStatus`
 
-Cada test limpia la tabla `Lead` antes de correr. El reset completo de la base ocurre antes de la suite de integracion.
+Cada test limpia la collection Payload `lead-submissions` antes de correr. El reset completo de la base ocurre antes de la suite de integracion.
 
 ## Agregar Tests De Integracion
 

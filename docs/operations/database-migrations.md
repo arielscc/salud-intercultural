@@ -100,25 +100,9 @@ pnpm seed
 
 El seed por defecto ejecuta solo `pnpm payload:seed`, porque Payload es la fuente de verdad del contenido editable y del panel admin.
 
-```bash
-pnpm db:seed:legacy
-```
-
-`pnpm db:seed:legacy` queda como seed legacy de modelos Prisma de contenido. No usarlo como flujo normal de desarrollo ni contra produccion salvo decision explicita de mantenimiento.
-
 ## Modelos Prisma principales
 
-Los modelos Prisma editoriales existentes son legacy mientras avanza la limpieza de ownership:
-
-- `Lead`.
-- `Service`.
-- `TreatmentTopic`.
-- `TeamMember`.
-- `Testimonial`.
-- `Faq`.
-- `SiteSetting`.
-
-Payload es la fuente de verdad para leads simples, servicios, equipo, testimonios, FAQs, configuracion global, paginas publicas y media. Prisma queda reservado para dominios operativos futuros.
+Los modelos Prisma editoriales legacy (`Lead`, `Service`, `TreatmentTopic`, `TeamMember`, `Testimonial`, `Faq` y `SiteSetting`) fueron eliminados. Payload es la fuente de verdad para leads simples, servicios, equipo, testimonios, FAQs, configuracion global, paginas publicas y media. Prisma queda reservado para dominios operativos futuros.
 
 ## Payload
 
