@@ -4,7 +4,7 @@
 
 - Node compatible con Next.js 16.
 - `pnpm` segun `packageManager` en `package.json`.
-- PostgreSQL local o una base Neon de desarrollo.
+- Docker para PostgreSQL local.
 - Variables locales en `.env`.
 
 ## Instalacion
@@ -15,19 +15,29 @@ pnpm install
 
 ## Configurar entorno
 
-1. Copiar `.env.example` a `.env`.
-2. Configurar como maAnimo:
+1. Levantar PostgreSQL local:
+
+```bash
+docker compose up -d postgres
+```
+
+2. Copiar `.env.local.example` a `.env`.
+3. Confirmar que `.env` use estos valores locales:
 
 ```env
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
+NEXT_PUBLIC_SITE_NAME="Salud Intercultural"
+DATABASE_URL="postgresql://salud_intercultural:salud_intercultural@localhost:5432/salud_intercultural_dev?schema=public"
+PAYLOAD_SECRET="local-development-secret-change-me"
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
-DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
-PAYLOAD_SECRET="valor-largo-seguro"
 PAYLOAD_DB_SCHEMA="payload"
+BLOB_READ_WRITE_TOKEN=""
 CMS_READS_DURING_BUILD="false"
+NEXT_PUBLIC_GA_ID=""
+NEXT_PUBLIC_META_PIXEL_ID=""
 ```
 
-3. Dejar `BLOB_READ_WRITE_TOKEN` vacio en local si se quiere usar storage local en `public/media`.
+4. Dejar `BLOB_READ_WRITE_TOKEN` vacio en local si se quiere usar storage local en `public/media`.
 
 Mas detalle: [variables de entorno](./environment-variables.md).
 
