@@ -4,12 +4,13 @@ Guia operativa para cargar datos iniciales locales, staging o produccion.
 
 ## Alcance
 
-El proyecto tiene dos capas de seed:
+El seed canonico del proyecto es Payload:
 
-- `prisma/seed.ts`: datos base para modelos Prisma.
 - `scripts/seed-payload.ts`: contenido inicial para Payload CMS y panel admin.
 
-Ambos scripts son idempotentes: usan `upsert` o busqueda previa para actualizar registros existentes sin duplicarlos.
+`prisma/seed.ts` queda como seed legacy de contenido Prisma. No se ejecuta por defecto porque duplica contenido editable que ahora pertenece a Payload.
+
+Los scripts son idempotentes: usan `upsert` o busqueda previa para actualizar registros existentes sin duplicarlos.
 
 ## Variables Necesarias
 
@@ -36,22 +37,25 @@ Usar `ADMIN_RESET_PASSWORD_ON_SEED="true"` solo cuando se quiera resetear intenc
 
 ## Ejecutar Seeds
 
-Seed completo:
+Seed por defecto:
 
 ```bash
 pnpm seed
 ```
 
-Ejecuta:
+Ejecuta solo:
 
-1. `pnpm db:seed`
-2. `pnpm payload:seed`
+```bash
+pnpm payload:seed
+```
 
-Solo Prisma:
+Seed Prisma legacy:
 
 ```bash
 pnpm db:seed
 ```
+
+Usarlo solo cuando se necesite revisar o conservar datos legacy Prisma antes de completar la limpieza de ownership. No usarlo como seed normal de contenido editable.
 
 Solo Payload CMS:
 
@@ -67,19 +71,9 @@ pnpm payload:seed:staging
 
 Usa `.env.staging` mediante `DOTENV_CONFIG_PATH`.
 
-## Contenido Sembrado
+## Contenido Sembrado Por Defecto
 
-Prisma:
-
-- Servicios.
-- Problemas frecuentes / tratamientos generales.
-- Equipo.
-- Testimonios.
-- FAQs.
-- Configuracion institucional.
-- Contenido base de tratamientos.
-
-Payload CMS:
+`pnpm seed` carga en Payload CMS:
 
 - Usuario admin opcional desde variables de entorno.
 - Servicios.
@@ -89,6 +83,8 @@ Payload CMS:
 - Paginas publicas base para SEO editable.
 - Global `site-settings`.
 - Global `home-content`.
+
+`pnpm db:seed` carga contenido legacy en modelos Prisma (`Service`, `TreatmentTopic`, `TeamMember`, `Testimonial`, `Faq` y `SiteSetting`). Ese contenido ya no es fuente de verdad del sitio publico.
 
 ## Reset Local
 
@@ -112,7 +108,7 @@ Antes de ejecutar reset, confirmar que `DATABASE_URL` apunte a una base local o 
 ## Produccion Y Staging
 
 - En Vercel no conviene ejecutar seeds automaticamente durante build.
-- Para produccion, ejecutar `pnpm payload:seed` manualmente desde un entorno seguro con `DATABASE_URL` de produccion.
+- Para produccion, ejecutar `pnpm seed` o `pnpm payload:seed` manualmente desde un entorno seguro con `DATABASE_URL` de produccion.
 - Para staging, usar `pnpm payload:seed:staging` solo si `.env.staging` apunta al ambiente correcto.
 - Si usas Neon, revisar que la base y schema existan antes de sembrar.
 
@@ -120,6 +116,7 @@ Antes de ejecutar reset, confirmar que `DATABASE_URL` apunte a una base local o 
 
 - Confirmar siempre a que base apunta `DATABASE_URL`.
 - No ejecutar `db:reset` ni seeds destructivos contra produccion.
+- No ejecutar `pnpm db:seed` contra produccion salvo decision explicita de mantenimiento legacy.
 - No usar `ALLOW_REMOTE_DB_RESET=true` salvo para una base remota no productiva aprobada explicitamente.
 - No commitear `.env`, `.env.staging` ni `.env.production.local`.
 - Rotar cualquier credencial real compartida por chat, capturas, correo, tickets o commits.

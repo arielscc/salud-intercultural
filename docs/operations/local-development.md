@@ -74,11 +74,10 @@ DATABASE_URL="postgresql://salud_intercultural:salud_intercultural@localhost:543
 `pnpm seed` ejecuta:
 
 ```bash
-pnpm db:seed
 pnpm payload:seed
 ```
 
-El seed Prisma carga servicios, tratamientos, equipo, testimonios, FAQs y configuraciones base. El seed Payload carga paginas, servicios, equipo, testimonios, FAQs, globals y el admin solo si `ADMIN_EMAIL` y `ADMIN_PASSWORD` estan configurados.
+El seed por defecto carga paginas, servicios, equipo, testimonios, FAQs, globals y el admin solo si `ADMIN_EMAIL` y `ADMIN_PASSWORD` estan configurados. El seed Prisma de contenido queda como legacy y solo se ejecuta manualmente con `pnpm db:seed`.
 
 Para reiniciar datos locales desde cero:
 
@@ -124,7 +123,7 @@ Usar esta checklist para confirmar que el entorno quedo listo para desarrollo di
 2. `.env` apunta a `salud_intercultural_dev`.
 3. `.env.test` apunta a `salud_intercultural_test`.
 4. `pnpm db:migrate` funciona contra desarrollo local.
-5. `pnpm seed` carga datos locales de Prisma y Payload.
+5. `pnpm seed` carga datos locales de Payload.
 6. `pnpm dev` abre el sitio publico y el admin local.
 7. `pnpm test` corre la suite rapida sin DB real.
 8. `pnpm test:integration` usa la DB local de test.

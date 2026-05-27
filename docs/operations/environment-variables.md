@@ -90,6 +90,8 @@ CMS_READS_DURING_BUILD="false"
 pnpm seed
 ```
 
+`pnpm seed` carga solo el seed canonico de Payload. `pnpm db:seed` queda como flujo legacy de Prisma y no se ejecuta por defecto.
+
 ## Test Local
 
 Los tests con base real deben usar `salud_intercultural_test`, no la base de desarrollo, staging ni produccion.

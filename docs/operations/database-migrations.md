@@ -92,15 +92,33 @@ pnpm db:studio
 
 Util para inspeccion tecnica, no para operacion diaria del CMS.
 
+## Seeds
+
+```bash
+pnpm seed
+```
+
+El seed por defecto ejecuta solo `pnpm payload:seed`, porque Payload es la fuente de verdad del contenido editable y del panel admin.
+
+```bash
+pnpm db:seed
+```
+
+`pnpm db:seed` queda como seed legacy de modelos Prisma de contenido. No usarlo como flujo normal de desarrollo ni contra produccion salvo decision explicita de mantenimiento.
+
 ## Modelos Prisma principales
 
-- `Lead`: consultas recibidas por `/api/leads`.
-- `Service`: servicios base.
-- `TreatmentTopic`: tratamientos/problemas frecuentes.
-- `TeamMember`: equipo.
-- `Testimonial`: testimonios.
-- `Faq`: preguntas frecuentes.
-- `SiteSetting`: configuracion institucional base.
+Los modelos Prisma editoriales existentes son legacy mientras avanza la limpieza de ownership:
+
+- `Lead`.
+- `Service`.
+- `TreatmentTopic`.
+- `TeamMember`.
+- `Testimonial`.
+- `Faq`.
+- `SiteSetting`.
+
+Payload es la fuente de verdad para leads simples, servicios, equipo, testimonios, FAQs, configuracion global, paginas publicas y media. Prisma queda reservado para dominios operativos futuros.
 
 ## Payload
 
