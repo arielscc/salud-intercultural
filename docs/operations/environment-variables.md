@@ -48,6 +48,7 @@ Estas variables no deben exponerse al navegador.
 | `RATE_LIMIT_MAX` | No | `10` | Limite de envios por ventana para leads. |
 | `RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Ventana de rate limit para leads. |
 | `CMS_READS_DURING_BUILD` | No | `false` | Permite lecturas CMS durante build si se cambia a `true`. |
+| `ALLOW_REMOTE_DB_RESET` | No | `false` | Override operativo para `pnpm db:reset` contra una base remota no productiva aprobada explicitamente. |
 
 Nota de contacto: `+59164175822` es el numero principal. `+59162287251` queda como numero alternativo; ambos pueden recibir WhatsApp y llamadas.
 
@@ -108,6 +109,24 @@ Reglas:
 - Tests de integracion deben cargarse con `.env.test`.
 - `pnpm test:db:reset` solo permite resetear `salud_intercultural_test` en host local.
 - Tests no deben usar `.env.staging`, `.env.production.local` ni una URL remota de Neon/Vercel salvo decision explicita y documentada.
+
+## Safety Rails De DB
+
+Los comandos destructivos pasan por validacion de ambiente.
+
+`pnpm db:reset` permite por defecto:
+
+- Hosts locales: `localhost`, `127.0.0.1`, `::1`, `host.docker.internal` o `postgres`.
+- Bases: `salud_intercultural_dev` o `salud_intercultural_test`.
+
+`pnpm db:reset` bloquea:
+
+- `NEXT_PUBLIC_SITE_URL` con `saludintercultural.com`.
+- `DATABASE_URL` que referencie `saludintercultural.com`.
+- Hosts gestionados/remotos conocidos como Neon o Vercel.
+- Bases con nombres que parezcan `staging`, `prod` o `production`.
+
+`ALLOW_REMOTE_DB_RESET=true` solo salta la restriccion de host no local para una base remota no productiva aprobada explicitamente. No salta bloqueos de dominio protegido, Neon/Vercel ni nombres staging/produccion.
 
 ## Staging En Vercel
 

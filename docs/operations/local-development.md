@@ -87,7 +87,7 @@ pnpm db:reset
 pnpm seed
 ```
 
-Advertencia: `pnpm db:reset` es destructivo. Ejecutarlo solo cuando `DATABASE_URL` apunte a `localhost`, `127.0.0.1` o una base local de desarrollo. No ejecutarlo contra staging, produccion, Neon remoto ni Vercel Postgres.
+Advertencia: `pnpm db:reset` es destructivo. El comando esta protegido por safety rails y solo permite bases locales llamadas `salud_intercultural_dev` o `salud_intercultural_test`. Bloquea staging, produccion, Neon remoto, Vercel Postgres y URLs del dominio `saludintercultural.com`.
 
 ## Validaciones
 

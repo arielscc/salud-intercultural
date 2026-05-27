@@ -32,7 +32,27 @@ Usar para staging y produccion. No usa migraciones interactivas.
 pnpm db:reset
 ```
 
-No ejecutar contra staging o produccion.
+`pnpm db:reset` es destructivo y esta protegido por `scripts/reset-database.ts`.
+
+Permitido por defecto:
+
+- Host local: `localhost`, `127.0.0.1`, `::1`, `host.docker.internal` o `postgres`.
+- Base: `salud_intercultural_dev` o `salud_intercultural_test`.
+
+Bloqueado siempre:
+
+- `NEXT_PUBLIC_SITE_URL` con `saludintercultural.com`.
+- `DATABASE_URL` que referencie `saludintercultural.com`.
+- Hosts gestionados/remotos conocidos como Neon o Vercel.
+- Bases con nombres que parezcan `staging`, `prod` o `production`.
+
+Override:
+
+```bash
+ALLOW_REMOTE_DB_RESET=true pnpm db:reset
+```
+
+Usar este override solo para una base remota no productiva aprobada explicitamente. No salta los bloqueos de dominio protegido, Neon/Vercel ni nombres staging/produccion.
 
 ## Prisma Studio
 

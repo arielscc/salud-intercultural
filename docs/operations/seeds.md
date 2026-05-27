@@ -107,6 +107,7 @@ pnpm seed
 ```
 
 Antes de ejecutar reset, confirmar que `DATABASE_URL` apunte a una base local o de desarrollo.
+`pnpm db:reset` valida esto automaticamente y bloquea hosts remotos conocidos, dominios de produccion/staging y nombres de base peligrosos antes de borrar datos.
 
 ## Produccion Y Staging
 
@@ -119,5 +120,6 @@ Antes de ejecutar reset, confirmar que `DATABASE_URL` apunte a una base local o 
 
 - Confirmar siempre a que base apunta `DATABASE_URL`.
 - No ejecutar `db:reset` ni seeds destructivos contra produccion.
+- No usar `ALLOW_REMOTE_DB_RESET=true` salvo para una base remota no productiva aprobada explicitamente.
 - No commitear `.env`, `.env.staging` ni `.env.production.local`.
 - Rotar cualquier credencial real compartida por chat, capturas, correo, tickets o commits.
