@@ -14,3 +14,4 @@ No usar este directorio para procedimientos operativos, checklists de deploy o e
 ## Guias
 
 1. [Arquitectura V2](./v2-architecture.md)
+2. [Ownership de datos](./data-ownership.md)
