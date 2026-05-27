@@ -43,4 +43,5 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 
 - [Indice general de docs](../README.md)
 - [Arquitectura V2](../architecture/v2-architecture.md)
+- [Ownership de datos](../architecture/data-ownership.md)
 - [Estado de implementacion V2](../project/v2-implementation-status.md)
