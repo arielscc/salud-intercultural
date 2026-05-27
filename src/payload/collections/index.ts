@@ -6,6 +6,7 @@ import { Pages } from "./Pages.ts";
 import { Services } from "./Services.ts";
 import { TeamMembers } from "./TeamMembers.ts";
 import { Testimonials } from "./Testimonials.ts";
+import { TreatmentTopics } from "./TreatmentTopics.ts";
 import { Users } from "./Users.ts";
 
 export const collections: CollectionConfig[] = [
@@ -13,6 +14,7 @@ export const collections: CollectionConfig[] = [
   Media,
   Services,
   Testimonials,
+  TreatmentTopics,
   Faqs,
   TeamMembers,
   Pages,

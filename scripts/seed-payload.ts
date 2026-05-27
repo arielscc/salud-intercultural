@@ -5,6 +5,7 @@ import { siteConfig } from "../src/config/site";
 import { aboutContent } from "../src/data/about";
 import { faqs } from "../src/data/faqs";
 import { homeContent } from "../src/data/home";
+import { problems } from "../src/data/problems";
 import { services } from "../src/data/services";
 import { teamMembers } from "../src/data/team";
 import { testimonials } from "../src/data/testimonials";
@@ -78,6 +79,9 @@ const pageSeeds: PageSeed[] = [
     title: treatmentsContent.hero.title,
     summary: treatmentsContent.hero.description,
     content: treatmentsContent.overview.paragraphs.join("\n\n"),
+    hero: {
+      eyebrow: treatmentsContent.hero.eyebrow
+    },
     seo: treatmentsContent.seo,
     order: 4
   },
@@ -161,7 +165,7 @@ function seoData(seo: { title?: string; description?: string }) {
 
 async function upsertBySlug<T extends Record<string, unknown>>(
   payload: PayloadClient,
-  collection: "pages" | "services" | "team-members" | "testimonials",
+  collection: "pages" | "services" | "team-members" | "testimonials" | "treatment-topics",
   slug: string,
   data: T
 ) {
@@ -190,6 +194,15 @@ async function upsertBySlug<T extends Record<string, unknown>>(
     data,
     overrideAccess: true
   } as never);
+}
+
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 async function upsertFaq(payload: PayloadClient, faq: (typeof faqs)[number]) {
@@ -353,6 +366,27 @@ async function seedFaqs(payload: PayloadClient) {
   }
 }
 
+async function seedTreatmentTopics(payload: PayloadClient) {
+  for (const [index, problem] of problems.entries()) {
+    await upsertBySlug(payload, "treatment-topics", slugify(problem.title), {
+      slug: slugify(problem.title),
+      title: problem.title,
+      headline: problem.headline,
+      description: problem.description,
+      cta: problem.cta,
+      whatsappMessage: problem.whatsappMessage,
+      icon: problem.icon,
+      active: true,
+      featured: index < 3,
+      order: index + 1,
+      seo: seoData({
+        title: `${problem.title} | Salud Intercultural`,
+        description: problem.description
+      })
+    });
+  }
+}
+
 async function seedPages(payload: PayloadClient) {
   for (const page of pageSeeds) {
     await upsertBySlug(payload, "pages", page.slug, {
@@ -432,6 +466,7 @@ async function main() {
   await seedTeamMembers(payload);
   await seedTestimonials(payload);
   await seedFaqs(payload);
+  await seedTreatmentTopics(payload);
   await seedPages(payload);
   await seedGlobals(payload, serviceDocs);
 

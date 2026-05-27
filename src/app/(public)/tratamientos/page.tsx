@@ -6,18 +6,57 @@ import { Icon } from "@/components/shared/Icon";
 import { PremiumCard } from "@/components/shared/PremiumCard";
 import { SEOJsonLd } from "@/components/shared/SEOJsonLd";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { problems } from "@/data/problems";
 import { treatmentsContent } from "@/data/treatments";
-import { createPageMetadata } from "@/lib/seo";
+import {
+  getPublicPage,
+  getPublicPageMetadata,
+  getPublicTreatmentTopics
+} from "@/lib/cms/public-content";
 import { createWhatsAppLink } from "@/lib/whatsapp";
+import type { Page } from "@/types/payload-types";
 
-export const metadata: Metadata = createPageMetadata({
-  title: treatmentsContent.seo.title,
-  description: treatmentsContent.seo.description,
-  path: "/tratamientos"
-});
+export const revalidate = 60;
 
-export default function TratamientosPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  return getPublicPageMetadata("tratamientos", {
+    title: treatmentsContent.seo.title,
+    description: treatmentsContent.seo.description,
+    path: "/tratamientos"
+  });
+}
+
+function mapCmsTreatmentsContent(page: Page | null) {
+  if (!page) return treatmentsContent;
+
+  const overviewParagraphs =
+    page.content
+      ?.split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean) ?? treatmentsContent.overview.paragraphs;
+
+  return {
+    ...treatmentsContent,
+    hero: {
+      ...treatmentsContent.hero,
+      eyebrow: page.hero?.eyebrow || treatmentsContent.hero.eyebrow,
+      title: page.title || treatmentsContent.hero.title,
+      description: page.summary || treatmentsContent.hero.description
+    },
+    overview: {
+      ...treatmentsContent.overview,
+      paragraphs: overviewParagraphs
+    }
+  };
+}
+
+export default async function TratamientosPage() {
+  const [page, treatmentTopics] = await Promise.all([
+    getPublicPage("tratamientos"),
+    getPublicTreatmentTopics()
+  ]);
+  const content = mapCmsTreatmentsContent(page.data);
+  const problems = treatmentTopics.data;
+
   return (
     <>
       <SEOJsonLd
@@ -33,13 +72,13 @@ export default function TratamientosPage() {
         <Container className="grid items-end gap-10 lg:grid-cols-[1fr_0.78fr]">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary-dark">
-              {treatmentsContent.hero.eyebrow}
+              {content.hero.eyebrow}
             </p>
             <h1 className="text-balance mt-5 font-sora text-4xl font-semibold leading-tight tracking-normal text-text sm:text-5xl">
-              {treatmentsContent.hero.title}
+              {content.hero.title}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-              {treatmentsContent.hero.description}
+              {content.hero.description}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
@@ -71,12 +110,12 @@ export default function TratamientosPage() {
           <SectionHeader
             align="left"
             eyebrow="Información general"
-            title={treatmentsContent.overview.title}
+            title={content.overview.title}
             description="Un marco institucional para orientar, no para diagnosticar en línea."
           />
           <PremiumCard>
             <div className="space-y-5 text-base leading-8 text-muted">
-              {treatmentsContent.overview.paragraphs.map((paragraph) => (
+              {content.overview.paragraphs.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
               ))}
             </div>
@@ -125,7 +164,7 @@ export default function TratamientosPage() {
             description="La orientación se adapta a cada persona y se comunica con responsabilidad."
           />
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {treatmentsContent.complementaryGuidance.map((item) => (
+            {content.complementaryGuidance.map((item) => (
               <PremiumCard key={item.title} tone="soft">
                 <h2 className="font-sora text-xl font-semibold text-text">{item.title}</h2>
                 <p className="mt-3 text-sm leading-7 text-muted">{item.description}</p>
@@ -145,7 +184,7 @@ export default function TratamientosPage() {
           />
           <PremiumCard>
             <div className="grid gap-4">
-              {treatmentsContent.evaluationSteps.map((step, index) => (
+              {content.evaluationSteps.map((step, index) => (
                 <div key={step} className="flex gap-4 rounded-2xl bg-surface-soft/70 p-4">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-white">
                     {index + 1}
@@ -177,7 +216,7 @@ export default function TratamientosPage() {
             <div>
               <p className="font-sora text-2xl font-semibold">Contenido administrable</p>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-white/76">
-                {treatmentsContent.cmsNote}
+                {content.cmsNote}
               </p>
             </div>
             <Button href="/contacto" variant="light">

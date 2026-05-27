@@ -4,6 +4,7 @@ import { getPayload } from "payload";
 import { siteConfig as fallbackSiteConfig } from "@/config/site";
 import { faqs as fallbackFaqs } from "@/data/faqs";
 import { homeContent as fallbackHomeContent } from "@/data/home";
+import { problems as fallbackProblems } from "@/data/problems";
 import { services as fallbackServices } from "@/data/services";
 import { teamMembers as fallbackTeamMembers } from "@/data/team";
 import { testimonials as fallbackTestimonials } from "@/data/testimonials";
@@ -12,6 +13,7 @@ import { getImageAlt } from "@/lib/images";
 import type {
   FAQ,
   IconName,
+  Problem,
   Service,
   TeamMember,
   Testimonial
@@ -24,7 +26,8 @@ import type {
   Service as PayloadService,
   SiteSetting,
   TeamMember as PayloadTeamMember,
-  Testimonial as PayloadTestimonial
+  Testimonial as PayloadTestimonial,
+  TreatmentTopic as PayloadTreatmentTopic
 } from "@/types/payload-types";
 
 type ContentSource = "cms" | "fallback";
@@ -208,6 +211,19 @@ function mapFaq(doc: PayloadFaq): FAQ {
   };
 }
 
+function mapTreatmentTopic(doc: PayloadTreatmentTopic): Problem {
+  const fallback = fallbackProblems.find((problem) => problem.title === doc.title);
+
+  return {
+    title: doc.title,
+    headline: doc.headline,
+    description: doc.description,
+    cta: doc.cta,
+    whatsappMessage: doc.whatsappMessage,
+    icon: (doc.icon as IconName | null) ?? fallback?.icon ?? "heartPulse"
+  };
+}
+
 function orderByContentOrder<T extends { order?: number; title?: string; name?: string }>(
   items: T[]
 ) {
@@ -291,6 +307,23 @@ export async function getPublicFaqs(): Promise<PublicContent<FAQ[]>> {
     return docs.length ? withCms(orderByContentOrder(docs)) : withFallback(fallbackFaqs);
   } catch (error) {
     return withFallback(fallbackFaqs, getErrorMessage(error));
+  }
+}
+
+export async function getPublicTreatmentTopics(): Promise<PublicContent<Problem[]>> {
+  try {
+    const payload = await getPayloadClient();
+    const result = await payload.find({
+      collection: "treatment-topics",
+      depth: 0,
+      limit: 100,
+      overrideAccess: false,
+      sort: "order"
+    });
+    const docs = result.docs.map(mapTreatmentTopic);
+    return docs.length ? withCms(docs) : withFallback(fallbackProblems);
+  } catch (error) {
+    return withFallback(fallbackProblems, getErrorMessage(error));
   }
 }
 
