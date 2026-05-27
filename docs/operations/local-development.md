@@ -77,7 +77,7 @@ DATABASE_URL="postgresql://salud_intercultural:salud_intercultural@localhost:543
 pnpm payload:seed
 ```
 
-El seed por defecto carga paginas, servicios, equipo, testimonios, FAQs, globals y el admin solo si `ADMIN_EMAIL` y `ADMIN_PASSWORD` estan configurados. El seed Prisma de contenido queda como legacy y solo se ejecuta manualmente con `pnpm db:seed`.
+El seed por defecto carga paginas, servicios, equipo, testimonios, FAQs, globals y el admin solo si `ADMIN_EMAIL` y `ADMIN_PASSWORD` estan configurados. El seed Prisma de contenido queda como legacy y solo se ejecuta manualmente con `pnpm db:seed:legacy`.
 
 Para reiniciar datos locales desde cero:
 

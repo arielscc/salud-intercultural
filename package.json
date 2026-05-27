@@ -19,7 +19,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:reset": "node --import dotenv/config --import tsx scripts/reset-database.ts",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:legacy": "tsx prisma/legacy-seed.ts",
     "seed": "pnpm payload:seed",
     "db:studio": "prisma studio",
     "payload": "payload",

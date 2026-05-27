@@ -8,7 +8,7 @@ El seed canonico del proyecto es Payload:
 
 - `scripts/seed-payload.ts`: contenido inicial para Payload CMS y panel admin.
 
-`prisma/seed.ts` queda como seed legacy de contenido Prisma. No se ejecuta por defecto porque duplica contenido editable que ahora pertenece a Payload.
+`prisma/legacy-seed.ts` queda como seed legacy de contenido Prisma. No se ejecuta por defecto porque duplica contenido editable que ahora pertenece a Payload.
 
 Los scripts son idempotentes: usan `upsert` o busqueda previa para actualizar registros existentes sin duplicarlos.
 
@@ -52,7 +52,7 @@ pnpm payload:seed
 Seed Prisma legacy:
 
 ```bash
-pnpm db:seed
+pnpm db:seed:legacy
 ```
 
 Usarlo solo cuando se necesite revisar o conservar datos legacy Prisma antes de completar la limpieza de ownership. No usarlo como seed normal de contenido editable.
@@ -84,7 +84,7 @@ Usa `.env.staging` mediante `DOTENV_CONFIG_PATH`.
 - Global `site-settings`.
 - Global `home-content`.
 
-`pnpm db:seed` carga contenido legacy en modelos Prisma (`Service`, `TreatmentTopic`, `TeamMember`, `Testimonial`, `Faq` y `SiteSetting`). Ese contenido ya no es fuente de verdad del sitio publico.
+`pnpm db:seed:legacy` carga contenido legacy en modelos Prisma (`Service`, `TreatmentTopic`, `TeamMember`, `Testimonial`, `Faq` y `SiteSetting`). Ese contenido ya no es fuente de verdad del sitio publico.
 
 ## Reset Local
 
@@ -116,7 +116,7 @@ Antes de ejecutar reset, confirmar que `DATABASE_URL` apunte a una base local o 
 
 - Confirmar siempre a que base apunta `DATABASE_URL`.
 - No ejecutar `db:reset` ni seeds destructivos contra produccion.
-- No ejecutar `pnpm db:seed` contra produccion salvo decision explicita de mantenimiento legacy.
+- No ejecutar `pnpm db:seed:legacy` contra produccion salvo decision explicita de mantenimiento legacy.
 - No usar `ALLOW_REMOTE_DB_RESET=true` salvo para una base remota no productiva aprobada explicitamente.
 - No commitear `.env`, `.env.staging` ni `.env.production.local`.
 - Rotar cualquier credencial real compartida por chat, capturas, correo, tickets o commits.

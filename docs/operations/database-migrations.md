@@ -101,10 +101,10 @@ pnpm seed
 El seed por defecto ejecuta solo `pnpm payload:seed`, porque Payload es la fuente de verdad del contenido editable y del panel admin.
 
 ```bash
-pnpm db:seed
+pnpm db:seed:legacy
 ```
 
-`pnpm db:seed` queda como seed legacy de modelos Prisma de contenido. No usarlo como flujo normal de desarrollo ni contra produccion salvo decision explicita de mantenimiento.
+`pnpm db:seed:legacy` queda como seed legacy de modelos Prisma de contenido. No usarlo como flujo normal de desarrollo ni contra produccion salvo decision explicita de mantenimiento.
 
 ## Modelos Prisma principales
 

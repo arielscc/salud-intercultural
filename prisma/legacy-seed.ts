@@ -8,6 +8,14 @@ import { testimonials } from "../src/data/testimonials";
 import { clinic } from "../src/data/clinic";
 import { treatmentsContent } from "../src/data/treatments";
 
+/*
+ * Seed legacy de contenido Prisma.
+ *
+ * Payload es la fuente de verdad para contenido editable y leads simples.
+ * Este archivo se conserva temporalmente solo para revisar o mantener datos
+ * legacy antes de eliminar los modelos Prisma editoriales.
+ */
+
 async function seedServices() {
   await Promise.all(
     services.map((service, index) =>
