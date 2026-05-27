@@ -55,32 +55,58 @@ Nota de contacto: `+59164175822` es el numero principal. `+59162287251` queda co
 
 Local es la computadora de desarrollo sobre la rama `develop`.
 
-1. Copiar `.env.example` a `.env`.
-2. Configurar `DATABASE_URL` apuntando a una base local o Neon de desarrollo.
-3. Generar `PAYLOAD_SECRET`:
+1. Levantar PostgreSQL local con Docker:
+
+```bash
+docker compose up -d postgres
+```
+
+2. Copiar `.env.local.example` a `.env`.
+3. Confirmar que `DATABASE_URL` apunte a `salud_intercultural_dev`.
+4. Para reemplazar el secreto local de ejemplo, generar `PAYLOAD_SECRET`:
 
 ```bash
 openssl rand -base64 32
 ```
 
-4. Configurar como minimo:
+5. Configurar como minimo:
 
 ```env
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 NEXT_PUBLIC_SITE_NAME="Salud Intercultural"
+DATABASE_URL="postgresql://salud_intercultural:salud_intercultural@localhost:5432/salud_intercultural_dev?schema=public"
+PAYLOAD_SECRET="local-development-secret-change-me"
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
-DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
-PAYLOAD_SECRET="valor-largo-seguro"
 PAYLOAD_DB_SCHEMA="payload"
+BLOB_READ_WRITE_TOKEN=""
 CMS_READS_DURING_BUILD="false"
 ```
 
-5. Dejar `BLOB_READ_WRITE_TOKEN` vacio en local si se quiere usar storage local en `public/media`.
-6. Ejecutar seeds cuando corresponda:
+6. Dejar `BLOB_READ_WRITE_TOKEN` vacio en local si se quiere usar storage local en `public/media`.
+7. Ejecutar seeds cuando corresponda:
 
 ```bash
 pnpm seed
 ```
+
+## Test Local
+
+Los tests con base real deben usar `salud_intercultural_test`, no la base de desarrollo, staging ni produccion.
+
+1. Copiar `.env.test.example` a `.env.test`.
+2. Confirmar que `DATABASE_URL` apunte a `salud_intercultural_test`.
+3. Confirmar que `PAYLOAD_DB_SCHEMA` use `payload_test`.
+4. Cargar `.env.test` explicitamente cuando un comando necesite variables de test:
+
+```bash
+DOTENV_CONFIG_PATH=.env.test node --import dotenv/config ./node_modules/vitest/vitest.mjs run
+```
+
+Reglas:
+
+- `pnpm test` debe seguir siendo la suite rapida sin preparar DB real.
+- Tests de integracion deben cargarse con `.env.test`.
+- Tests no deben usar `.env.staging`, `.env.production.local` ni una URL remota de Neon/Vercel salvo decision explicita y documentada.
 
 ## Staging En Vercel
 
