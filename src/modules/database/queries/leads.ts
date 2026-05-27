@@ -1,7 +1,10 @@
-import { prisma } from "@/modules/database/client";
+import config from "@payload-config";
+import { getPayload } from "payload";
 import { withDatabaseError } from "@/modules/database/errors";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
-import type { LeadSource, LeadStatus } from "@/generated/prisma/client";
+
+export type LeadSource = "website" | "whatsapp" | "facebook" | "tiktok" | "google" | "call";
+export type LeadStatus = "new" | "contacted" | "scheduled" | "closed" | "lost";
 
 export type CreateLeadRecordInput = {
   name?: string;
@@ -15,8 +18,11 @@ export type CreateLeadRecordInput = {
 };
 
 export async function createLeadRecord(input: CreateLeadRecordInput) {
-  return withDatabaseError("createLeadRecord", () =>
-    prisma.lead.create({
+  return withDatabaseError("createLeadRecord", async () => {
+    const payload = await getPayload({ config });
+
+    return payload.create({
+      collection: "lead-submissions",
       data: {
         name: input.name,
         phone: input.phone,
@@ -26,9 +32,10 @@ export async function createLeadRecord(input: CreateLeadRecordInput) {
         source: input.source ?? "website",
         status: input.status ?? "new",
         pagePath: input.pagePath
-      }
-    })
-  );
+      },
+      overrideAccess: true
+    });
+  });
 }
 
 export async function getLeads(
@@ -41,34 +48,47 @@ export async function getLeads(
   const pagination = getPagination(input);
   const search = input.search?.trim();
 
-  return withDatabaseError("getLeads", () =>
-    prisma.lead.findMany({
+  return withDatabaseError("getLeads", async () => {
+    const payload = await getPayload({ config });
+    const result = await payload.find({
+      collection: "lead-submissions",
+      limit: pagination.take,
+      page: pagination.page,
+      sort: "-createdAt",
       where: {
-        status: input.status,
-        source: input.source,
-        OR: search
-          ? [
-              { name: { contains: search, mode: "insensitive" } },
-              { phone: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } }
-            ]
-          : undefined
+        and: [
+          input.status ? { status: { equals: input.status } } : {},
+          input.source ? { source: { equals: input.source } } : {},
+          search
+            ? {
+                or: [
+                  { name: { contains: search } },
+                  { phone: { contains: search } },
+                  { email: { contains: search } }
+                ]
+              }
+            : {}
+        ]
       },
-      orderBy: { createdAt: "desc" },
-      skip: pagination.skip,
-      take: pagination.take
-    })
-  );
+      overrideAccess: true
+    });
+
+    return result.docs;
+  });
 }
 
-export async function updateLeadStatus(id: string, status: LeadStatus) {
-  return withDatabaseError("updateLeadStatus", () =>
-    prisma.lead.update({
-      where: { id },
+export async function updateLeadStatus(id: number | string, status: LeadStatus) {
+  return withDatabaseError("updateLeadStatus", async () => {
+    const payload = await getPayload({ config });
+
+    return payload.update({
+      id,
+      collection: "lead-submissions",
       data: {
         status,
-        contactedAt: status === "contacted" ? new Date() : undefined
-      }
-    })
-  );
+        contactedAt: status === "contacted" ? new Date().toISOString() : undefined
+      },
+      overrideAccess: true
+    });
+  });
 }

@@ -1,15 +1,24 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { prisma } from "@/modules/database/client";
+import config from "@payload-config";
+import { getPayload } from "payload";
 import { createLeadRecord, getLeads, updateLeadStatus } from "@/modules/database/queries/leads";
 
-beforeEach(async () => {
-  await prisma.lead.deleteMany();
-});
+async function deleteLeadSubmissions() {
+  const payload = await getPayload({ config });
 
-afterAll(async () => {
-  await prisma.lead.deleteMany();
-  await prisma.$disconnect();
-});
+  await payload.delete({
+    collection: "lead-submissions",
+    where: {
+      id: {
+        exists: true
+      }
+    },
+    overrideAccess: true
+  });
+}
+
+beforeEach(deleteLeadSubmissions);
+afterAll(deleteLeadSubmissions);
 
 describe("lead queries integration", () => {
   it("creates, lists, filters and updates leads in the test database", async () => {
@@ -47,6 +56,6 @@ describe("lead queries integration", () => {
 
     const updated = await updateLeadStatus(created.id, "contacted");
     expect(updated.status).toBe("contacted");
-    expect(updated.contactedAt).toBeInstanceOf(Date);
+    expect(updated.contactedAt).toEqual(expect.any(String));
   });
 });

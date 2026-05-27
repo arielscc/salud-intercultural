@@ -52,7 +52,7 @@ describe("POST /api/leads", () => {
       lead: {
         id: persistedLead.id,
         status: persistedLead.status,
-        createdAt: persistedLead.createdAt.toISOString()
+        createdAt: persistedLead.createdAt
       }
     });
     expect(createLeadRecordMock).toHaveBeenCalledWith(

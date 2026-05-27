@@ -13,7 +13,7 @@ export const validLeadInput: CreateLeadInput = {
 };
 
 export const persistedLead = {
-  id: "lead_123",
+  id: 123,
   name: validLeadInput.name ?? null,
   phone: validLeadInput.phone,
   email: validLeadInput.email ?? null,
@@ -24,6 +24,6 @@ export const persistedLead = {
   pagePath: validLeadInput.pagePath ?? null,
   notes: null,
   contactedAt: null,
-  createdAt: new Date("2026-05-21T10:00:00.000Z"),
-  updatedAt: new Date("2026-05-21T10:00:00.000Z")
+  createdAt: "2026-05-21T10:00:00.000Z",
+  updatedAt: "2026-05-21T10:00:00.000Z"
 };
