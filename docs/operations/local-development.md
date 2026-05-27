@@ -116,6 +116,21 @@ Mas detalle: [testing](./testing.md).
 
 Si `typecheck` o `build` fallan por `DATABASE_URL`, revisa que `.env` exista y apunte a una base PostgreSQL valida.
 
+## Checklist De Validacion Local
+
+Usar esta checklist para confirmar que el entorno quedo listo para desarrollo diario:
+
+1. `docker compose up -d postgres` levanta PostgreSQL local.
+2. `.env` apunta a `salud_intercultural_dev`.
+3. `.env.test` apunta a `salud_intercultural_test`.
+4. `pnpm db:migrate` funciona contra desarrollo local.
+5. `pnpm seed` carga datos locales de Prisma y Payload.
+6. `pnpm dev` abre el sitio publico y el admin local.
+7. `pnpm test` corre la suite rapida sin DB real.
+8. `pnpm test:integration` usa la DB local de test.
+9. `pnpm db:reset` bloquea URLs peligrosas antes de tocar Prisma.
+10. La documentacion operativa esta enlazada desde [Operations](./README.md).
+
 ## Archivos principales
 
 - Rutas publicas: `src/app/(public)`
