@@ -12,7 +12,7 @@ Se verifico contra:
 - `payload.config.ts`
 - `prisma/schema.prisma`
 - `prisma/migrations`
-- `prisma/seed.ts`
+- `prisma/legacy-seed.ts`
 - `scripts/seed-payload.ts`
 - `src/app`
 - `src/features`
@@ -44,7 +44,7 @@ Estado por area:
 | Analytics | Implementado | `src/features/analytics` |
 | Accesibilidad responsive | Implementado y documentado | `docs/operations/accessibility-responsive.md` |
 | Performance base | Implementado y documentado | `docs/operations/performance.md` |
-| Seeds | Implementado | `prisma/seed.ts`, `scripts/seed-payload.ts` |
+| Seeds | Implementado | `prisma/legacy-seed.ts`, `scripts/seed-payload.ts` |
 | Env vars | Implementado | `.env.example`, `src/lib/env.ts` |
 | Testing base | Implementado | `tests`, `src/app/api/leads/route.test.ts`, script `pnpm test` |
 | Deploy operativo | Documentado | `docs/operations/deploy.md`, `docs/operations/external-platforms.md` |
@@ -116,7 +116,7 @@ Disponibles en `package.json`:
 - `pnpm db:migrate`
 - `pnpm db:deploy`
 - `pnpm db:reset`
-- `pnpm db:seed`
+- `pnpm db:seed:legacy`
 - `pnpm seed`
 - `pnpm db:studio`
 - `pnpm payload`

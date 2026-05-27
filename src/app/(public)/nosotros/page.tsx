@@ -10,15 +10,53 @@ import { SectionHeader } from "@/components/shared/SectionHeader";
 import { aboutContent } from "@/data/about";
 import { imagePlaceholder, publicImageSizes } from "@/lib/images";
 import { createWhatsAppLink } from "@/lib/whatsapp";
-import { createPageMetadata } from "@/lib/seo";
+import { getPublicPage, getPublicPageMetadata } from "@/lib/cms/public-content";
+import type { Page } from "@/types/payload-types";
 
-export const metadata: Metadata = createPageMetadata({
-  title: aboutContent.seo.title,
-  description: aboutContent.seo.description,
-  path: "/nosotros"
-});
+export const revalidate = 60;
 
-export default function NosotrosPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  return getPublicPageMetadata("nosotros", {
+    title: aboutContent.seo.title,
+    description: aboutContent.seo.description,
+    path: "/nosotros"
+  });
+}
+
+function mediaUrl(image?: Page["hero"]["image"]) {
+  return typeof image === "object" && image?.url ? image.url : undefined;
+}
+
+function mapCmsAboutContent(page: Page | null) {
+  if (!page) return aboutContent;
+
+  const historyParagraphs =
+    page.content
+      ?.split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean) ?? aboutContent.history.paragraphs;
+
+  return {
+    ...aboutContent,
+    hero: {
+      ...aboutContent.hero,
+      eyebrow: page.hero?.eyebrow || aboutContent.hero.eyebrow,
+      title: page.title || aboutContent.hero.title,
+      description: page.summary || aboutContent.hero.description,
+      image: mediaUrl(page.hero?.image) ?? page.hero?.imageUrl ?? aboutContent.hero.image,
+      imageAlt: page.hero?.imageAlt || aboutContent.hero.imageAlt
+    },
+    history: {
+      ...aboutContent.history,
+      paragraphs: historyParagraphs
+    }
+  };
+}
+
+export default async function NosotrosPage() {
+  const page = await getPublicPage("nosotros");
+  const content = mapCmsAboutContent(page.data);
+
   return (
     <>
       <SEOJsonLd
@@ -34,13 +72,13 @@ export default function NosotrosPage() {
         <Container className="grid items-center gap-10 lg:grid-cols-[1.02fr_0.98fr]">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary-dark">
-              {aboutContent.hero.eyebrow}
+              {content.hero.eyebrow}
             </p>
             <h1 className="text-balance mt-5 font-sora text-4xl font-semibold leading-tight tracking-normal text-text sm:text-5xl">
-              {aboutContent.hero.title}
+              {content.hero.title}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-              {aboutContent.hero.description}
+              {content.hero.description}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
@@ -60,8 +98,8 @@ export default function NosotrosPage() {
           <div className="relative">
             <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-border bg-surface shadow-lift">
               <Image
-                src={aboutContent.hero.image}
-                alt={aboutContent.hero.imageAlt}
+                src={content.hero.image}
+                alt={content.hero.imageAlt}
                 fill
                 priority
                 placeholder="blur"
@@ -85,12 +123,12 @@ export default function NosotrosPage() {
           <SectionHeader
             align="left"
             eyebrow="Historia"
-            title={aboutContent.history.title}
+            title={content.history.title}
             description="Una base institucional clara para fortalecer confianza antes de la consulta."
           />
           <PremiumCard>
             <div className="space-y-5 text-base leading-8 text-muted">
-              {aboutContent.history.paragraphs.map((paragraph) => (
+              {content.history.paragraphs.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
               ))}
             </div>
@@ -106,7 +144,7 @@ export default function NosotrosPage() {
             description="La página queda preparada para que estos bloques sean editables desde el CMS."
           />
           <div className="mt-12 grid gap-6 md:grid-cols-2">
-            {aboutContent.missionVision.map((item) => (
+            {content.missionVision.map((item) => (
               <PremiumCard key={item.title} interactive>
                 <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                   <Icon name={item.icon} className="h-6 w-6" />
@@ -127,7 +165,7 @@ export default function NosotrosPage() {
             description="Valores institucionales orientados a construir confianza, claridad y acompañamiento responsable."
           />
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {aboutContent.values.map((value) => (
+            {content.values.map((value) => (
               <PremiumCard key={value.title} tone="soft" className="h-full">
                 <Icon name={value.icon} className="h-6 w-6 text-primary" />
                 <h2 className="mt-4 font-sora text-lg font-semibold text-text">{value.title}</h2>
@@ -143,12 +181,12 @@ export default function NosotrosPage() {
           <SectionHeader
             align="left"
             eyebrow="Interculturalidad"
-            title={aboutContent.philosophy.title}
-            description={aboutContent.philosophy.description}
+            title={content.philosophy.title}
+            description={content.philosophy.description}
           />
           <PremiumCard>
             <div className="grid gap-4">
-              {aboutContent.philosophy.principles.map((principle, index) => (
+              {content.philosophy.principles.map((principle, index) => (
                 <div key={principle} className="flex gap-4 rounded-2xl bg-surface-soft/70 p-4">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-white">
                     {index + 1}
@@ -169,7 +207,7 @@ export default function NosotrosPage() {
             description="Perfiles listos para conectarse al panel administrativo con fotos, cargo, especialidad y descripción."
           />
           <div className="mt-12 grid gap-6 md:grid-cols-2">
-            {aboutContent.team.map((member) => (
+            {content.team.map((member) => (
               <PremiumCard key={member.name} className="grid gap-5 sm:grid-cols-[9rem_1fr]">
                 <div className="grid aspect-square place-items-center rounded-[1.5rem] bg-surface-soft text-3xl font-semibold text-primary">
                   SI
@@ -194,7 +232,7 @@ export default function NosotrosPage() {
             description="Galería temporal con estructura lista para multimedia administrable desde CMS."
           />
           <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {aboutContent.gallery.map((image) => (
+            {content.gallery.map((image) => (
               <div
                 key={image.src}
                 className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] border border-border bg-background shadow-soft"
@@ -220,7 +258,7 @@ export default function NosotrosPage() {
             <div>
               <p className="font-sora text-2xl font-semibold">Contenido institucional editable</p>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-white/76">
-                {aboutContent.cmsNote}
+                {content.cmsNote}
               </p>
             </div>
             <Button href="/contacto" variant="light">

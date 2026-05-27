@@ -2,6 +2,7 @@ import "dotenv/config";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import { siteConfig } from "../src/config/site";
+import { aboutContent } from "../src/data/about";
 import { faqs } from "../src/data/faqs";
 import { homeContent } from "../src/data/home";
 import { services } from "../src/data/services";
@@ -16,7 +17,24 @@ type SeededServiceDoc = {
   slug?: string | null;
 };
 
-const pageSeeds = [
+type PageSeed = {
+  slug: string;
+  title: string;
+  summary: string;
+  content: string;
+  hero?: {
+    eyebrow?: string;
+    imageUrl?: string;
+    imageAlt?: string;
+  };
+  seo: {
+    title: string;
+    description: string;
+  };
+  order: number;
+};
+
+const pageSeeds: PageSeed[] = [
   {
     slug: "home",
     title: seo.title,
@@ -43,12 +61,25 @@ const pageSeeds = [
     order: 2
   },
   {
+    slug: "nosotros",
+    title: aboutContent.hero.title,
+    summary: aboutContent.hero.description,
+    content: aboutContent.history.paragraphs.join("\n\n"),
+    hero: {
+      eyebrow: aboutContent.hero.eyebrow,
+      imageUrl: aboutContent.hero.image,
+      imageAlt: aboutContent.hero.imageAlt
+    },
+    seo: aboutContent.seo,
+    order: 3
+  },
+  {
     slug: "tratamientos",
     title: treatmentsContent.hero.title,
     summary: treatmentsContent.hero.description,
     content: treatmentsContent.overview.paragraphs.join("\n\n"),
     seo: treatmentsContent.seo,
-    order: 3
+    order: 4
   },
   {
     slug: "equipo",
@@ -62,7 +93,7 @@ const pageSeeds = [
       description:
         "Conoce al equipo médico de Salud Intercultural: perfiles profesionales activos administrables desde el panel."
     },
-    order: 4
+    order: 5
   },
   {
     slug: "testimonios",
@@ -76,7 +107,7 @@ const pageSeeds = [
       description:
         "Experiencias de pacientes de Salud Intercultural con identidad reservada, motivo de consulta y valoración opcional."
     },
-    order: 5
+    order: 6
   },
   {
     slug: "preguntas-frecuentes",
@@ -90,7 +121,7 @@ const pageSeeds = [
       description:
         "Resuelve dudas frecuentes sobre citas, ubicación, WhatsApp, llamadas, tratamientos personalizados, costos y atención en Salud Intercultural."
     },
-    order: 6
+    order: 7
   },
   {
     slug: "contacto",
@@ -104,9 +135,9 @@ const pageSeeds = [
       description:
         "Contacta a Salud Intercultural por WhatsApp, llamada o formulario. Encuentra dirección, horarios, mapa y canales oficiales en El Alto."
     },
-    order: 7
+    order: 8
   }
-] as const;
+];
 
 function textRows(items: readonly string[]) {
   return items.map((text) => ({ text }));
@@ -329,9 +360,9 @@ async function seedPages(payload: PayloadClient) {
       title: page.title,
       summary: page.summary,
       hero: {
-        eyebrow: page.slug === "home" ? "Inicio" : page.title,
-        imageUrl: services[0]?.image,
-        imageAlt: services[0]?.imageAlt
+        eyebrow: page.hero?.eyebrow ?? (page.slug === "home" ? "Inicio" : page.title),
+        imageUrl: page.hero?.imageUrl ?? services[0]?.image,
+        imageAlt: page.hero?.imageAlt ?? services[0]?.imageAlt
       },
       content: page.content,
       active: true,
