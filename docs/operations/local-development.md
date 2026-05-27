@@ -53,6 +53,42 @@ Rutas utiles:
 - Admin Payload: `http://localhost:3000/admin`
 - API leads: `http://localhost:3000/api/leads`
 
+## Migraciones Y Seeds
+
+Flujo inicial para preparar la base local:
+
+```bash
+docker compose up -d postgres
+pnpm install
+pnpm db:migrate
+pnpm seed
+pnpm dev
+```
+
+`pnpm db:migrate` debe leer `.env` y apuntar a:
+
+```env
+DATABASE_URL="postgresql://salud_intercultural:salud_intercultural@localhost:5432/salud_intercultural_dev?schema=public"
+```
+
+`pnpm seed` ejecuta:
+
+```bash
+pnpm db:seed
+pnpm payload:seed
+```
+
+El seed Prisma carga servicios, tratamientos, equipo, testimonios, FAQs y configuraciones base. El seed Payload carga paginas, servicios, equipo, testimonios, FAQs, globals y el admin solo si `ADMIN_EMAIL` y `ADMIN_PASSWORD` estan configurados.
+
+Para reiniciar datos locales desde cero:
+
+```bash
+pnpm db:reset
+pnpm seed
+```
+
+Advertencia: `pnpm db:reset` es destructivo. Ejecutarlo solo cuando `DATABASE_URL` apunte a `localhost`, `127.0.0.1` o una base local de desarrollo. No ejecutarlo contra staging, produccion, Neon remoto ni Vercel Postgres.
+
 ## Validaciones
 
 ```bash
