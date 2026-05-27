@@ -99,13 +99,14 @@ Los tests con base real deben usar `salud_intercultural_test`, no la base de des
 4. Cargar `.env.test` explicitamente cuando un comando necesite variables de test:
 
 ```bash
-DOTENV_CONFIG_PATH=.env.test node --import dotenv/config ./node_modules/vitest/vitest.mjs run
+pnpm test:integration
 ```
 
 Reglas:
 
 - `pnpm test` debe seguir siendo la suite rapida sin preparar DB real.
 - Tests de integracion deben cargarse con `.env.test`.
+- `pnpm test:db:reset` solo permite resetear `salud_intercultural_test` en host local.
 - Tests no deben usar `.env.staging`, `.env.production.local` ni una URL remota de Neon/Vercel salvo decision explicita y documentada.
 
 ## Staging En Vercel
