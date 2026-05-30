@@ -29,4 +29,12 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("administracion", "clinical_write")).toBe(false);
     expect(roleHasPermission("administracion", "studies_write")).toBe(false);
   });
+
+  it("allows follow-up work without exposing clinical writes to captacion", () => {
+    expect(roleHasPermission("captacion", "followups_read")).toBe(true);
+    expect(roleHasPermission("captacion", "followups_write")).toBe(true);
+    expect(roleHasPermission("captacion", "clinical_read")).toBe(false);
+    expect(roleHasPermission("medico", "followups_write")).toBe(true);
+    expect(roleHasPermission("direccion", "followups_read")).toBe(true);
+  });
 });

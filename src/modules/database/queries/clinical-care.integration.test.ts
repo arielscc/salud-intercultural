@@ -11,6 +11,9 @@ import {
 } from "@/modules/database/queries/clinical-care";
 
 async function cleanClinicalCare() {
+  await prisma.followUpStatusHistory.deleteMany();
+  await prisma.followUpAttempt.deleteMany();
+  await prisma.followUpTask.deleteMany();
   await prisma.cashMovement.deleteMany();
   await prisma.deliveredProduct.deleteMany();
   await prisma.payment.deleteMany();

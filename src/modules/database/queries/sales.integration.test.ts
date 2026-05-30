@@ -13,6 +13,9 @@ import {
 import { createVisitRecord } from "@/modules/database/queries/visits";
 
 async function cleanSales() {
+  await prisma.followUpStatusHistory.deleteMany();
+  await prisma.followUpAttempt.deleteMany();
+  await prisma.followUpTask.deleteMany();
   await prisma.cashMovement.deleteMany();
   await prisma.deliveredProduct.deleteMany();
   await prisma.payment.deleteMany();

@@ -165,6 +165,17 @@ export async function getPatientById(id: string) {
               include: { method: true }
             }
           }
+        },
+        followUpTasks: {
+          orderBy: [{ dueAt: "desc" }, { createdAt: "desc" }],
+          take: 12,
+          include: {
+            assignedTo: true,
+            attempts: {
+              orderBy: { contactedAt: "desc" },
+              take: 3
+            }
+          }
         }
       }
     });

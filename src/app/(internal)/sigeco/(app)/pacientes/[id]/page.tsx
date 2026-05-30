@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
+import { createFollowUpTaskAction } from "@/features/follow-ups/actions";
+import { followUpStatusLabels } from "@/features/follow-ups/labels";
 import {
   patientCaptureSourceLabels,
   patientGenderLabels,
@@ -173,6 +175,48 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           {patient.sales.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
               Sin ventas ni cobros registrados.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="font-sora text-lg font-bold">Crear seguimiento</h3>
+        <form action={createFollowUpTaskAction} className="grid gap-3">
+          <input type="hidden" name="patientId" value={patient.id} />
+          <Field label="Título">
+            <input className={internalInputClassName} name="title" defaultValue="Seguimiento a paciente" required />
+          </Field>
+          <Field label="Fecha y hora">
+            <input className={internalInputClassName} name="dueAt" type="datetime-local" required />
+          </Field>
+          <Field label="Notas">
+            <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
+          </Field>
+          <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
+            Crear seguimiento
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="mb-4 font-sora text-lg font-bold">Historial de seguimiento</h3>
+        <div className="grid gap-3">
+          {patient.followUpTasks.map((task) => (
+            <a key={task.id} href={`/sigeco/seguimientos/${task.id}`} className="focus-ring rounded-xl border border-border bg-surface-soft/60 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-bold">{task.title}</p>
+                  <p className="text-sm text-muted">{task.dueAt.toLocaleString("es-BO")}</p>
+                </div>
+                <span className="text-sm font-bold text-muted">{followUpStatusLabels[task.status]}</span>
+              </div>
+              {task.attempts[0]?.notes ? <p className="mt-2 text-sm text-muted">{task.attempts[0].notes}</p> : null}
+            </a>
+          ))}
+          {patient.followUpTasks.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
+              Sin seguimientos registrados.
             </p>
           ) : null}
         </div>
