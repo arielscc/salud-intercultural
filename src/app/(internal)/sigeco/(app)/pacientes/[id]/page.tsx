@@ -6,6 +6,7 @@ import {
   patientGenderLabels,
   routeAreaLabels
 } from "@/features/patients/labels";
+import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
 import { studyTypeLabels } from "@/features/studies/labels";
 import { createVisitAction } from "@/features/visits/actions";
 import { getPatientById } from "@/modules/database/queries/patients";
@@ -144,6 +145,34 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           {patient.studies.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
               Sin estudios registrados.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="mb-4 font-sora text-lg font-bold">Cronología administrativa</h3>
+        <div className="grid gap-3">
+          {patient.sales.map((sale) => (
+            <a
+              key={sale.id}
+              href={`/sigeco/administracion/ventas/${sale.id}`}
+              className="focus-ring rounded-xl border border-border bg-surface-soft/60 p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-bold">{formatMoney(sale.totalCents)}</p>
+                  <p className="text-sm text-muted">
+                    Pagado {formatMoney(sale.paidCents)} · Saldo {formatMoney(sale.balanceCents)}
+                  </p>
+                </div>
+                <span className="text-sm font-bold text-muted">{saleStatusLabels[sale.status]}</span>
+              </div>
+            </a>
+          ))}
+          {patient.sales.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
+              Sin ventas ni cobros registrados.
             </p>
           ) : null}
         </div>

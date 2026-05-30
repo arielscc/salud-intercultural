@@ -155,6 +155,16 @@ export async function getPatientById(id: string) {
           include: {
             recordedBy: true
           }
+        },
+        sales: {
+          orderBy: { createdAt: "desc" },
+          take: 8,
+          include: {
+            items: true,
+            payments: {
+              include: { method: true }
+            }
+          }
         }
       }
     });

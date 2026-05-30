@@ -5,6 +5,11 @@ import { createPatientRecord, getPatientById, getPatients } from "@/modules/data
 import { createVisitRecord, getVisitById, getVisits, updateVisitRouteStatus } from "@/modules/database/queries/visits";
 
 async function cleanPatientsVisits() {
+  await prisma.cashMovement.deleteMany();
+  await prisma.deliveredProduct.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.saleItem.deleteMany();
+  await prisma.sale.deleteMany();
   await prisma.nursingWorkItemResult.deleteMany();
   await prisma.nursingApplication.deleteMany();
   await prisma.nursingNote.deleteMany();

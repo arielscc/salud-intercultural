@@ -21,4 +21,12 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("enfermeria", "clinical_write")).toBe(false);
     expect(roleHasPermission("enfermeria", "clinical_read")).toBe(false);
   });
+
+  it("allows administration sales without clinical or studies writes", () => {
+    expect(roleHasPermission("administracion", "sales_read")).toBe(true);
+    expect(roleHasPermission("administracion", "sales_write")).toBe(true);
+    expect(roleHasPermission("administracion", "payments_write")).toBe(true);
+    expect(roleHasPermission("administracion", "clinical_write")).toBe(false);
+    expect(roleHasPermission("administracion", "studies_write")).toBe(false);
+  });
 });

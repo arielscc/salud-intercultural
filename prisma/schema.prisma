@@ -38,6 +38,9 @@ enum InternalPermission {
   nursing_write
   studies_read
   studies_write
+  sales_read
+  sales_write
+  payments_write
   reports_read
 }
 
@@ -182,6 +185,30 @@ enum StudyStatus {
   cancelled
 }
 
+enum SaleStatus {
+  pending
+  partial
+  paid
+  cancelled
+}
+
+enum SaleItemType {
+  treatment
+  medication
+  resonance
+  serum
+  service
+  study
+  product
+  other
+}
+
+enum CashMovementType {
+  income
+  expense
+  adjustment
+}
+
 model InternalUser {
   id             String            @id @default(cuid())
   email          String            @unique
@@ -215,6 +242,9 @@ model InternalUser {
   requestedStudies Study[] @relation("StudyRequestedBy")
   recordedStudies Study[] @relation("StudyRecordedBy")
   nursingWorkItemResults NursingWorkItemResult[]
+  createdSales Sale[] @relation("SaleCreatedBy")
+  receivedPayments Payment[]
+  cashMovements CashMovement[]
 
   @@index([role])
   @@index([active])
@@ -348,6 +378,10 @@ model Patient {
   nursingApplications NursingApplication[]
   nursingNotes        NursingNote[]
   studies             Study[]
+  sales               Sale[]
+  payments            Payment[]
+  deliveredProducts   DeliveredProduct[]
+  cashMovements       CashMovement[]
 
   @@index([fullName])
   @@index([phone])
@@ -408,6 +442,10 @@ model Visit {
   nursingApplications NursingApplication[]
   nursingNotes NursingNote[]
   studies Study[]
+  sales Sale[]
+  payments Payment[]
+  deliveredProducts DeliveredProduct[]
+  cashMovements CashMovement[]
 
   @@index([patientId])
   @@index([status, checkedInAt])
@@ -635,6 +673,7 @@ model VisitWorkItem {
   nursingApplications NursingApplication[]
   studies Study[]
   nursingWorkItemResults NursingWorkItemResult[]
+  sales Sale[]
 
   @@index([visitId])
   @@index([createdById])
@@ -794,4 +833,136 @@ model NursingWorkItemResult {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+}
+
+model Sale {
+  id            String          @id @default(cuid())
+  patientId     String
+  visitId       String?
+  workItemId    String?
+  createdById   String?
+  status        SaleStatus      @default(pending)
+  subtotalCents Int             @default(0)
+  discountCents Int             @default(0)
+  totalCents    Int             @default(0)
+  paidCents     Int             @default(0)
+  balanceCents  Int             @default(0)
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  patient       Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit         Visit?          @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  workItem      VisitWorkItem?  @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  createdBy     InternalUser?   @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items         SaleItem[]
+  payments      Payment[]
+  deliveredProducts DeliveredProduct[]
+  cashMovements CashMovement[]
+
+  @@index([patientId])
+  @@index([visitId])
+  @@index([workItemId])
+  @@index([createdById])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+model SaleItem {
+  id             String       @id @default(cuid())
+  saleId         String
+  type           SaleItemType @default(other)
+  description    String
+  quantity       Int          @default(1)
+  unitPriceCents Int
+  totalCents     Int
+  delivered      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  sale           Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  deliveredProducts DeliveredProduct[]
+
+  @@index([saleId])
+  @@index([type])
+}
+
+model PaymentMethod {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  payments  Payment[]
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  saleId       String
+  patientId    String
+  visitId      String?
+  methodId     String
+  receivedById String?
+  amountCents  Int
+  reference    String?
+  notes        String?
+  paidAt       DateTime      @default(now())
+  createdAt    DateTime      @default(now())
+  sale         Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit        Visit?        @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  method       PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Restrict)
+  receivedBy   InternalUser? @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  cashMovements CashMovement[]
+
+  @@index([saleId])
+  @@index([patientId])
+  @@index([visitId])
+  @@index([methodId])
+  @@index([receivedById])
+  @@index([paidAt])
+}
+
+model DeliveredProduct {
+  id          String    @id @default(cuid())
+  saleId      String
+  saleItemId  String?
+  patientId   String
+  visitId     String?
+  description String
+  quantity    Int       @default(1)
+  deliveredAt DateTime  @default(now())
+  sale        Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleItem    SaleItem? @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+  patient     Patient   @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit       Visit?    @relation(fields: [visitId], references: [id], onDelete: SetNull)
+
+  @@index([saleId])
+  @@index([saleItemId])
+  @@index([patientId])
+  @@index([visitId])
+  @@index([deliveredAt])
+}
+
+model CashMovement {
+  id          String           @id @default(cuid())
+  saleId      String?
+  paymentId   String?
+  patientId   String?
+  visitId     String?
+  userId      String?
+  type        CashMovementType @default(income)
+  amountCents Int
+  description String
+  occurredAt  DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+  sale        Sale?            @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  payment     Payment?         @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  patient     Patient?         @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  visit       Visit?           @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  user        InternalUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([saleId])
+  @@index([paymentId])
+  @@index([patientId])
+  @@index([visitId])
+  @@index([userId])
+  @@index([type, occurredAt])
 }
