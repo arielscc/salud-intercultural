@@ -14,6 +14,7 @@ Usar este directorio para:
 1. [Estado de implementacion V2](./v2-implementation-status.md)
 2. [Preparacion V3](./v3-readiness.md)
 3. [Plan de limpieza de ownership de datos](./data-ownership-cleanup-plan.md)
+4. [Implementacion tecnica V3](./v3-technical-implementation.md)
 
 ## Documentacion relacionada
 

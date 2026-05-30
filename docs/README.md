@@ -8,6 +8,7 @@ Documentacion oficial del proyecto Salud Intercultural. Este directorio esta org
 2. [Design](./design/README.md): sistema visual publico, criterios de UI y reglas de experiencia.
 3. [Operations](./operations/README.md): procedimientos diarios para desarrollo, deploy, variables, CMS, media, leads, analytics, QA y troubleshooting.
 4. [Project](./project/README.md): estado de implementacion, preparacion V3, backlog y documentacion de gestion del producto.
+5. [Masters](./masters/README.md): vision estrategica, procesos reales de la clinica, roles, flujos operativos y reglas de negocio no tecnicas.
 
 ## Regla De Ubicacion
 
@@ -15,6 +16,7 @@ Documentacion oficial del proyecto Salud Intercultural. Este directorio esta org
 - Si describe como debe verse o comportarse la interfaz, va en `design`.
 - Si describe como operar, configurar, validar o publicar el sistema, va en `operations`.
 - Si describe estado, roadmap, decisiones de version o preparacion futura, va en `project`.
+- Si describe como trabaja la clinica, sus roles, procesos, flujos o reglas de negocio no tecnicas, va en `masters`.
 
 ## Antes De Crear Un Documento Nuevo
 
