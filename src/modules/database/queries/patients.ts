@@ -135,6 +135,26 @@ export async function getPatientById(id: string) {
             phone: true,
             status: true
           }
+        },
+        vitalSigns: {
+          orderBy: { recordedAt: "desc" },
+          take: 8
+        },
+        nursingApplications: {
+          orderBy: { appliedAt: "desc" },
+          take: 8
+        },
+        nursingNotes: {
+          orderBy: { createdAt: "desc" },
+          take: 8,
+          include: { user: true }
+        },
+        studies: {
+          orderBy: [{ performedAt: "desc" }, { createdAt: "desc" }],
+          take: 8,
+          include: {
+            recordedBy: true
+          }
         }
       }
     });

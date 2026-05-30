@@ -87,6 +87,23 @@ export async function getClinicalVisitById(visitId: string) {
             workItem: true
           }
         },
+        studies: {
+          orderBy: [{ performedAt: "desc" }, { createdAt: "desc" }],
+          include: {
+            recordedBy: true,
+            attachments: true
+          }
+        },
+        vitalSigns: {
+          orderBy: { recordedAt: "desc" }
+        },
+        nursingApplications: {
+          orderBy: { appliedAt: "desc" }
+        },
+        nursingNotes: {
+          orderBy: { createdAt: "desc" },
+          include: { user: true }
+        },
         workItems: {
           orderBy: { createdAt: "desc" }
         }

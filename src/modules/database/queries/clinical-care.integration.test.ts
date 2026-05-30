@@ -11,6 +11,13 @@ import {
 } from "@/modules/database/queries/clinical-care";
 
 async function cleanClinicalCare() {
+  await prisma.nursingWorkItemResult.deleteMany();
+  await prisma.nursingApplication.deleteMany();
+  await prisma.nursingNote.deleteMany();
+  await prisma.vitalSigns.deleteMany();
+  await prisma.studyAttachment.deleteMany();
+  await prisma.study.deleteMany();
+  await prisma.clinicalAttachment.deleteMany();
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.lead.deleteMany();

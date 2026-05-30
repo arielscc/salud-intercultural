@@ -13,4 +13,12 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("medico", "leads_update")).toBe(false);
     expect(roleHasPermission("enfermeria", "leads_read")).toBe(false);
   });
+
+  it("allows nursing records without diagnostic write access", () => {
+    expect(roleHasPermission("enfermeria", "nursing_read")).toBe(true);
+    expect(roleHasPermission("enfermeria", "nursing_write")).toBe(true);
+    expect(roleHasPermission("enfermeria", "studies_write")).toBe(true);
+    expect(roleHasPermission("enfermeria", "clinical_write")).toBe(false);
+    expect(roleHasPermission("enfermeria", "clinical_read")).toBe(false);
+  });
 });

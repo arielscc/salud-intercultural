@@ -8,6 +8,7 @@ import {
 } from "@/features/clinical-care/actions";
 import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { routeAreaLabels } from "@/features/patients/labels";
+import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
 import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
 import { requirePermission } from "@/modules/permissions";
 
@@ -160,6 +161,46 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
           {visit.clinicalOrders.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
               Sin órdenes clínicas para otras áreas.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="mb-4 font-sora text-lg font-bold">Estudios y enfermería</h3>
+        <div className="grid gap-3">
+          {visit.studies.map((study) => (
+            <article key={study.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
+              <p className="font-bold">{study.title}</p>
+              <p className="text-xs font-semibold text-muted">
+                {studyTypeLabels[study.type]} · {studyStatusLabels[study.status]} ·{" "}
+                {(study.performedAt ?? study.createdAt).toLocaleString("es-BO")}
+              </p>
+              {study.resultSummary ? <p className="mt-2 text-sm text-muted">{study.resultSummary}</p> : null}
+              {study.findings ? <p className="mt-1 text-sm text-muted">{study.findings}</p> : null}
+            </article>
+          ))}
+          {visit.vitalSigns.slice(0, 3).map((item) => (
+            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
+              <p className="font-bold">Signos vitales</p>
+              <p className="text-sm text-muted">
+                PA {item.systolicPressureMmHg ?? "-"} / {item.diastolicPressureMmHg ?? "-"} · Pulso{" "}
+                {item.heartRateBpm ?? "-"} · Sat {item.oxygenSaturation ?? "-"}
+              </p>
+            </article>
+          ))}
+          {visit.nursingApplications.slice(0, 3).map((item) => (
+            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
+              <p className="font-bold">{item.medication}</p>
+              <p className="text-sm text-muted">
+                {item.quantity ?? "Sin cantidad"} · {item.route ?? "Sin vía"} ·{" "}
+                {item.appliedAt.toLocaleString("es-BO")}
+              </p>
+            </article>
+          ))}
+          {visit.studies.length + visit.vitalSigns.length + visit.nursingApplications.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
+              Sin estudios ni registros de enfermería en esta visita.
             </p>
           ) : null}
         </div>

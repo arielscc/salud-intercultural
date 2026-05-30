@@ -6,6 +6,7 @@ import {
   patientGenderLabels,
   routeAreaLabels
 } from "@/features/patients/labels";
+import { studyTypeLabels } from "@/features/studies/labels";
 import { createVisitAction } from "@/features/visits/actions";
 import { getPatientById } from "@/modules/database/queries/patients";
 import { requirePermission } from "@/modules/permissions";
@@ -83,6 +84,66 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           {patient.visits.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
               Este paciente aún no tiene visitas registradas.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="mb-4 font-sora text-lg font-bold">Timeline de enfermería</h3>
+        <div className="grid gap-3">
+          {patient.vitalSigns.map((item) => (
+            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
+              <p className="font-bold">Signos vitales</p>
+              <p className="text-sm text-muted">
+                {item.recordedAt.toLocaleString("es-BO")} · PA {item.systolicPressureMmHg ?? "-"} /
+                {item.diastolicPressureMmHg ?? "-"} · Pulso {item.heartRateBpm ?? "-"} · Temp{" "}
+                {item.temperatureCelsius?.toString() ?? "-"}
+              </p>
+              {item.notes ? <p className="mt-1 text-sm text-muted">{item.notes}</p> : null}
+            </article>
+          ))}
+          {patient.nursingApplications.map((item) => (
+            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
+              <p className="font-bold">{item.medication}</p>
+              <p className="text-sm text-muted">
+                {item.appliedAt.toLocaleString("es-BO")} · {item.quantity ?? "Sin cantidad"} ·{" "}
+                {item.route ?? "Sin vía"}
+              </p>
+              {item.notes ? <p className="mt-1 text-sm text-muted">{item.notes}</p> : null}
+            </article>
+          ))}
+          {patient.nursingNotes.map((item) => (
+            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
+              <p className="font-bold">Nota de enfermería</p>
+              <p className="text-sm text-muted">{item.createdAt.toLocaleString("es-BO")}</p>
+              <p className="mt-1 text-sm text-muted">{item.note}</p>
+            </article>
+          ))}
+          {patient.vitalSigns.length + patient.nursingApplications.length + patient.nursingNotes.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
+              Sin registros de enfermería.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="mb-4 font-sora text-lg font-bold">Estudios</h3>
+        <div className="grid gap-3">
+          {patient.studies.map((study) => (
+            <article key={study.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
+              <p className="font-bold">{study.title}</p>
+              <p className="text-sm text-muted">
+                {studyTypeLabels[study.type]} ·{" "}
+                {(study.performedAt ?? study.createdAt).toLocaleString("es-BO")}
+              </p>
+              {study.resultSummary ? <p className="mt-1 text-sm text-muted">{study.resultSummary}</p> : null}
+            </article>
+          ))}
+          {patient.studies.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
+              Sin estudios registrados.
             </p>
           ) : null}
         </div>

@@ -28,6 +28,10 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_route_update",
     "clinical_read",
     "clinical_write",
+    "nursing_read",
+    "nursing_write",
+    "studies_read",
+    "studies_write",
     "reports_read"
   ],
   direccion: [
@@ -37,6 +41,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "visits_read",
     "patient_route_read",
     "clinical_read",
+    "nursing_read",
+    "studies_read",
     "reports_read"
   ],
   medico: [
@@ -47,7 +53,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_route_read",
     "patient_route_update",
     "clinical_read",
-    "clinical_write"
+    "clinical_write",
+    "nursing_read",
+    "studies_read"
   ],
   recepcion: [
     "internal_access",
@@ -74,7 +82,16 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patients_create"
   ],
   administracion: ["internal_access", "leads_read", "patients_read", "visits_read", "patient_route_read"],
-  enfermeria: ["internal_access", "patients_read", "visits_read", "patient_route_read"]
+  enfermeria: [
+    "internal_access",
+    "patients_read",
+    "visits_read",
+    "patient_route_read",
+    "nursing_read",
+    "nursing_write",
+    "studies_read",
+    "studies_write"
+  ]
 };
 
 export function roleHasPermission(role: InternalRole, permission: InternalPermission) {
