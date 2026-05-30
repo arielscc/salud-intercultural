@@ -28,6 +28,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 13. [Accesibilidad y UX responsive](./accessibility-responsive.md)
 14. [Performance y Core Web Vitals](./performance.md)
 15. [Errores comunes](./troubleshooting.md)
+16. [Reportes de cambios por tarea](./task-change-reports.md)
 
 ## Flujo recomendado
 
