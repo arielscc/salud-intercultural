@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { InternalLeadContactMethod, InternalLeadContactResult, InternalLeadStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { LeadStatusPill } from "@/components/internal/StatusPill";
@@ -49,6 +50,18 @@ export default async function InternalLeadDetailPage({ params }: LeadDetailPageP
           {lead.intentionToVisit ? <p>Intención: {lead.intentionToVisit}</p> : null}
           {lead.commercialNotes ? <p>Notas: {lead.commercialNotes}</p> : null}
         </div>
+        {lead.convertedPatientId ? (
+          <p className="mt-4 rounded-xl border border-success/25 bg-success/10 px-4 py-3 text-sm font-bold text-success">
+            Lead convertido a paciente.
+          </p>
+        ) : (
+          <Link
+            href={`/sigeco/pacientes/nuevo?leadId=${lead.id}&name=${encodeURIComponent(lead.name ?? "")}&phone=${encodeURIComponent(lead.phone)}&city=${encodeURIComponent(lead.city ?? "")}`}
+            className="focus-ring mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white"
+          >
+            Convertir a paciente
+          </Link>
+        )}
       </section>
 
       <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">

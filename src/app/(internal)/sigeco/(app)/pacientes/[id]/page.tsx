@@ -1,0 +1,101 @@
+import { notFound } from "next/navigation";
+import { Field, internalInputClassName } from "@/components/internal/Field";
+import { VisitStatusPill } from "@/components/internal/StatusPill";
+import {
+  patientCaptureSourceLabels,
+  patientGenderLabels,
+  routeAreaLabels
+} from "@/features/patients/labels";
+import { createVisitAction } from "@/features/visits/actions";
+import { getPatientById } from "@/modules/database/queries/patients";
+import { requirePermission } from "@/modules/permissions";
+
+type PatientDetailPageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function PatientDetailPage({ params }: PatientDetailPageProps) {
+  await requirePermission("patients_read");
+  const { id } = await params;
+  const patient = await getPatientById(id);
+
+  if (!patient) notFound();
+
+  return (
+    <div className="grid gap-5">
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <p className="text-sm font-semibold text-muted">{patient.internalCode}</p>
+        <h2 className="font-sora text-2xl font-bold">{patient.fullName}</h2>
+        <div className="mt-3 grid gap-1 text-sm text-muted">
+          <p>Teléfono: {patient.phone}</p>
+          {patient.secondaryPhone ? <p>Alternativo: {patient.secondaryPhone}</p> : null}
+          <p>Género: {patientGenderLabels[patient.gender]}</p>
+          {patient.city ? <p>Ciudad: {patient.city}</p> : null}
+          <p>Fuente: {patientCaptureSourceLabels[patient.captureSource]}</p>
+        </div>
+      </section>
+
+      <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="font-sora text-lg font-bold">Registrar llegada</h3>
+        <form action={createVisitAction} className="grid gap-3">
+          <input type="hidden" name="patientId" value={patient.id} />
+          <Field label="Motivo de visita">
+            <textarea className={`${internalInputClassName} min-h-24 py-3`} name="reason" />
+          </Field>
+          <Field label="Nota de recepción">
+            <input className={internalInputClassName} name="note" />
+          </Field>
+          <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
+            Abrir visita
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="mb-4 font-sora text-lg font-bold">Ficha permanente</h3>
+        <div className="grid gap-3 text-sm">
+          <Info label="Alergias" value={patient.allergies} />
+          <Info label="Antecedentes" value={patient.relevantHistory} />
+          <Info label="Observaciones" value={patient.generalObservations} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="mb-4 font-sora text-lg font-bold">Visitas</h3>
+        <div className="grid gap-3">
+          {patient.visits.map((visit) => (
+            <a
+              key={visit.id}
+              href={`/sigeco/visitas/${visit.id}`}
+              className="focus-ring rounded-xl border border-border bg-surface-soft/60 p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-bold">{visit.checkedInAt.toLocaleString("es-BO")}</p>
+                  <p className="text-sm text-muted">
+                    Área actual: {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
+                  </p>
+                </div>
+                <VisitStatusPill status={visit.status} />
+              </div>
+            </a>
+          ))}
+          {patient.visits.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
+              Este paciente aún no tiene visitas registradas.
+            </p>
+          ) : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-soft/60 p-3">
+      <p className="text-xs font-bold uppercase tracking-normal text-muted">{label}</p>
+      <p className="mt-1 text-text">{value || "Sin registro"}</p>
+    </div>
+  );
+}

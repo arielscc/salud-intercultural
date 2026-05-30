@@ -1,0 +1,156 @@
+import type { PatientCaptureSource, PatientGender } from "@/generated/prisma/client";
+import { prisma, withDatabaseError } from "@/modules/database";
+import { getPagination, type PaginationInput } from "@/modules/database/pagination";
+
+export type CreatePatientRecordInput = {
+  fullName: string;
+  phone: string;
+  secondaryPhone?: string;
+  birthDate?: Date;
+  gender?: PatientGender;
+  city?: string;
+  department?: string;
+  address?: string;
+  captureSource?: PatientCaptureSource;
+  generalObservations?: string;
+  allergies?: string;
+  relevantHistory?: string;
+  sourceLeadId?: string;
+  createdById?: string;
+};
+
+export async function createPatientRecord(input: CreatePatientRecordInput) {
+  return withDatabaseError("createPatientRecord", async () => {
+    return prisma.$transaction(async (tx) => {
+      const patientCount = await tx.patient.count();
+      const patient = await tx.patient.create({
+        data: {
+          internalCode: `SI-${String(patientCount + 1).padStart(6, "0")}`,
+          fullName: input.fullName,
+          phone: input.phone,
+          secondaryPhone: input.secondaryPhone,
+          birthDate: input.birthDate,
+          gender: input.gender ?? "unknown",
+          city: input.city,
+          department: input.department,
+          address: input.address,
+          captureSource: input.captureSource ?? "other",
+          generalObservations: input.generalObservations,
+          allergies: input.allergies,
+          relevantHistory: input.relevantHistory
+        }
+      });
+
+      if (input.sourceLeadId) {
+        await tx.lead.update({
+          where: { id: input.sourceLeadId },
+          data: {
+            convertedPatientId: patient.id,
+            status: "converted_to_patient"
+          }
+        });
+
+        await tx.leadStatusHistory.create({
+          data: {
+            leadId: input.sourceLeadId,
+            userId: input.createdById,
+            toStatus: "converted_to_patient",
+            note: `Convertido a paciente ${patient.internalCode}`
+          }
+        });
+      }
+
+      return patient;
+    });
+  });
+}
+
+export async function getPatients(
+  input: PaginationInput & {
+    search?: string;
+  } = {}
+) {
+  const pagination = getPagination(input);
+  const search = input.search?.trim();
+
+  return withDatabaseError("getPatients", async () => {
+    return prisma.patient.findMany({
+      where: {
+        OR: search
+          ? [
+              { fullName: { contains: search, mode: "insensitive" } },
+              { phone: { contains: search, mode: "insensitive" } },
+              { internalCode: { contains: search, mode: "insensitive" } },
+              { city: { contains: search, mode: "insensitive" } }
+            ]
+          : undefined
+      },
+      include: {
+        visits: {
+          orderBy: { checkedInAt: "desc" },
+          take: 1
+        },
+        _count: {
+          select: {
+            visits: true
+          }
+        }
+      },
+      orderBy: {
+        updatedAt: "desc"
+      },
+      skip: pagination.skip,
+      take: pagination.take
+    });
+  });
+}
+
+export async function getPatientById(id: string) {
+  return withDatabaseError("getPatientById", async () => {
+    return prisma.patient.findUnique({
+      where: { id },
+      include: {
+        visits: {
+          orderBy: { checkedInAt: "desc" },
+          include: {
+            route: {
+              include: {
+                steps: {
+                  orderBy: { startedAt: "desc" }
+                }
+              }
+            },
+            statusHistory: {
+              orderBy: { createdAt: "desc" }
+            },
+            workItems: {
+              orderBy: { createdAt: "desc" }
+            }
+          }
+        },
+        convertedLeads: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            status: true
+          }
+        }
+      }
+    });
+  });
+}
+
+export async function findPossibleDuplicatePatients(phone: string) {
+  return withDatabaseError("findPossibleDuplicatePatients", async () => {
+    return prisma.patient.findMany({
+      where: {
+        OR: [{ phone }, { secondaryPhone: phone }]
+      },
+      take: 5,
+      orderBy: {
+        updatedAt: "desc"
+      }
+    });
+  });
+}

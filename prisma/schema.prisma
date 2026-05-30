@@ -24,6 +24,14 @@ enum InternalPermission {
   leads_update
   leads_contact
   leads_reminder
+  patients_read
+  patients_create
+  patients_update
+  visits_read
+  visits_create
+  visits_update
+  patient_route_read
+  patient_route_update
   reports_read
 }
 
@@ -76,6 +84,59 @@ enum InternalLeadReminderStatus {
   cancelled
 }
 
+enum PatientGender {
+  female
+  male
+  other
+  unknown
+}
+
+enum PatientStatus {
+  active
+  inactive
+  archived
+}
+
+enum PatientCaptureSource {
+  facebook_ads
+  facebook_organic
+  tiktok
+  whatsapp
+  referral
+  previous_patient
+  flyer
+  website
+  other
+}
+
+enum VisitStatus {
+  in_reception
+  in_consultation
+  in_nursing
+  in_administration
+  completed
+  left_without_care
+  cancelled
+}
+
+enum PatientRouteArea {
+  recepcion
+  medico
+  enfermeria
+  administracion
+  seguimiento
+  cierre
+}
+
+enum VisitWorkItemStatus {
+  pending
+  acknowledged
+  in_progress
+  completed
+  cancelled
+  blocked
+}
+
 model InternalUser {
   id             String            @id @default(cuid())
   email          String            @unique
@@ -93,6 +154,11 @@ model InternalUser {
   contactAttempts LeadContactAttempt[]
   reminders      LeadReminder[]
   statusChanges  LeadStatusHistory[]
+  patientNotes    PatientNote[]
+  createdVisits   Visit[]           @relation("VisitCreatedBy")
+  visitStatusChanges VisitStatusHistory[]
+  receptionCheckIns ReceptionCheckIn[]
+  createdWorkItems VisitWorkItem[]
 
   @@index([role])
   @@index([active])
@@ -130,6 +196,7 @@ model Lead {
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime                  @updatedAt
   assignedTo          InternalUser?             @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  convertedPatient    Patient?                  @relation("LeadConvertedPatient", fields: [convertedPatientId], references: [id], onDelete: SetNull)
   contactAttempts     LeadContactAttempt[]
   reminders           LeadReminder[]
   statusHistory       LeadStatusHistory[]
@@ -139,6 +206,7 @@ model Lead {
   @@index([status, createdAt])
   @@index([source])
   @@index([assignedToId])
+  @@index([convertedPatientId])
 }
 
 model LeadContactAttempt {
@@ -189,5 +257,163 @@ model LeadStatusHistory {
 
   @@index([leadId])
   @@index([userId])
+  @@index([createdAt])
+}
+
+model Patient {
+  id                  String               @id @default(cuid())
+  internalCode        String               @unique
+  fullName            String
+  phone               String
+  secondaryPhone      String?
+  birthDate           DateTime?
+  gender              PatientGender        @default(unknown)
+  city                String?
+  department          String?
+  address             String?
+  captureSource       PatientCaptureSource @default(other)
+  firstVisitAt        DateTime?
+  generalObservations String?
+  allergies           String?
+  relevantHistory     String?
+  status              PatientStatus        @default(active)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  convertedLeads      Lead[]               @relation("LeadConvertedPatient")
+  contacts            PatientContact[]
+  notes               PatientNote[]
+  visits              Visit[]
+
+  @@index([fullName])
+  @@index([phone])
+  @@index([status])
+  @@index([captureSource])
+  @@index([createdAt])
+}
+
+model PatientContact {
+  id        String   @id @default(cuid())
+  patientId String
+  label     String?
+  phone     String
+  createdAt DateTime @default(now())
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([phone])
+}
+
+model PatientNote {
+  id        String        @id @default(cuid())
+  patientId String
+  userId    String?
+  note      String
+  createdAt DateTime      @default(now())
+  patient   Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user      InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([patientId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Visit {
+  id             String               @id @default(cuid())
+  patientId      String
+  status         VisitStatus          @default(in_reception)
+  reason         String?
+  createdById    String?
+  checkedInAt    DateTime             @default(now())
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  patient        Patient              @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  createdBy      InternalUser?        @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  checkIn        ReceptionCheckIn?
+  route          PatientRoute?
+  statusHistory  VisitStatusHistory[]
+  workItems      VisitWorkItem[]
+
+  @@index([patientId])
+  @@index([status, checkedInAt])
+  @@index([createdById])
+  @@index([checkedInAt])
+}
+
+model VisitStatusHistory {
+  id         String        @id @default(cuid())
+  visitId    String
+  userId     String?
+  fromStatus VisitStatus?
+  toStatus   VisitStatus
+  note       String?
+  createdAt  DateTime      @default(now())
+  visit      Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  user       InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([visitId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ReceptionCheckIn {
+  id        String        @id @default(cuid())
+  visitId   String        @unique
+  userId    String?
+  note      String?
+  createdAt DateTime      @default(now())
+  visit     Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  user      InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+model PatientRoute {
+  id          String             @id @default(cuid())
+  visitId     String             @unique
+  currentArea PatientRouteArea   @default(recepcion)
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  visit       Visit              @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  steps       PatientRouteStep[]
+
+  @@index([currentArea])
+  @@index([active])
+}
+
+model PatientRouteStep {
+  id        String           @id @default(cuid())
+  routeId   String
+  area      PatientRouteArea
+  status    VisitStatus
+  note      String?
+  startedAt DateTime         @default(now())
+  endedAt   DateTime?
+  route     PatientRoute     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId])
+  @@index([area])
+  @@index([startedAt])
+}
+
+model VisitWorkItem {
+  id          String              @id @default(cuid())
+  visitId     String
+  createdById String?
+  area        PatientRouteArea
+  status      VisitWorkItemStatus @default(pending)
+  title       String
+  description String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  completedAt DateTime?
+  visit       Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  createdBy   InternalUser?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([visitId])
+  @@index([createdById])
+  @@index([area, status])
   @@index([createdAt])
 }
