@@ -6,3 +6,188 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum InternalRole {
+  super_admin
+  direccion
+  medico
+  recepcion
+  captacion
+  administracion
+  enfermeria
+}
+
+enum InternalPermission {
+  internal_access
+  leads_read
+  leads_create
+  leads_update
+  leads_contact
+  leads_reminder
+  reports_read
+}
+
+enum InternalLeadSource {
+  website
+  whatsapp
+  facebook_ads
+  facebook_organic
+  tiktok
+  google
+  call
+  referral
+  previous_patient
+  flyer
+  other
+}
+
+enum InternalLeadStatus {
+  new
+  contacted
+  interested
+  wants_visit
+  reminder_pending
+  confirmed_attendance
+  no_answer
+  discarded
+  converted_to_patient
+}
+
+enum InternalLeadContactMethod {
+  call
+  whatsapp
+  in_person
+  other
+}
+
+enum InternalLeadContactResult {
+  contacted
+  no_answer
+  interested
+  wants_visit
+  confirmed_attendance
+  discarded
+  follow_up_required
+}
+
+enum InternalLeadReminderStatus {
+  pending
+  completed
+  cancelled
+}
+
+model InternalUser {
+  id             String            @id @default(cuid())
+  email          String            @unique
+  name           String?
+  passwordHash   String
+  role           InternalRole      @default(captacion)
+  active         Boolean           @default(true)
+  lastLoginAt    DateTime?
+  failedAttempts Int               @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  sessions       InternalSession[]
+  assignedLeads  Lead[]            @relation("LeadAssignee")
+  contactAttempts LeadContactAttempt[]
+  reminders      LeadReminder[]
+  statusChanges  LeadStatusHistory[]
+
+  @@index([role])
+  @@index([active])
+}
+
+model InternalSession {
+  id        String       @id @default(cuid())
+  tokenHash String       @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime     @default(now())
+  user      InternalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Lead {
+  id                  String                    @id @default(cuid())
+  name                String?
+  phone               String
+  email               String?
+  city                String?
+  symptoms            String?
+  intentionToVisit    String?
+  estimatedVisitDate  DateTime?
+  commercialNotes     String?
+  source              InternalLeadSource        @default(website)
+  status              InternalLeadStatus        @default(new)
+  pagePath            String?
+  assignedToId        String?
+  convertedPatientId  String?
+  firstContactedAt    DateTime?
+  lastContactedAt     DateTime?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  assignedTo          InternalUser?             @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  contactAttempts     LeadContactAttempt[]
+  reminders           LeadReminder[]
+  statusHistory       LeadStatusHistory[]
+
+  @@index([createdAt])
+  @@index([phone])
+  @@index([status, createdAt])
+  @@index([source])
+  @@index([assignedToId])
+}
+
+model LeadContactAttempt {
+  id          String                    @id @default(cuid())
+  leadId      String
+  userId      String?
+  method      InternalLeadContactMethod @default(call)
+  result      InternalLeadContactResult
+  notes       String?
+  contactedAt DateTime                  @default(now())
+  createdAt   DateTime                  @default(now())
+  lead        Lead                      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        InternalUser?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([contactedAt])
+}
+
+model LeadReminder {
+  id          String                     @id @default(cuid())
+  leadId      String
+  userId      String?
+  dueAt       DateTime
+  note        String?
+  status      InternalLeadReminderStatus @default(pending)
+  completedAt DateTime?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  lead        Lead                       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        InternalUser?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([status, dueAt])
+}
+
+model LeadStatusHistory {
+  id         String             @id @default(cuid())
+  leadId     String
+  userId     String?
+  fromStatus InternalLeadStatus?
+  toStatus   InternalLeadStatus
+  note       String?
+  createdAt  DateTime           @default(now())
+  lead       Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user       InternalUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([createdAt])
+}

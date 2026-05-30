@@ -44,6 +44,10 @@ Estas variables no deben exponerse al navegador.
 | `ADMIN_RESET_PASSWORD_ON_SEED` | No | `false` | Permite resetear el password de un admin existente durante seed cuando vale `true`. |
 | `ADMIN_SESSION_SECONDS` | No | `28800` | Duracion de sesion admin. |
 | `ADMIN_LOCK_MINUTES` | No | `10` | Bloqueo temporal tras intentos fallidos. |
+| `INTERNAL_SESSION_SECONDS` | No | `28800` | Duracion de sesion interna de Sigeco. |
+| `INTERNAL_LOCK_MINUTES` | No | `10` | Bloqueo temporal tras intentos fallidos en Sigeco. |
+| `INTERNAL_ADMIN_EMAIL` | No | `sigeco-admin@example.com` | Email para crear el primer super administrador interno con `pnpm internal:seed`. |
+| `INTERNAL_ADMIN_PASSWORD` | No | clave temporal de seed | Password para crear el primer super administrador interno con `pnpm internal:seed`. |
 | `GOOGLE_SITE_VERIFICATION` | No | token de Search Console | Verificacion de propiedad en Google. |
 | `RATE_LIMIT_MAX` | No | `10` | Limite de envios por ventana para leads. |
 | `RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Ventana de rate limit para leads. |
