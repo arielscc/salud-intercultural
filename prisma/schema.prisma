@@ -32,6 +32,8 @@ enum InternalPermission {
   visits_update
   patient_route_read
   patient_route_update
+  clinical_read
+  clinical_write
   reports_read
 }
 
@@ -137,6 +139,30 @@ enum VisitWorkItemStatus {
   blocked
 }
 
+enum DiagnosisKind {
+  primary
+  secondary
+}
+
+enum ClinicalOrderType {
+  vital_signs
+  study
+  nursing_application
+  serum
+  medication
+  administration
+  follow_up
+  other
+}
+
+enum ClinicalOrderStatus {
+  pending
+  acknowledged
+  completed
+  cancelled
+  blocked
+}
+
 model InternalUser {
   id             String            @id @default(cuid())
   email          String            @unique
@@ -159,6 +185,11 @@ model InternalUser {
   visitStatusChanges VisitStatusHistory[]
   receptionCheckIns ReceptionCheckIn[]
   createdWorkItems VisitWorkItem[]
+  clinicalConsultations ClinicalConsultation[]
+  prescriptions Prescription[]
+  clinicalEvolutions ClinicalEvolution[]
+  clinicalNotes ClinicalNote[]
+  clinicalOrders ClinicalOrder[]
 
   @@index([role])
   @@index([active])
@@ -283,6 +314,11 @@ model Patient {
   contacts            PatientContact[]
   notes               PatientNote[]
   visits              Visit[]
+  clinicalConsultations ClinicalConsultation[]
+  prescriptions       Prescription[]
+  clinicalEvolutions  ClinicalEvolution[]
+  clinicalNotes       ClinicalNote[]
+  clinicalOrders      ClinicalOrder[]
 
   @@index([fullName])
   @@index([phone])
@@ -334,6 +370,11 @@ model Visit {
   route          PatientRoute?
   statusHistory  VisitStatusHistory[]
   workItems      VisitWorkItem[]
+  clinicalConsultation ClinicalConsultation?
+  prescriptions Prescription[]
+  clinicalEvolutions ClinicalEvolution[]
+  clinicalNotes ClinicalNote[]
+  clinicalOrders ClinicalOrder[]
 
   @@index([patientId])
   @@index([status, checkedInAt])
@@ -354,6 +395,149 @@ model VisitStatusHistory {
 
   @@index([visitId])
   @@index([userId])
+  @@index([createdAt])
+}
+
+model ClinicalConsultation {
+  id                  String              @id @default(cuid())
+  visitId             String              @unique
+  patientId           String
+  doctorId            String?
+  motive              String
+  findings            String?
+  observations        String?
+  treatmentPlanText   String?
+  indications         String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  visit               Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient             Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor              InternalUser?       @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  diagnoses           Diagnosis[]
+  treatmentPlans      TreatmentPlan[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([createdAt])
+}
+
+model Diagnosis {
+  id             String               @id @default(cuid())
+  consultationId String
+  kind           DiagnosisKind        @default(secondary)
+  name           String
+  findings       String?
+  observations   String?
+  createdAt      DateTime             @default(now())
+  consultation   ClinicalConsultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  @@index([consultationId])
+  @@index([kind])
+}
+
+model TreatmentPlan {
+  id             String               @id @default(cuid())
+  consultationId String
+  internalName   String?
+  medications    String?
+  dosage         String?
+  duration       String?
+  observations   String?
+  createdAt      DateTime             @default(now())
+  consultation   ClinicalConsultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  @@index([consultationId])
+}
+
+model Prescription {
+  id        String             @id @default(cuid())
+  visitId   String
+  patientId String
+  doctorId  String?
+  notes     String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  visit     Visit              @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient   Patient            @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor    InternalUser?      @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  items     PrescriptionItem[]
+
+  @@index([visitId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([createdAt])
+}
+
+model PrescriptionItem {
+  id             String       @id @default(cuid())
+  prescriptionId String
+  medication     String
+  dose           String?
+  frequency      String?
+  duration       String?
+  observations   String?
+  createdAt      DateTime     @default(now())
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+}
+
+model ClinicalEvolution {
+  id        String        @id @default(cuid())
+  visitId   String
+  patientId String
+  userId    String?
+  note      String
+  createdAt DateTime      @default(now())
+  visit     Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient   Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  user      InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([visitId])
+  @@index([patientId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ClinicalNote {
+  id        String        @id @default(cuid())
+  visitId   String
+  patientId String
+  userId    String?
+  note      String
+  createdAt DateTime      @default(now())
+  visit     Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient   Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  user      InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([visitId])
+  @@index([patientId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ClinicalOrder {
+  id          String              @id @default(cuid())
+  visitId     String
+  patientId   String
+  doctorId    String?
+  workItemId  String?
+  type        ClinicalOrderType
+  targetArea  PatientRouteArea
+  status      ClinicalOrderStatus @default(pending)
+  title       String
+  details     String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  visit       Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient     Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor      InternalUser?       @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  workItem    VisitWorkItem?      @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+
+  @@index([visitId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([targetArea, status])
   @@index([createdAt])
 }
 
@@ -411,6 +595,7 @@ model VisitWorkItem {
   completedAt DateTime?
   visit       Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
   createdBy   InternalUser?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  clinicalOrders ClinicalOrder[]
 
   @@index([visitId])
   @@index([createdById])

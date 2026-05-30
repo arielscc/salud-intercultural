@@ -26,6 +26,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "visits_update",
     "patient_route_read",
     "patient_route_update",
+    "clinical_read",
+    "clinical_write",
     "reports_read"
   ],
   direccion: [
@@ -34,9 +36,19 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patients_read",
     "visits_read",
     "patient_route_read",
+    "clinical_read",
     "reports_read"
   ],
-  medico: ["internal_access", "patients_read", "visits_read", "patient_route_read"],
+  medico: [
+    "internal_access",
+    "patients_read",
+    "visits_read",
+    "visits_update",
+    "patient_route_read",
+    "patient_route_update",
+    "clinical_read",
+    "clinical_write"
+  ],
   recepcion: [
     "internal_access",
     "leads_read",

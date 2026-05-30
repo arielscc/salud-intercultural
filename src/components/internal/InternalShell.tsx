@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, Home, LogOut, UserRoundSearch, UsersRound } from "lucide-react";
+import { ClipboardList, Home, LogOut, Stethoscope, UserRoundSearch, UsersRound } from "lucide-react";
 import type { InternalUser } from "@/generated/prisma/client";
 import { logoutInternalUser } from "@/features/internal-auth/actions";
 import { internalRoleLabels } from "@/features/internal-auth/permissions";
@@ -9,7 +9,8 @@ const navItems = [
   { href: "/sigeco", label: "Inicio", icon: Home },
   { href: "/sigeco/leads", label: "Leads", icon: UserRoundSearch },
   { href: "/sigeco/pacientes", label: "Pacientes", icon: UsersRound },
-  { href: "/sigeco/visitas", label: "Visitas", icon: ClipboardList }
+  { href: "/sigeco/visitas", label: "Visitas", icon: ClipboardList },
+  { href: "/sigeco/consultas", label: "Consulta", icon: Stethoscope }
 ];
 
 export function InternalShell({
@@ -48,7 +49,7 @@ export function InternalShell({
         <main className="flex-1 px-4 py-5 pb-24 sm:px-6 sm:pb-8">{children}</main>
 
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 px-3 pb-[calc(0.65rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:hidden">
-          <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+          <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
 
