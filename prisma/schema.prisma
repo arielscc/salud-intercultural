@@ -43,6 +43,9 @@ enum InternalPermission {
   payments_write
   followups_read
   followups_write
+  inventory_read
+  inventory_write
+  inventory_adjust
   reports_read
 }
 
@@ -230,6 +233,18 @@ enum FollowUpAttemptMethod {
   other
 }
 
+enum InventoryMovementType {
+  entry
+  automatic_sale_exit
+  authorized_manual_adjustment
+  correction
+}
+
+enum InventoryAlertStatus {
+  open
+  resolved
+}
+
 model InternalUser {
   id             String            @id @default(cuid())
   email          String            @unique
@@ -270,6 +285,8 @@ model InternalUser {
   createdFollowUps FollowUpTask[] @relation("FollowUpCreatedBy")
   followUpAttempts FollowUpAttempt[]
   followUpStatusChanges FollowUpStatusHistory[]
+  inventoryMovements InventoryMovement[]
+  inventoryAdjustments InventoryAdjustment[]
 
   @@index([role])
   @@index([active])
@@ -889,6 +906,7 @@ model Sale {
   deliveredProducts DeliveredProduct[]
   cashMovements CashMovement[]
   followUpTasks FollowUpTask[]
+  inventoryMovements InventoryMovement[]
 
   @@index([patientId])
   @@index([visitId])
@@ -901,6 +919,7 @@ model Sale {
 model SaleItem {
   id             String       @id @default(cuid())
   saleId         String
+  inventoryItemId String?
   type           SaleItemType @default(other)
   description    String
   quantity       Int          @default(1)
@@ -909,9 +928,12 @@ model SaleItem {
   delivered      Boolean      @default(false)
   createdAt      DateTime     @default(now())
   sale           Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  inventoryItem  InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
   deliveredProducts DeliveredProduct[]
+  inventoryMovements InventoryMovement[]
 
   @@index([saleId])
+  @@index([inventoryItemId])
   @@index([type])
 }
 
@@ -1080,4 +1102,93 @@ model FollowUpTemplate {
   createdAt DateTime @default(now())
 
   @@index([active])
+}
+
+model Supplier {
+  id        String          @id @default(cuid())
+  name      String
+  phone     String?
+  notes     String?
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  items     InventoryItem[]
+
+  @@index([name])
+  @@index([active])
+}
+
+model InventoryItem {
+  id              String              @id @default(cuid())
+  supplierId      String?
+  sku             String?             @unique
+  internalCode    String              @unique
+  name            String
+  description     String?
+  unit            String              @default("unidad")
+  currentStock    Int                 @default(0)
+  minimumStock    Int                 @default(0)
+  active          Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  supplier        Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  saleItems       SaleItem[]
+  movements       InventoryMovement[]
+  adjustments     InventoryAdjustment[]
+  alerts          InventoryAlert[]
+
+  @@index([supplierId])
+  @@index([name])
+  @@index([active])
+  @@index([currentStock])
+}
+
+model InventoryMovement {
+  id              String                @id @default(cuid())
+  itemId          String
+  saleId          String?
+  saleItemId      String?
+  userId          String?
+  type            InventoryMovementType
+  quantityDelta   Int
+  stockAfter      Int
+  reason          String
+  createdAt       DateTime              @default(now())
+  item            InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  sale            Sale?                 @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  saleItem        SaleItem?             @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+  user            InternalUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([itemId])
+  @@index([saleId])
+  @@index([saleItemId])
+  @@index([userId])
+  @@index([type, createdAt])
+}
+
+model InventoryAdjustment {
+  id              String        @id @default(cuid())
+  itemId          String
+  userId          String?
+  quantityDelta   Int
+  reason          String
+  createdAt       DateTime      @default(now())
+  item            InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  user            InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([itemId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model InventoryAlert {
+  id        String               @id @default(cuid())
+  itemId    String
+  status    InventoryAlertStatus @default(open)
+  message   String
+  createdAt DateTime             @default(now())
+  resolvedAt DateTime?
+  item      InventoryItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([status, createdAt])
 }

@@ -37,6 +37,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "payments_write",
     "followups_read",
     "followups_write",
+    "inventory_read",
+    "inventory_write",
+    "inventory_adjust",
     "reports_read"
   ],
   direccion: [
@@ -50,6 +53,7 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "studies_read",
     "sales_read",
     "followups_read",
+    "inventory_read",
     "reports_read"
   ],
   medico: [
@@ -102,7 +106,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "sales_write",
     "payments_write",
     "followups_read",
-    "followups_write"
+    "followups_write",
+    "inventory_read",
+    "inventory_write"
   ],
   enfermeria: [
     "internal_access",

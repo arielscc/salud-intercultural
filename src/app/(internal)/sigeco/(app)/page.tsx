@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertCircle, BellRing, UserRoundSearch } from "lucide-react";
 import { getFollowUpWorkSummary } from "@/modules/database/queries/follow-ups";
+import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getInternalLeadWorkSummary, getInternalLeads } from "@/modules/database/queries/leads-v3";
 import { requireInternalUser } from "@/modules/permissions";
 import { LeadStatusPill } from "@/components/internal/StatusPill";
@@ -11,6 +12,7 @@ export default async function SigecoDashboardPage() {
     user.role === "captacion" ? user.id : undefined
   );
   const followUpSummary = await getFollowUpWorkSummary(user.role === "captacion" ? user.id : undefined);
+  const inventorySummary = await getInventorySummary();
   const recentLeads = await getInternalLeads({ pageSize: 5 });
 
   return (
@@ -25,6 +27,7 @@ export default async function SigecoDashboardPage() {
         <MetricCard icon={BellRing} label="Recordatorios vencidos" value={summary.pendingReminders} />
         <MetricCard icon={AlertCircle} label="No responden" value={summary.noAnswer} />
         <MetricCard icon={BellRing} label="Seguimientos hoy" value={followUpSummary.today} />
+        <MetricCard icon={AlertCircle} label="Stock bajo" value={inventorySummary.lowStock} />
       </section>
 
       <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">

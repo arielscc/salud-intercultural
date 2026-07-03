@@ -9,6 +9,7 @@ import {
   saleItemTypeLabels,
   saleStatusLabels
 } from "@/features/sales/labels";
+import { getInventoryItems } from "@/modules/database/queries/inventory";
 import { getAdministrationWorkItemById } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";
 
@@ -22,7 +23,10 @@ type AdministrationWorkItemPageProps = {
 export default async function AdministrationWorkItemPage({ params }: AdministrationWorkItemPageProps) {
   await requirePermission("sales_read");
   const { workItemId } = await params;
-  const item = await getAdministrationWorkItemById(workItemId);
+  const [item, inventoryItems] = await Promise.all([
+    getAdministrationWorkItemById(workItemId),
+    getInventoryItems({ pageSize: 100 })
+  ]);
 
   if (!item) notFound();
 
@@ -57,6 +61,16 @@ export default async function AdministrationWorkItemPage({ params }: Administrat
             {saleItemTypeOptions.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Producto inventariable">
+          <select className={internalInputClassName} name="inventoryItemId" defaultValue="">
+            <option value="">No descontar inventario</option>
+            {inventoryItems.map((inventoryItem) => (
+              <option key={inventoryItem.id} value={inventoryItem.id}>
+                {inventoryItem.name} · Stock {inventoryItem.currentStock}
               </option>
             ))}
           </select>

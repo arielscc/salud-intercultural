@@ -41,6 +41,7 @@ export const createSaleSchema = z.object({
   patientId: z.string().min(1),
   visitId: optionalText,
   workItemId: optionalText,
+  inventoryItemId: optionalText,
   itemType: saleItemTypeSchema.default("service"),
   description: z.string().trim().min(2).max(180),
   quantity: z.coerce.number().int().positive().max(999).default(1),

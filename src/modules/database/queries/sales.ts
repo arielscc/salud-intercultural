@@ -1,6 +1,7 @@
 import type { Prisma, SaleItemType } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
+import { applyInventoryMovement } from "@/modules/database/queries/inventory";
 
 const paymentMethodNames: Record<string, string> = {
   cash: "Efectivo",
@@ -118,6 +119,7 @@ export async function createSaleRecord(input: {
   workItemId?: string;
   createdById?: string;
   itemType: SaleItemType;
+  inventoryItemId?: string;
   description: string;
   quantity: number;
   unitPriceCents: number;
@@ -150,6 +152,7 @@ export async function createSaleRecord(input: {
           notes: input.notes,
           items: {
             create: {
+              inventoryItemId: input.inventoryItemId,
               type: input.itemType,
               description: input.description,
               quantity: input.quantity,
@@ -160,6 +163,29 @@ export async function createSaleRecord(input: {
         },
         include: { items: true }
       });
+
+      if (input.inventoryItemId) {
+        await applyInventoryMovement(tx, {
+          itemId: input.inventoryItemId,
+          saleId: sale.id,
+          saleItemId: sale.items[0]?.id,
+          userId: input.createdById,
+          type: "automatic_sale_exit",
+          quantityDelta: -input.quantity,
+          reason: `Salida automática por venta ${sale.id}`
+        });
+
+        await tx.deliveredProduct.create({
+          data: {
+            saleId: sale.id,
+            saleItemId: sale.items[0]?.id,
+            patientId: input.patientId,
+            visitId: input.visitId,
+            description: input.description,
+            quantity: input.quantity
+          }
+        });
+      }
 
       if (initialPaymentCents > 0) {
         const method = await ensurePaymentMethod(tx, input.paymentMethodCode ?? "cash");

@@ -28,6 +28,7 @@ export async function createSaleAction(formData: FormData) {
     workItemId: parsed.data.workItemId,
     createdById: user.id,
     itemType: parsed.data.itemType,
+    inventoryItemId: parsed.data.inventoryItemId,
     description: parsed.data.description,
     quantity: parsed.data.quantity,
     unitPriceCents: moneyToCents(parsed.data.unitPrice),
