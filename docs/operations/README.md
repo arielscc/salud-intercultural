@@ -29,6 +29,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 14. [Performance y Core Web Vitals](./performance.md)
 15. [Errores comunes](./troubleshooting.md)
 16. [Reportes de cambios por tarea](./task-change-reports.md)
+17. [Desarrollo asistido con skills](./ai-assisted-development.md)
 
 ## Flujo recomendado
 

@@ -11,10 +11,12 @@ Usar este directorio para:
 
 ## Guias
 
-1. [Estado de implementacion V2](./v2-implementation-status.md)
-2. [Preparacion V3](./v3-readiness.md)
-3. [Plan de limpieza de ownership de datos](./data-ownership-cleanup-plan.md)
-4. [Implementacion tecnica V3](./v3-technical-implementation.md)
+1. [Estado de implementacion V3](./v3-implementation-status.md): estado actual de Sigeco, resultados por fase, validaciones, pendientes y siguiente orden recomendado.
+2. [Implementacion tecnica V3](./v3-technical-implementation.md): roadmap tecnico, arquitectura, modelos, tareas y criterios de aceptacion.
+3. [Estado de implementacion V2](./v2-implementation-status.md): baseline estable del sitio publico, CMS y marketing.
+4. [Preparacion V3](./v3-readiness.md): criterios y decisiones previas para iniciar V3.
+5. [Plan de limpieza de ownership de datos](./data-ownership-cleanup-plan.md): cierre de la separacion Payload/Prisma.
+6. [Reportes por tarea](./task-reports/): evidencia de cada entrega implementada.
 
 ## Documentacion relacionada
 

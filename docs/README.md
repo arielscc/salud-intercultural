@@ -1,6 +1,23 @@
 # Documentation
 
-Documentacion oficial del proyecto Salud Intercultural. Este directorio esta organizado por responsabilidad para evitar duplicacion y dejar una base clara para iniciar V3.
+Documentacion oficial del proyecto Salud Intercultural. Este directorio esta organizado por responsabilidad para evitar duplicacion y dejar claro que se esta implementando, que resultado dejo cada entrega y que falta cerrar.
+
+## Lectura Rapida
+
+1. [Estado de implementacion V3](./project/v3-implementation-status.md): punto de entrada para ver el estado actual de Sigeco, resultados por fase, validaciones y pendientes.
+2. [Implementacion tecnica V3](./project/v3-technical-implementation.md): roadmap tecnico y criterios de aceptacion por fase.
+3. [Documento de Negocio V3.0](./masters/Documento_de_Negocio_V3_0.md): fuente funcional de verdad sobre lo que la clinica espera.
+4. [Reportes por tarea](./project/task-reports/): evidencia de cambios implementados, decisiones, validacion y pendientes.
+5. [Desarrollo asistido con skills](./operations/ai-assisted-development.md): workflow recomendado para planificar, revisar, probar y publicar con gstack/Codex.
+
+## Estado General
+
+| Version | Estado | Resultado |
+| --- | --- | --- |
+| V1 | Implementado | Sitio web institucional. |
+| V2 | Implementado | CMS, marketing, SEO, analytics, media y leads publicos. |
+| V3 | Implementado localmente hasta V3.6 | Sigeco cubre CRM interno, pacientes, visitas, consulta, enfermeria, ventas, seguimiento e inventario. |
+| V4+ | Futuro | ERP clinico, automatizaciones, portal del paciente, multi-sucursal y expansion. |
 
 ## Directorios
 
