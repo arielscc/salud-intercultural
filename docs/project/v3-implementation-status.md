@@ -31,6 +31,7 @@ Leer en este orden cuando se necesite entender el proyecto:
 3. [Ownership de datos](../architecture/data-ownership.md): que vive en Payload, Prisma o `src/data`.
 4. [Reportes por tarea](./task-reports/): que se implemento y valido en cada entrega.
 5. [Desarrollo asistido con skills](../operations/ai-assisted-development.md): como usar gstack/Codex para mantener calidad.
+6. [Prueba manual del flujo completo V3 Sigeco](../operations/sigeco-v3-full-flow-testing.md): como validar el flujo funcional end-to-end.
 
 ## Objetivo De V3
 
@@ -303,7 +304,7 @@ Pendientes repetidos en los reportes de fase:
 
 Antes de iniciar V4 o automatizaciones avanzadas:
 
-1. QA funcional completo de V3.1A a V3.6 en mobile.
+1. QA funcional completo de V3.1A a V3.6 en mobile siguiendo [la guia de prueba del flujo V3](../operations/sigeco-v3-full-flow-testing.md).
 2. Correccion de bugs encontrados por QA.
 3. Auditoria de permisos y privacidad.
 4. Auditoria append-only transversal.

@@ -30,6 +30,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 15. [Errores comunes](./troubleshooting.md)
 16. [Reportes de cambios por tarea](./task-change-reports.md)
 17. [Desarrollo asistido con skills](./ai-assisted-development.md)
+18. [Prueba manual del flujo completo V3 Sigeco](./sigeco-v3-full-flow-testing.md)
 
 ## Flujo recomendado
 
