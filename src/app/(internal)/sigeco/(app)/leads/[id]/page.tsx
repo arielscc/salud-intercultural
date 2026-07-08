@@ -5,6 +5,8 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { LeadStatusPill } from "@/components/internal/StatusPill";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { InfoRow } from "@/components/internal/ui/InfoRow";
+import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import {
   contactMethodLabels,
   contactResultLabels,
@@ -176,31 +178,3 @@ export default async function InternalLeadDetailPage({ params }: LeadDetailPageP
   );
 }
 
-function InfoRow({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
-  return (
-    <div className={wide ? "sm:col-span-2" : undefined}>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{label}</dt>
-      <dd className="m-0 mt-0.5 text-sm text-text">{value}</dd>
-    </div>
-  );
-}
-
-function TimelineItem({
-  title,
-  meta,
-  body
-}: {
-  title: string;
-  meta: string;
-  body?: string;
-}) {
-  return (
-    <article className="border-b border-border py-3 first:pt-0 last:border-b-0 last:pb-0">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <p className="text-sm font-semibold text-text">{title}</p>
-        <p className="text-[11px] tabular-nums text-muted">{meta}</p>
-      </div>
-      {body ? <p className="mt-1 text-sm text-muted">{body}</p> : null}
-    </article>
-  );
-}

@@ -11,7 +11,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 1. Fundaciones Marea y shell de escritorio | Completada (2026-07-08) |
 | 2. Dashboard | Completada (2026-07-08) |
 | 3. Modulo Leads | Completada (2026-07-08) |
-| 4. Modulo Pacientes | Pendiente |
+| 4. Modulo Pacientes | Completada (2026-07-08) |
 | 5. Modulo Visitas | Pendiente |
 | 6. Modulo Consultas | Pendiente |
 | 7. Modulo Enfermeria | Pendiente |
@@ -90,3 +90,20 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** ordenamiento por columnas y paginacion visible (la query pagina con `pageSize: 30` pero la UI actual no expone controles de pagina; ya estaba asi y agregar controles requiere logica de navegacion nueva — registrado como pendiente funcional 5).
 
 **Commit sugerido:** `feat(sigeco): redesign leads module with marea system`
+
+### 2026-07-08 — Tarea 4: Modulo Pacientes
+
+**Que se hizo:**
+
+- **Componentes promovidos:** `TimelineItem` e `InfoRow` se repetian entre leads y pacientes, asi que se movieron a `src/components/internal/ui/` (regla transversal 4) y el detalle de leads ahora los importa de ahi. `TimelineItem` acepta `title`/`body` como nodos y un `aside` opcional para mostrar un estado en lugar de la fecha.
+- **Lista (`pacientes/page.tsx`):** de cards a `Table` con columnas nombre (link al detalle), codigo interno, telefono, ciudad y numero de visitas (todo `tabular-nums`). Busqueda existente en `Card` de una fila. `PageHeader` con boton "Nuevo paciente". Estado vacio como fila.
+- **Detalle (`pacientes/[id]/page.tsx`):** dos columnas (`xl:grid-cols-[1.4fr_1fr]`). Izquierda: ficha (codigo como eyebrow, nombre, `<dl>` con telefono/alternativo/genero/ciudad/fuente), ficha permanente (`InfoRow` con fallback "Sin registro"), visitas como tabla (llegada linkeada, area actual, `VisitStatusPill`), timeline de enfermeria (signos vitales, aplicaciones y notas como `TimelineItem` planos), estudios, cronologia administrativa como tabla (total linkeado a la venta, pagado, saldo, estado) e historial de seguimiento (titulo linkeado + estado como aside). Derecha: formularios "Registrar llegada" (boton primario) y "Crear seguimiento" (outline), mismos campos y actions.
+- **Nuevo (`pacientes/nuevo/page.tsx`):** card centrada `max-w-3xl`; aviso de duplicado restilizado con familia warning (punto + texto, sin solo-color); nombre completo a ancho total, pares telefono/alternativo, nacimiento/genero, ciudad/departamento; textareas a ancho completo; boton al pie tras separador. Mismos hidden inputs (`allowDuplicate`, `sourceLeadId`) y misma action.
+
+**Archivos tocados:** `src/components/internal/ui/TimelineItem.tsx` (nuevo), `src/components/internal/ui/InfoRow.tsx` (nuevo), `src/app/(internal)/sigeco/(app)/leads/[id]/page.tsx` (usa los componentes compartidos), `src/app/(internal)/sigeco/(app)/pacientes/{page,nuevo/page,[id]/page}.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual con datos reales de QA: lista con paciente SI-000001, detalle completo con visita "En consulta", signos vitales y formularios en rail derecho.
+
+**Pendientes que deja la tarea:** edicion de la ficha permanente del paciente sigue sin existir (pendiente funcional conocido de V3, fuera del rediseno).
+
+**Commit sugerido:** `feat(sigeco): redesign patients module with marea system`

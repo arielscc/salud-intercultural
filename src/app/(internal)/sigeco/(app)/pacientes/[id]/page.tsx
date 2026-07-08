@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
+import { Button } from "@/components/internal/ui/Button";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { InfoRow } from "@/components/internal/ui/InfoRow";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
+import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpTaskAction } from "@/features/follow-ups/actions";
 import { followUpStatusLabels } from "@/features/follow-ups/labels";
 import {
@@ -25,211 +30,253 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
   if (!patient) notFound();
 
+  const nursingCount =
+    patient.vitalSigns.length + patient.nursingApplications.length + patient.nursingNotes.length;
+
   return (
-    <div className="grid gap-5">
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <p className="text-sm font-semibold text-muted">{patient.internalCode}</p>
-        <h2 className="font-sora text-2xl font-bold">{patient.fullName}</h2>
-        <div className="mt-3 grid gap-1 text-sm text-muted">
-          <p>Teléfono: {patient.phone}</p>
-          {patient.secondaryPhone ? <p>Alternativo: {patient.secondaryPhone}</p> : null}
-          <p>Género: {patientGenderLabels[patient.gender]}</p>
-          {patient.city ? <p>Ciudad: {patient.city}</p> : null}
-          <p>Fuente: {patientCaptureSourceLabels[patient.captureSource]}</p>
-        </div>
-      </section>
+    <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-4">
+        <Card>
+          <p className="text-xs font-medium tabular-nums text-muted">{patient.internalCode}</p>
+          <h2 className="font-sora text-xl font-bold tracking-tight text-text">
+            {patient.fullName}
+          </h2>
+          <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
+            <InfoRow label="Teléfono" value={patient.phone} />
+            {patient.secondaryPhone ? (
+              <InfoRow label="Alternativo" value={patient.secondaryPhone} />
+            ) : null}
+            <InfoRow label="Género" value={patientGenderLabels[patient.gender]} />
+            {patient.city ? <InfoRow label="Ciudad" value={patient.city} /> : null}
+            <InfoRow label="Fuente" value={patientCaptureSourceLabels[patient.captureSource]} />
+          </dl>
+        </Card>
 
-      <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="font-sora text-lg font-bold">Registrar llegada</h3>
-        <form action={createVisitAction} className="grid gap-3">
-          <input type="hidden" name="patientId" value={patient.id} />
-          <Field label="Motivo de visita">
-            <textarea className={`${internalInputClassName} min-h-24 py-3`} name="reason" />
-          </Field>
-          <Field label="Nota de recepción">
-            <input className={internalInputClassName} name="note" />
-          </Field>
-          <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
-            Abrir visita
-          </button>
-        </form>
-      </section>
+        <Card>
+          <CardHeader title="Ficha permanente" />
+          <dl className="grid gap-y-3 text-sm">
+            <InfoRow label="Alergias" value={patient.allergies} wide />
+            <InfoRow label="Antecedentes" value={patient.relevantHistory} wide />
+            <InfoRow label="Observaciones" value={patient.generalObservations} wide />
+          </dl>
+        </Card>
 
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Ficha permanente</h3>
-        <div className="grid gap-3 text-sm">
-          <Info label="Alergias" value={patient.allergies} />
-          <Info label="Antecedentes" value={patient.relevantHistory} />
-          <Info label="Observaciones" value={patient.generalObservations} />
-        </div>
-      </section>
+        <Card className="p-0">
+          <CardHeader className="mb-0 p-[18px] pb-3" title="Visitas" />
+          <Table>
+            <thead>
+              <tr>
+                <Th>Llegada</Th>
+                <Th>Área actual</Th>
+                <Th>Estado</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {patient.visits.map((visit) => (
+                <Tr key={visit.id}>
+                  <Td className="font-semibold tabular-nums text-text">
+                    <a
+                      href={`/sigeco/visitas/${visit.id}`}
+                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                    >
+                      {visit.checkedInAt.toLocaleString("es-BO")}
+                    </a>
+                  </Td>
+                  <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
+                  <Td>
+                    <VisitStatusPill status={visit.status} />
+                  </Td>
+                </Tr>
+              ))}
+              {patient.visits.length === 0 ? (
+                <tr>
+                  <Td className="py-6 text-center" colSpan={3}>
+                    Este paciente aún no tiene visitas registradas.
+                  </Td>
+                </tr>
+              ) : null}
+            </tbody>
+          </Table>
+        </Card>
 
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Visitas</h3>
-        <div className="grid gap-3">
-          {patient.visits.map((visit) => (
-            <a
-              key={visit.id}
-              href={`/sigeco/visitas/${visit.id}`}
-              className="focus-ring rounded-xl border border-border bg-surface-soft/60 p-3"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">{visit.checkedInAt.toLocaleString("es-BO")}</p>
-                  <p className="text-sm text-muted">
-                    Área actual: {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
-                  </p>
-                </div>
-                <VisitStatusPill status={visit.status} />
-              </div>
-            </a>
-          ))}
-          {patient.visits.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Este paciente aún no tiene visitas registradas.
-            </p>
-          ) : null}
-        </div>
-      </section>
+        <Card>
+          <CardHeader title="Timeline de enfermería" />
+          <div className="grid gap-0">
+            {patient.vitalSigns.map((item) => (
+              <TimelineItem
+                key={item.id}
+                title="Signos vitales"
+                meta={item.recordedAt.toLocaleString("es-BO")}
+                body={
+                  <>
+                    <span className="tabular-nums">
+                      PA {item.systolicPressureMmHg ?? "-"}/{item.diastolicPressureMmHg ?? "-"} ·
+                      Pulso {item.heartRateBpm ?? "-"} · Temp{" "}
+                      {item.temperatureCelsius?.toString() ?? "-"}
+                    </span>
+                    {item.notes ? <span className="mt-1 block">{item.notes}</span> : null}
+                  </>
+                }
+              />
+            ))}
+            {patient.nursingApplications.map((item) => (
+              <TimelineItem
+                key={item.id}
+                title={item.medication}
+                meta={item.appliedAt.toLocaleString("es-BO")}
+                body={
+                  <>
+                    {item.quantity ?? "Sin cantidad"} · {item.route ?? "Sin vía"}
+                    {item.notes ? <span className="mt-1 block">{item.notes}</span> : null}
+                  </>
+                }
+              />
+            ))}
+            {patient.nursingNotes.map((item) => (
+              <TimelineItem
+                key={item.id}
+                title="Nota de enfermería"
+                meta={item.createdAt.toLocaleString("es-BO")}
+                body={item.note}
+              />
+            ))}
+            {nursingCount === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin registros de enfermería.</p>
+            ) : null}
+          </div>
+        </Card>
 
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Timeline de enfermería</h3>
-        <div className="grid gap-3">
-          {patient.vitalSigns.map((item) => (
-            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
-              <p className="font-bold">Signos vitales</p>
-              <p className="text-sm text-muted">
-                {item.recordedAt.toLocaleString("es-BO")} · PA {item.systolicPressureMmHg ?? "-"} /
-                {item.diastolicPressureMmHg ?? "-"} · Pulso {item.heartRateBpm ?? "-"} · Temp{" "}
-                {item.temperatureCelsius?.toString() ?? "-"}
-              </p>
-              {item.notes ? <p className="mt-1 text-sm text-muted">{item.notes}</p> : null}
-            </article>
-          ))}
-          {patient.nursingApplications.map((item) => (
-            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
-              <p className="font-bold">{item.medication}</p>
-              <p className="text-sm text-muted">
-                {item.appliedAt.toLocaleString("es-BO")} · {item.quantity ?? "Sin cantidad"} ·{" "}
-                {item.route ?? "Sin vía"}
-              </p>
-              {item.notes ? <p className="mt-1 text-sm text-muted">{item.notes}</p> : null}
-            </article>
-          ))}
-          {patient.nursingNotes.map((item) => (
-            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
-              <p className="font-bold">Nota de enfermería</p>
-              <p className="text-sm text-muted">{item.createdAt.toLocaleString("es-BO")}</p>
-              <p className="mt-1 text-sm text-muted">{item.note}</p>
-            </article>
-          ))}
-          {patient.vitalSigns.length + patient.nursingApplications.length + patient.nursingNotes.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Sin registros de enfermería.
-            </p>
-          ) : null}
-        </div>
-      </section>
+        <Card>
+          <CardHeader title="Estudios" />
+          <div className="grid gap-0">
+            {patient.studies.map((study) => (
+              <TimelineItem
+                key={study.id}
+                title={study.title}
+                meta={(study.performedAt ?? study.createdAt).toLocaleString("es-BO")}
+                body={
+                  <>
+                    {studyTypeLabels[study.type]}
+                    {study.resultSummary ? (
+                      <span className="mt-1 block">{study.resultSummary}</span>
+                    ) : null}
+                  </>
+                }
+              />
+            ))}
+            {patient.studies.length === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin estudios registrados.</p>
+            ) : null}
+          </div>
+        </Card>
 
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Estudios</h3>
-        <div className="grid gap-3">
-          {patient.studies.map((study) => (
-            <article key={study.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
-              <p className="font-bold">{study.title}</p>
-              <p className="text-sm text-muted">
-                {studyTypeLabels[study.type]} ·{" "}
-                {(study.performedAt ?? study.createdAt).toLocaleString("es-BO")}
-              </p>
-              {study.resultSummary ? <p className="mt-1 text-sm text-muted">{study.resultSummary}</p> : null}
-            </article>
-          ))}
-          {patient.studies.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Sin estudios registrados.
-            </p>
-          ) : null}
-        </div>
-      </section>
+        <Card className="p-0">
+          <CardHeader className="mb-0 p-[18px] pb-3" title="Cronología administrativa" />
+          <Table>
+            <thead>
+              <tr>
+                <Th>Total</Th>
+                <Th>Pagado</Th>
+                <Th>Saldo</Th>
+                <Th>Estado</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {patient.sales.map((sale) => (
+                <Tr key={sale.id}>
+                  <Td className="font-semibold tabular-nums text-text">
+                    <a
+                      href={`/sigeco/administracion/ventas/${sale.id}`}
+                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                    >
+                      {formatMoney(sale.totalCents)}
+                    </a>
+                  </Td>
+                  <Td className="tabular-nums">{formatMoney(sale.paidCents)}</Td>
+                  <Td className="tabular-nums">{formatMoney(sale.balanceCents)}</Td>
+                  <Td>{saleStatusLabels[sale.status]}</Td>
+                </Tr>
+              ))}
+              {patient.sales.length === 0 ? (
+                <tr>
+                  <Td className="py-6 text-center" colSpan={4}>
+                    Sin ventas ni cobros registrados.
+                  </Td>
+                </tr>
+              ) : null}
+            </tbody>
+          </Table>
+        </Card>
 
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Cronología administrativa</h3>
-        <div className="grid gap-3">
-          {patient.sales.map((sale) => (
-            <a
-              key={sale.id}
-              href={`/sigeco/administracion/ventas/${sale.id}`}
-              className="focus-ring rounded-xl border border-border bg-surface-soft/60 p-3"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">{formatMoney(sale.totalCents)}</p>
-                  <p className="text-sm text-muted">
-                    Pagado {formatMoney(sale.paidCents)} · Saldo {formatMoney(sale.balanceCents)}
-                  </p>
-                </div>
-                <span className="text-sm font-bold text-muted">{saleStatusLabels[sale.status]}</span>
-              </div>
-            </a>
-          ))}
-          {patient.sales.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Sin ventas ni cobros registrados.
-            </p>
-          ) : null}
-        </div>
-      </section>
+        <Card>
+          <CardHeader title="Historial de seguimiento" />
+          <div className="grid gap-0">
+            {patient.followUpTasks.map((task) => (
+              <TimelineItem
+                key={task.id}
+                title={
+                  <a
+                    href={`/sigeco/seguimientos/${task.id}`}
+                    className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                  >
+                    {task.title}
+                  </a>
+                }
+                meta={task.dueAt.toLocaleString("es-BO")}
+                aside={
+                  <span className="text-[11px] font-semibold text-muted">
+                    {followUpStatusLabels[task.status]}
+                  </span>
+                }
+                body={task.attempts[0]?.notes ?? undefined}
+              />
+            ))}
+            {patient.followUpTasks.length === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin seguimientos registrados.</p>
+            ) : null}
+          </div>
+        </Card>
+      </div>
 
-      <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="font-sora text-lg font-bold">Crear seguimiento</h3>
-        <form action={createFollowUpTaskAction} className="grid gap-3">
-          <input type="hidden" name="patientId" value={patient.id} />
-          <Field label="Título">
-            <input className={internalInputClassName} name="title" defaultValue="Seguimiento a paciente" required />
-          </Field>
-          <Field label="Fecha y hora">
-            <input className={internalInputClassName} name="dueAt" type="datetime-local" required />
-          </Field>
-          <Field label="Notas">
-            <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
-          </Field>
-          <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
-            Crear seguimiento
-          </button>
-        </form>
-      </section>
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader title="Registrar llegada" />
+          <form action={createVisitAction} className="grid gap-3">
+            <input type="hidden" name="patientId" value={patient.id} />
+            <Field label="Motivo de visita">
+              <textarea className={`${internalInputClassName} min-h-24 py-3`} name="reason" />
+            </Field>
+            <Field label="Nota de recepción">
+              <input className={internalInputClassName} name="note" />
+            </Field>
+            <Button type="submit">Abrir visita</Button>
+          </form>
+        </Card>
 
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Historial de seguimiento</h3>
-        <div className="grid gap-3">
-          {patient.followUpTasks.map((task) => (
-            <a key={task.id} href={`/sigeco/seguimientos/${task.id}`} className="focus-ring rounded-xl border border-border bg-surface-soft/60 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">{task.title}</p>
-                  <p className="text-sm text-muted">{task.dueAt.toLocaleString("es-BO")}</p>
-                </div>
-                <span className="text-sm font-bold text-muted">{followUpStatusLabels[task.status]}</span>
-              </div>
-              {task.attempts[0]?.notes ? <p className="mt-2 text-sm text-muted">{task.attempts[0].notes}</p> : null}
-            </a>
-          ))}
-          {patient.followUpTasks.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Sin seguimientos registrados.
-            </p>
-          ) : null}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="rounded-xl border border-border bg-surface-soft/60 p-3">
-      <p className="text-xs font-bold uppercase tracking-normal text-muted">{label}</p>
-      <p className="mt-1 text-text">{value || "Sin registro"}</p>
+        <Card>
+          <CardHeader title="Crear seguimiento" />
+          <form action={createFollowUpTaskAction} className="grid gap-3">
+            <input type="hidden" name="patientId" value={patient.id} />
+            <Field label="Título">
+              <input
+                className={internalInputClassName}
+                name="title"
+                defaultValue="Seguimiento a paciente"
+                required
+              />
+            </Field>
+            <Field label="Fecha y hora">
+              <input className={internalInputClassName} name="dueAt" type="datetime-local" required />
+            </Field>
+            <Field label="Notas">
+              <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
+            </Field>
+            <Button type="submit" variant="outline">
+              Crear seguimiento
+            </Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }
