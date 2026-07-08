@@ -1,10 +1,17 @@
 import Link from "next/link";
-import { AlertCircle, BellRing, UserRoundSearch } from "lucide-react";
+import { AlertCircle, BellRing, Boxes, PhoneCall, Plus, UserRoundSearch } from "lucide-react";
 import { getFollowUpWorkSummary } from "@/modules/database/queries/follow-ups";
 import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getInternalLeadWorkSummary, getInternalLeads } from "@/modules/database/queries/leads-v3";
 import { requireInternalUser } from "@/modules/permissions";
+import { leadSourceLabels } from "@/features/crm/labels";
 import { LeadStatusPill } from "@/components/internal/StatusPill";
+import { buttonVariants } from "@/components/internal/ui/Button";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { KpiCard } from "@/components/internal/ui/KpiCard";
+import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
+import { cn } from "@/lib/cn";
 
 export default async function SigecoDashboardPage() {
   const user = await requireInternalUser();
@@ -16,76 +23,89 @@ export default async function SigecoDashboardPage() {
   const recentLeads = await getInternalLeads({ pageSize: 5 });
 
   return (
-    <div className="grid gap-5">
-      <section>
-        <p className="text-sm font-semibold text-muted">Panel operativo</p>
-        <h2 className="font-sora text-2xl font-bold text-text">Trabajo de hoy</h2>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        <MetricCard icon={UserRoundSearch} label="Leads nuevos" value={summary.newLeads} />
-        <MetricCard icon={BellRing} label="Recordatorios vencidos" value={summary.pendingReminders} />
-        <MetricCard icon={AlertCircle} label="No responden" value={summary.noAnswer} />
-        <MetricCard icon={BellRing} label="Seguimientos hoy" value={followUpSummary.today} />
-        <MetricCard icon={AlertCircle} label="Stock bajo" value={inventorySummary.lowStock} />
-      </section>
-
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h3 className="font-sora text-lg font-bold">Leads recientes</h3>
-            <p className="text-sm text-muted">Últimos movimientos del pipeline comercial.</p>
-          </div>
-          <Link
-            href="/sigeco/leads"
-            className="focus-ring rounded-xl border border-border px-3 py-2 text-sm font-bold text-text"
-          >
-            Ver
+    <div className="grid gap-4">
+      <PageHeader
+        title="Trabajo de hoy"
+        description="Panel operativo"
+        actions={
+          <Link href="/sigeco/leads/nuevo" className={cn(buttonVariants({ size: "sm" }))}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nuevo lead
           </Link>
-        </div>
-        <div className="grid gap-3">
-          {recentLeads.map((lead) => (
-            <Link
-              key={lead.id}
-              href={`/sigeco/leads/${lead.id}`}
-              className="focus-ring rounded-xl border border-border bg-surface-soft/60 p-3"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">{lead.name || "Sin nombre"}</p>
-                  <p className="text-sm text-muted">{lead.phone}</p>
-                </div>
-                <LeadStatusPill status={lead.status} />
-              </div>
-            </Link>
-          ))}
-          {recentLeads.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Aún no hay leads internos.
-            </p>
-          ) : null}
-        </div>
-      </section>
-    </div>
-  );
-}
+        }
+      />
 
-function MetricCard({
-  icon: Icon,
-  label,
-  value
-}: {
-  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary-dark">
-        <Icon className="h-5 w-5" aria-hidden={true} />
-      </div>
-      <p className="text-3xl font-bold">{value}</p>
-      <p className="text-sm font-semibold text-muted">{label}</p>
+      <section className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <KpiCard icon={UserRoundSearch} label="Leads nuevos" value={summary.newLeads} />
+        <KpiCard
+          icon={BellRing}
+          label="Recordatorios vencidos"
+          value={summary.pendingReminders}
+          flag={
+            summary.pendingReminders > 0 ? { tone: "warn", label: "Atender hoy" } : undefined
+          }
+        />
+        <KpiCard icon={AlertCircle} label="No responden" value={summary.noAnswer} />
+        <KpiCard icon={PhoneCall} label="Seguimientos hoy" value={followUpSummary.today} />
+        <KpiCard
+          icon={Boxes}
+          label="Stock bajo"
+          value={inventorySummary.lowStock}
+          flag={inventorySummary.lowStock > 0 ? { tone: "crit", label: "Reponer" } : undefined}
+        />
+      </section>
+
+      <Card className="p-0">
+        <CardHeader
+          className="mb-0 p-[18px] pb-3"
+          title="Leads recientes"
+          description="Últimos movimientos del pipeline comercial."
+          action={
+            <Link
+              href="/sigeco/leads"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              Ver todos
+            </Link>
+          }
+        />
+        <Table>
+          <thead>
+            <tr>
+              <Th>Nombre</Th>
+              <Th>Teléfono</Th>
+              <Th>Origen</Th>
+              <Th>Estado</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentLeads.map((lead) => (
+              <Tr key={lead.id}>
+                <Td className="font-semibold text-text">
+                  <Link
+                    href={`/sigeco/leads/${lead.id}`}
+                    className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                  >
+                    {lead.name || "Sin nombre"}
+                  </Link>
+                </Td>
+                <Td className="tabular-nums">{lead.phone}</Td>
+                <Td>{leadSourceLabels[lead.source]}</Td>
+                <Td>
+                  <LeadStatusPill status={lead.status} />
+                </Td>
+              </Tr>
+            ))}
+            {recentLeads.length === 0 ? (
+              <tr>
+                <Td className="py-6 text-center" colSpan={4}>
+                  Aún no hay leads internos.
+                </Td>
+              </tr>
+            ) : null}
+          </tbody>
+        </Table>
+      </Card>
     </div>
   );
 }

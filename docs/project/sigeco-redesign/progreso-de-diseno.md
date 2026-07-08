@@ -9,7 +9,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | Tarea | Estado |
 | --- | --- |
 | 1. Fundaciones Marea y shell de escritorio | Completada (2026-07-08) |
-| 2. Dashboard | Pendiente |
+| 2. Dashboard | Completada (2026-07-08) |
 | 3. Modulo Leads | Pendiente |
 | 4. Modulo Pacientes | Pendiente |
 | 5. Modulo Visitas | Pendiente |
@@ -57,3 +57,20 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 - El login interno recibe los tokens Marea (colores) pero conserva su maquetado hasta la Tarea 11.
 
 **Commit sugerido:** `feat(sigeco): add marea design system foundations and desktop shell`
+
+### 2026-07-08 — Tarea 2: Dashboard
+
+**Que se hizo:**
+
+- `/sigeco` rediseniado con los componentes Marea: `PageHeader` ("Trabajo de hoy" + acceso directo "Nuevo lead" hacia `/sigeco/leads/nuevo`), fila de 5 `KpiCard` (grid `sm:3 / xl:5`) y "Leads recientes" convertido de lista de cards a `Table` con columnas nombre (link al detalle), telefono (`tabular-nums`), origen (`leadSourceLabels`) y estado (`LeadStatusPill`).
+- Banderas de atencion: `warn` "Atender hoy" en recordatorios vencidos y `crit` "Reponer" en stock bajo, solo cuando el valor es mayor a 0 (icono + texto, nunca solo color).
+- `Th`, `Td` y `Tr` de la libreria interna ahora aceptan atributos HTML estandar (`colSpan` para el estado vacio de la tabla).
+- Mismas 4 queries de siempre (`getInternalLeadWorkSummary`, `getFollowUpWorkSummary`, `getInventorySummary`, `getInternalLeads`); cero cambios de logica.
+
+**Archivos tocados:** `src/app/(internal)/sigeco/(app)/page.tsx`, `src/components/internal/ui/Table.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual en `http://localhost:3000/sigeco` con usuario local: KPIs en fila con bandera "Atender hoy" activa (habia 1 recordatorio vencido), tabla con pills y hover, boton "Nuevo lead" en el header de pagina.
+
+**Pendientes que deja la tarea:** los ya registrados como pendientes funcionales (grafico "Leads por semana" y panel "Pendientes por area" requieren queries nuevas).
+
+**Commit sugerido:** `feat(sigeco): redesign dashboard with marea layout`

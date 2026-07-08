@@ -21,44 +21,31 @@ export function Table({
   );
 }
 
-export function Th({
-  className,
-  children
-}: {
-  className?: string;
-  children?: React.ReactNode;
-}) {
+export function Th({ className, children, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
       className={cn(
         "whitespace-nowrap border-b border-border bg-background px-3.5 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted",
         className
       )}
+      {...props}
     >
       {children}
     </th>
   );
 }
 
-export function Tr({
-  className,
-  children
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return <tr className={cn("transition hover:bg-surface-soft/40", className)}>{children}</tr>;
+export function Tr({ className, children, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
+  return (
+    <tr className={cn("transition hover:bg-surface-soft/40", className)} {...props}>
+      {children}
+    </tr>
+  );
 }
 
-export function Td({
-  className,
-  children
-}: {
-  className?: string;
-  children?: React.ReactNode;
-}) {
+export function Td({ className, children, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <td className={cn("border-b border-border px-3.5 py-2.5 text-sm text-muted", className)}>
+    <td className={cn("border-b border-border px-3.5 py-2.5 text-sm text-muted", className)} {...props}>
       {children}
     </td>
   );
