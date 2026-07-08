@@ -10,7 +10,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | --- | --- |
 | 1. Fundaciones Marea y shell de escritorio | Completada (2026-07-08) |
 | 2. Dashboard | Completada (2026-07-08) |
-| 3. Modulo Leads | Pendiente |
+| 3. Modulo Leads | Completada (2026-07-08) |
 | 4. Modulo Pacientes | Pendiente |
 | 5. Modulo Visitas | Pendiente |
 | 6. Modulo Consultas | Pendiente |
@@ -74,3 +74,19 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** los ya registrados como pendientes funcionales (grafico "Leads por semana" y panel "Pendientes por area" requieren queries nuevas).
 
 **Commit sugerido:** `feat(sigeco): redesign dashboard with marea layout`
+
+### 2026-07-08 — Tarea 3: Modulo Leads
+
+**Que se hizo:**
+
+- **Lista (`leads/page.tsx`):** de cards apiladas a `Table` con columnas nombre (link al detalle + ciudad como sublinea), telefono (`tabular-nums`), origen, interes (`intentionToVisit`, truncado), estado (`LeadStatusPill`) y proximo recordatorio (`reminders[0].dueAt`). Busqueda y los 2 selects de filtro existentes restilizados en una fila dentro de `Card` (`2fr 1fr 1fr auto`) con boton "Filtrar" outline; mismo form GET con los mismos `searchParams`. `PageHeader` con boton "Nuevo lead". Estado vacio como fila de tabla.
+- **Detalle (`leads/[id]/page.tsx`):** layout de dos columnas (`xl:grid-cols-[1.4fr_1fr]`). Izquierda: ficha en `Card` (origen como eyebrow, nombre, telefono, pill, datos en `<dl>` de dos columnas con etiquetas en versalitas, aviso o boton "Convertir a paciente" con el mismo href) + historial comercial con items de timeline planos separados por hairline (titulo + fecha tabular en la misma linea). Derecha: los 3 formularios de accion en cards (`Actualizar estado` con boton primario, `Registrar contacto` y `Crear recordatorio` con boton outline), mismos campos, names y actions.
+- **Nuevo (`leads/nuevo/page.tsx`):** formulario en `Card` centrado (`max-w-3xl`) con pares de campos en `sm:grid-cols-2` (nombre/telefono, email/ciudad, fuente/fecha estimada) y textareas a ancho completo; boton "Crear lead" alineado a la derecha tras un separador. Misma action y mismos names.
+
+**Archivos tocados:** `src/app/(internal)/sigeco/(app)/leads/page.tsx`, `src/app/(internal)/sigeco/(app)/leads/[id]/page.tsx`, `src/app/(internal)/sigeco/(app)/leads/nuevo/page.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual de las 3 pantallas en el navegador con datos reales: lista con filtros y pills, detalle de lead convertido con historial completo, formulario nuevo.
+
+**Pendientes que deja la tarea:** ordenamiento por columnas y paginacion visible (la query pagina con `pageSize: 30` pero la UI actual no expone controles de pagina; ya estaba asi y agregar controles requiere logica de navegacion nueva — registrado como pendiente funcional 5).
+
+**Commit sugerido:** `feat(sigeco): redesign leads module with marea system`

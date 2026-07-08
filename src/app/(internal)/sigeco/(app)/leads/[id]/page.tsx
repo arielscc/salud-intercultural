@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { InternalLeadContactMethod, InternalLeadContactResult, InternalLeadStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { LeadStatusPill } from "@/components/internal/StatusPill";
+import { Button, buttonVariants } from "@/components/internal/ui/Button";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
 import {
   contactMethodLabels,
   contactResultLabels,
@@ -16,6 +18,7 @@ import {
 } from "@/features/crm/actions";
 import { getInternalLeadById } from "@/modules/database/queries/leads-v3";
 import { requirePermission } from "@/modules/permissions";
+import { cn } from "@/lib/cn";
 
 const statusOptions = Object.entries(leadStatusLabels) as Array<[InternalLeadStatus, string]>;
 const methodOptions = Object.entries(contactMethodLabels) as Array<[InternalLeadContactMethod, string]>;
@@ -33,142 +36,152 @@ export default async function InternalLeadDetailPage({ params }: LeadDetailPageP
   if (!lead) notFound();
 
   return (
-    <div className="grid gap-5">
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-muted">{leadSourceLabels[lead.source]}</p>
-            <h2 className="font-sora text-2xl font-bold">{lead.name || "Sin nombre"}</h2>
-            <p className="mt-1 text-sm text-muted">{lead.phone}</p>
+    <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-4">
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-muted">{leadSourceLabels[lead.source]}</p>
+              <h2 className="font-sora text-xl font-bold tracking-tight text-text">
+                {lead.name || "Sin nombre"}
+              </h2>
+              <p className="mt-0.5 text-sm tabular-nums text-muted">{lead.phone}</p>
+            </div>
+            <LeadStatusPill status={lead.status} />
           </div>
-          <LeadStatusPill status={lead.status} />
-        </div>
-        <div className="grid gap-2 text-sm text-muted">
-          {lead.email ? <p>Email: {lead.email}</p> : null}
-          {lead.city ? <p>Ciudad: {lead.city}</p> : null}
-          {lead.symptoms ? <p>Síntomas: {lead.symptoms}</p> : null}
-          {lead.intentionToVisit ? <p>Intención: {lead.intentionToVisit}</p> : null}
-          {lead.commercialNotes ? <p>Notas: {lead.commercialNotes}</p> : null}
-        </div>
-        {lead.convertedPatientId ? (
-          <p className="mt-4 rounded-xl border border-success/25 bg-success/10 px-4 py-3 text-sm font-bold text-success">
-            Lead convertido a paciente.
-          </p>
-        ) : (
-          <Link
-            href={`/sigeco/pacientes/nuevo?leadId=${lead.id}&name=${encodeURIComponent(lead.name ?? "")}&phone=${encodeURIComponent(lead.phone)}&city=${encodeURIComponent(lead.city ?? "")}`}
-            className="focus-ring mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white"
-          >
-            Convertir a paciente
-          </Link>
-        )}
-      </section>
 
-      <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="font-sora text-lg font-bold">Actualizar estado</h3>
-        <form action={updateLeadStatusAction} className="grid gap-3">
-          <input type="hidden" name="leadId" value={lead.id} />
-          <Field label="Estado">
-            <select className={internalInputClassName} name="status" defaultValue={lead.status}>
-              {statusOptions.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Nota">
-            <input className={internalInputClassName} name="note" />
-          </Field>
-          <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
-            Guardar estado
-          </button>
-        </form>
-      </section>
+          <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
+            {lead.email ? <InfoRow label="Email" value={lead.email} /> : null}
+            {lead.city ? <InfoRow label="Ciudad" value={lead.city} /> : null}
+            {lead.symptoms ? <InfoRow label="Síntomas" value={lead.symptoms} wide /> : null}
+            {lead.intentionToVisit ? <InfoRow label="Intención" value={lead.intentionToVisit} /> : null}
+            {lead.commercialNotes ? <InfoRow label="Notas" value={lead.commercialNotes} wide /> : null}
+          </dl>
 
-      <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="font-sora text-lg font-bold">Registrar contacto</h3>
-        <form action={createLeadContactAttemptAction} className="grid gap-3">
-          <input type="hidden" name="leadId" value={lead.id} />
-          <Field label="Método">
-            <select className={internalInputClassName} name="method" defaultValue="call">
-              {methodOptions.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Resultado">
-            <select className={internalInputClassName} name="result" defaultValue="contacted">
-              {resultOptions.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Notas">
-            <textarea className={`${internalInputClassName} min-h-24 py-3`} name="notes" />
-          </Field>
-          <button className="focus-ring min-h-12 rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm font-bold">
-            Registrar contacto
-          </button>
-        </form>
-      </section>
+          {lead.convertedPatientId ? (
+            <p className="mt-4 inline-flex items-center gap-1.5 rounded-[7px] bg-success/10 px-3 py-2 text-sm font-semibold text-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+              Lead convertido a paciente.
+            </p>
+          ) : (
+            <Link
+              href={`/sigeco/pacientes/nuevo?leadId=${lead.id}&name=${encodeURIComponent(lead.name ?? "")}&phone=${encodeURIComponent(lead.phone)}&city=${encodeURIComponent(lead.city ?? "")}`}
+              className={cn(buttonVariants({ size: "sm" }), "mt-4")}
+            >
+              Convertir a paciente
+            </Link>
+          )}
+        </Card>
 
-      <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="font-sora text-lg font-bold">Crear recordatorio</h3>
-        <form action={createLeadReminderAction} className="grid gap-3">
-          <input type="hidden" name="leadId" value={lead.id} />
-          <Field label="Fecha y hora">
-            <input className={internalInputClassName} name="dueAt" type="datetime-local" required />
-          </Field>
-          <Field label="Nota">
-            <input className={internalInputClassName} name="note" />
-          </Field>
-          <button className="focus-ring min-h-12 rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm font-bold">
-            Crear recordatorio
-          </button>
-        </form>
-      </section>
+        <Card>
+          <CardHeader title="Historial comercial" />
+          <div className="grid gap-0">
+            {lead.statusHistory.map((item) => (
+              <TimelineItem
+                key={item.id}
+                title={`Estado: ${leadStatusLabels[item.toStatus]}`}
+                meta={item.createdAt.toLocaleString("es-BO")}
+                body={item.note ?? undefined}
+              />
+            ))}
+            {lead.contactAttempts.map((item) => (
+              <TimelineItem
+                key={item.id}
+                title={`${contactMethodLabels[item.method]} · ${contactResultLabels[item.result]}`}
+                meta={item.contactedAt.toLocaleString("es-BO")}
+                body={item.notes ?? undefined}
+              />
+            ))}
+            {lead.reminders.map((item) => (
+              <TimelineItem
+                key={item.id}
+                title={`Recordatorio ${item.status}`}
+                meta={item.dueAt.toLocaleString("es-BO")}
+                body={item.note ?? undefined}
+              />
+            ))}
+          </div>
+        </Card>
+      </div>
 
-      <Timeline title="Historial comercial">
-        {lead.statusHistory.map((item) => (
-          <TimelineItem
-            key={item.id}
-            title={`Estado: ${leadStatusLabels[item.toStatus]}`}
-            meta={item.createdAt.toLocaleString("es-BO")}
-            body={item.note ?? undefined}
-          />
-        ))}
-        {lead.contactAttempts.map((item) => (
-          <TimelineItem
-            key={item.id}
-            title={`${contactMethodLabels[item.method]} · ${contactResultLabels[item.result]}`}
-            meta={item.contactedAt.toLocaleString("es-BO")}
-            body={item.notes ?? undefined}
-          />
-        ))}
-        {lead.reminders.map((item) => (
-          <TimelineItem
-            key={item.id}
-            title={`Recordatorio ${item.status}`}
-            meta={item.dueAt.toLocaleString("es-BO")}
-            body={item.note ?? undefined}
-          />
-        ))}
-      </Timeline>
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader title="Actualizar estado" />
+          <form action={updateLeadStatusAction} className="grid gap-3">
+            <input type="hidden" name="leadId" value={lead.id} />
+            <Field label="Estado">
+              <select className={internalInputClassName} name="status" defaultValue={lead.status}>
+                {statusOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Nota">
+              <input className={internalInputClassName} name="note" />
+            </Field>
+            <Button type="submit">Guardar estado</Button>
+          </form>
+        </Card>
+
+        <Card>
+          <CardHeader title="Registrar contacto" />
+          <form action={createLeadContactAttemptAction} className="grid gap-3">
+            <input type="hidden" name="leadId" value={lead.id} />
+            <Field label="Método">
+              <select className={internalInputClassName} name="method" defaultValue="call">
+                {methodOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Resultado">
+              <select className={internalInputClassName} name="result" defaultValue="contacted">
+                {resultOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Notas">
+              <textarea className={`${internalInputClassName} min-h-24 py-3`} name="notes" />
+            </Field>
+            <Button type="submit" variant="outline">
+              Registrar contacto
+            </Button>
+          </form>
+        </Card>
+
+        <Card>
+          <CardHeader title="Crear recordatorio" />
+          <form action={createLeadReminderAction} className="grid gap-3">
+            <input type="hidden" name="leadId" value={lead.id} />
+            <Field label="Fecha y hora">
+              <input className={internalInputClassName} name="dueAt" type="datetime-local" required />
+            </Field>
+            <Field label="Nota">
+              <input className={internalInputClassName} name="note" />
+            </Field>
+            <Button type="submit" variant="outline">
+              Crear recordatorio
+            </Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }
 
-function Timeline({ title, children }: { title: string; children: React.ReactNode }) {
+function InfoRow({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-      <h3 className="mb-4 font-sora text-lg font-bold">{title}</h3>
-      <div className="grid gap-3">{children}</div>
-    </section>
+    <div className={wide ? "sm:col-span-2" : undefined}>
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{label}</dt>
+      <dd className="m-0 mt-0.5 text-sm text-text">{value}</dd>
+    </div>
   );
 }
 
@@ -182,10 +195,12 @@ function TimelineItem({
   body?: string;
 }) {
   return (
-    <article className="rounded-xl border border-border bg-surface-soft/60 p-3">
-      <p className="font-bold">{title}</p>
-      <p className="text-xs font-semibold text-muted">{meta}</p>
-      {body ? <p className="mt-2 text-sm text-muted">{body}</p> : null}
+    <article className="border-b border-border py-3 first:pt-0 last:border-b-0 last:pb-0">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <p className="text-sm font-semibold text-text">{title}</p>
+        <p className="text-[11px] tabular-nums text-muted">{meta}</p>
+      </div>
+      {body ? <p className="mt-1 text-sm text-muted">{body}</p> : null}
     </article>
   );
 }

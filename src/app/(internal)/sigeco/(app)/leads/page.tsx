@@ -1,9 +1,16 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import type { InternalLeadSource, InternalLeadStatus } from "@/generated/prisma/client";
 import { LeadStatusPill } from "@/components/internal/StatusPill";
+import { internalInputClassName } from "@/components/internal/Field";
+import { Button, buttonVariants } from "@/components/internal/ui/Button";
+import { Card } from "@/components/internal/ui/Card";
+import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { leadSourceLabels, leadStatusLabels } from "@/features/crm/labels";
 import { getInternalLeads } from "@/modules/database/queries/leads-v3";
 import { requirePermission } from "@/modules/permissions";
+import { cn } from "@/lib/cn";
 
 const statusOptions = Object.entries(leadStatusLabels) as Array<[InternalLeadStatus, string]>;
 const sourceOptions = Object.entries(leadSourceLabels) as Array<[InternalLeadSource, string]>;
@@ -27,97 +34,99 @@ export default async function InternalLeadsPage({ searchParams }: LeadsPageProps
   });
 
   return (
-    <div className="grid gap-5">
-      <section className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-muted">CRM interno</p>
-          <h2 className="font-sora text-2xl font-bold">Leads</h2>
-        </div>
-        <Link
-          href="/sigeco/leads/nuevo"
-          className="focus-ring min-h-11 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-sm"
-        >
-          Nuevo
-        </Link>
-      </section>
-
-      <form className="grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:grid-cols-4">
-        <input
-          className="min-h-12 rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 sm:col-span-2"
-          type="search"
-          name="search"
-          placeholder="Buscar por nombre, teléfono, email o ciudad"
-          defaultValue={params.search}
-        />
-        <select
-          className="min-h-12 rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-          name="status"
-          defaultValue={params.status ?? ""}
-        >
-          <option value="">Todos los estados</option>
-          {statusOptions.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <select
-          className="min-h-12 rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-          name="source"
-          defaultValue={params.source ?? ""}
-        >
-          <option value="">Todas las fuentes</option>
-          {sourceOptions.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <button className="focus-ring min-h-12 rounded-xl border border-border bg-surface-soft px-4 text-sm font-bold sm:col-span-4">
-          Filtrar
-        </button>
-      </form>
-
-      <section className="grid gap-3">
-        {leads.map((lead) => (
-          <Link
-            key={lead.id}
-            href={`/sigeco/leads/${lead.id}`}
-            className="focus-ring rounded-2xl border border-border bg-surface p-4 shadow-sm transition hover:border-primary/30"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-bold">{lead.name || "Sin nombre"}</p>
-                <p className="text-sm text-muted">{lead.phone}</p>
-                <p className="mt-1 text-xs font-semibold text-muted">
-                  {lead.city ? `${lead.city} · ` : ""}
-                  {leadSourceLabels[lead.source]}
-                </p>
-              </div>
-              <LeadStatusPill status={lead.status} />
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-muted">
-              <span className="rounded-full bg-surface-soft px-3 py-1">
-                Contactos: {lead._count.contactAttempts}
-              </span>
-              <span className="rounded-full bg-surface-soft px-3 py-1">
-                Recordatorios: {lead._count.reminders}
-              </span>
-              {lead.reminders[0] ? (
-                <span className="rounded-full bg-accent/10 px-3 py-1 text-accent">
-                  Próximo: {lead.reminders[0].dueAt.toLocaleDateString("es-BO")}
-                </span>
-              ) : null}
-            </div>
+    <div className="grid gap-4">
+      <PageHeader
+        title="Leads"
+        description="CRM interno"
+        actions={
+          <Link href="/sigeco/leads/nuevo" className={cn(buttonVariants({ size: "sm" }))}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nuevo lead
           </Link>
-        ))}
-        {leads.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-surface p-6 text-center">
-            <p className="font-bold">No hay leads con esos filtros.</p>
-            <p className="mt-1 text-sm text-muted">Crea un lead nuevo o ajusta la búsqueda.</p>
-          </div>
-        ) : null}
-      </section>
+        }
+      />
+
+      <Card>
+        <form className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
+          <input
+            className={internalInputClassName}
+            type="search"
+            name="search"
+            placeholder="Buscar por nombre, teléfono, email o ciudad"
+            defaultValue={params.search}
+          />
+          <select className={internalInputClassName} name="status" defaultValue={params.status ?? ""}>
+            <option value="">Todos los estados</option>
+            {statusOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select className={internalInputClassName} name="source" defaultValue={params.source ?? ""}>
+            <option value="">Todas las fuentes</option>
+            {sourceOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" variant="outline">
+            Filtrar
+          </Button>
+        </form>
+      </Card>
+
+      <Card className="p-0">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Nombre</Th>
+              <Th>Teléfono</Th>
+              <Th>Origen</Th>
+              <Th>Interés</Th>
+              <Th>Estado</Th>
+              <Th>Próx. recordatorio</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {leads.map((lead) => (
+              <Tr key={lead.id}>
+                <Td className="font-semibold text-text">
+                  <Link
+                    href={`/sigeco/leads/${lead.id}`}
+                    className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                  >
+                    {lead.name || "Sin nombre"}
+                  </Link>
+                  {lead.city ? (
+                    <span className="block text-[11px] font-normal text-muted">{lead.city}</span>
+                  ) : null}
+                </Td>
+                <Td className="tabular-nums">{lead.phone}</Td>
+                <Td>{leadSourceLabels[lead.source]}</Td>
+                <Td className="max-w-[220px] truncate">{lead.intentionToVisit || "—"}</Td>
+                <Td>
+                  <LeadStatusPill status={lead.status} />
+                </Td>
+                <Td className="tabular-nums">
+                  {lead.reminders[0] ? lead.reminders[0].dueAt.toLocaleDateString("es-BO") : "—"}
+                </Td>
+              </Tr>
+            ))}
+            {leads.length === 0 ? (
+              <tr>
+                <Td className="py-8 text-center" colSpan={6}>
+                  <span className="block font-semibold text-text">No hay leads con esos filtros.</span>
+                  <span className="mt-1 block text-sm text-muted">
+                    Crea un lead nuevo o ajusta la búsqueda.
+                  </span>
+                </Td>
+              </tr>
+            ) : null}
+          </tbody>
+        </Table>
+      </Card>
     </div>
   );
 }
