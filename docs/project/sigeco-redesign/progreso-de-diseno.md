@@ -1,0 +1,59 @@
+# Progreso De Diseno (Rediseno Sigeco Marea)
+
+Registro de tareas completadas del rediseno. El plan detallado vive en [Tareas de rediseno](./tareas-de-rediseno.md); la especificacion visual en [Sistema Visual Sigeco](../../design/sigeco-visual-system.md).
+
+Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejecutadas y pendientes que dejo la tarea.
+
+## Estado General
+
+| Tarea | Estado |
+| --- | --- |
+| 1. Fundaciones Marea y shell de escritorio | Completada (2026-07-08) |
+| 2. Dashboard | Pendiente |
+| 3. Modulo Leads | Pendiente |
+| 4. Modulo Pacientes | Pendiente |
+| 5. Modulo Visitas | Pendiente |
+| 6. Modulo Consultas | Pendiente |
+| 7. Modulo Enfermeria | Pendiente |
+| 8. Modulo Administracion (Caja) | Pendiente |
+| 9. Modulo Seguimientos | Pendiente |
+| 10. Modulo Inventario | Pendiente |
+| 11. Login interno | Pendiente |
+| 12. Limpieza y QA visual final | Pendiente |
+
+## Pendientes Funcionales Detectados
+
+Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso quedan fuera del rediseno (solo diseno):
+
+1. Busqueda global en el header (paciente, lead o telefono desde cualquier modulo).
+2. Contadores de pendientes junto a los items de la sidebar.
+3. Grafico "Leads por semana" en el dashboard (requiere query de agregacion semanal).
+4. Panel "Pendientes por area" en el dashboard (requiere query agregada de work items).
+5. Ordenamiento por columnas y filtros avanzados en tablas (evaluar TanStack Table).
+
+## Entradas
+
+### 2026-07-08 — Tarea 1: Fundaciones Marea Y Shell De Escritorio
+
+**Que se hizo:**
+
+- Tokens Marea scopeados a `.sigeco-app` en `src/app/(internal)/sigeco/sigeco.css`; la clase vive en el `<html>` del layout de Sigeco, por lo que las utilidades Tailwind existentes toman los valores Marea solo dentro del panel.
+- Fuente IBM Plex Sans (400/500/600) agregada via `next/font` en el layout de Sigeco con variable `--font-plex`; el body interno la usa con fallback a Inter.
+- Token `warning` agregado de forma aditiva: `--color-warning` en `:root` y `.dark` de `globals.css` (valores ambar publicos actuales) y color `warning` en `tailwind.config.ts`. Ningun estilo publico existente cambia.
+- Libreria UI base creada en `src/components/internal/ui/`: `Button` (cva: primary/outline/ghost/danger, sm/md), `Card` + `CardHeader`, `Table` + `Th`/`Tr`/`Td` (scroll horizontal propio, encabezados en versalitas), `KpiCard` (cifra Sora tabular, bandera warn/crit) y `PageHeader`.
+- `InternalShell` reescrito como shell de pantalla completa: `h-dvh overflow-hidden`, sidebar fija de 220px en `lg+` con los 9 modulos y usuario al pie, header superior con fecha, usuario y logout, y `<main>` como unica zona con scroll. La tab bar inferior movil fue eliminada.
+- Navegacion extraida a `nav-items.ts` + `SidebarNav.tsx` (cliente, estado activo por `usePathname`) + `MobileSidebar.tsx` (cliente, drawer con overlay para `< lg`).
+- `StatusPill` restilizado a las familias semanticas Marea (punto + etiqueta, tints; solido solo para `converted_to_patient`) manteniendo su API y los 9 + 7 estados existentes.
+- `Field` e `internalInputClassName` adoptan radio 9px, altura 44px y etiqueta 13px medium, sin cambio de API.
+
+**Archivos tocados:** `src/app/(internal)/sigeco/sigeco.css` (nuevo), `src/app/(internal)/sigeco/layout.tsx`, `src/app/globals.css` (solo adicion de `--color-warning`), `tailwind.config.ts` (solo adicion de `warning`), `src/components/internal/ui/{Button,Card,Table,KpiCard,PageHeader}.tsx` (nuevos), `src/components/internal/{InternalShell,SidebarNav,MobileSidebar,StatusPill,Field}.tsx`, `src/components/internal/nav-items.ts` (nuevo).
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 18 archivos / 54 tests OK, `pnpm run build` OK (todas las rutas publicas, Payload y Sigeco generadas).
+
+**Pendientes que deja la tarea:**
+
+- Verificacion visual en navegador: COMPLETADA el mismo dia (2026-07-08) con usuario local sembrado via `pnpm internal:seed`. Confirmado en `http://localhost:3000/sigeco`: sidebar fija con estado activo, header con fecha/usuario/logout, tokens Marea aplicados, documento sin scroll (`docScrollable: false`; solo `<main>` con `overflow-y: auto`) y drawer movil funcionando en 390px.
+- Las paginas internas aun usan su maquetado anterior dentro del nuevo shell; se restilizan en las tareas 2-11. El dashboard y las listas se ven mas anchos que antes (el shell ya no limita a `max-w-6xl`), lo cual es esperado durante la transicion.
+- El login interno recibe los tokens Marea (colores) pero conserva su maquetado hasta la Tarea 11.
+
+**Commit sugerido:** `feat(sigeco): add marea design system foundations and desktop shell`
