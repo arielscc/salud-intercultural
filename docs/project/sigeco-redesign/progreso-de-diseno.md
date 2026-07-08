@@ -13,7 +13,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 3. Modulo Leads | Completada (2026-07-08) |
 | 4. Modulo Pacientes | Completada (2026-07-08) |
 | 5. Modulo Visitas | Completada (2026-07-08) |
-| 6. Modulo Consultas | Pendiente |
+| 6. Modulo Consultas | Completada (2026-07-08) |
 | 7. Modulo Enfermeria | Pendiente |
 | 8. Modulo Administracion (Caja) | Pendiente |
 | 9. Modulo Seguimientos | Pendiente |
@@ -123,3 +123,18 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** ninguno nuevo.
 
 **Commit sugerido:** `feat(sigeco): redesign visits module with marea system`
+
+### 2026-07-08 — Tarea 6: Modulo Consultas
+
+**Que se hizo:**
+
+- **Bandeja (`consultas/page.tsx`):** de cards a `Table` con columnas paciente (link), telefono, llegada, area actual, consulta (chip success "Registrada" con punto cuando `clinicalConsultation` existe, em-dash si no) y estado (`VisitStatusPill`). `PageHeader` "Consultas / Atencion medica". Estado vacio como fila.
+- **Consulta (`consultas/[visitId]/page.tsx`):** dos columnas (`xl:grid-cols-[1.5fr_1fr]`). Izquierda: ficha del paciente con alergias, antecedentes y motivo de recepcion como `InfoRow` prominentes (informacion critica para el medico), y el formulario "Consulta medica" completo en `Card`: motivo, diagnosticos principal/secundario en par (`sm:grid-cols-2`), hallazgos, observaciones, plan, indicaciones, la receta rapida como `<fieldset>` con fondo `background` y legend (medicamento + dosis/frecuencia/duracion en 3 columnas + observaciones), evolucion y boton "Guardar consulta" al pie tras separador. Mismos names, defaults y action. Derecha: formulario "Indicacion para otra area" (mismos selects de tipo/area destino), "Ordenes clinicas" como `TimelineItem` (estado como aside) y "Estudios y enfermeria" (estudios con estado como aside, signos vitales y aplicaciones con los mismos limites `slice(0,3)`).
+
+**Archivos tocados:** `src/app/(internal)/sigeco/(app)/consultas/page.tsx`, `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual con datos de QA: bandeja con chip "Registrada", consulta con diagnosticos precargados ("Lumbalgia mecanica en evaluacion"), ordenes clinicas con estados Pendiente/Completada en el rail.
+
+**Pendientes que deja la tarea:** ninguno nuevo. El formato de receta imprimible sigue como pendiente transversal de V3 (fuera del rediseno).
+
+**Commit sugerido:** `feat(sigeco): redesign consultations module with marea system`

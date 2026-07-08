@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
+import { Card } from "@/components/internal/ui/Card";
+import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { getConsultationVisits } from "@/modules/database/queries/clinical-care";
 import { requirePermission } from "@/modules/permissions";
@@ -9,44 +12,63 @@ export default async function ConsultationsPage() {
   const visits = await getConsultationVisits({ pageSize: 30 });
 
   return (
-    <div className="grid gap-5">
-      <section>
-        <p className="text-sm font-semibold text-muted">Atención médica</p>
-        <h2 className="font-sora text-2xl font-bold">Consultas</h2>
-      </section>
+    <div className="grid gap-4">
+      <PageHeader title="Consultas" description="Atención médica" />
 
-      <section className="grid gap-3">
-        {visits.map((visit) => (
-          <Link
-            key={visit.id}
-            href={`/sigeco/consultas/${visit.id}`}
-            className="focus-ring rounded-2xl border border-border bg-surface p-4 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-bold">{visit.patient.fullName}</p>
-                <p className="text-sm text-muted">{visit.patient.phone}</p>
-                <p className="mt-1 text-xs font-semibold text-muted">
-                  {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"} ·{" "}
-                  {visit.checkedInAt.toLocaleString("es-BO")}
-                </p>
-                {visit.clinicalConsultation ? (
-                  <p className="mt-2 text-xs font-bold text-success">Consulta registrada</p>
-                ) : null}
-              </div>
-              <VisitStatusPill status={visit.status} />
-            </div>
-          </Link>
-        ))}
-        {visits.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-surface p-6 text-center">
-            <p className="font-bold">No hay pacientes en consulta.</p>
-            <p className="mt-1 text-sm text-muted">
-              Recepción debe derivar una visita al área médica.
-            </p>
-          </div>
-        ) : null}
-      </section>
+      <Card className="p-0">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Paciente</Th>
+              <Th>Teléfono</Th>
+              <Th>Llegada</Th>
+              <Th>Área actual</Th>
+              <Th>Consulta</Th>
+              <Th>Estado</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {visits.map((visit) => (
+              <Tr key={visit.id}>
+                <Td className="font-semibold text-text">
+                  <Link
+                    href={`/sigeco/consultas/${visit.id}`}
+                    className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                  >
+                    {visit.patient.fullName}
+                  </Link>
+                </Td>
+                <Td className="tabular-nums">{visit.patient.phone}</Td>
+                <Td className="tabular-nums">{visit.checkedInAt.toLocaleString("es-BO")}</Td>
+                <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
+                <Td>
+                  {visit.clinicalConsultation ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-success">
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+                      Registrada
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </Td>
+                <Td>
+                  <VisitStatusPill status={visit.status} />
+                </Td>
+              </Tr>
+            ))}
+            {visits.length === 0 ? (
+              <tr>
+                <Td className="py-8 text-center" colSpan={6}>
+                  <span className="block font-semibold text-text">No hay pacientes en consulta.</span>
+                  <span className="mt-1 block text-sm text-muted">
+                    Recepción debe derivar una visita al área médica.
+                  </span>
+                </Td>
+              </tr>
+            ) : null}
+          </tbody>
+        </Table>
+      </Card>
     </div>
   );
 }
