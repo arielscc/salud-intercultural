@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Inter, Sora } from "next/font/google";
+import { IBM_Plex_Sans, Inter, Sora } from "next/font/google";
 import "@/app/globals.css";
+import "./sigeco.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -11,6 +12,13 @@ const inter = Inter({
 const sora = Sora({
   subsets: ["latin"],
   variable: "--font-sora",
+  display: "swap"
+});
+
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex",
   display: "swap"
 });
 
@@ -25,8 +33,12 @@ export default function SigecoRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.variable} ${sora.variable}`} data-theme="light">
-      <body style={{ paddingBottom: 0 }}>{children}</body>
+    <html
+      lang="es"
+      className={`sigeco-app ${inter.variable} ${sora.variable} ${plexSans.variable}`}
+      data-theme="light"
+    >
+      <body>{children}</body>
     </html>
   );
 }

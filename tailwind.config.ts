@@ -20,6 +20,7 @@ const config: Config = {
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         success: "rgb(var(--color-success) / <alpha-value>)",
+        warning: "rgb(var(--color-warning) / <alpha-value>)",
         error: "rgb(var(--color-error) / <alpha-value>)",
         destructive: {
           DEFAULT: "hsl(var(--destructive))",

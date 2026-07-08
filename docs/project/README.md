@@ -17,6 +17,7 @@ Usar este directorio para:
 4. [Preparacion V3](./v3-readiness.md): criterios y decisiones previas para iniciar V3.
 5. [Plan de limpieza de ownership de datos](./data-ownership-cleanup-plan.md): cierre de la separacion Payload/Prisma.
 6. [Reportes por tarea](./task-reports/): evidencia de cada entrega implementada.
+7. [Rediseno Sigeco (Marea)](./sigeco-redesign/tareas-de-rediseno.md): plan de tareas del rediseno del panel interno y su [progreso](./sigeco-redesign/progreso-de-diseno.md).
 
 ## Documentacion relacionada
 

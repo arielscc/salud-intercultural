@@ -3,52 +3,55 @@ import { leadStatusLabels } from "@/features/crm/labels";
 import { visitStatusLabels } from "@/features/patients/labels";
 import { cn } from "@/lib/cn";
 
-const statusClassName: Record<InternalLeadStatus, string> = {
-  new: "border-primary/25 bg-primary/10 text-primary-dark",
-  contacted: "border-secondary/25 bg-secondary/10 text-secondary",
-  interested: "border-success/25 bg-success/10 text-success",
-  wants_visit: "border-accent/25 bg-accent/10 text-accent",
-  reminder_pending: "border-accent/30 bg-accent/10 text-accent",
-  confirmed_attendance: "border-success/30 bg-success/10 text-success",
-  no_answer: "border-muted/25 bg-muted/10 text-muted",
-  discarded: "border-error/25 bg-error/10 text-error",
-  converted_to_patient: "border-primary/30 bg-primary/10 text-primary-dark"
-};
+/*
+ * Familias semanticas Marea (docs/design/sigeco-visual-system.md):
+ * tint primario = nuevo en el sistema, neutro = en proceso sin urgencia,
+ * exito = avance positivo (solido para estados finales), alerta = requiere
+ * accion o espera, error = estado final negativo.
+ */
 
-export function LeadStatusPill({ status, className }: { status: InternalLeadStatus; className?: string }) {
+function Pill({ className, label }: { className: string; label: string }) {
   return (
     <span
       className={cn(
-        "inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-xs font-bold",
-        statusClassName[status],
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold",
         className
       )}
     >
-      {leadStatusLabels[status]}
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
+      {label}
     </span>
   );
 }
 
+const statusClassName: Record<InternalLeadStatus, string> = {
+  new: "bg-surface-soft text-primary-dark",
+  contacted: "border border-border bg-background text-muted",
+  interested: "bg-success/10 text-success",
+  wants_visit: "bg-warning/10 text-warning",
+  reminder_pending: "bg-warning/10 text-warning",
+  confirmed_attendance: "bg-success/10 text-success",
+  no_answer: "bg-warning/10 text-warning",
+  discarded: "bg-error/10 text-error",
+  converted_to_patient: "bg-success text-white"
+};
+
+export function LeadStatusPill({ status, className }: { status: InternalLeadStatus; className?: string }) {
+  return <Pill className={cn(statusClassName[status], className)} label={leadStatusLabels[status]} />;
+}
+
 const visitStatusClassName: Record<VisitStatus, string> = {
-  in_reception: "border-primary/25 bg-primary/10 text-primary-dark",
-  in_consultation: "border-secondary/25 bg-secondary/10 text-secondary",
-  in_nursing: "border-accent/25 bg-accent/10 text-accent",
-  in_administration: "border-muted/25 bg-muted/10 text-muted",
-  completed: "border-success/25 bg-success/10 text-success",
-  left_without_care: "border-error/25 bg-error/10 text-error",
-  cancelled: "border-error/25 bg-error/10 text-error"
+  in_reception: "bg-surface-soft text-primary-dark",
+  in_consultation: "bg-success/10 text-success",
+  in_nursing: "bg-warning/10 text-warning",
+  in_administration: "border border-border bg-background text-muted",
+  completed: "bg-success/10 text-success",
+  left_without_care: "bg-error/10 text-error",
+  cancelled: "bg-error/10 text-error"
 };
 
 export function VisitStatusPill({ status, className }: { status: VisitStatus; className?: string }) {
   return (
-    <span
-      className={cn(
-        "inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-xs font-bold",
-        visitStatusClassName[status],
-        className
-      )}
-    >
-      {visitStatusLabels[status]}
-    </span>
+    <Pill className={cn(visitStatusClassName[status], className)} label={visitStatusLabels[status]} />
   );
 }

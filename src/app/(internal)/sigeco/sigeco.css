@@ -1,0 +1,29 @@
+/*
+ * Tokens del sistema visual Marea — exclusivo del panel interno Sigeco.
+ * Spec: docs/design/sigeco-visual-system.md
+ * Scope: la clase .sigeco-app vive en el <html> del layout de Sigeco;
+ * estos valores nunca alcanzan al sitio publico ni al CMS.
+ */
+.sigeco-app {
+  color-scheme: light;
+  --color-primary: 6 140 168;
+  --color-primary-dark: 6 115 138;
+  --color-secondary: 46 138 95;
+  --color-accent: 178 110 18;
+  --color-background: 244 247 248;
+  --color-surface: 255 255 255;
+  --color-surface-soft: 226 242 246;
+  --color-text: 22 38 44;
+  --color-muted: 92 112 118;
+  --color-border: 223 232 234;
+  --color-success: 46 138 95;
+  --color-warning: 178 110 18;
+  --color-error: 192 61 54;
+  --shadow-brand: 6 140 168;
+  --shadow-strong: 22 38 44;
+}
+
+.sigeco-app body {
+  font-family: var(--font-plex), var(--font-inter), system-ui, sans-serif;
+  padding-bottom: 0;
+}
