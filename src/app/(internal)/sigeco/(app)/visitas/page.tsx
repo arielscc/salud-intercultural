@@ -1,9 +1,16 @@
 import Link from "next/link";
+import { UserRoundSearch } from "lucide-react";
 import type { VisitStatus } from "@/generated/prisma/client";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
+import { internalInputClassName } from "@/components/internal/Field";
+import { Button, buttonVariants } from "@/components/internal/ui/Button";
+import { Card } from "@/components/internal/ui/Card";
+import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
 import { getVisits } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
+import { cn } from "@/lib/cn";
 
 const statusOptions = Object.entries(visitStatusLabels) as Array<[VisitStatus, string]>;
 
@@ -21,70 +28,87 @@ export default async function VisitsPage({ searchParams }: VisitsPageProps) {
   });
 
   return (
-    <div className="grid gap-5">
-      <section className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-muted">Recepción</p>
-          <h2 className="font-sora text-2xl font-bold">Visitas activas</h2>
-        </div>
-        <Link
-          href="/sigeco/pacientes"
-          className="focus-ring min-h-11 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-sm"
-        >
-          Buscar paciente
-        </Link>
-      </section>
-
-      <form className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <select
-          className="min-h-12 w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-          name="status"
-          defaultValue={params.status ?? ""}
-        >
-          <option value="">Solo activas</option>
-          {statusOptions.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <button className="focus-ring mt-3 min-h-12 w-full rounded-xl border border-border bg-surface-soft px-4 text-sm font-bold">
-          Filtrar
-        </button>
-      </form>
-
-      <section className="grid gap-3">
-        {visits.map((visit) => (
-          <Link
-            key={visit.id}
-            href={`/sigeco/visitas/${visit.id}`}
-            className="focus-ring rounded-2xl border border-border bg-surface p-4 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-bold">{visit.patient.fullName}</p>
-                <p className="text-sm text-muted">{visit.patient.phone}</p>
-                <p className="mt-1 text-xs font-semibold text-muted">
-                  {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"} ·{" "}
-                  {visit.checkedInAt.toLocaleString("es-BO")}
-                </p>
-              </div>
-              <VisitStatusPill status={visit.status} />
-            </div>
-            {visit.workItems.length > 0 ? (
-              <div className="mt-3 rounded-xl bg-surface-soft px-3 py-2 text-xs font-semibold text-muted">
-                {visit.workItems.length} tareas pendientes
-              </div>
-            ) : null}
+    <div className="grid gap-4">
+      <PageHeader
+        title="Visitas activas"
+        description="Recepción"
+        actions={
+          <Link href="/sigeco/pacientes" className={cn(buttonVariants({ size: "sm" }))}>
+            <UserRoundSearch className="h-4 w-4" aria-hidden="true" />
+            Buscar paciente
           </Link>
-        ))}
-        {visits.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-surface p-6 text-center">
-            <p className="font-bold">No hay visitas con ese filtro.</p>
-            <p className="mt-1 text-sm text-muted">Busca un paciente y registra su llegada.</p>
-          </div>
-        ) : null}
-      </section>
+        }
+      />
+
+      <Card>
+        <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <select className={internalInputClassName} name="status" defaultValue={params.status ?? ""}>
+            <option value="">Solo activas</option>
+            {statusOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" variant="outline">
+            Filtrar
+          </Button>
+        </form>
+      </Card>
+
+      <Card className="p-0">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Paciente</Th>
+              <Th>Teléfono</Th>
+              <Th>Llegada</Th>
+              <Th>Área actual</Th>
+              <Th>Tareas</Th>
+              <Th>Estado</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {visits.map((visit) => (
+              <Tr key={visit.id}>
+                <Td className="font-semibold text-text">
+                  <Link
+                    href={`/sigeco/visitas/${visit.id}`}
+                    className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                  >
+                    {visit.patient.fullName}
+                  </Link>
+                </Td>
+                <Td className="tabular-nums">{visit.patient.phone}</Td>
+                <Td className="tabular-nums">{visit.checkedInAt.toLocaleString("es-BO")}</Td>
+                <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
+                <Td className="tabular-nums">
+                  {visit.workItems.length > 0 ? (
+                    <span className="inline-flex items-center rounded-full bg-surface-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary-dark">
+                      {visit.workItems.length} pendientes
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </Td>
+                <Td>
+                  <VisitStatusPill status={visit.status} />
+                </Td>
+              </Tr>
+            ))}
+            {visits.length === 0 ? (
+              <tr>
+                <Td className="py-8 text-center" colSpan={6}>
+                  <span className="block font-semibold text-text">No hay visitas con ese filtro.</span>
+                  <span className="mt-1 block text-sm text-muted">
+                    Busca un paciente y registra su llegada.
+                  </span>
+                </Td>
+              </tr>
+            ) : null}
+          </tbody>
+        </Table>
+      </Card>
     </div>
   );
 }

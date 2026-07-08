@@ -2,6 +2,10 @@ import { notFound } from "next/navigation";
 import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
+import { Button } from "@/components/internal/ui/Button";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { InfoRow } from "@/components/internal/ui/InfoRow";
+import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import {
   routeAreaLabels,
   visitStatusLabels,
@@ -26,89 +30,110 @@ export default async function VisitDetailPage({ params }: VisitDetailPageProps) 
   if (!visit) notFound();
 
   return (
-    <div className="grid gap-5">
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-muted">{visit.patient.internalCode}</p>
-            <h2 className="font-sora text-2xl font-bold">{visit.patient.fullName}</h2>
-            <p className="mt-1 text-sm text-muted">{visit.patient.phone}</p>
-          </div>
-          <VisitStatusPill status={visit.status} />
-        </div>
-        <p className="text-sm text-muted">
-          Área actual: {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
-        </p>
-        {visit.reason ? <p className="mt-2 text-sm text-muted">Motivo: {visit.reason}</p> : null}
-      </section>
-
-      <section className="grid gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="font-sora text-lg font-bold">Derivar paciente</h3>
-        <form action={updateVisitStatusAction} className="grid gap-3">
-          <input type="hidden" name="visitId" value={visit.id} />
-          <Field label="Estado">
-            <select className={internalInputClassName} name="status" defaultValue={visit.status}>
-              {statusOptions.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Área destino">
-            <select className={internalInputClassName} name="area" defaultValue={visit.route?.currentArea ?? "recepcion"}>
-              {areaOptions.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Nota">
-            <input className={internalInputClassName} name="note" />
-          </Field>
-          <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
-            Actualizar ruta
-          </button>
-        </form>
-      </section>
-
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Tareas de visita</h3>
-        <div className="grid gap-3">
-          {visit.workItems.map((item) => (
-            <article key={item.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">{item.title}</p>
-                  <p className="text-xs font-semibold text-muted">
-                    {routeAreaLabels[item.area]} · {item.createdAt.toLocaleString("es-BO")}
-                  </p>
-                </div>
-                <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold text-muted">
-                  {workItemStatusLabels[item.status]}
-                </span>
-              </div>
-              {item.description ? <p className="mt-2 text-sm text-muted">{item.description}</p> : null}
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Ruta del paciente</h3>
-        <div className="grid gap-3">
-          {visit.route?.steps.map((step) => (
-            <article key={step.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
-              <p className="font-bold">{routeAreaLabels[step.area]}</p>
-              <p className="text-xs font-semibold text-muted">
-                {visitStatusLabels[step.status]} · {step.startedAt.toLocaleString("es-BO")}
+    <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-4">
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium tabular-nums text-muted">
+                {visit.patient.internalCode}
               </p>
-              {step.note ? <p className="mt-2 text-sm text-muted">{step.note}</p> : null}
-            </article>
-          ))}
-        </div>
-      </section>
+              <h2 className="font-sora text-xl font-bold tracking-tight text-text">
+                {visit.patient.fullName}
+              </h2>
+              <p className="mt-0.5 text-sm tabular-nums text-muted">{visit.patient.phone}</p>
+            </div>
+            <VisitStatusPill status={visit.status} />
+          </div>
+          <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
+            <InfoRow
+              label="Área actual"
+              value={visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
+            />
+            <InfoRow label="Llegada" value={visit.checkedInAt.toLocaleString("es-BO")} />
+            {visit.reason ? <InfoRow label="Motivo" value={visit.reason} wide /> : null}
+          </dl>
+        </Card>
+
+        <Card>
+          <CardHeader title="Tareas de visita" />
+          <div className="grid gap-0">
+            {visit.workItems.map((item) => (
+              <TimelineItem
+                key={item.id}
+                title={item.title}
+                meta={`${routeAreaLabels[item.area]} · ${item.createdAt.toLocaleString("es-BO")}`}
+                aside={
+                  <span className="text-[11px] font-semibold text-muted">
+                    {workItemStatusLabels[item.status]}
+                  </span>
+                }
+                body={item.description ?? undefined}
+              />
+            ))}
+            {visit.workItems.length === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin tareas registradas para esta visita.</p>
+            ) : null}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Ruta del paciente" />
+          <div className="grid gap-0">
+            {visit.route?.steps.map((step) => (
+              <TimelineItem
+                key={step.id}
+                title={routeAreaLabels[step.area]}
+                meta={step.startedAt.toLocaleString("es-BO")}
+                aside={
+                  <span className="text-[11px] font-semibold text-muted">
+                    {visitStatusLabels[step.status]}
+                  </span>
+                }
+                body={step.note ?? undefined}
+              />
+            ))}
+            {!visit.route || visit.route.steps.length === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin pasos de ruta registrados.</p>
+            ) : null}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader title="Derivar paciente" />
+          <form action={updateVisitStatusAction} className="grid gap-3">
+            <input type="hidden" name="visitId" value={visit.id} />
+            <Field label="Estado">
+              <select className={internalInputClassName} name="status" defaultValue={visit.status}>
+                {statusOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Área destino">
+              <select
+                className={internalInputClassName}
+                name="area"
+                defaultValue={visit.route?.currentArea ?? "recepcion"}
+              >
+                {areaOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Nota">
+              <input className={internalInputClassName} name="note" />
+            </Field>
+            <Button type="submit">Actualizar ruta</Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

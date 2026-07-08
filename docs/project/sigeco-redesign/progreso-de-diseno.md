@@ -12,7 +12,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 2. Dashboard | Completada (2026-07-08) |
 | 3. Modulo Leads | Completada (2026-07-08) |
 | 4. Modulo Pacientes | Completada (2026-07-08) |
-| 5. Modulo Visitas | Pendiente |
+| 5. Modulo Visitas | Completada (2026-07-08) |
 | 6. Modulo Consultas | Pendiente |
 | 7. Modulo Enfermeria | Pendiente |
 | 8. Modulo Administracion (Caja) | Pendiente |
@@ -107,3 +107,19 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** edicion de la ficha permanente del paciente sigue sin existir (pendiente funcional conocido de V3, fuera del rediseno).
 
 **Commit sugerido:** `feat(sigeco): redesign patients module with marea system`
+
+### 2026-07-08 — Tarea 5: Modulo Visitas
+
+**Que se hizo:**
+
+- **Lista (`visitas/page.tsx`):** de cards a `Table` con columnas paciente (link al detalle), telefono, llegada, area actual, tareas (chip con conteo de pendientes en tint primario, o em-dash) y estado (`VisitStatusPill`). Filtro de estado existente en `Card` de una fila con boton "Filtrar" outline; mismo comportamiento (`activeOnly` cuando no hay filtro). `PageHeader` con accion "Buscar paciente" hacia `/sigeco/pacientes`. Estado vacio como fila.
+- **Detalle (`visitas/[id]/page.tsx`):** dos columnas (`xl:grid-cols-[1.4fr_1fr]`). Izquierda: ficha de la visita (codigo del paciente como eyebrow, nombre, telefono, pill de estado, `<dl>` con area actual, llegada y motivo), "Tareas de visita" como `TimelineItem` (estado del work item como aside, area + fecha como meta, descripcion como body) y "Ruta del paciente" igual (area como titulo, estado como aside). Derecha: formulario "Derivar paciente" con los mismos selects de estado/area, nota y action `updateVisitStatusAction`.
+- Se agregaron textos de estado vacio en tareas y ruta (antes las secciones quedaban en blanco) y el dato de llegada en la ficha del detalle (ya venia en la query; solo presentacion).
+
+**Archivos tocados:** `src/app/(internal)/sigeco/(app)/visitas/page.tsx`, `src/app/(internal)/sigeco/(app)/visitas/[id]/page.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual con datos de QA: lista filtrada por "En consulta" con chip "2 pendientes", detalle con 4 tareas de visita (completadas y pendientes) y ruta Medico/Recepcion.
+
+**Pendientes que deja la tarea:** ninguno nuevo.
+
+**Commit sugerido:** `feat(sigeco): redesign visits module with marea system`
