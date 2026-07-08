@@ -14,7 +14,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 4. Modulo Pacientes | Completada (2026-07-08) |
 | 5. Modulo Visitas | Completada (2026-07-08) |
 | 6. Modulo Consultas | Completada (2026-07-08) |
-| 7. Modulo Enfermeria | Pendiente |
+| 7. Modulo Enfermeria | Completada (2026-07-08) |
 | 8. Modulo Administracion (Caja) | Pendiente |
 | 9. Modulo Seguimientos | Pendiente |
 | 10. Modulo Inventario | Pendiente |
@@ -138,3 +138,19 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** ninguno nuevo. El formato de receta imprimible sigue como pendiente transversal de V3 (fuera del rediseno).
 
 **Commit sugerido:** `feat(sigeco): redesign consultations module with marea system`
+
+### 2026-07-08 — Tarea 7: Modulo Enfermeria
+
+**Que se hizo:**
+
+- **Bandeja (`enfermeria/page.tsx`):** de cards a `Table` con columnas paciente (link + codigo interno como sublinea), tarea (titulo + descripcion truncados), indicacion (tipo de orden clinica + medico, o em-dash) y estado (chip neutro con `nursingWorkItemStatusLabels`). Estado vacio como fila con texto de guia.
+- **Ejecucion (`enfermeria/[workItemId]/page.tsx`):** dos columnas (`xl:grid-cols-[1.5fr_1fr]`). Izquierda: ficha del paciente con la indicacion medica destacada en panel inset (tipo de orden como versalita, titulo, detalle y "Registro: X"), y los 3 formularios de registro clinico en cards: "Signos vitales" (8 campos en `sm:2 / xl:4` columnas), "Aplicacion clinica" (cantidad/via/hora en 3 columnas, boton primario) y "Estudio". Derecha: "Estado de tarea" (accion principal, boton primario) y "Nota de enfermeria". Mismos names, hidden inputs, defaults y actions.
+- Limpieza: el formulario de aplicacion clinica tenia el hidden input `workItemId` duplicado; se dejo uno (mismo dato enviado).
+
+**Archivos tocados:** `src/app/(internal)/sigeco/(app)/enfermeria/page.tsx`, `src/app/(internal)/sigeco/(app)/enfermeria/[workItemId]/page.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual: bandeja con estado vacio (las tareas QA estan completadas y la query trae solo activas) y detalle abierto por id directo con la indicacion "Aplicar Suero QA V3" destacada, formularios precargados y rail de estado/nota.
+
+**Pendientes que deja la tarea:** ninguno nuevo.
+
+**Commit sugerido:** `feat(sigeco): redesign nursing module with marea system`

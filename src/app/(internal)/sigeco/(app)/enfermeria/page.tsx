@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { Card } from "@/components/internal/ui/Card";
+import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { nursingWorkItemStatusLabels } from "@/features/nursing/labels";
 import { getNursingWorkItems } from "@/modules/database/queries/nursing";
@@ -9,47 +12,70 @@ export default async function NursingWorkQueuePage() {
   const workItems = await getNursingWorkItems({ pageSize: 40 });
 
   return (
-    <div className="grid gap-5">
-      <section>
-        <p className="text-sm font-semibold text-muted">Bandeja operativa</p>
-        <h2 className="font-sora text-2xl font-bold text-text">Enfermería</h2>
-      </section>
+    <div className="grid gap-4">
+      <PageHeader title="Enfermería" description="Bandeja operativa" />
 
-      <section className="grid gap-3">
-        {workItems.map((item) => {
-          const order = item.clinicalOrders[0];
+      <Card className="p-0">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Paciente</Th>
+              <Th>Tarea</Th>
+              <Th>Indicación</Th>
+              <Th>Estado</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {workItems.map((item) => {
+              const order = item.clinicalOrders[0];
 
-          return (
-            <Link
-              key={item.id}
-              href={`/sigeco/enfermeria/${item.id}`}
-              className="focus-ring rounded-2xl border border-border bg-surface p-4 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-normal text-muted">
-                    {item.visit.patient.internalCode}
-                  </p>
-                  <h3 className="font-sora text-lg font-bold">{item.visit.patient.fullName}</h3>
-                  <p className="mt-1 text-sm text-muted">{item.title}</p>
-                </div>
-                <span className="rounded-full border border-border bg-surface-soft px-3 py-1 text-xs font-bold text-muted">
-                  {nursingWorkItemStatusLabels[item.status]}
-                </span>
-              </div>
-              <div className="mt-3 grid gap-1 text-sm text-muted">
-                {order ? <p>{clinicalOrderTypeLabels[order.type]} · {order.doctor?.name ?? order.doctor?.email ?? "Médico"}</p> : null}
-                {item.description ? <p>{item.description}</p> : null}
-              </div>
-            </Link>
-          );
-        })}
-        {workItems.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border bg-surface p-4 text-sm text-muted">
-            No hay indicaciones activas para enfermería.
-          </p>
-        ) : null}
-      </section>
+              return (
+                <Tr key={item.id}>
+                  <Td className="font-semibold text-text">
+                    <Link
+                      href={`/sigeco/enfermeria/${item.id}`}
+                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                    >
+                      {item.visit.patient.fullName}
+                    </Link>
+                    <span className="block text-[11px] font-normal tabular-nums text-muted">
+                      {item.visit.patient.internalCode}
+                    </span>
+                  </Td>
+                  <Td className="max-w-[320px]">
+                    <span className="block truncate font-medium text-text">{item.title}</span>
+                    {item.description ? (
+                      <span className="block truncate text-[11px] text-muted">{item.description}</span>
+                    ) : null}
+                  </Td>
+                  <Td>
+                    {order
+                      ? `${clinicalOrderTypeLabels[order.type]} · ${order.doctor?.name ?? order.doctor?.email ?? "Médico"}`
+                      : "—"}
+                  </Td>
+                  <Td>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-0.5 text-[11px] font-semibold text-muted">
+                      {nursingWorkItemStatusLabels[item.status]}
+                    </span>
+                  </Td>
+                </Tr>
+              );
+            })}
+            {workItems.length === 0 ? (
+              <tr>
+                <Td className="py-8 text-center" colSpan={4}>
+                  <span className="block font-semibold text-text">
+                    No hay indicaciones activas para enfermería.
+                  </span>
+                  <span className="mt-1 block text-sm text-muted">
+                    Las indicaciones llegan desde la consulta médica.
+                  </span>
+                </Td>
+              </tr>
+            ) : null}
+          </tbody>
+        </Table>
+      </Card>
     </div>
   );
 }
