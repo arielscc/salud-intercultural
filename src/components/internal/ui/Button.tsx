@@ -9,13 +9,20 @@ export const buttonVariants = cva(
         primary: "bg-primary text-white hover:bg-primary-dark",
         outline: "border border-border bg-surface text-text hover:border-primary/40 hover:text-primary-dark",
         ghost: "text-muted hover:bg-surface-soft hover:text-text",
-        danger: "bg-error text-white hover:bg-error/90"
+        danger: "bg-error text-white hover:bg-error/90",
+        link: "text-primary-dark underline-offset-4 hover:underline"
       },
       size: {
         sm: "min-h-9 px-3 text-[13px]",
         md: "min-h-11 px-4"
       }
     },
+    compoundVariants: [
+      {
+        variant: "link",
+        class: "min-h-0 px-0"
+      }
+    ],
     defaultVariants: {
       variant: "primary",
       size: "md"

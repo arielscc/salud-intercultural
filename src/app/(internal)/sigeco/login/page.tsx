@@ -1,11 +1,21 @@
-import { LockKeyhole } from "lucide-react";
+import { Field, internalInputClassName } from "@/components/internal/Field";
+import { PasswordInput } from "@/components/internal/PasswordInput";
+import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { loginInternalUser } from "@/features/internal-auth/actions";
+import { cn } from "@/lib/cn";
+import { LockKeyhole } from "lucide-react";
+
+const supportWhatsappHref = `https://wa.me/59177557034?text=${encodeURIComponent(
+  "Hola, necesito ayuda con el acceso a Sigeco.",
+)}`;
 
 type LoginPageProps = {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; email?: string }>;
 };
 
-export default async function SigecoLoginPage({ searchParams }: LoginPageProps) {
+export default async function SigecoLoginPage({
+  searchParams,
+}: LoginPageProps) {
   const params = await searchParams;
   const errorMessage =
     params.error === "locked"
@@ -15,52 +25,71 @@ export default async function SigecoLoginPage({ searchParams }: LoginPageProps) 
         : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f5f8f9] px-4 py-10 text-text">
-      <section className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-soft sm:p-6">
+    <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10 text-text">
+      <section className="w-full max-w-sm rounded-[9px] border border-border bg-surface p-6">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary-dark">
-            <LockKeyhole className="h-6 w-6" aria-hidden="true" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-[9px] bg-surface-soft text-primary-dark">
+            <LockKeyhole className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-normal text-muted">Sigeco</p>
-            <h1 className="font-sora text-2xl font-bold">Ingreso interno</h1>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+              Sigeco · Salud Intercultural
+            </p>
+            <h1 className="font-sora text-xl font-bold tracking-tight text-text">
+              Ingreso interno
+            </h1>
           </div>
         </div>
 
         {errorMessage ? (
-          <p className="mb-4 rounded-xl border border-error/25 bg-error/10 px-4 py-3 text-sm font-semibold text-error">
+          <p className="mb-4 flex items-start gap-2 rounded-[9px] bg-error/10 px-3.5 py-3 text-sm font-medium text-error">
+            <span
+              className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-current"
+              aria-hidden="true"
+            />
             {errorMessage}
           </p>
         ) : null}
 
         <form action={loginInternalUser} className="grid gap-4">
-          <label className="grid gap-2 text-sm font-semibold">
-            Email
+          <Field label="Email">
             <input
-              className="min-h-12 rounded-xl border border-border bg-surface px-4 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+              className={internalInputClassName}
               type="email"
               name="email"
               autoComplete="email"
+              defaultValue={params.email}
               required
             />
-          </label>
-          <label className="grid gap-2 text-sm font-semibold">
-            Contraseña
-            <input
-              className="min-h-12 rounded-xl border border-border bg-surface px-4 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
-          <button
-            type="submit"
-            className="focus-ring mt-2 min-h-12 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-soft transition hover:bg-primary-dark"
-          >
+          </Field>
+          <Field label="Contraseña">
+            <PasswordInput required />
+          </Field>
+          <Button type="submit" className="mt-1">
             Entrar
-          </button>
+          </Button>
         </form>
+
+        <div className="mt-6 grid gap-2 border-t border-border pt-4 text-center">
+          <p className="text-[11px] text-muted">
+            Acceso exclusivo para el personal de la clínica.
+          </p>
+          <hr className="mx-auto w-full border-t border-border" />
+          <div className="flex-row flex-wrap items-center justify-center gap-2 text-center sm:flex">
+            <p className="text-[11px] text-muted">¿Problemas para entrar?</p>
+            <a
+              href={supportWhatsappHref}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                buttonVariants({ variant: "link", size: "sm" }),
+                "justify-self-center",
+              )}
+            >
+              Contactar soporte
+            </a>
+          </div>
+        </div>
       </section>
     </main>
   );

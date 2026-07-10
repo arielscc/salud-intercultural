@@ -72,7 +72,7 @@ Regla central del rediseno: **el shell ocupa toda la pantalla y solo el area de 
 
 Viven en `src/components/internal/ui/`. Regla: usar estos componentes antes de escribir Tailwind crudo en paginas.
 
-- `Button`: variantes `primary`, `outline`, `ghost`, `danger`; tamanos `sm`, `md`.
+- `Button`: variantes `primary`, `outline`, `ghost`, `danger`, `link` (sin borde ni fondo, texto primario con subrayado al hover, sin padding; soporta iconos); tamanos `sm`, `md`.
 - `Card` / `CardHeader`: superficie blanca, borde hairline, radio 9px, padding 18px.
 - `Table` (+ `Th`, `Td`): encabezado en versalitas sobre fondo `background`, filas con borde inferior, hover con tint suave, contenedor con scroll horizontal propio.
 - `KpiCard`: etiqueta muted, cifra Sora `tabular-nums`, nota secundaria y bandera opcional `warn`/`crit` (icono + texto).

@@ -18,7 +18,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 8. Modulo Administracion (Caja) | Completada (2026-07-09) |
 | 9. Modulo Seguimientos | Completada (2026-07-09) |
 | 10. Modulo Inventario | Completada (2026-07-09) |
-| 11. Login interno | Pendiente |
+| 11. Login interno | Completada (2026-07-09) |
 | 12. Limpieza y QA visual final | Pendiente |
 
 ## Pendientes Funcionales Detectados
@@ -203,3 +203,34 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** UI de proveedores sigue fuera de alcance (pendiente V4 conocido).
 
 **Commit sugerido:** `feat(sigeco): redesign inventory module with marea system`
+
+### 2026-07-09 — Tarea 11: Login Interno
+
+**Que se hizo:**
+
+- `login/page.tsx` restilizado con los componentes Marea: card centrada `max-w-sm` con borde hairline y radio 9px (se eliminaron el fondo hardcodeado `bg-[#f5f8f9]` y la sombra publica `shadow-soft`, prohibida por la spec), icono de candado sobre tint `surface-soft`, eyebrow "Sigeco · Salud Intercultural" en versalitas, inputs con `Field`/`internalInputClassName`, boton `Button` primario y nota de pie "Acceso exclusivo para el personal de la clinica".
+- Banner de error restilizado con la familia `error` (punto + texto, sin borde decorativo), mismos mensajes para `locked` y credenciales invalidas.
+- `min-h-screen` cambiado a `min-h-dvh` (consistente con el shell).
+- Misma action `loginInternalUser`, mismos names y autocompletes.
+
+**Archivos tocados:** `src/app/(internal)/sigeco/login/page.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual del estado de error (`?error=1`) y login funcional end-to-end con el usuario local (redirige a `/sigeco`).
+
+**Pendientes que deja la tarea:** ninguno nuevo.
+
+**Commit sugerido:** `feat(sigeco): redesign internal login with marea system`
+
+### 2026-07-09 — Mejoras de UX del login (pedido explicito del usuario)
+
+**Que se hizo:**
+
+- **Mostrar/ocultar contraseña:** nuevo componente cliente `PasswordInput` (`src/components/internal/PasswordInput.tsx`) con boton de ojo (`Eye`/`EyeOff`), `aria-label` y `aria-pressed`; mantiene `name`, `autoComplete` y `required` del input original.
+- **Soporte por WhatsApp:** boton outline "Contactar soporte" bajo el formulario que abre `https://wa.me/59177557034` con el mensaje precargado "Hola, necesito ayuda con el acceso a Sigeco." (numero 775 57034 con codigo de pais 591).
+- **Conservar email al fallar el login:** unica excepcion aprobada a la regla "solo diseno" — `loginInternalUser` ahora incluye el email en el redirect de error (`?error=...&email=...`) y la pagina lo repone como `defaultValue`; la contraseña nunca viaja ni se repone. Decision de seguridad: el comportamiento es **identico exista o no la cuenta** (mismo mensaje generico, mismo email conservado) para no permitir enumeracion de usuarios; se descarto "limpiar todo si el usuario no existe" por ese motivo, explicado y aceptado en sesion.
+
+**Archivos tocados:** `src/components/internal/PasswordInput.tsx` (nuevo), `src/app/(internal)/sigeco/login/page.tsx`, `src/features/internal-auth/actions.ts` (solo el redirect de error).
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion funcional en navegador: login fallido conserva `test@test.si` con contraseña vacia, toggle alterna `type` password/text, link de WhatsApp correcto, login exitoso redirige a `/sigeco` (y resetea el contador de intentos fallidos generado por la prueba).
+
+**Commit sugerido:** `feat(sigeco): improve login ux with password toggle and support contact`
