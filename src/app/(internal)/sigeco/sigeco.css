@@ -27,3 +27,13 @@
   font-family: var(--font-plex), var(--font-inter), system-ui, sans-serif;
   padding-bottom: 0;
 }
+
+/*
+ * Los hijos de grid tienen min-width auto: sin esto, las cards con tablas
+ * anchas no pueden encogerse y fuerzan scroll horizontal de <main>.
+ * La regla permite que el scroll ocurra dentro del contenedor de cada tabla
+ * (overflow-x-auto), nunca en la pagina.
+ */
+.sigeco-app main .grid > * {
+  min-width: 0;
+}

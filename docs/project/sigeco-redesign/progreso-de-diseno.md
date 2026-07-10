@@ -19,7 +19,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 9. Modulo Seguimientos | Completada (2026-07-09) |
 | 10. Modulo Inventario | Completada (2026-07-09) |
 | 11. Login interno | Completada (2026-07-09) |
-| 12. Limpieza y QA visual final | Pendiente |
+| 12. Limpieza y QA visual final | Completada (2026-07-09) |
 
 ## Pendientes Funcionales Detectados
 
@@ -234,3 +234,26 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion funcional en navegador: login fallido conserva `test@test.si` con contraseña vacia, toggle alterna `type` password/text, link de WhatsApp correcto, login exitoso redirige a `/sigeco` (y resetea el contador de intentos fallidos generado por la prueba).
 
 **Commit sugerido:** `feat(sigeco): improve login ux with password toggle and support contact`
+
+### 2026-07-09 — Tarea 12: Limpieza Y QA Visual Final
+
+**Que se hizo:**
+
+- **Adopcion de `Chip`:** los 3 chips inline que quedaban (tareas pendientes en visitas, "Registrada" en consultas, estado de work item en enfermeria) migraron al componente compartido. Verificado por grep: cero clases legacy (`rounded-2xl`, `shadow-soft/lift`, `premium-*`, `glass`, colores hardcodeados, `danger`) en paginas y componentes de Sigeco.
+- **Bug encontrado y corregido en QA responsive:** en 390px, `<main>` scrolleaba horizontalmente (730px de contenido en 390px de viewport) porque los hijos de grid tienen `min-width: auto` y las cards con tablas no podian encogerse. Se agrego la regla `.sigeco-app main .grid > * { min-width: 0 }` en `sigeco.css`; ahora el scroll horizontal ocurre solo dentro del contenedor de cada tabla (verificado: main 390/390, contenedor de tabla 712 de contenido en 356 visibles). Desktop sin cambios.
+- **QA visual ejecutado (manual, con navegador headless):**
+  - Las 9 rutas de Sigeco recorridas autenticado: cero errores de consola.
+  - Regla de pantalla completa verificada: el documento nunca hace scroll; solo `<main>`.
+  - 390px: header con hamburguesa, drawer abre/cierra, navega y se cierra al elegir modulo (verificado clickeando el link del drawer; ojo: el primer intento de test clickeo el link oculto de la sidebar de escritorio, falso positivo), formularios apilados correctamente.
+  - Sitio publico verificado intacto: home renderiza igual y `--color-primary` en `:root` sigue siendo `5 154 178` (teal publico original). CMS Payload responde en `/admin/login` con su propio sistema visual.
+- **Pendiente consciente:** la auditoria con `/gstack-design-review` y el `/qa` funcional completo de la guia `sigeco-v3-full-flow-testing.md` no se corrieron en esta sesion (el QA visual fue manual); siguen recomendados antes de promover a staging, junto con la prueba con usuarios reales.
+
+**Archivos tocados:** `src/app/(internal)/sigeco/sigeco.css`, `src/app/(internal)/sigeco/(app)/{visitas,consultas,enfermeria}/page.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK.
+
+**Commit sugerido:** `chore(sigeco): visual qa pass and legacy style cleanup`
+
+## Cierre Del Rediseno
+
+Las 12 tareas estan completadas (2026-07-08 y 2026-07-09). Sigeco corre completo con el sistema Marea: tokens aislados, shell de pantalla completa con sidebar, tablas de trabajo, pills/chips semanticos y drawer movil. La web publica y el CMS no cambiaron.

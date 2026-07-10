@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/internal/ui/Card";
+import { Chip } from "@/components/internal/ui/Chip";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
@@ -54,9 +55,7 @@ export default async function NursingWorkQueuePage() {
                       : "—"}
                   </Td>
                   <Td>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-0.5 text-[11px] font-semibold text-muted">
-                      {nursingWorkItemStatusLabels[item.status]}
-                    </span>
+                    <Chip>{nursingWorkItemStatusLabels[item.status]}</Chip>
                   </Td>
                 </Tr>
               );

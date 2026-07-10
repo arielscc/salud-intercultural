@@ -5,6 +5,7 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { internalInputClassName } from "@/components/internal/Field";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
+import { Chip } from "@/components/internal/ui/Chip";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
@@ -84,9 +85,7 @@ export default async function VisitsPage({ searchParams }: VisitsPageProps) {
                 <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
                 <Td className="tabular-nums">
                   {visit.workItems.length > 0 ? (
-                    <span className="inline-flex items-center rounded-full bg-surface-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary-dark">
-                      {visit.workItems.length} pendientes
-                    </span>
+                    <Chip tone="primary">{visit.workItems.length} pendientes</Chip>
                   ) : (
                     "—"
                   )}

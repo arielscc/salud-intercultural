@@ -19,6 +19,7 @@ Estado general:
 | Sitio publico V1/V2 | Implementado | Presencia digital, paginas publicas, SEO, analytics y formularios. |
 | CMS V2 | Implementado | Payload administra contenido publico, media, paginas, servicios, equipo, testimonios y FAQs. |
 | Sigeco V3 | Implementado localmente hasta V3.6 | Sistema interno en `/sigeco` para operacion clinica, comercial, administrativa y de inventario. |
+| Rediseno visual Marea | Implementado localmente (2026-07-09) | Todo Sigeco usa el sistema visual Marea: shell de escritorio de pantalla completa, tablas de trabajo y tokens aislados del sitio publico. Ver [sistema visual](../design/sigeco-visual-system.md) y [progreso](./sigeco-redesign/progreso-de-diseno.md). |
 | Publicacion remota | Pendiente de promocion | `develop` contiene el avance local; requiere flujo `develop -> staging -> main`. |
 | QA manual mobile | Parcial pendiente | Los reportes de fases piden pruebas manuales en 390px para varias pantallas. |
 

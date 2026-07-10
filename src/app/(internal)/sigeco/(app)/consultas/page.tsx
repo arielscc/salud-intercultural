@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Card } from "@/components/internal/ui/Card";
+import { Chip } from "@/components/internal/ui/Chip";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels } from "@/features/patients/labels";
@@ -43,10 +44,9 @@ export default async function ConsultationsPage() {
                 <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
                 <Td>
                   {visit.clinicalConsultation ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-success">
-                      <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+                    <Chip tone="success" dot>
                       Registrada
-                    </span>
+                    </Chip>
                   ) : (
                     "—"
                   )}
