@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 
 describe("internal role permissions", () => {
-  it("allows captacion to operate leads without report access", () => {
-    expect(roleHasPermission("captacion", "leads_read")).toBe(true);
-    expect(roleHasPermission("captacion", "leads_create")).toBe(true);
-    expect(roleHasPermission("captacion", "leads_contact")).toBe(true);
+  it("keeps lead permissions out of every role after the simplification", () => {
+    expect(roleHasPermission("super_admin", "leads_read")).toBe(false);
+    expect(roleHasPermission("direccion", "leads_read")).toBe(false);
+    expect(roleHasPermission("recepcion", "leads_create")).toBe(false);
+    expect(roleHasPermission("captacion", "leads_read")).toBe(false);
+    expect(roleHasPermission("captacion", "leads_contact")).toBe(false);
+    expect(roleHasPermission("administracion", "leads_read")).toBe(false);
     expect(roleHasPermission("captacion", "reports_read")).toBe(false);
   });
 

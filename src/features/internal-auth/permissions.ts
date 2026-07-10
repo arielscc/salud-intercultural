@@ -21,11 +21,6 @@ export const deprecatedInternalRoles: InternalRole[] = ["captacion"];
 export const internalRolePermissions: Record<InternalRole, InternalPermission[]> = {
   super_admin: [
     "internal_access",
-    "leads_read",
-    "leads_create",
-    "leads_update",
-    "leads_contact",
-    "leads_reminder",
     "patients_read",
     "patients_create",
     "patients_update",
@@ -52,7 +47,6 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
   ],
   direccion: [
     "internal_access",
-    "leads_read",
     "patients_read",
     "visits_read",
     "patient_route_read",
@@ -80,9 +74,6 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
   ],
   recepcion: [
     "internal_access",
-    "leads_read",
-    "leads_create",
-    "leads_update",
     "patients_read",
     "patients_create",
     "patients_update",
@@ -94,11 +85,6 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
   ],
   captacion: [
     "internal_access",
-    "leads_read",
-    "leads_create",
-    "leads_update",
-    "leads_contact",
-    "leads_reminder",
     "patients_read",
     "patients_create",
     "followups_read",
@@ -106,7 +92,6 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
   ],
   administracion: [
     "internal_access",
-    "leads_read",
     "patients_read",
     "visits_read",
     "patient_route_read",

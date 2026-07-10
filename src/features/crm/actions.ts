@@ -1,5 +1,11 @@
 "use server";
 
+/*
+ * LEGACY (simplificacion V3.7): la UI de leads se retiro de Sigeco y ningun
+ * formulario invoca estas actions. Se conservan junto a los datos de leads;
+ * la captacion por WhatsApp/redes se gestionara desde otro proyecto.
+ */
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {

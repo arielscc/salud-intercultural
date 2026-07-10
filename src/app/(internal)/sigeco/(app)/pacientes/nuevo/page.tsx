@@ -17,7 +17,6 @@ type NewPatientPageProps = {
   searchParams: Promise<{
     duplicatePhone?: string;
     error?: string;
-    leadId?: string;
     name?: string;
     phone?: string;
     city?: string;
@@ -47,7 +46,6 @@ export default async function NewPatientPage({ searchParams }: NewPatientPagePro
       <Card>
         <form action={createPatientAction} className="grid gap-4">
           {params.duplicatePhone ? <input type="hidden" name="allowDuplicate" value="true" /> : null}
-          {params.leadId ? <input type="hidden" name="sourceLeadId" value={params.leadId} /> : null}
           <Field label="Nombre completo">
             <input
               className={internalInputClassName}

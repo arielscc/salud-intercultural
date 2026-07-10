@@ -47,7 +47,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium tabular-nums text-muted">
-                {task.patient?.internalCode ?? "Lead"}
+                {task.patient?.internalCode ?? "Sin ficha"}
               </p>
               <h2 className="font-sora text-xl font-bold tracking-tight text-text">{name}</h2>
               <p className="mt-0.5 text-sm text-muted">{task.title}</p>

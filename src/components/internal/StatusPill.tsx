@@ -1,5 +1,4 @@
-import type { InternalLeadStatus, VisitStatus } from "@/generated/prisma/client";
-import { leadStatusLabels } from "@/features/crm/labels";
+import type { VisitStatus } from "@/generated/prisma/client";
 import { visitStatusLabels } from "@/features/patients/labels";
 import { cn } from "@/lib/cn";
 
@@ -22,22 +21,6 @@ function Pill({ className, label }: { className: string; label: string }) {
       {label}
     </span>
   );
-}
-
-const statusClassName: Record<InternalLeadStatus, string> = {
-  new: "bg-surface-soft text-primary-dark",
-  contacted: "border border-border bg-background text-muted",
-  interested: "bg-success/10 text-success",
-  wants_visit: "bg-warning/10 text-warning",
-  reminder_pending: "bg-warning/10 text-warning",
-  confirmed_attendance: "bg-success/10 text-success",
-  no_answer: "bg-warning/10 text-warning",
-  discarded: "bg-error/10 text-error",
-  converted_to_patient: "bg-success text-white"
-};
-
-export function LeadStatusPill({ status, className }: { status: InternalLeadStatus; className?: string }) {
-  return <Pill className={cn(statusClassName[status], className)} label={leadStatusLabels[status]} />;
 }
 
 const visitStatusClassName: Record<VisitStatus, string> = {

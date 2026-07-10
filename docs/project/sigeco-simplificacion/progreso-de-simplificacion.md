@@ -8,7 +8,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | --- | --- | --- |
 | 1 | Modelo de datos de la simplificacion | Completada (2026-07-10) |
 | 2 | Funnel de recepcion | Completada (2026-07-10) |
-| 3 | Retirar UI y termino lead | Pendiente |
+| 3 | Retirar UI y termino lead | Completada (2026-07-10) |
 | 4 | Fusionar Pacientes y Visitas en Recepcion | Pendiente |
 | 5 | Rol seguimiento y retiro de captacion | Pendiente |
 | 6 | Flujo de visita flexible | Pendiente |
@@ -69,3 +69,27 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** la ficha de QA `SI-000002` (Rosa Huanca Flores) queda en la base dev como dato de prueba. Los formularios viejos de alta de paciente/visita siguen activos hasta la Tarea 4. La deteccion de duplicados asume celulares de 8 digitos (formato boliviano); si se registran fijos habra que revisarla.
 
 **Commit sugerido:** `feat(sigeco): add reception intake funnel`
+
+### Tarea 3 — Retirar UI Y Termino Lead (2026-07-10)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(internal)/sigeco/(app)/leads/` eliminado (lista, detalle y alta); `/sigeco/leads` ahora responde 404.
+- `src/components/internal/nav-items.ts`: entrada "Leads" fuera del sidebar (8 secciones visibles).
+- `src/app/(internal)/sigeco/(app)/page.tsx` (dashboard): fuera los KPIs de leads (nuevos, recordatorios vencidos, no responden) y la tabla "Leads recientes"; accion del header ahora es "Registrar llegada" hacia el funnel. Quedan los KPIs de seguimientos hoy y stock bajo como version interina; el dashboard definitivo llega en la Tarea 9.
+- `src/components/internal/StatusPill.tsx`: eliminado `LeadStatusPill` (sin usos restantes).
+- `src/app/(internal)/sigeco/(app)/seguimientos/{page,[taskId]/page}.tsx`: columna "Paciente / Lead" -> "Paciente" y fallback visible "Lead" -> "Sin ficha". El acceso a `task.lead` se mantiene para que los seguimientos historicos ligados a leads conserven nombre y telefono.
+- `src/app/(internal)/sigeco/(app)/pacientes/nuevo/page.tsx`: retirado el parametro `leadId` y el hidden `sourceLeadId` (la conversion lead->paciente ya no tiene UI).
+- `src/features/internal-auth/permissions.ts`: permisos `leads_*` retirados de TODOS los roles (super_admin, direccion, recepcion, captacion, administracion). El enum `InternalPermission` queda intacto en Prisma.
+- `src/features/internal-auth/permissions.test.ts`: test actualizado — ningun rol conserva permisos de leads.
+- `src/features/crm/actions.ts`, `src/modules/database/queries/leads-v3.ts`: marcados LEGACY con comentario (sin UI que los invoque; conservados junto a los datos y sus tests de integracion).
+
+**Sin tocar (fuera de alcance):** modelos y datos de leads en Prisma (verificado: 2 leads intactos en dev), el concepto "lead" del sitio publico/Payload (`/api/leads`, `LeadSubmissions`, formulario de contacto web) que es independiente de Sigeco, y `sourceLeadId` en el schema de pacientes (logica, sin UI).
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (60), `pnpm test:integration` (13, incluye las suites legacy de leads), `pnpm run build`. Navegador: dashboard y sidebar sin rastro de leads, `/sigeco/leads` 404, seguimientos con "Paciente"/"Sin ficha".
+
+**Pendientes que deja:** el dashboard queda minimo (2 KPIs) hasta la Tarea 9. El destino final de los datos historicos de leads (exportar/migrar al otro proyecto) sigue abierto.
+
+**Commit sugerido:** `feat(sigeco): remove leads ui and terminology`

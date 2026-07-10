@@ -6,7 +6,6 @@ import {
   PhoneCall,
   Receipt,
   Stethoscope,
-  UserRoundSearch,
   UsersRound,
   type LucideIcon
 } from "lucide-react";
@@ -19,7 +18,6 @@ export type SigecoNavItem = {
 
 export const sigecoNavItems: SigecoNavItem[] = [
   { href: "/sigeco", label: "Inicio", icon: Home },
-  { href: "/sigeco/leads", label: "Leads", icon: UserRoundSearch },
   { href: "/sigeco/pacientes", label: "Pacientes", icon: UsersRound },
   { href: "/sigeco/visitas", label: "Visitas", icon: ClipboardList },
   { href: "/sigeco/consultas", label: "Consulta", icon: Stethoscope },

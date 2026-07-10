@@ -1,3 +1,9 @@
+/*
+ * LEGACY (simplificacion V3.7): sin UI en Sigeco. Los modelos y datos de
+ * leads se conservan; estas queries siguen cubiertas por sus tests de
+ * integracion hasta definir el destino final de los datos historicos.
+ */
+
 import type {
   InternalLeadContactMethod,
   InternalLeadContactResult,

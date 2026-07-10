@@ -51,7 +51,7 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
         <Table>
           <thead>
             <tr>
-              <Th>Paciente / Lead</Th>
+              <Th>Paciente</Th>
               <Th>Tarea</Th>
               <Th>Teléfono</Th>
               <Th>Vence</Th>
@@ -74,7 +74,7 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
                       {name}
                     </Link>
                     <span className="block text-[11px] font-normal tabular-nums text-muted">
-                      {task.patient?.internalCode ?? "Lead"}
+                      {task.patient?.internalCode ?? "Sin ficha"}
                     </span>
                   </Td>
                   <Td className="max-w-[280px] truncate">{task.title}</Td>
