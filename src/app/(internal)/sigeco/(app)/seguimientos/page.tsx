@@ -1,10 +1,17 @@
 import Link from "next/link";
+import { BellRing, CalendarClock, PhoneCall } from "lucide-react";
+import { Card } from "@/components/internal/ui/Card";
+import { Chip } from "@/components/internal/ui/Chip";
+import { KpiCard } from "@/components/internal/ui/KpiCard";
+import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { followUpStatusLabels } from "@/features/follow-ups/labels";
 import {
   getFollowUpTasks,
   getFollowUpWorkSummary
 } from "@/modules/database/queries/follow-ups";
 import { requirePermission } from "@/modules/permissions";
+import { cn } from "@/lib/cn";
 
 type FollowUpsPageProps = {
   searchParams: Promise<{ filtro?: string }>;
@@ -20,78 +27,99 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
   ]);
 
   return (
-    <div className="grid gap-5">
-      <section>
-        <p className="text-sm font-semibold text-muted">Bandeja diaria</p>
-        <h2 className="font-sora text-2xl font-bold text-text">Seguimientos</h2>
-      </section>
+    <div className="grid gap-4">
+      <PageHeader title="Seguimientos" description="Bandeja diaria" />
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <Metric label="Vencidos" value={summary.overdue} />
-        <Metric label="Hoy" value={summary.today} />
-        <Metric label="Próximos" value={summary.upcoming} />
+        <KpiCard
+          icon={BellRing}
+          label="Vencidos"
+          value={summary.overdue}
+          flag={summary.overdue > 0 ? { tone: "crit", label: "Atender primero" } : undefined}
+        />
+        <KpiCard icon={PhoneCall} label="Hoy" value={summary.today} />
+        <KpiCard icon={CalendarClock} label="Próximos" value={summary.upcoming} />
       </section>
 
-      <nav className="flex gap-2 overflow-x-auto">
-        <FilterLink href="/sigeco/seguimientos?filtro=vencidos" label="Vencidos" />
-        <FilterLink href="/sigeco/seguimientos" label="Hoy" />
-        <FilterLink href="/sigeco/seguimientos?filtro=proximos" label="Próximos" />
+      <nav className="flex gap-2 overflow-x-auto" aria-label="Filtro de seguimientos">
+        <FilterTab href="/sigeco/seguimientos?filtro=vencidos" label="Vencidos" active={filter === "overdue"} />
+        <FilterTab href="/sigeco/seguimientos" label="Hoy" active={filter === "today"} />
+        <FilterTab href="/sigeco/seguimientos?filtro=proximos" label="Próximos" active={filter === "upcoming"} />
       </nav>
 
-      <section className="grid gap-3">
-        {tasks.map((task) => {
-          const phone = task.patient?.phone ?? task.lead?.phone;
-          const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
-          const isOverdue = task.dueAt < new Date() && task.status === "pending";
+      <Card className="p-0">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Paciente / Lead</Th>
+              <Th>Tarea</Th>
+              <Th>Teléfono</Th>
+              <Th>Vence</Th>
+              <Th>Estado</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.map((task) => {
+              const phone = task.patient?.phone ?? task.lead?.phone;
+              const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
+              const isOverdue = task.dueAt < new Date() && task.status === "pending";
 
-          return (
-            <Link
-              key={task.id}
-              href={`/sigeco/seguimientos/${task.id}`}
-              className={`focus-ring rounded-2xl border bg-surface p-4 shadow-sm ${
-                isOverdue ? "border-danger/40" : "border-border"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-normal text-muted">
-                    {task.patient?.internalCode ?? "Lead"}
-                  </p>
-                  <h3 className="font-sora text-lg font-bold">{name}</h3>
-                  <p className="mt-1 text-sm text-muted">{task.title}</p>
-                </div>
-                <span className="rounded-full border border-border bg-surface-soft px-3 py-1 text-xs font-bold text-muted">
-                  {followUpStatusLabels[task.status]}
-                </span>
-              </div>
-              <p className="mt-3 text-sm text-muted">
-                {task.dueAt.toLocaleString("es-BO")} {phone ? `· ${phone}` : ""}
-              </p>
-            </Link>
-          );
-        })}
-        {tasks.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border bg-surface p-4 text-sm text-muted">
-            No hay seguimientos para este filtro.
-          </p>
-        ) : null}
-      </section>
+              return (
+                <Tr key={task.id}>
+                  <Td className="font-semibold text-text">
+                    <Link
+                      href={`/sigeco/seguimientos/${task.id}`}
+                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                    >
+                      {name}
+                    </Link>
+                    <span className="block text-[11px] font-normal tabular-nums text-muted">
+                      {task.patient?.internalCode ?? "Lead"}
+                    </span>
+                  </Td>
+                  <Td className="max-w-[280px] truncate">{task.title}</Td>
+                  <Td className="tabular-nums">{phone ?? "—"}</Td>
+                  <Td className={cn("tabular-nums", isOverdue && "font-semibold text-error")}>
+                    {task.dueAt.toLocaleString("es-BO")}
+                    {isOverdue ? " · vencido" : ""}
+                  </Td>
+                  <Td>
+                    <Chip dot>{followUpStatusLabels[task.status]}</Chip>
+                  </Td>
+                </Tr>
+              );
+            })}
+            {tasks.length === 0 ? (
+              <tr>
+                <Td className="py-8 text-center" colSpan={5}>
+                  <span className="block font-semibold text-text">
+                    No hay seguimientos para este filtro.
+                  </span>
+                  <span className="mt-1 block text-sm text-muted">
+                    Los seguimientos se crean desde la ficha del paciente o tras la atención.
+                  </span>
+                </Td>
+              </tr>
+            ) : null}
+          </tbody>
+        </Table>
+      </Card>
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function FilterTab({ href, label, active }: { href: string; label: string; active: boolean }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-      <p className="text-sm font-semibold text-muted">{label}</p>
-      <p className="mt-2 text-3xl font-bold">{value}</p>
-    </div>
-  );
-}
-
-function FilterLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link href={href} className="focus-ring shrink-0 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-bold">
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "focus-ring shrink-0 rounded-[9px] border px-4 py-2 text-[13px] font-semibold transition",
+        active
+          ? "border-transparent bg-surface-soft text-primary-dark"
+          : "border-border bg-surface text-muted hover:text-text"
+      )}
+    >
       {label}
     </Link>
   );

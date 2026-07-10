@@ -16,7 +16,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 6. Modulo Consultas | Completada (2026-07-08) |
 | 7. Modulo Enfermeria | Completada (2026-07-08) |
 | 8. Modulo Administracion (Caja) | Completada (2026-07-09) |
-| 9. Modulo Seguimientos | Pendiente |
+| 9. Modulo Seguimientos | Completada (2026-07-09) |
 | 10. Modulo Inventario | Pendiente |
 | 11. Login interno | Pendiente |
 | 12. Limpieza y QA visual final | Pendiente |
@@ -171,3 +171,19 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** el estado visible de error para venta con stock insuficiente requiere manejo de errores en la action (fuera del rediseno; ya registrado como pendiente transversal de V3).
 
 **Commit sugerido:** `feat(sigeco): redesign administration module with marea system`
+
+### 2026-07-09 — Tarea 9: Modulo Seguimientos
+
+**Que se hizo:**
+
+- **Bandeja (`seguimientos/page.tsx`):** resumen como 3 `KpiCard` (vencidos con bandera crit "Atender primero" cuando > 0, hoy, proximos). Filtros vencidos/hoy/proximos como tabs con **estado activo visible** (tint primario segun el `filtro` actual — antes no se distinguia el filtro aplicado). Lista de cards a `Table`: paciente/lead (link + codigo o "Lead"), tarea, telefono, vence (fecha en error + sufijo "vencido" si esta vencida y pendiente) y estado como `Chip`. Estado vacio como fila con texto guia.
+- **Correccion de bug visual preexistente:** el resaltado de tareas vencidas usaba `border-danger/40`, pero el color `danger` no existe en `tailwind.config.ts` (el token es `error`), por lo que nunca se aplico. El nuevo resaltado usa la familia `error` correcta (texto + palabra "vencido", no solo color).
+- **Detalle (`seguimientos/[taskId]/page.tsx`):** dos columnas (`xl:grid-cols-[1.4fr_1fr]`). Izquierda: ficha (codigo o "Lead", nombre, titulo de la tarea, `Chip` de estado, `<dl>` con vencimiento y telefono, acciones rapidas "Llamar" outline y "WhatsApp" primaria con iconos y mismos hrefs `tel:`/`wa.me`) e "Historial" como `TimelineItem` (resultado como titulo, metodo + fecha como meta). Derecha: formulario "Registrar contacto" (metodo, resultado, notas) con la misma action.
+
+**Archivos tocados:** `src/app/(internal)/sigeco/(app)/seguimientos/page.tsx`, `src/app/(internal)/sigeco/(app)/seguimientos/[taskId]/page.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual: bandeja con tabs activos y estado vacio (la unica tarea QA esta resuelta y la query trae pendientes), detalle abierto por id directo con chip "No mejoro", botones Llamar/WhatsApp e historial del intento QA.
+
+**Pendientes que deja la tarea:** ninguno nuevo.
+
+**Commit sugerido:** `feat(sigeco): redesign follow-ups module with marea system`

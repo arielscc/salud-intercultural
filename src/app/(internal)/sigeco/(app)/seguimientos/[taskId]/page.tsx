@@ -1,10 +1,17 @@
 import { notFound } from "next/navigation";
+import { MessageCircle, Phone } from "lucide-react";
 import type { FollowUpAttemptMethod, FollowUpStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { Button, buttonVariants } from "@/components/internal/ui/Button";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { Chip } from "@/components/internal/ui/Chip";
+import { InfoRow } from "@/components/internal/ui/InfoRow";
+import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpAttemptAction } from "@/features/follow-ups/actions";
 import { followUpAttemptMethodLabels, followUpStatusLabels } from "@/features/follow-ups/labels";
 import { getFollowUpTaskById } from "@/modules/database/queries/follow-ups";
 import { requirePermission } from "@/modules/permissions";
+import { cn } from "@/lib/cn";
 
 const methodOptions = Object.entries(followUpAttemptMethodLabels) as Array<[FollowUpAttemptMethod, string]>;
 const resultOptions = ([
@@ -34,74 +41,92 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
   const whatsappHref = phone ? `https://wa.me/${phone.replace(/\D/g, "")}` : undefined;
 
   return (
-    <div className="grid gap-5">
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <p className="text-sm font-semibold text-muted">{task.patient?.internalCode ?? "Lead"}</p>
-        <h2 className="font-sora text-2xl font-bold">{name}</h2>
-        <p className="mt-1 text-sm text-muted">{task.title}</p>
-        <p className="mt-2 text-sm font-semibold text-muted">
-          {followUpStatusLabels[task.status]} · {task.dueAt.toLocaleString("es-BO")}
-        </p>
-        <div className="mt-4 flex gap-2">
-          {phone ? (
-            <a href={`tel:${phone}`} className="focus-ring rounded-xl border border-border px-4 py-2 text-sm font-bold">
-              Llamar
-            </a>
-          ) : null}
-          {whatsappHref ? (
-            <a href={whatsappHref} target="_blank" rel="noreferrer" className="focus-ring rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">
-              WhatsApp
-            </a>
-          ) : null}
-        </div>
-      </section>
-
-      <form action={createFollowUpAttemptAction} className="grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <input type="hidden" name="taskId" value={task.id} />
-        <h3 className="font-sora text-lg font-bold">Registrar contacto</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Método">
-            <select className={internalInputClassName} name="method" defaultValue="call">
-              {methodOptions.map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Resultado">
-            <select className={internalInputClassName} name="result" defaultValue="done">
-              {resultOptions.map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <Field label="Notas">
-          <textarea className={`${internalInputClassName} min-h-24 py-3`} name="notes" />
-        </Field>
-        <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
-          Guardar seguimiento
-        </button>
-      </form>
-
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Historial</h3>
-        <div className="grid gap-3">
-          {task.attempts.map((attempt) => (
-            <article key={attempt.id} className="rounded-xl border border-border bg-surface-soft/60 p-3">
-              <p className="font-bold">{followUpStatusLabels[attempt.result]}</p>
-              <p className="text-sm text-muted">
-                {followUpAttemptMethodLabels[attempt.method]} · {attempt.contactedAt.toLocaleString("es-BO")}
+    <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-4">
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium tabular-nums text-muted">
+                {task.patient?.internalCode ?? "Lead"}
               </p>
-              {attempt.notes ? <p className="mt-1 text-sm text-muted">{attempt.notes}</p> : null}
-            </article>
-          ))}
-          {task.attempts.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Sin intentos registrados.
-            </p>
+              <h2 className="font-sora text-xl font-bold tracking-tight text-text">{name}</h2>
+              <p className="mt-0.5 text-sm text-muted">{task.title}</p>
+            </div>
+            <Chip dot>{followUpStatusLabels[task.status]}</Chip>
+          </div>
+          <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
+            <InfoRow label="Vence" value={task.dueAt.toLocaleString("es-BO")} />
+            {phone ? <InfoRow label="Teléfono" value={phone} /> : null}
+          </dl>
+          {phone ? (
+            <div className="mt-4 flex gap-2">
+              <a href={`tel:${phone}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                Llamar
+              </a>
+              {whatsappHref ? (
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(buttonVariants({ size: "sm" }))}
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  WhatsApp
+                </a>
+              ) : null}
+            </div>
           ) : null}
-        </div>
-      </section>
+        </Card>
+
+        <Card>
+          <CardHeader title="Historial" />
+          <div className="grid gap-0">
+            {task.attempts.map((attempt) => (
+              <TimelineItem
+                key={attempt.id}
+                title={followUpStatusLabels[attempt.result]}
+                meta={`${followUpAttemptMethodLabels[attempt.method]} · ${attempt.contactedAt.toLocaleString("es-BO")}`}
+                body={attempt.notes ?? undefined}
+              />
+            ))}
+            {task.attempts.length === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin intentos registrados.</p>
+            ) : null}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader title="Registrar contacto" />
+          <form action={createFollowUpAttemptAction} className="grid gap-3">
+            <input type="hidden" name="taskId" value={task.id} />
+            <Field label="Método">
+              <select className={internalInputClassName} name="method" defaultValue="call">
+                {methodOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Resultado">
+              <select className={internalInputClassName} name="result" defaultValue="done">
+                {resultOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Notas">
+              <textarea className={`${internalInputClassName} min-h-24 py-3`} name="notes" />
+            </Field>
+            <Button type="submit">Guardar seguimiento</Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }
