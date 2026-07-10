@@ -15,7 +15,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 5. Modulo Visitas | Completada (2026-07-08) |
 | 6. Modulo Consultas | Completada (2026-07-08) |
 | 7. Modulo Enfermeria | Completada (2026-07-08) |
-| 8. Modulo Administracion (Caja) | Pendiente |
+| 8. Modulo Administracion (Caja) | Completada (2026-07-09) |
 | 9. Modulo Seguimientos | Pendiente |
 | 10. Modulo Inventario | Pendiente |
 | 11. Login interno | Pendiente |
@@ -154,3 +154,20 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** ninguno nuevo.
 
 **Commit sugerido:** `feat(sigeco): redesign nursing module with marea system`
+
+### 2026-07-09 — Tarea 8: Modulo Administracion (Caja)
+
+**Que se hizo:**
+
+- **Componente nuevo:** `Chip` en `src/components/internal/ui/Chip.tsx` (tonos neutral/primary/success/warning/error, punto opcional) — el patron de chip se repetia por tercera vez; los modulos anteriores lo adoptaran en la tarea 12 de limpieza.
+- **Bandeja (`administracion/page.tsx`):** resumen de dinero como 3 `KpiCard` con iconos (cobrado hoy, ventas del mes, saldo pendiente con bandera warn "Por cobrar" cuando > 0). "Pendientes derivados" de cards a `Table`: paciente (link + codigo), tarea, indicacion (tipo + medico), venta (total · saldo) y estado como `Chip` semantico (warning con saldo, success pagada, neutral sin venta = area). Estado vacio como fila.
+- **Tarea (`administracion/[workItemId]/page.tsx`):** dos columnas. Izquierda: ficha con el pendiente administrativo en panel inset + formulario "Registrar venta" reorganizado (tipo/producto inventariable en par, cantidad/precio/descuento en 3 columnas, cobro inicial/forma de pago en par, boton al pie tras separador). Derecha: "Ventas de esta tarea" como `TimelineItem` (total linkeado al comprobante, estado como aside, saldo como body). Mismos names, hidden inputs y actions.
+- **Comprobante (`administracion/ventas/[saleId]/page.tsx`):** encabezado con chip semantico (warning si hay saldo, success si pagado); items como `Table` con columnas numericas alineadas a la derecha; bloque de totales alineado a la derecha (`SummaryRow` con total en bold y saldo en warning cuando > 0); pagos como `Table` (monto, metodo, fecha, referencia). El formulario "Registrar cobro" va como rail derecho solo cuando hay saldo (`hasBalance` condiciona el layout de 2 columnas); misma condicion y action de siempre.
+
+**Archivos tocados:** `src/components/internal/ui/Chip.tsx` (nuevo), `src/app/(internal)/sigeco/(app)/administracion/{page,[workItemId]/page,ventas/[saleId]/page}.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual con datos de QA: bandeja con KPIs (Bs 130,00 ventas del mes) y estado vacio; comprobante pagado con chip "Pagado", totales con descuento Bs 10,00 y pago QA-PAGO-001 en tabla.
+
+**Pendientes que deja la tarea:** el estado visible de error para venta con stock insuficiente requiere manejo de errores en la action (fuera del rediseno; ya registrado como pendiente transversal de V3).
+
+**Commit sugerido:** `feat(sigeco): redesign administration module with marea system`

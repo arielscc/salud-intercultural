@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import type { SaleItemType } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
+import { Button } from "@/components/internal/ui/Button";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createSaleAction } from "@/features/sales/actions";
 import {
   formatMoney,
@@ -34,107 +37,158 @@ export default async function AdministrationWorkItemPage({ params }: Administrat
   const order = item.clinicalOrders[0];
 
   return (
-    <div className="grid gap-5">
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-muted">{patient.internalCode}</p>
-            <h2 className="font-sora text-2xl font-bold">{patient.fullName}</h2>
-            <p className="mt-1 text-sm text-muted">{patient.phone}</p>
+    <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
+      <div className="grid gap-4">
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium tabular-nums text-muted">{patient.internalCode}</p>
+              <h2 className="font-sora text-xl font-bold tracking-tight text-text">
+                {patient.fullName}
+              </h2>
+              <p className="mt-0.5 text-sm tabular-nums text-muted">{patient.phone}</p>
+            </div>
+            <VisitStatusPill status={item.visit.status} />
           </div>
-          <VisitStatusPill status={item.visit.status} />
-        </div>
-        <div className="mt-4 rounded-xl border border-border bg-surface-soft/60 p-3">
-          <p className="text-xs font-bold uppercase tracking-normal text-muted">Pendiente administrativo</p>
-          <p className="font-bold">{order?.title ?? item.title}</p>
-          <p className="mt-1 text-sm text-muted">{order?.details ?? item.description}</p>
-        </div>
-      </section>
-
-      <form action={createSaleAction} className="grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <input type="hidden" name="patientId" value={patient.id} />
-        <input type="hidden" name="visitId" value={item.visit.id} />
-        <input type="hidden" name="workItemId" value={item.id} />
-        <h3 className="font-sora text-lg font-bold">Registrar venta</h3>
-        <Field label="Tipo">
-          <select className={internalInputClassName} name="itemType" defaultValue={order?.type === "study" ? "study" : "service"}>
-            {saleItemTypeOptions.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Producto inventariable">
-          <select className={internalInputClassName} name="inventoryItemId" defaultValue="">
-            <option value="">No descontar inventario</option>
-            {inventoryItems.map((inventoryItem) => (
-              <option key={inventoryItem.id} value={inventoryItem.id}>
-                {inventoryItem.name} · Stock {inventoryItem.currentStock}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Descripción">
-          <input className={internalInputClassName} name="description" defaultValue={order?.title ?? item.title} required />
-        </Field>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Cantidad">
-            <input className={internalInputClassName} name="quantity" inputMode="numeric" defaultValue="1" required />
-          </Field>
-          <Field label="Precio unitario Bs">
-            <input className={internalInputClassName} name="unitPrice" inputMode="decimal" placeholder="0.00" required />
-          </Field>
-          <Field label="Descuento Bs">
-            <input className={internalInputClassName} name="discount" inputMode="decimal" placeholder="0.00" />
-          </Field>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Cobro inicial Bs">
-            <input className={internalInputClassName} name="initialPayment" inputMode="decimal" placeholder="0.00" />
-          </Field>
-          <Field label="Forma de pago">
-            <select className={internalInputClassName} name="paymentMethodCode" defaultValue="cash">
-              {paymentMethodOptions.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <Field label="Referencia">
-          <input className={internalInputClassName} name="paymentReference" />
-        </Field>
-        <Field label="Notas">
-          <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
-        </Field>
-        <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
-          Crear venta
-        </button>
-      </form>
-
-      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="mb-4 font-sora text-lg font-bold">Ventas de esta tarea</h3>
-        <div className="grid gap-3">
-          {item.sales.map((sale) => (
-            <a key={sale.id} href={`/sigeco/administracion/ventas/${sale.id}`} className="focus-ring rounded-xl border border-border bg-surface-soft/60 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-bold">{formatMoney(sale.totalCents)}</p>
-                  <p className="text-sm text-muted">Saldo: {formatMoney(sale.balanceCents)}</p>
-                </div>
-                <span className="text-sm font-bold text-muted">{saleStatusLabels[sale.status]}</span>
-              </div>
-            </a>
-          ))}
-          {item.sales.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-              Sin ventas registradas para esta tarea.
+          <div className="mt-4 rounded-[9px] border border-border bg-background p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+              Pendiente administrativo
             </p>
-          ) : null}
-        </div>
-      </section>
+            <p className="mt-0.5 text-sm font-semibold text-text">{order?.title ?? item.title}</p>
+            {order?.details ?? item.description ? (
+              <p className="mt-1 text-sm text-muted">{order?.details ?? item.description}</p>
+            ) : null}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Registrar venta" />
+          <form action={createSaleAction} className="grid gap-3">
+            <input type="hidden" name="patientId" value={patient.id} />
+            <input type="hidden" name="visitId" value={item.visit.id} />
+            <input type="hidden" name="workItemId" value={item.id} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Tipo">
+                <select
+                  className={internalInputClassName}
+                  name="itemType"
+                  defaultValue={order?.type === "study" ? "study" : "service"}
+                >
+                  {saleItemTypeOptions.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Producto inventariable">
+                <select className={internalInputClassName} name="inventoryItemId" defaultValue="">
+                  <option value="">No descontar inventario</option>
+                  {inventoryItems.map((inventoryItem) => (
+                    <option key={inventoryItem.id} value={inventoryItem.id}>
+                      {inventoryItem.name} · Stock {inventoryItem.currentStock}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Field label="Descripción">
+              <input
+                className={internalInputClassName}
+                name="description"
+                defaultValue={order?.title ?? item.title}
+                required
+              />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Cantidad">
+                <input
+                  className={internalInputClassName}
+                  name="quantity"
+                  inputMode="numeric"
+                  defaultValue="1"
+                  required
+                />
+              </Field>
+              <Field label="Precio unitario Bs">
+                <input
+                  className={internalInputClassName}
+                  name="unitPrice"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  required
+                />
+              </Field>
+              <Field label="Descuento Bs">
+                <input
+                  className={internalInputClassName}
+                  name="discount"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                />
+              </Field>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Cobro inicial Bs">
+                <input
+                  className={internalInputClassName}
+                  name="initialPayment"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                />
+              </Field>
+              <Field label="Forma de pago">
+                <select className={internalInputClassName} name="paymentMethodCode" defaultValue="cash">
+                  {paymentMethodOptions.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Field label="Referencia">
+              <input className={internalInputClassName} name="paymentReference" />
+            </Field>
+            <Field label="Notas">
+              <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
+            </Field>
+            <div className="flex justify-end border-t border-border pt-4">
+              <Button type="submit">Crear venta</Button>
+            </div>
+          </form>
+        </Card>
+      </div>
+
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader title="Ventas de esta tarea" />
+          <div className="grid gap-0">
+            {item.sales.map((sale) => (
+              <TimelineItem
+                key={sale.id}
+                title={
+                  <a
+                    href={`/sigeco/administracion/ventas/${sale.id}`}
+                    className="focus-ring rounded-[7px] tabular-nums hover:text-primary-dark hover:underline"
+                  >
+                    {formatMoney(sale.totalCents)}
+                  </a>
+                }
+                aside={
+                  <span className="text-[11px] font-semibold text-muted">
+                    {saleStatusLabels[sale.status]}
+                  </span>
+                }
+                body={<span className="tabular-nums">Saldo: {formatMoney(sale.balanceCents)}</span>}
+              />
+            ))}
+            {item.sales.length === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin ventas registradas para esta tarea.</p>
+            ) : null}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
