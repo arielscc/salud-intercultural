@@ -58,8 +58,7 @@ export async function submitReceptionIntakeAction(formData: FormData) {
   });
 
   revalidatePath("/sigeco");
-  revalidatePath("/sigeco/visitas");
-  revalidatePath("/sigeco/pacientes");
-  revalidatePath(`/sigeco/pacientes/${result.patientId}`);
-  redirect(`/sigeco/visitas/${result.visit.id}`);
+  revalidatePath("/sigeco/recepcion");
+  revalidatePath(`/sigeco/recepcion/pacientes/${result.patientId}`);
+  redirect(`/sigeco/recepcion/visitas/${result.visit.id}`);
 }

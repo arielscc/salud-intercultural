@@ -1,17 +1,23 @@
 import { IntakeFunnel } from "@/components/internal/reception/IntakeFunnel";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { getReceptionPatientById } from "@/modules/database/queries/reception";
 import { requirePermission } from "@/modules/permissions";
 
 type ReceptionIntakePageProps = {
   searchParams: Promise<{
     error?: string;
     duplicatePhone?: string;
+    paciente?: string;
   }>;
 };
 
 export default async function ReceptionIntakePage({ searchParams }: ReceptionIntakePageProps) {
   await requirePermission("visits_create");
   const params = await searchParams;
+  const patient = params.paciente ? await getReceptionPatientById(params.paciente) : null;
+  const initialPatient = patient
+    ? { ...patient, birthDate: patient.birthDate ? patient.birthDate.toISOString().slice(0, 10) : "" }
+    : undefined;
 
   return (
     <div className="mx-auto grid w-full max-w-2xl gap-4">
@@ -45,7 +51,10 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
         </div>
       ) : null}
 
-      <IntakeFunnel allowDuplicateFromServer={Boolean(params.duplicatePhone)} />
+      <IntakeFunnel
+        allowDuplicateFromServer={Boolean(params.duplicatePhone)}
+        initialPatient={initialPatient}
+      />
     </div>
   );
 }

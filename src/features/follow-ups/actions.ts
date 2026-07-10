@@ -32,7 +32,7 @@ export async function createFollowUpTaskAction(formData: FormData) {
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/seguimientos");
-  if (parsed.data.patientId) revalidatePath(`/sigeco/pacientes/${parsed.data.patientId}`);
+  if (parsed.data.patientId) revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
   redirect(`/sigeco/seguimientos/${task.id}`);
 }
 

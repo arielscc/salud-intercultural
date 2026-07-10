@@ -13,19 +13,24 @@ function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
 }
 
+/*
+ * LEGACY (simplificacion V3.7): el alta manual de pacientes fue reemplazada
+ * por el funnel de recepcion (submitReceptionIntakeAction). Se conserva por
+ * si un flujo interno necesita crear fichas sin abrir visita.
+ */
 export async function createPatientAction(formData: FormData) {
   const user = await requirePermission("patients_create");
   const parsed = createPatientSchema.safeParse(parseFormData(formData));
 
   if (!parsed.success) {
-    redirect("/sigeco/pacientes/nuevo?error=invalid");
+    redirect("/sigeco/recepcion/nuevo?error=invalid");
   }
 
   const input = sanitizePatientInput(parsed.data);
   const duplicates = await findPossibleDuplicatePatients(input.phone);
 
   if (duplicates.length > 0 && formData.get("allowDuplicate") !== "true") {
-    redirect(`/sigeco/pacientes/nuevo?duplicatePhone=${encodeURIComponent(input.phone)}`);
+    redirect(`/sigeco/recepcion/nuevo?duplicatePhone=${encodeURIComponent(input.phone)}`);
   }
 
   const patient = await createPatientRecord({
@@ -34,6 +39,6 @@ export async function createPatientAction(formData: FormData) {
   });
 
   revalidatePath("/sigeco");
-  revalidatePath("/sigeco/pacientes");
-  redirect(`/sigeco/pacientes/${patient.id}`);
+  revalidatePath("/sigeco/recepcion");
+  redirect(`/sigeco/recepcion/pacientes/${patient.id}`);
 }

@@ -41,7 +41,7 @@ export async function createSaleAction(formData: FormData) {
 
   revalidatePath("/sigeco/administracion");
   if (parsed.data.workItemId) revalidatePath(`/sigeco/administracion/${parsed.data.workItemId}`);
-  revalidatePath(`/sigeco/pacientes/${parsed.data.patientId}`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
   redirect(`/sigeco/administracion/ventas/${sale.id}`);
 }
 

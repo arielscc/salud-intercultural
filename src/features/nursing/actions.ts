@@ -53,7 +53,7 @@ export async function createVitalSignsAction(formData: FormData) {
 
   revalidatePath("/sigeco/enfermeria");
   if (workItemId) revalidatePath(`/sigeco/enfermeria/${workItemId}`);
-  revalidatePath(`/sigeco/pacientes/${parsed.data.patientId}`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
 }
 
 export async function createNursingApplicationAction(formData: FormData) {
@@ -71,7 +71,7 @@ export async function createNursingApplicationAction(formData: FormData) {
 
   revalidatePath("/sigeco/enfermeria");
   if (parsed.data.workItemId) revalidatePath(`/sigeco/enfermeria/${parsed.data.workItemId}`);
-  revalidatePath(`/sigeco/pacientes/${parsed.data.patientId}`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
 }
 
 export async function createNursingNoteAction(formData: FormData) {
@@ -90,5 +90,5 @@ export async function createNursingNoteAction(formData: FormData) {
 
   revalidatePath("/sigeco/enfermeria");
   if (workItemId) revalidatePath(`/sigeco/enfermeria/${workItemId}`);
-  revalidatePath(`/sigeco/pacientes/${parsed.data.patientId}`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
 }

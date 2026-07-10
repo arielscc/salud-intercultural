@@ -18,7 +18,7 @@ export async function createVisitAction(formData: FormData) {
   const parsed = createVisitSchema.safeParse(parseFormData(formData));
 
   if (!parsed.success) {
-    redirect("/sigeco/visitas?error=invalid");
+    redirect("/sigeco/recepcion?error=invalid");
   }
 
   const visit = await createVisitRecord({
@@ -27,9 +27,9 @@ export async function createVisitAction(formData: FormData) {
   });
 
   revalidatePath("/sigeco");
-  revalidatePath("/sigeco/visitas");
-  revalidatePath(`/sigeco/pacientes/${parsed.data.patientId}`);
-  redirect(`/sigeco/visitas/${visit.id}`);
+  revalidatePath("/sigeco/recepcion");
+  revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
+  redirect(`/sigeco/recepcion/visitas/${visit.id}`);
 }
 
 export async function updateVisitStatusAction(formData: FormData) {
@@ -37,7 +37,7 @@ export async function updateVisitStatusAction(formData: FormData) {
   const parsed = updateVisitStatusSchema.safeParse(parseFormData(formData));
 
   if (!parsed.success) {
-    redirect("/sigeco/visitas?error=invalid-status");
+    redirect("/sigeco/recepcion?error=invalid-status");
   }
 
   await updateVisitRouteStatus({
@@ -46,6 +46,6 @@ export async function updateVisitStatusAction(formData: FormData) {
   });
 
   revalidatePath("/sigeco");
-  revalidatePath("/sigeco/visitas");
-  revalidatePath(`/sigeco/visitas/${parsed.data.visitId}`);
+  revalidatePath("/sigeco/recepcion");
+  revalidatePath(`/sigeco/recepcion/visitas/${parsed.data.visitId}`);
 }

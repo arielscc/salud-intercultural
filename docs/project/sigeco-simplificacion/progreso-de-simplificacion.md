@@ -9,7 +9,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | 1 | Modelo de datos de la simplificacion | Completada (2026-07-10) |
 | 2 | Funnel de recepcion | Completada (2026-07-10) |
 | 3 | Retirar UI y termino lead | Completada (2026-07-10) |
-| 4 | Fusionar Pacientes y Visitas en Recepcion | Pendiente |
+| 4 | Fusionar Pacientes y Visitas en Recepcion | Completada (2026-07-10) |
 | 5 | Rol seguimiento y retiro de captacion | Pendiente |
 | 6 | Flujo de visita flexible | Pendiente |
 | 7 | Edicion de ficha de paciente | Pendiente |
@@ -93,3 +93,23 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** el dashboard queda minimo (2 KPIs) hasta la Tarea 9. El destino final de los datos historicos de leads (exportar/migrar al otro proyecto) sigue abierto.
 
 **Commit sugerido:** `feat(sigeco): remove leads ui and terminology`
+
+### Tarea 4 — Fusionar Pacientes Y Visitas En Recepcion (2026-07-10)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(internal)/sigeco/(app)/recepcion/page.tsx`: modulo nuevo con dos vistas por query param `?vista=`: "Hoy" (visitas activas con filtro de estado, permiso `visits_read`) y "Pacientes" (busqueda del padron completo, permiso `patients_read`). Accion principal "Registrar llegada" hacia el funnel.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: ficha de paciente movida (git mv) desde `pacientes/[id]`. El formulario viejo "Abrir visita" se reemplazo por un boton al funnel con `?paciente=<id>` (prellenado, arranca en paso 1). El form "Crear seguimiento" se mantiene.
+- `src/app/(internal)/sigeco/(app)/recepcion/visitas/[id]/page.tsx`: detalle de visita movido desde `visitas/[id]`; el nombre del paciente ahora enlaza a su ficha.
+- `src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx` + `IntakeFunnel.tsx` + `queries/reception.ts`: soporte de prellenado por `?paciente=` (query `getReceptionPatientById`, prop `initialPatient`, select compartido `receptionPatientSelect`).
+- Rutas viejas convertidas en redirects: `/sigeco/pacientes` -> `?vista=pacientes`, `/sigeco/pacientes/nuevo` -> funnel, `/sigeco/pacientes/[id]` y `/sigeco/visitas/[id]` -> sus rutas nuevas, `/sigeco/visitas` -> `/sigeco/recepcion`. Ningun marcador viejo se rompe.
+- `src/components/internal/nav-items.ts`: sidebar 8 -> 7 secciones ("Recepcion" reemplaza a Pacientes y Visitas; activo por `startsWith` cubre todo el modulo).
+- Actions actualizadas a las rutas nuevas (revalidate/redirect): `reception`, `visits`, `patients` (marcada LEGACY: el alta manual fue reemplazada por el funnel), `clinical-care`, `follow-ups`, `nursing`, `sales`, `studies`.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (60), `pnpm test:integration` (13), `pnpm run build`. Navegador: ambas vistas de Recepcion, redirects de las 3 rutas viejas verificados autenticado, ficha -> funnel prellenado (banner SI-000002, paso 1), detalle de visita en ruta nueva.
+
+**Pendientes que deja:** la edicion de la ficha permanente sigue pendiente (Tarea 7). El detalle de paciente y el de visita siguen siendo paginas separadas (unificarlas en pestanias puede evaluarse despues del QA con usuarios reales).
+
+**Commit sugerido:** `feat(sigeco): merge patients and visits into reception module`

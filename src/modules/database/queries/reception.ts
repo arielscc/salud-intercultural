@@ -69,6 +69,30 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
   });
 }
 
+const receptionPatientSelect = {
+  id: true,
+  internalCode: true,
+  fullName: true,
+  phone: true,
+  birthDate: true,
+  gender: true,
+  city: true,
+  captureSource: true,
+  allergies: true,
+  relevantHistory: true,
+  currentMedication: true,
+  followUpPreference: true
+} as const;
+
+export async function getReceptionPatientById(id: string) {
+  return withDatabaseError("getReceptionPatientById", async () => {
+    return prisma.patient.findUnique({
+      where: { id },
+      select: receptionPatientSelect
+    });
+  });
+}
+
 export async function searchReceptionPatients(search: string) {
   return withDatabaseError("searchReceptionPatients", async () => {
     return prisma.patient.findMany({
@@ -80,20 +104,7 @@ export async function searchReceptionPatients(search: string) {
           { internalCode: { contains: search, mode: "insensitive" } }
         ]
       },
-      select: {
-        id: true,
-        internalCode: true,
-        fullName: true,
-        phone: true,
-        birthDate: true,
-        gender: true,
-        city: true,
-        captureSource: true,
-        allergies: true,
-        relevantHistory: true,
-        currentMedication: true,
-        followUpPreference: true
-      },
+      select: receptionPatientSelect,
       orderBy: { updatedAt: "desc" },
       take: 5
     });

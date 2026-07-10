@@ -88,24 +88,43 @@ function normalizePhone(phone: string) {
   return phone.replace(/\D/g, "");
 }
 
-export function IntakeFunnel({ allowDuplicateFromServer = false }: { allowDuplicateFromServer?: boolean }) {
-  const [step, setStep] = useState(0);
+type CityChoice = "" | (typeof cityChips)[number] | "otra";
+
+function cityStateFrom(city: string | null | undefined): { choice: CityChoice; other: string } {
+  if (!city) return { choice: "", other: "" };
+  if ((cityChips as readonly string[]).includes(city)) {
+    return { choice: city as (typeof cityChips)[number], other: "" };
+  }
+  return { choice: "otra", other: city };
+}
+
+export function IntakeFunnel({
+  allowDuplicateFromServer = false,
+  initialPatient
+}: {
+  allowDuplicateFromServer?: boolean;
+  initialPatient?: PatientMatch;
+}) {
+  const [step, setStep] = useState(initialPatient ? 1 : 0);
   const [stepError, setStepError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<PatientMatch[] | null>(null);
   const [isSearching, startSearch] = useTransition();
 
-  const [existingPatient, setExistingPatient] = useState<PatientMatch | null>(null);
+  const [existingPatient, setExistingPatient] = useState<PatientMatch | null>(
+    initialPatient ?? null
+  );
   const [phoneMatches, setPhoneMatches] = useState<PatientMatch[]>([]);
   const [allowDuplicate, setAllowDuplicate] = useState(allowDuplicateFromServer);
 
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [gender, setGender] = useState("unknown");
-  const [cityChoice, setCityChoice] = useState<"" | (typeof cityChips)[number] | "otra">("");
-  const [cityOther, setCityOther] = useState("");
+  const [fullName, setFullName] = useState(initialPatient?.fullName ?? "");
+  const [phone, setPhone] = useState(initialPatient?.phone ?? "");
+  const [birthDate, setBirthDate] = useState(initialPatient?.birthDate ?? "");
+  const [gender, setGender] = useState(initialPatient?.gender ?? "unknown");
+  const initialCity = cityStateFrom(initialPatient?.city);
+  const [cityChoice, setCityChoice] = useState<CityChoice>(initialCity.choice);
+  const [cityOther, setCityOther] = useState(initialCity.other);
 
   const [reason, setReason] = useState("");
   const [durationValue, setDurationValue] = useState("");
@@ -114,13 +133,22 @@ export function IntakeFunnel({ allowDuplicateFromServer = false }: { allowDuplic
   const [previouslyTreated, setPreviouslyTreated] = useState("");
   const [bringsStudies, setBringsStudies] = useState("");
 
-  const [noKnownAllergies, setNoKnownAllergies] = useState(false);
-  const [allergies, setAllergies] = useState("");
-  const [relevantHistory, setRelevantHistory] = useState("");
-  const [currentMedication, setCurrentMedication] = useState("");
+  const initialNoAllergies = initialPatient?.allergies === NO_KNOWN_ALLERGIES;
+  const [noKnownAllergies, setNoKnownAllergies] = useState(initialNoAllergies);
+  const [allergies, setAllergies] = useState(
+    initialNoAllergies ? "" : (initialPatient?.allergies ?? "")
+  );
+  const [relevantHistory, setRelevantHistory] = useState(initialPatient?.relevantHistory ?? "");
+  const [currentMedication, setCurrentMedication] = useState(
+    initialPatient?.currentMedication ?? ""
+  );
 
-  const [captureSource, setCaptureSource] = useState("");
-  const [followUpPreference, setFollowUpPreference] = useState("");
+  const [captureSource, setCaptureSource] = useState(initialPatient?.captureSource ?? "");
+  const [followUpPreference, setFollowUpPreference] = useState(
+    initialPatient && initialPatient.followUpPreference !== "unknown"
+      ? initialPatient.followUpPreference
+      : ""
+  );
 
   const age = calculateAge(birthDate);
   const city = cityChoice === "otra" ? cityOther : cityChoice;
@@ -132,16 +160,9 @@ export function IntakeFunnel({ allowDuplicateFromServer = false }: { allowDuplic
     setPhone(patient.phone);
     setBirthDate(patient.birthDate);
     setGender(patient.gender);
-    if (!patient.city) {
-      setCityChoice("");
-      setCityOther("");
-    } else if ((cityChips as readonly string[]).includes(patient.city)) {
-      setCityChoice(patient.city as (typeof cityChips)[number]);
-      setCityOther("");
-    } else {
-      setCityChoice("otra");
-      setCityOther(patient.city);
-    }
+    const cityState = cityStateFrom(patient.city);
+    setCityChoice(cityState.choice);
+    setCityOther(cityState.other);
     setNoKnownAllergies(patient.allergies === NO_KNOWN_ALLERGIES);
     setAllergies(patient.allergies === NO_KNOWN_ALLERGIES ? "" : (patient.allergies ?? ""));
     setRelevantHistory(patient.relevantHistory ?? "");

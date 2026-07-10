@@ -26,5 +26,5 @@ export async function createStudyAction(formData: FormData) {
   revalidatePath("/sigeco/enfermeria");
   if (parsed.data.workItemId) revalidatePath(`/sigeco/enfermeria/${parsed.data.workItemId}`);
   if (parsed.data.visitId) revalidatePath(`/sigeco/consultas/${parsed.data.visitId}`);
-  revalidatePath(`/sigeco/pacientes/${parsed.data.patientId}`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
 }

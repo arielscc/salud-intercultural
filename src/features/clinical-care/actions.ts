@@ -51,5 +51,5 @@ export async function createClinicalOrderAction(formData: FormData) {
 
   revalidatePath("/sigeco/consultas");
   revalidatePath(`/sigeco/consultas/${parsed.data.visitId}`);
-  revalidatePath(`/sigeco/visitas/${parsed.data.visitId}`);
+  revalidatePath(`/sigeco/recepcion/visitas/${parsed.data.visitId}`);
 }
