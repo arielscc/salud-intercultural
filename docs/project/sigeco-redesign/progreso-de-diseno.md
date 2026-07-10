@@ -17,7 +17,7 @@ Formato de cada entrada: fecha, que se hizo, archivos tocados, validaciones ejec
 | 7. Modulo Enfermeria | Completada (2026-07-08) |
 | 8. Modulo Administracion (Caja) | Completada (2026-07-09) |
 | 9. Modulo Seguimientos | Completada (2026-07-09) |
-| 10. Modulo Inventario | Pendiente |
+| 10. Modulo Inventario | Completada (2026-07-09) |
 | 11. Login interno | Pendiente |
 | 12. Limpieza y QA visual final | Pendiente |
 
@@ -187,3 +187,19 @@ Mejoras visibles en la propuesta aprobada que requieren logica nueva y por eso q
 **Pendientes que deja la tarea:** ninguno nuevo.
 
 **Commit sugerido:** `feat(sigeco): redesign follow-ups module with marea system`
+
+### 2026-07-09 — Tarea 10: Modulo Inventario
+
+**Que se hizo:**
+
+- **Lista (`inventario/page.tsx`):** 3 `KpiCard` (productos activos; stock bajo con bandera warn "Reponer"; alertas abiertas con bandera crit "Revisar"). Layout de dos columnas: tabla "Productos" a la izquierda (producto con link + codigo, SKU, stock y minimo alineados a la derecha con `tabular-nums`, estado como `Chip` warning "Stock bajo" + mensaje de alerta en error truncado) y formulario "Nuevo producto" como rail derecho en `Card` (mismos campos y action). Stock actual en warning cuando esta bajo el minimo.
+- **Detalle (`inventario/[itemId]/page.tsx`):** dos columnas. Izquierda: ficha (codigo eyebrow, nombre, SKU, chip "Stock bajo"/"Stock normal", `<dl>` con stock actual en warning si corresponde, minimo y estado activo) y "Movimientos" como `Table` (tipo, cantidad con signo en success/error, stock despues, fecha, motivo truncado). Derecha: formularios "Entrada de stock" (boton primario) y "Ajuste autorizado" (outline), mismos campos y actions.
+- **Correccion del mismo bug `danger`:** la lista usaba `border-danger/40` y `text-danger` (color inexistente en Tailwind config), por lo que ni el resaltado de stock bajo ni el color del mensaje de alerta se aplicaban. Ahora usan las familias `warning`/`error` reales, siempre con texto ademas del color.
+
+**Archivos tocados:** `src/app/(internal)/sigeco/(app)/inventario/page.tsx`, `src/app/(internal)/sigeco/(app)/inventario/[itemId]/page.tsx`.
+
+**Validaciones:** `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 54 tests OK, `pnpm run build` OK. Verificacion visual con datos de QA: lista con "Suero QA V3" (61 unidades, minimo 4, sin alerta) y formulario en rail; detalle con chip "Stock normal" y movimientos append-only con deltas +1/-1 coloreados, incluida la "Salida por venta" automatica.
+
+**Pendientes que deja la tarea:** UI de proveedores sigue fuera de alcance (pendiente V4 conocido).
+
+**Commit sugerido:** `feat(sigeco): redesign inventory module with marea system`

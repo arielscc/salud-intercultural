@@ -1,8 +1,16 @@
 import Link from "next/link";
+import { Bell, Boxes, TriangleAlert } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { Button } from "@/components/internal/ui/Button";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { Chip } from "@/components/internal/ui/Chip";
+import { KpiCard } from "@/components/internal/ui/KpiCard";
+import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { createInventoryItemAction } from "@/features/inventory/actions";
 import { getInventoryItems, getInventorySummary } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
+import { cn } from "@/lib/cn";
 
 export default async function InventoryPage() {
   await requirePermission("inventory_read");
@@ -12,91 +20,140 @@ export default async function InventoryPage() {
   ]);
 
   return (
-    <div className="grid gap-5">
-      <section>
-        <p className="text-sm font-semibold text-muted">Stock operativo</p>
-        <h2 className="font-sora text-2xl font-bold text-text">Inventario</h2>
-      </section>
+    <div className="grid gap-4">
+      <PageHeader title="Inventario" description="Stock operativo" />
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <Metric label="Productos activos" value={summary.totalItems} />
-        <Metric label="Stock bajo" value={summary.lowStock} />
-        <Metric label="Alertas abiertas" value={summary.openAlerts} />
+        <KpiCard icon={Boxes} label="Productos activos" value={summary.totalItems} />
+        <KpiCard
+          icon={TriangleAlert}
+          label="Stock bajo"
+          value={summary.lowStock}
+          flag={summary.lowStock > 0 ? { tone: "warn", label: "Reponer" } : undefined}
+        />
+        <KpiCard
+          icon={Bell}
+          label="Alertas abiertas"
+          value={summary.openAlerts}
+          flag={summary.openAlerts > 0 ? { tone: "crit", label: "Revisar" } : undefined}
+        />
       </section>
 
-      <form action={createInventoryItemAction} className="grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <h3 className="font-sora text-lg font-bold">Nuevo producto</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Código interno">
-            <input className={internalInputClassName} name="internalCode" required />
-          </Field>
-          <Field label="SKU">
-            <input className={internalInputClassName} name="sku" />
-          </Field>
-        </div>
-        <Field label="Nombre">
-          <input className={internalInputClassName} name="name" required />
-        </Field>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Unidad">
-            <input className={internalInputClassName} name="unit" defaultValue="unidad" required />
-          </Field>
-          <Field label="Stock mínimo">
-            <input className={internalInputClassName} name="minimumStock" inputMode="numeric" defaultValue="0" />
-          </Field>
-          <Field label="Stock inicial">
-            <input className={internalInputClassName} name="initialStock" inputMode="numeric" defaultValue="0" />
-          </Field>
-        </div>
-        <Field label="Descripción">
-          <textarea className={`${internalInputClassName} min-h-20 py-3`} name="description" />
-        </Field>
-        <button className="focus-ring min-h-12 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">
-          Crear producto
-        </button>
-      </form>
+      <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
+        <Card className="p-0">
+          <CardHeader className="mb-0 p-[18px] pb-3" title="Productos" />
+          <Table>
+            <thead>
+              <tr>
+                <Th>Producto</Th>
+                <Th>SKU</Th>
+                <Th className="text-right">Stock</Th>
+                <Th className="text-right">Mínimo</Th>
+                <Th>Estado</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => {
+                const lowStock = item.currentStock <= item.minimumStock;
 
-      <section className="grid gap-3">
-        <h3 className="font-sora text-lg font-bold">Productos</h3>
-        {items.map((item) => {
-          const lowStock = item.currentStock <= item.minimumStock;
-          return (
-            <Link
-              key={item.id}
-              href={`/sigeco/inventario/${item.id}`}
-              className={`focus-ring rounded-2xl border bg-surface p-4 shadow-sm ${
-                lowStock ? "border-danger/40" : "border-border"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-normal text-muted">{item.internalCode}</p>
-                  <h4 className="font-sora text-lg font-bold">{item.name}</h4>
-                  <p className="mt-1 text-sm text-muted">{item.sku ?? "Sin SKU"}</p>
-                </div>
-                <span className="rounded-full border border-border bg-surface-soft px-3 py-1 text-xs font-bold text-muted">
-                  {item.currentStock} {item.unit}
-                </span>
-              </div>
-              {item.alerts[0] ? <p className="mt-3 text-sm font-semibold text-danger">{item.alerts[0].message}</p> : null}
-            </Link>
-          );
-        })}
-        {items.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border bg-surface p-4 text-sm text-muted">
-            Sin productos registrados.
-          </p>
-        ) : null}
-      </section>
-    </div>
-  );
-}
+                return (
+                  <Tr key={item.id}>
+                    <Td className="font-semibold text-text">
+                      <Link
+                        href={`/sigeco/inventario/${item.id}`}
+                        className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                      >
+                        {item.name}
+                      </Link>
+                      <span className="block text-[11px] font-normal tabular-nums text-muted">
+                        {item.internalCode}
+                      </span>
+                    </Td>
+                    <Td className="tabular-nums">{item.sku ?? "—"}</Td>
+                    <Td
+                      className={cn(
+                        "text-right tabular-nums",
+                        lowStock && "font-semibold text-warning"
+                      )}
+                    >
+                      {item.currentStock} {item.unit}
+                    </Td>
+                    <Td className="text-right tabular-nums">
+                      {item.minimumStock} {item.unit}
+                    </Td>
+                    <Td className="max-w-[220px]">
+                      {lowStock ? (
+                        <Chip tone="warning" dot>
+                          Stock bajo
+                        </Chip>
+                      ) : (
+                        "—"
+                      )}
+                      {item.alerts[0] ? (
+                        <span className="mt-1 block truncate text-[11px] text-error">
+                          {item.alerts[0].message}
+                        </span>
+                      ) : null}
+                    </Td>
+                  </Tr>
+                );
+              })}
+              {items.length === 0 ? (
+                <tr>
+                  <Td className="py-8 text-center" colSpan={5}>
+                    <span className="block font-semibold text-text">Sin productos registrados.</span>
+                    <span className="mt-1 block text-sm text-muted">
+                      Crea el primer producto con el formulario.
+                    </span>
+                  </Td>
+                </tr>
+              ) : null}
+            </tbody>
+          </Table>
+        </Card>
 
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
-      <p className="text-sm font-semibold text-muted">{label}</p>
-      <p className="mt-2 text-3xl font-bold">{value}</p>
+        <Card>
+          <CardHeader title="Nuevo producto" />
+          <form action={createInventoryItemAction} className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Código interno">
+                <input className={internalInputClassName} name="internalCode" required />
+              </Field>
+              <Field label="SKU">
+                <input className={internalInputClassName} name="sku" />
+              </Field>
+            </div>
+            <Field label="Nombre">
+              <input className={internalInputClassName} name="name" required />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Unidad">
+                <input className={internalInputClassName} name="unit" defaultValue="unidad" required />
+              </Field>
+              <Field label="Stock mínimo">
+                <input
+                  className={internalInputClassName}
+                  name="minimumStock"
+                  inputMode="numeric"
+                  defaultValue="0"
+                />
+              </Field>
+              <Field label="Stock inicial">
+                <input
+                  className={internalInputClassName}
+                  name="initialStock"
+                  inputMode="numeric"
+                  defaultValue="0"
+                />
+              </Field>
+            </div>
+            <Field label="Descripción">
+              <textarea className={`${internalInputClassName} min-h-20 py-3`} name="description" />
+            </Field>
+            <Button type="submit">Crear producto</Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }
