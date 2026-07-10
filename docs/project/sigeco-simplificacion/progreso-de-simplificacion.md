@@ -7,7 +7,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | Tarea | Nombre | Estado |
 | --- | --- | --- |
 | 1 | Modelo de datos de la simplificacion | Completada (2026-07-10) |
-| 2 | Funnel de recepcion | Pendiente |
+| 2 | Funnel de recepcion | Completada (2026-07-10) |
 | 3 | Retirar UI y termino lead | Pendiente |
 | 4 | Fusionar Pacientes y Visitas en Recepcion | Pendiente |
 | 5 | Rol seguimiento y retiro de captacion | Pendiente |
@@ -47,3 +47,25 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** ninguno propio. El rol `captacion` conserva sus permisos actuales hasta la Tarea 3; el usuario de Yazmin se reasigna en la Tarea 5.
 
 **Commit sugerido:** `feat(sigeco): add simplification data model`
+
+### Tarea 2 — Funnel De Recepcion (2026-07-10)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx`: pagina nueva del funnel (permiso `visits_create`), con avisos de error y duplicado.
+- `src/components/internal/reception/IntakeFunnel.tsx`: componente cliente del funnel de 4 pasos segun la especificacion aprobada. Paso 0 de busqueda (nombre/telefono/codigo) con prellenado de ficha existente; chips tocables para ciudad (El Alto/La Paz/Otra), genero, unidad de duracion, tipo de visita, si/no, alergias ("Ninguna conocida"), fuente y preferencia de seguimiento; edad calculada en vivo desde la fecha de nacimiento; validacion por paso (solo nombre, telefono y motivo obligatorios); deteccion de telefono duplicado al avanzar del paso 1 (compara los ultimos 8 digitos normalizados, tolera guiones y espacios) con opcion de usar la ficha existente o continuar como nuevo.
+- `src/features/reception/actions.ts`: `submitReceptionIntakeAction` (crea/actualiza paciente + abre visita con check-in; verifica permisos `patients_create`/`patients_update` segun el caso y duplicados como respaldo server-side) y `searchReceptionPatientsAction` (busqueda para prellenado, minimo 2 caracteres).
+- `src/features/reception/schemas/intake.schema.ts` + `.test.ts`: schema zod del funnel completo con refine de duracion (cantidad y unidad juntas o ninguna) y mapeo a registro limpio (5 tests).
+- `src/features/reception/labels.ts`: labels de `VisitIntakeType`, `SymptomDurationUnit` y `FollowUpContactPreference`.
+- `src/modules/database/queries/reception.ts`: `createReceptionIntake` (transaccion unica: paciente nuevo o actualizado + visita completa) y `searchReceptionPatients`.
+- `src/modules/database/queries/visits.ts`: refactor sin cambio de comportamiento — la creacion de visita se extrajo a `createVisitInTransaction` (reusada por `createVisitRecord` y por el intake) y acepta los campos nuevos del funnel.
+- `src/modules/database/queries/reception.integration.test.ts`: 4 tests (funnel completo, paciente existente sin duplicar, minimo de 3 campos, busqueda por nombre/telefono/codigo).
+- `src/app/(internal)/sigeco/(app)/visitas/page.tsx`: boton "Registrar llegada" hacia `/sigeco/recepcion/nuevo` (punto de entrada temporal hasta la fusion de la Tarea 4).
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (19 archivos, 60 tests), `pnpm test:integration` (9 archivos, 13 tests), `pnpm run build`. Prueba en navegador con datos reales: paciente nuevo completo creado en ~15 toques (ficha `SI-000002` + visita abierta y redirigida a su detalle, 15 campos verificados por SQL), prellenado desde busqueda y deteccion de duplicado por telefono con guiones.
+
+**Pendientes que deja:** la ficha de QA `SI-000002` (Rosa Huanca Flores) queda en la base dev como dato de prueba. Los formularios viejos de alta de paciente/visita siguen activos hasta la Tarea 4. La deteccion de duplicados asume celulares de 8 digitos (formato boliviano); si se registran fijos habra que revisarla.
+
+**Commit sugerido:** `feat(sigeco): add reception intake funnel`

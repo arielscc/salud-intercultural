@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserRoundSearch } from "lucide-react";
+import { UserRoundPlus, UserRoundSearch } from "lucide-react";
 import type { VisitStatus } from "@/generated/prisma/client";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { internalInputClassName } from "@/components/internal/Field";
@@ -34,10 +34,19 @@ export default async function VisitsPage({ searchParams }: VisitsPageProps) {
         title="Visitas activas"
         description="Recepción"
         actions={
-          <Link href="/sigeco/pacientes" className={cn(buttonVariants({ size: "sm" }))}>
-            <UserRoundSearch className="h-4 w-4" aria-hidden="true" />
-            Buscar paciente
-          </Link>
+          <>
+            <Link
+              href="/sigeco/pacientes"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              <UserRoundSearch className="h-4 w-4" aria-hidden="true" />
+              Buscar paciente
+            </Link>
+            <Link href="/sigeco/recepcion/nuevo" className={cn(buttonVariants({ size: "sm" }))}>
+              <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
+              Registrar llegada
+            </Link>
+          </>
         }
       />
 

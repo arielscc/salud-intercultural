@@ -1,80 +1,103 @@
-import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
+import type {
+  PatientRouteArea,
+  Prisma,
+  SymptomDurationUnit,
+  VisitIntakeType,
+  VisitStatus
+} from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 
-export async function createVisitRecord(input: {
+export type CreateVisitRecordInput = {
   patientId: string;
   userId?: string;
   reason?: string;
   note?: string;
-}) {
+  intakeType?: VisitIntakeType;
+  symptomDurationValue?: number;
+  symptomDurationUnit?: SymptomDurationUnit;
+  previouslyTreated?: boolean;
+  bringsStudies?: boolean;
+};
+
+export async function createVisitInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CreateVisitRecordInput
+) {
+  const visit = await tx.visit.create({
+    data: {
+      patientId: input.patientId,
+      createdById: input.userId,
+      reason: input.reason,
+      status: "in_reception",
+      intakeType: input.intakeType,
+      symptomDurationValue: input.symptomDurationValue,
+      symptomDurationUnit: input.symptomDurationUnit,
+      previouslyTreated: input.previouslyTreated,
+      bringsStudies: input.bringsStudies
+    }
+  });
+
+  await tx.receptionCheckIn.create({
+    data: {
+      visitId: visit.id,
+      userId: input.userId,
+      note: input.note
+    }
+  });
+
+  await tx.visitStatusHistory.create({
+    data: {
+      visitId: visit.id,
+      userId: input.userId,
+      toStatus: "in_reception",
+      note: input.note ?? "Llegada registrada"
+    }
+  });
+
+  const route = await tx.patientRoute.create({
+    data: {
+      visitId: visit.id,
+      currentArea: "recepcion",
+      active: true
+    }
+  });
+
+  await tx.patientRouteStep.create({
+    data: {
+      routeId: route.id,
+      area: "recepcion",
+      status: "in_reception",
+      note: input.note ?? "Paciente en recepción"
+    }
+  });
+
+  await tx.visitWorkItem.create({
+    data: {
+      visitId: visit.id,
+      createdById: input.userId,
+      area: "recepcion",
+      title: "Recepción registrada",
+      description: input.reason
+    }
+  });
+
+  await tx.patient.updateMany({
+    where: {
+      id: input.patientId,
+      firstVisitAt: null
+    },
+    data: {
+      firstVisitAt: visit.checkedInAt
+    }
+  });
+
+  return visit;
+}
+
+export async function createVisitRecord(input: CreateVisitRecordInput) {
   return withDatabaseError("createVisitRecord", async () => {
-    return prisma.$transaction(async (tx) => {
-      const visit = await tx.visit.create({
-        data: {
-          patientId: input.patientId,
-          createdById: input.userId,
-          reason: input.reason,
-          status: "in_reception"
-        }
-      });
-
-      await tx.receptionCheckIn.create({
-        data: {
-          visitId: visit.id,
-          userId: input.userId,
-          note: input.note
-        }
-      });
-
-      await tx.visitStatusHistory.create({
-        data: {
-          visitId: visit.id,
-          userId: input.userId,
-          toStatus: "in_reception",
-          note: input.note ?? "Llegada registrada"
-        }
-      });
-
-      const route = await tx.patientRoute.create({
-        data: {
-          visitId: visit.id,
-          currentArea: "recepcion",
-          active: true
-        }
-      });
-
-      await tx.patientRouteStep.create({
-        data: {
-          routeId: route.id,
-          area: "recepcion",
-          status: "in_reception",
-          note: input.note ?? "Paciente en recepción"
-        }
-      });
-
-      await tx.visitWorkItem.create({
-        data: {
-          visitId: visit.id,
-          createdById: input.userId,
-          area: "recepcion",
-          title: "Recepción registrada",
-          description: input.reason
-        }
-      });
-
-      await tx.patient.updateMany({
-        where: {
-          id: input.patientId,
-          firstVisitAt: null
-        },
-        data: {
-          firstVisitAt: visit.checkedInAt
-        }
-      });
-
-      return visit;
-    });
+    return prisma.$transaction(async (tx) => createVisitInTransaction(tx, input));
   });
 }
 

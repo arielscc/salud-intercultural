@@ -1,0 +1,631 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useFormStatus } from "react-dom";
+import { Search, UserRoundPlus } from "lucide-react";
+import { Button } from "@/components/internal/ui/Button";
+import { Card } from "@/components/internal/ui/Card";
+import { Field, internalInputClassName } from "@/components/internal/Field";
+import {
+  patientCaptureSourceLabels,
+  patientGenderLabels
+} from "@/features/patients/labels";
+import {
+  followUpContactPreferenceLabels,
+  symptomDurationUnitLabels,
+  visitIntakeTypeLabels
+} from "@/features/reception/labels";
+import {
+  searchReceptionPatientsAction,
+  submitReceptionIntakeAction
+} from "@/features/reception/actions";
+import { cn } from "@/lib/cn";
+
+type PatientMatch = Awaited<ReturnType<typeof searchReceptionPatientsAction>>[number];
+
+const NO_KNOWN_ALLERGIES = "Ninguna conocida";
+const cityChips = ["El Alto", "La Paz"] as const;
+const stepTitles: Record<number, string> = {
+  1: "¿Quién es?",
+  2: "¿A qué viene?",
+  3: "Antecedentes rápidos",
+  4: "Origen y seguimiento"
+};
+
+function ChipOption({
+  selected,
+  onClick,
+  children
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition",
+        selected
+          ? "border-primary bg-surface-soft text-primary-dark"
+          : "border-border bg-surface text-muted hover:border-primary/40 hover:text-text"
+      )}
+    >
+      {selected ? (
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
+      ) : null}
+      {children}
+    </button>
+  );
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? "Registrando…" : "Registrar llegada"}
+    </Button>
+  );
+}
+
+function calculateAge(birthDate: string) {
+  if (!birthDate) return null;
+  const date = new Date(`${birthDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDelta = now.getMonth() - date.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < date.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 && age < 130 ? age : null;
+}
+
+function normalizePhone(phone: string) {
+  return phone.replace(/\D/g, "");
+}
+
+export function IntakeFunnel({ allowDuplicateFromServer = false }: { allowDuplicateFromServer?: boolean }) {
+  const [step, setStep] = useState(0);
+  const [stepError, setStepError] = useState<string | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<PatientMatch[] | null>(null);
+  const [isSearching, startSearch] = useTransition();
+
+  const [existingPatient, setExistingPatient] = useState<PatientMatch | null>(null);
+  const [phoneMatches, setPhoneMatches] = useState<PatientMatch[]>([]);
+  const [allowDuplicate, setAllowDuplicate] = useState(allowDuplicateFromServer);
+
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [gender, setGender] = useState("unknown");
+  const [cityChoice, setCityChoice] = useState<"" | (typeof cityChips)[number] | "otra">("");
+  const [cityOther, setCityOther] = useState("");
+
+  const [reason, setReason] = useState("");
+  const [durationValue, setDurationValue] = useState("");
+  const [durationUnit, setDurationUnit] = useState("");
+  const [intakeType, setIntakeType] = useState("first_visit");
+  const [previouslyTreated, setPreviouslyTreated] = useState("");
+  const [bringsStudies, setBringsStudies] = useState("");
+
+  const [noKnownAllergies, setNoKnownAllergies] = useState(false);
+  const [allergies, setAllergies] = useState("");
+  const [relevantHistory, setRelevantHistory] = useState("");
+  const [currentMedication, setCurrentMedication] = useState("");
+
+  const [captureSource, setCaptureSource] = useState("");
+  const [followUpPreference, setFollowUpPreference] = useState("");
+
+  const age = calculateAge(birthDate);
+  const city = cityChoice === "otra" ? cityOther : cityChoice;
+  const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
+
+  function prefillFromPatient(patient: PatientMatch) {
+    setExistingPatient(patient);
+    setFullName(patient.fullName);
+    setPhone(patient.phone);
+    setBirthDate(patient.birthDate);
+    setGender(patient.gender);
+    if (!patient.city) {
+      setCityChoice("");
+      setCityOther("");
+    } else if ((cityChips as readonly string[]).includes(patient.city)) {
+      setCityChoice(patient.city as (typeof cityChips)[number]);
+      setCityOther("");
+    } else {
+      setCityChoice("otra");
+      setCityOther(patient.city);
+    }
+    setNoKnownAllergies(patient.allergies === NO_KNOWN_ALLERGIES);
+    setAllergies(patient.allergies === NO_KNOWN_ALLERGIES ? "" : (patient.allergies ?? ""));
+    setRelevantHistory(patient.relevantHistory ?? "");
+    setCurrentMedication(patient.currentMedication ?? "");
+    setCaptureSource(patient.captureSource);
+    setFollowUpPreference(patient.followUpPreference === "unknown" ? "" : patient.followUpPreference);
+    setPhoneMatches([]);
+    setStepError(null);
+    setStep(1);
+  }
+
+  function startAsNewPatient() {
+    setExistingPatient(null);
+    setStepError(null);
+    setStep(1);
+  }
+
+  function runSearch() {
+    const term = searchTerm.trim();
+    if (term.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    startSearch(async () => {
+      const results = await searchReceptionPatientsAction(term);
+      setSearchResults(results);
+    });
+  }
+
+  function continueFromStep1() {
+    if (fullName.trim().length < 2) {
+      setStepError("Ingresa el nombre completo.");
+      return;
+    }
+    if (!/^[+()\d\s-]{6,}$/.test(phone.trim())) {
+      setStepError("Ingresa un teléfono válido.");
+      return;
+    }
+    setStepError(null);
+
+    if (existingPatient || allowDuplicate) {
+      setStep(2);
+      return;
+    }
+
+    const phoneDigits = normalizePhone(phone);
+    startSearch(async () => {
+      const results = await searchReceptionPatientsAction(phoneDigits.slice(-8));
+      const matches = results.filter((patient) =>
+        normalizePhone(patient.phone).endsWith(phoneDigits.slice(-8))
+      );
+      if (matches.length > 0) {
+        setPhoneMatches(matches);
+      } else {
+        setPhoneMatches([]);
+        setStep(2);
+      }
+    });
+  }
+
+  function continueFromStep2() {
+    if (reason.trim().length < 2) {
+      setStepError("Ingresa el motivo de la visita.");
+      return;
+    }
+    if ((durationValue !== "") !== (durationUnit !== "")) {
+      setStepError("Para “desde cuándo” completa la cantidad y la unidad, o deja ambas vacías.");
+      return;
+    }
+    setStepError(null);
+    setStep(3);
+  }
+
+  function goBack() {
+    setStepError(null);
+    setPhoneMatches([]);
+    setStep((current) => Math.max(0, current - 1));
+  }
+
+  return (
+    <form action={submitReceptionIntakeAction} className="grid gap-4">
+      <input type="hidden" name="patientId" value={existingPatient?.id ?? ""} />
+      <input type="hidden" name="fullName" value={fullName} />
+      <input type="hidden" name="phone" value={phone} />
+      <input type="hidden" name="birthDate" value={birthDate} />
+      <input type="hidden" name="gender" value={gender} />
+      <input type="hidden" name="city" value={city} />
+      <input type="hidden" name="reason" value={reason} />
+      <input type="hidden" name="symptomDurationValue" value={durationValue} />
+      <input type="hidden" name="symptomDurationUnit" value={durationUnit} />
+      <input type="hidden" name="intakeType" value={intakeType} />
+      <input type="hidden" name="previouslyTreated" value={previouslyTreated} />
+      <input type="hidden" name="bringsStudies" value={bringsStudies} />
+      <input type="hidden" name="allergies" value={resolvedAllergies} />
+      <input type="hidden" name="relevantHistory" value={relevantHistory} />
+      <input type="hidden" name="currentMedication" value={currentMedication} />
+      <input type="hidden" name="captureSource" value={captureSource || "other"} />
+      <input type="hidden" name="followUpPreference" value={followUpPreference || "unknown"} />
+      {allowDuplicate ? <input type="hidden" name="allowDuplicate" value="true" /> : null}
+
+      {step > 0 ? (
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between text-[13px] font-medium text-muted">
+            <span className="font-semibold text-text">{stepTitles[step]}</span>
+            <span>Paso {step} de 4</span>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5" aria-hidden="true">
+            {[1, 2, 3, 4].map((marker) => (
+              <span
+                key={marker}
+                className={cn(
+                  "h-1 rounded-full",
+                  marker <= step ? "bg-primary" : "bg-border"
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {existingPatient && step > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[9px] bg-surface-soft px-4 py-2.5 text-sm">
+          <p className="text-text">
+            Ficha existente <span className="font-semibold">{existingPatient.internalCode}</span> — se
+            actualizará con lo que corrijas.
+          </p>
+          <Button type="button" variant="link" size="sm" onClick={() => setExistingPatient(null)}>
+            Registrar como nuevo
+          </Button>
+        </div>
+      ) : null}
+
+      {step === 0 ? (
+        <Card className="grid gap-4">
+          <div>
+            <h2 className="font-sora text-lg font-semibold text-text">¿Ya nos visitó antes?</h2>
+            <p className="mt-1 text-sm text-muted">
+              Busca por nombre, teléfono o código antes de registrar para no duplicar fichas.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <input
+              className={internalInputClassName}
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  runSearch();
+                }
+              }}
+              placeholder="Nombre, teléfono o código"
+              autoFocus
+            />
+            <Button type="button" variant="outline" onClick={runSearch} disabled={isSearching}>
+              <Search className="h-4 w-4" aria-hidden="true" />
+              {isSearching ? "Buscando…" : "Buscar"}
+            </Button>
+          </div>
+
+          {searchResults !== null ? (
+            <div className="grid gap-2">
+              {searchResults.map((patient) => (
+                <button
+                  key={patient.id}
+                  type="button"
+                  onClick={() => prefillFromPatient(patient)}
+                  className="focus-ring grid gap-0.5 rounded-[9px] border border-border bg-surface px-4 py-3 text-left transition hover:border-primary/40"
+                >
+                  <span className="font-semibold text-text">{patient.fullName}</span>
+                  <span className="text-[13px] text-muted">
+                    {patient.internalCode} · {patient.phone}
+                    {patient.city ? ` · ${patient.city}` : ""}
+                  </span>
+                </button>
+              ))}
+              {searchResults.length === 0 ? (
+                <p className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted">
+                  Sin resultados. Regístralo como paciente nuevo.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="border-t border-border pt-4">
+            <Button type="button" onClick={startAsNewPatient}>
+              <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
+              Es paciente nuevo
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      <Card className={cn("grid gap-4", step === 1 ? "" : "hidden")}>
+        <Field label="Nombre completo *">
+          <input
+            className={internalInputClassName}
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            autoComplete="off"
+          />
+        </Field>
+        <Field label="Teléfono (WhatsApp) *">
+          <input
+            className={internalInputClassName}
+            type="tel"
+            inputMode="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            autoComplete="off"
+          />
+        </Field>
+        <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
+          <input
+            className={internalInputClassName}
+            type="date"
+            value={birthDate}
+            onChange={(event) => setBirthDate(event.target.value)}
+          />
+        </Field>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>Ciudad</span>
+          <div className="flex flex-wrap gap-2">
+            {cityChips.map((option) => (
+              <ChipOption
+                key={option}
+                selected={cityChoice === option}
+                onClick={() => setCityChoice(cityChoice === option ? "" : option)}
+              >
+                {option}
+              </ChipOption>
+            ))}
+            <ChipOption
+              selected={cityChoice === "otra"}
+              onClick={() => setCityChoice(cityChoice === "otra" ? "" : "otra")}
+            >
+              Otra
+            </ChipOption>
+          </div>
+          {cityChoice === "otra" ? (
+            <input
+              className={internalInputClassName}
+              value={cityOther}
+              onChange={(event) => setCityOther(event.target.value)}
+              placeholder="¿Cuál?"
+            />
+          ) : null}
+        </div>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>Género (opcional)</span>
+          <div className="flex flex-wrap gap-2">
+            {(["female", "male", "other"] as const).map((option) => (
+              <ChipOption
+                key={option}
+                selected={gender === option}
+                onClick={() => setGender(gender === option ? "unknown" : option)}
+              >
+                {patientGenderLabels[option]}
+              </ChipOption>
+            ))}
+          </div>
+        </div>
+
+        {phoneMatches.length > 0 ? (
+          <div className="grid gap-2 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+            <p className="flex items-center gap-1.5 font-semibold text-warning">
+              <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+              Ya existe una ficha con este teléfono
+            </p>
+            {phoneMatches.map((patient) => (
+              <button
+                key={patient.id}
+                type="button"
+                onClick={() => prefillFromPatient(patient)}
+                className="focus-ring grid gap-0.5 rounded-[9px] border border-border bg-surface px-4 py-2.5 text-left transition hover:border-primary/40"
+              >
+                <span className="font-semibold text-text">{patient.fullName}</span>
+                <span className="text-[13px] text-muted">
+                  {patient.internalCode} · {patient.phone}
+                </span>
+              </button>
+            ))}
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={() => {
+                setAllowDuplicate(true);
+                setPhoneMatches([]);
+                setStep(2);
+              }}
+            >
+              No es la misma persona, continuar como nuevo
+            </Button>
+          </div>
+        ) : null}
+      </Card>
+
+      <Card className={cn("grid gap-4", step === 2 ? "" : "hidden")}>
+        <Field label="¿Qué le trae hoy? *">
+          <input
+            className={internalInputClassName}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Motivo en palabras del paciente"
+          />
+        </Field>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>¿Desde cuándo?</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              className={cn(internalInputClassName, "w-24")}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={999}
+              value={durationValue}
+              onChange={(event) => setDurationValue(event.target.value)}
+              aria-label="Cantidad"
+            />
+            {Object.entries(symptomDurationUnitLabels).map(([value, label]) => (
+              <ChipOption
+                key={value}
+                selected={durationUnit === value}
+                onClick={() => setDurationUnit(durationUnit === value ? "" : value)}
+              >
+                {label}
+              </ChipOption>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>¿Primera consulta o control?</span>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(visitIntakeTypeLabels).map(([value, label]) => (
+              <ChipOption
+                key={value}
+                selected={intakeType === value}
+                onClick={() => setIntakeType(value)}
+              >
+                {label}
+              </ChipOption>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>¿Ya se atendió antes por esto?</span>
+          <div className="flex flex-wrap gap-2">
+            <ChipOption
+              selected={previouslyTreated === "yes"}
+              onClick={() => setPreviouslyTreated(previouslyTreated === "yes" ? "" : "yes")}
+            >
+              Sí
+            </ChipOption>
+            <ChipOption
+              selected={previouslyTreated === "no"}
+              onClick={() => setPreviouslyTreated(previouslyTreated === "no" ? "" : "no")}
+            >
+              No
+            </ChipOption>
+          </div>
+        </div>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>¿Trae análisis o estudios?</span>
+          <div className="flex flex-wrap gap-2">
+            <ChipOption
+              selected={bringsStudies === "yes"}
+              onClick={() => setBringsStudies(bringsStudies === "yes" ? "" : "yes")}
+            >
+              Sí
+            </ChipOption>
+            <ChipOption
+              selected={bringsStudies === "no"}
+              onClick={() => setBringsStudies(bringsStudies === "no" ? "" : "no")}
+            >
+              No
+            </ChipOption>
+          </div>
+        </div>
+      </Card>
+
+      <Card className={cn("grid gap-4", step === 3 ? "" : "hidden")}>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>Alergias</span>
+          <div className="flex flex-wrap gap-2">
+            <ChipOption
+              selected={noKnownAllergies}
+              onClick={() => setNoKnownAllergies(!noKnownAllergies)}
+            >
+              {NO_KNOWN_ALLERGIES}
+            </ChipOption>
+          </div>
+          {noKnownAllergies ? null : (
+            <input
+              className={internalInputClassName}
+              value={allergies}
+              onChange={(event) => setAllergies(event.target.value)}
+              placeholder="Ej. penicilina (vacío si no sabe)"
+            />
+          )}
+        </div>
+        <Field label="Enfermedad de base (opcional)">
+          <input
+            className={internalInputClassName}
+            value={relevantHistory}
+            onChange={(event) => setRelevantHistory(event.target.value)}
+            placeholder="Ej. diabetes, hipertensión"
+          />
+        </Field>
+        <Field label="Medicación actual (opcional)">
+          <input
+            className={internalInputClassName}
+            value={currentMedication}
+            onChange={(event) => setCurrentMedication(event.target.value)}
+            placeholder="Ej. metformina cada mañana"
+          />
+        </Field>
+      </Card>
+
+      <Card className={cn("grid gap-4", step === 4 ? "" : "hidden")}>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>¿Cómo nos conoció?</span>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(patientCaptureSourceLabels).map(([value, label]) => (
+              <ChipOption
+                key={value}
+                selected={captureSource === value}
+                onClick={() => setCaptureSource(captureSource === value ? "" : value)}
+              >
+                {label}
+              </ChipOption>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>¿Podemos contactarlo para seguimiento?</span>
+          <div className="flex flex-wrap gap-2">
+            {(["whatsapp", "call", "both", "no_contact"] as const).map((value) => (
+              <ChipOption
+                key={value}
+                selected={followUpPreference === value}
+                onClick={() => setFollowUpPreference(followUpPreference === value ? "" : value)}
+              >
+                {followUpContactPreferenceLabels[value]}
+              </ChipOption>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted">
+          Al registrar se crea la ficha y la visita queda abierta en recepción. Lo médico lo completa
+          el doctor en consulta.
+        </div>
+      </Card>
+
+      {stepError ? (
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-error" role="alert">
+          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+          {stepError}
+        </p>
+      ) : null}
+
+      {step > 0 ? (
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <Button type="button" variant="ghost" onClick={goBack}>
+            Atrás
+          </Button>
+          {step === 1 ? (
+            <Button type="button" onClick={continueFromStep1} disabled={isSearching}>
+              {isSearching ? "Verificando…" : "Continuar"}
+            </Button>
+          ) : null}
+          {step === 2 ? (
+            <Button type="button" onClick={continueFromStep2}>
+              Continuar
+            </Button>
+          ) : null}
+          {step === 3 ? (
+            <Button type="button" onClick={() => setStep(4)}>
+              Continuar
+            </Button>
+          ) : null}
+          {step === 4 ? <SubmitButton /> : null}
+        </div>
+      ) : null}
+    </form>
+  );
+}
