@@ -7,8 +7,16 @@ export const internalRoleLabels: Record<InternalRole, string> = {
   recepcion: "Recepción",
   captacion: "Captación",
   administracion: "Administración",
-  enfermeria: "Enfermería"
+  enfermeria: "Enfermería",
+  seguimiento: "Seguimiento"
 };
+
+/**
+ * Rol deprecado por la simplificacion V3.7: no asignar a usuarios nuevos.
+ * El valor permanece en el enum de Prisma porque existen filas con ese rol;
+ * sus permisos de leads se retiran en la Tarea 3 del plan de simplificacion.
+ */
+export const deprecatedInternalRoles: InternalRole[] = ["captacion"];
 
 export const internalRolePermissions: Record<InternalRole, InternalPermission[]> = {
   super_admin: [
@@ -119,6 +127,12 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "nursing_write",
     "studies_read",
     "studies_write"
+  ],
+  seguimiento: [
+    "internal_access",
+    "patients_read",
+    "followups_read",
+    "followups_write"
   ]
 };
 

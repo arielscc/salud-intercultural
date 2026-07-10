@@ -6,7 +6,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 
 | Tarea | Nombre | Estado |
 | --- | --- | --- |
-| 1 | Modelo de datos de la simplificacion | Pendiente |
+| 1 | Modelo de datos de la simplificacion | Completada (2026-07-10) |
 | 2 | Funnel de recepcion | Pendiente |
 | 3 | Retirar UI y termino lead | Pendiente |
 | 4 | Fusionar Pacientes y Visitas en Recepcion | Pendiente |
@@ -31,4 +31,19 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 
 ## Entradas Por Tarea
 
-(sin entradas todavia)
+### Tarea 1 — Modelo De Datos De La Simplificacion (2026-07-10)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `prisma/schema.prisma`: enums nuevos `FollowUpContactPreference`, `VisitIntakeType`, `SymptomDurationUnit`; valor `seguimiento` agregado a `InternalRole`; campos nuevos en `Patient` (`currentMedication`, `followUpPreference`) y en `Visit` (`intakeType`, `symptomDurationValue`, `symptomDurationUnit`, `previouslyTreated`, `bringsStudies`).
+- `prisma/migrations/20260710000000_v3_7_simplification/migration.sql`: migracion 100% aditiva (sin DROP); aplicada sobre la base dev sin perdida de datos (conteos de `Patient`, `Visit` y `Lead` verificados antes/despues por SQL).
+- `src/features/internal-auth/permissions.ts`: rol `seguimiento` (label "Seguimiento") con permisos `internal_access`, `patients_read`, `followups_read`, `followups_write`; export `deprecatedInternalRoles` marcando `captacion` como deprecado (sus permisos de leads se retiran en la Tarea 3).
+- `src/features/internal-auth/permissions.test.ts`: test nuevo del alcance del rol `seguimiento`.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (18 archivos, 55 tests), `pnpm test:integration` (8 archivos, 9 tests; reset de la base de test autorizado por el usuario), `pnpm run build`. Columnas nuevas verificadas en la base dev via `information_schema`.
+
+**Pendientes que deja:** ninguno propio. El rol `captacion` conserva sus permisos actuales hasta la Tarea 3; el usuario de Yazmin se reasigna en la Tarea 5.
+
+**Commit sugerido:** `feat(sigeco): add simplification data model`

@@ -15,6 +15,7 @@ enum InternalRole {
   captacion
   administracion
   enfermeria
+  seguimiento
 }
 
 enum InternalPermission {
@@ -123,6 +124,14 @@ enum PatientCaptureSource {
   other
 }
 
+enum FollowUpContactPreference {
+  whatsapp
+  call
+  both
+  no_contact
+  unknown
+}
+
 enum VisitStatus {
   in_reception
   in_consultation
@@ -131,6 +140,20 @@ enum VisitStatus {
   completed
   left_without_care
   cancelled
+}
+
+enum VisitIntakeType {
+  first_visit
+  treatment_control
+  new_problem
+  results_review
+}
+
+enum SymptomDurationUnit {
+  days
+  weeks
+  months
+  years
 }
 
 enum PatientRouteArea {
@@ -246,47 +269,47 @@ enum InventoryAlertStatus {
 }
 
 model InternalUser {
-  id             String            @id @default(cuid())
-  email          String            @unique
-  name           String?
-  passwordHash   String
-  role           InternalRole      @default(captacion)
-  active         Boolean           @default(true)
-  lastLoginAt    DateTime?
-  failedAttempts Int               @default(0)
-  lockedUntil    DateTime?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  sessions       InternalSession[]
-  assignedLeads  Lead[]            @relation("LeadAssignee")
-  contactAttempts LeadContactAttempt[]
-  reminders      LeadReminder[]
-  statusChanges  LeadStatusHistory[]
-  patientNotes    PatientNote[]
-  createdVisits   Visit[]           @relation("VisitCreatedBy")
-  visitStatusChanges VisitStatusHistory[]
-  receptionCheckIns ReceptionCheckIn[]
-  createdWorkItems VisitWorkItem[]
-  clinicalConsultations ClinicalConsultation[]
-  prescriptions Prescription[]
-  clinicalEvolutions ClinicalEvolution[]
-  clinicalNotes ClinicalNote[]
-  clinicalOrders ClinicalOrder[]
-  recordedVitalSigns VitalSigns[]
-  nursingApplications NursingApplication[] @relation("NursingApplicationResponsible")
-  nursingNotes NursingNote[]
-  requestedStudies Study[] @relation("StudyRequestedBy")
-  recordedStudies Study[] @relation("StudyRecordedBy")
+  id                     String                  @id @default(cuid())
+  email                  String                  @unique
+  name                   String?
+  passwordHash           String
+  role                   InternalRole            @default(captacion)
+  active                 Boolean                 @default(true)
+  lastLoginAt            DateTime?
+  failedAttempts         Int                     @default(0)
+  lockedUntil            DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  sessions               InternalSession[]
+  assignedLeads          Lead[]                  @relation("LeadAssignee")
+  contactAttempts        LeadContactAttempt[]
+  reminders              LeadReminder[]
+  statusChanges          LeadStatusHistory[]
+  patientNotes           PatientNote[]
+  createdVisits          Visit[]                 @relation("VisitCreatedBy")
+  visitStatusChanges     VisitStatusHistory[]
+  receptionCheckIns      ReceptionCheckIn[]
+  createdWorkItems       VisitWorkItem[]
+  clinicalConsultations  ClinicalConsultation[]
+  prescriptions          Prescription[]
+  clinicalEvolutions     ClinicalEvolution[]
+  clinicalNotes          ClinicalNote[]
+  clinicalOrders         ClinicalOrder[]
+  recordedVitalSigns     VitalSigns[]
+  nursingApplications    NursingApplication[]    @relation("NursingApplicationResponsible")
+  nursingNotes           NursingNote[]
+  requestedStudies       Study[]                 @relation("StudyRequestedBy")
+  recordedStudies        Study[]                 @relation("StudyRecordedBy")
   nursingWorkItemResults NursingWorkItemResult[]
-  createdSales Sale[] @relation("SaleCreatedBy")
-  receivedPayments Payment[]
-  cashMovements CashMovement[]
-  assignedFollowUps FollowUpTask[] @relation("FollowUpAssignedTo")
-  createdFollowUps FollowUpTask[] @relation("FollowUpCreatedBy")
-  followUpAttempts FollowUpAttempt[]
-  followUpStatusChanges FollowUpStatusHistory[]
-  inventoryMovements InventoryMovement[]
-  inventoryAdjustments InventoryAdjustment[]
+  createdSales           Sale[]                  @relation("SaleCreatedBy")
+  receivedPayments       Payment[]
+  cashMovements          CashMovement[]
+  assignedFollowUps      FollowUpTask[]          @relation("FollowUpAssignedTo")
+  createdFollowUps       FollowUpTask[]          @relation("FollowUpCreatedBy")
+  followUpAttempts       FollowUpAttempt[]
+  followUpStatusChanges  FollowUpStatusHistory[]
+  inventoryMovements     InventoryMovement[]
+  inventoryAdjustments   InventoryAdjustment[]
 
   @@index([role])
   @@index([active])
@@ -305,30 +328,30 @@ model InternalSession {
 }
 
 model Lead {
-  id                  String                    @id @default(cuid())
-  name                String?
-  phone               String
-  email               String?
-  city                String?
-  symptoms            String?
-  intentionToVisit    String?
-  estimatedVisitDate  DateTime?
-  commercialNotes     String?
-  source              InternalLeadSource        @default(website)
-  status              InternalLeadStatus        @default(new)
-  pagePath            String?
-  assignedToId        String?
-  convertedPatientId  String?
-  firstContactedAt    DateTime?
-  lastContactedAt     DateTime?
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
-  assignedTo          InternalUser?             @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  convertedPatient    Patient?                  @relation("LeadConvertedPatient", fields: [convertedPatientId], references: [id], onDelete: SetNull)
-  contactAttempts     LeadContactAttempt[]
-  reminders           LeadReminder[]
-  statusHistory       LeadStatusHistory[]
-  followUpTasks       FollowUpTask[]
+  id                 String               @id @default(cuid())
+  name               String?
+  phone              String
+  email              String?
+  city               String?
+  symptoms           String?
+  intentionToVisit   String?
+  estimatedVisitDate DateTime?
+  commercialNotes    String?
+  source             InternalLeadSource   @default(website)
+  status             InternalLeadStatus   @default(new)
+  pagePath           String?
+  assignedToId       String?
+  convertedPatientId String?
+  firstContactedAt   DateTime?
+  lastContactedAt    DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  assignedTo         InternalUser?        @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  convertedPatient   Patient?             @relation("LeadConvertedPatient", fields: [convertedPatientId], references: [id], onDelete: SetNull)
+  contactAttempts    LeadContactAttempt[]
+  reminders          LeadReminder[]
+  statusHistory      LeadStatusHistory[]
+  followUpTasks      FollowUpTask[]
 
   @@index([createdAt])
   @@index([phone])
@@ -374,15 +397,15 @@ model LeadReminder {
 }
 
 model LeadStatusHistory {
-  id         String             @id @default(cuid())
+  id         String              @id @default(cuid())
   leadId     String
   userId     String?
   fromStatus InternalLeadStatus?
   toStatus   InternalLeadStatus
   note       String?
-  createdAt  DateTime           @default(now())
-  lead       Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  user       InternalUser?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt  DateTime            @default(now())
+  lead       Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user       InternalUser?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([leadId])
   @@index([userId])
@@ -390,42 +413,44 @@ model LeadStatusHistory {
 }
 
 model Patient {
-  id                  String               @id @default(cuid())
-  internalCode        String               @unique
-  fullName            String
-  phone               String
-  secondaryPhone      String?
-  birthDate           DateTime?
-  gender              PatientGender        @default(unknown)
-  city                String?
-  department          String?
-  address             String?
-  captureSource       PatientCaptureSource @default(other)
-  firstVisitAt        DateTime?
-  generalObservations String?
-  allergies           String?
-  relevantHistory     String?
-  status              PatientStatus        @default(active)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  convertedLeads      Lead[]               @relation("LeadConvertedPatient")
-  contacts            PatientContact[]
-  notes               PatientNote[]
-  visits              Visit[]
+  id                    String                    @id @default(cuid())
+  internalCode          String                    @unique
+  fullName              String
+  phone                 String
+  secondaryPhone        String?
+  birthDate             DateTime?
+  gender                PatientGender             @default(unknown)
+  city                  String?
+  department            String?
+  address               String?
+  captureSource         PatientCaptureSource      @default(other)
+  firstVisitAt          DateTime?
+  generalObservations   String?
+  allergies             String?
+  relevantHistory       String?
+  currentMedication     String?
+  followUpPreference    FollowUpContactPreference @default(unknown)
+  status                PatientStatus             @default(active)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  convertedLeads        Lead[]                    @relation("LeadConvertedPatient")
+  contacts              PatientContact[]
+  notes                 PatientNote[]
+  visits                Visit[]
   clinicalConsultations ClinicalConsultation[]
-  prescriptions       Prescription[]
-  clinicalEvolutions  ClinicalEvolution[]
-  clinicalNotes       ClinicalNote[]
-  clinicalOrders      ClinicalOrder[]
-  vitalSigns          VitalSigns[]
-  nursingApplications NursingApplication[]
-  nursingNotes        NursingNote[]
-  studies             Study[]
-  sales               Sale[]
-  payments            Payment[]
-  deliveredProducts   DeliveredProduct[]
-  cashMovements       CashMovement[]
-  followUpTasks       FollowUpTask[]
+  prescriptions         Prescription[]
+  clinicalEvolutions    ClinicalEvolution[]
+  clinicalNotes         ClinicalNote[]
+  clinicalOrders        ClinicalOrder[]
+  vitalSigns            VitalSigns[]
+  nursingApplications   NursingApplication[]
+  nursingNotes          NursingNote[]
+  studies               Study[]
+  sales                 Sale[]
+  payments              Payment[]
+  deliveredProducts     DeliveredProduct[]
+  cashMovements         CashMovement[]
+  followUpTasks         FollowUpTask[]
 
   @@index([fullName])
   @@index([phone])
@@ -461,36 +486,41 @@ model PatientNote {
 }
 
 model Visit {
-  id             String               @id @default(cuid())
-  patientId      String
-  status         VisitStatus          @default(in_reception)
-  reason         String?
-  createdById    String?
-  checkedInAt    DateTime             @default(now())
-  completedAt    DateTime?
-  cancelledAt    DateTime?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  patient        Patient              @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  createdBy      InternalUser?        @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  checkIn        ReceptionCheckIn?
-  route          PatientRoute?
-  statusHistory  VisitStatusHistory[]
-  workItems      VisitWorkItem[]
+  id                   String                @id @default(cuid())
+  patientId            String
+  status               VisitStatus           @default(in_reception)
+  reason               String?
+  intakeType           VisitIntakeType       @default(first_visit)
+  symptomDurationValue Int?
+  symptomDurationUnit  SymptomDurationUnit?
+  previouslyTreated    Boolean?
+  bringsStudies        Boolean               @default(false)
+  createdById          String?
+  checkedInAt          DateTime              @default(now())
+  completedAt          DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  patient              Patient               @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  createdBy            InternalUser?         @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  checkIn              ReceptionCheckIn?
+  route                PatientRoute?
+  statusHistory        VisitStatusHistory[]
+  workItems            VisitWorkItem[]
   clinicalConsultation ClinicalConsultation?
-  prescriptions Prescription[]
-  clinicalEvolutions ClinicalEvolution[]
-  clinicalNotes ClinicalNote[]
-  clinicalOrders ClinicalOrder[]
-  vitalSigns VitalSigns[]
-  nursingApplications NursingApplication[]
-  nursingNotes NursingNote[]
-  studies Study[]
-  sales Sale[]
-  payments Payment[]
-  deliveredProducts DeliveredProduct[]
-  cashMovements CashMovement[]
-  followUpTasks FollowUpTask[]
+  prescriptions        Prescription[]
+  clinicalEvolutions   ClinicalEvolution[]
+  clinicalNotes        ClinicalNote[]
+  clinicalOrders       ClinicalOrder[]
+  vitalSigns           VitalSigns[]
+  nursingApplications  NursingApplication[]
+  nursingNotes         NursingNote[]
+  studies              Study[]
+  sales                Sale[]
+  payments             Payment[]
+  deliveredProducts    DeliveredProduct[]
+  cashMovements        CashMovement[]
+  followUpTasks        FollowUpTask[]
 
   @@index([patientId])
   @@index([status, checkedInAt])
@@ -515,22 +545,22 @@ model VisitStatusHistory {
 }
 
 model ClinicalConsultation {
-  id                  String              @id @default(cuid())
-  visitId             String              @unique
-  patientId           String
-  doctorId            String?
-  motive              String
-  findings            String?
-  observations        String?
-  treatmentPlanText   String?
-  indications         String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  visit               Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  patient             Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  doctor              InternalUser?       @relation(fields: [doctorId], references: [id], onDelete: SetNull)
-  diagnoses           Diagnosis[]
-  treatmentPlans      TreatmentPlan[]
+  id                String          @id @default(cuid())
+  visitId           String          @unique
+  patientId         String
+  doctorId          String?
+  motive            String
+  findings          String?
+  observations      String?
+  treatmentPlanText String?
+  indications       String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  visit             Visit           @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient           Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor            InternalUser?   @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  diagnoses         Diagnosis[]
+  treatmentPlans    TreatmentPlan[]
 
   @@index([patientId])
   @@index([doctorId])
@@ -633,26 +663,26 @@ model ClinicalNote {
 }
 
 model ClinicalOrder {
-  id          String              @id @default(cuid())
-  visitId     String
-  patientId   String
-  doctorId    String?
-  workItemId  String?
-  type        ClinicalOrderType
-  targetArea  PatientRouteArea
-  status      ClinicalOrderStatus @default(pending)
-  title       String
-  details     String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  visit       Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  patient     Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  doctor      InternalUser?       @relation(fields: [doctorId], references: [id], onDelete: SetNull)
-  workItem    VisitWorkItem?      @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  nursingApplications NursingApplication[]
-  studies Study[]
+  id                     String                  @id @default(cuid())
+  visitId                String
+  patientId              String
+  doctorId               String?
+  workItemId             String?
+  type                   ClinicalOrderType
+  targetArea             PatientRouteArea
+  status                 ClinicalOrderStatus     @default(pending)
+  title                  String
+  details                String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  visit                  Visit                   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient                Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor                 InternalUser?           @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  workItem               VisitWorkItem?          @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  nursingApplications    NursingApplication[]
+  studies                Study[]
   nursingWorkItemResults NursingWorkItemResult[]
-  followUpTasks FollowUpTask[]
+  followUpTasks          FollowUpTask[]
 
   @@index([visitId])
   @@index([patientId])
@@ -703,24 +733,24 @@ model PatientRouteStep {
 }
 
 model VisitWorkItem {
-  id          String              @id @default(cuid())
-  visitId     String
-  createdById String?
-  area        PatientRouteArea
-  status      VisitWorkItemStatus @default(pending)
-  title       String
-  description String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  completedAt DateTime?
-  visit       Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  createdBy   InternalUser?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  clinicalOrders ClinicalOrder[]
-  nursingApplications NursingApplication[]
-  studies Study[]
+  id                     String                  @id @default(cuid())
+  visitId                String
+  createdById            String?
+  area                   PatientRouteArea
+  status                 VisitWorkItemStatus     @default(pending)
+  title                  String
+  description            String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  completedAt            DateTime?
+  visit                  Visit                   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  createdBy              InternalUser?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  clinicalOrders         ClinicalOrder[]
+  nursingApplications    NursingApplication[]
+  studies                Study[]
   nursingWorkItemResults NursingWorkItemResult[]
-  sales Sale[]
-  followUpTasks FollowUpTask[]
+  sales                  Sale[]
+  followUpTasks          FollowUpTask[]
 
   @@index([visitId])
   @@index([createdById])
@@ -729,28 +759,28 @@ model VisitWorkItem {
 }
 
 model Study {
-  id              String          @id @default(cuid())
+  id              String            @id @default(cuid())
   patientId       String
   visitId         String?
   clinicalOrderId String?
   workItemId      String?
   requestedById   String?
   recordedById    String?
-  type            StudyType       @default(other)
-  status          StudyStatus     @default(performed)
+  type            StudyType         @default(other)
+  status          StudyStatus       @default(performed)
   title           String
   resultSummary   String?
   findings        String?
   performedAt     DateTime?
   reviewedAt      DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  patient         Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit           Visit?          @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  clinicalOrder   ClinicalOrder?  @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
-  workItem        VisitWorkItem?  @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  requestedBy     InternalUser?   @relation("StudyRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
-  recordedBy      InternalUser?   @relation("StudyRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit           Visit?            @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  clinicalOrder   ClinicalOrder?    @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
+  workItem        VisitWorkItem?    @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  requestedBy     InternalUser?     @relation("StudyRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  recordedBy      InternalUser?     @relation("StudyRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
   attachments     StudyAttachment[]
 
   @@index([patientId])
@@ -777,24 +807,24 @@ model StudyAttachment {
 }
 
 model VitalSigns {
-  id                     String        @id @default(cuid())
-  patientId              String
-  visitId                String?
-  recordedById           String?
-  temperatureCelsius     Decimal?      @db.Decimal(4, 1)
-  systolicPressureMmHg   Int?
-  diastolicPressureMmHg  Int?
-  heartRateBpm           Int?
-  respiratoryRateRpm     Int?
-  oxygenSaturation       Int?
-  weightKg               Decimal?      @db.Decimal(5, 2)
-  heightCm               Decimal?      @db.Decimal(5, 2)
-  notes                  String?
-  recordedAt             DateTime      @default(now())
-  createdAt              DateTime      @default(now())
-  patient                Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit                  Visit?        @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  recordedBy             InternalUser? @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  id                    String        @id @default(cuid())
+  patientId             String
+  visitId               String?
+  recordedById          String?
+  temperatureCelsius    Decimal?      @db.Decimal(4, 1)
+  systolicPressureMmHg  Int?
+  diastolicPressureMmHg Int?
+  heartRateBpm          Int?
+  respiratoryRateRpm    Int?
+  oxygenSaturation      Int?
+  weightKg              Decimal?      @db.Decimal(5, 2)
+  heightCm              Decimal?      @db.Decimal(5, 2)
+  notes                 String?
+  recordedAt            DateTime      @default(now())
+  createdAt             DateTime      @default(now())
+  patient               Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit                 Visit?        @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  recordedBy            InternalUser? @relation(fields: [recordedById], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@index([visitId])
@@ -830,15 +860,15 @@ model NursingApplication {
 }
 
 model NursingNote {
-  id           String        @id @default(cuid())
-  patientId    String
-  visitId      String?
-  userId       String?
-  note         String
-  createdAt    DateTime      @default(now())
-  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit        Visit?        @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  user         InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id        String        @id @default(cuid())
+  patientId String
+  visitId   String?
+  userId    String?
+  note      String
+  createdAt DateTime      @default(now())
+  patient   Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit     Visit?        @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  user      InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@index([visitId])
@@ -883,29 +913,29 @@ model NursingWorkItemResult {
 }
 
 model Sale {
-  id            String          @id @default(cuid())
-  patientId     String
-  visitId       String?
-  workItemId    String?
-  createdById   String?
-  status        SaleStatus      @default(pending)
-  subtotalCents Int             @default(0)
-  discountCents Int             @default(0)
-  totalCents    Int             @default(0)
-  paidCents     Int             @default(0)
-  balanceCents  Int             @default(0)
-  notes         String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  patient       Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit         Visit?          @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  workItem      VisitWorkItem?  @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  createdBy     InternalUser?   @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  items         SaleItem[]
-  payments      Payment[]
-  deliveredProducts DeliveredProduct[]
-  cashMovements CashMovement[]
-  followUpTasks FollowUpTask[]
+  id                 String              @id @default(cuid())
+  patientId          String
+  visitId            String?
+  workItemId         String?
+  createdById        String?
+  status             SaleStatus          @default(pending)
+  subtotalCents      Int                 @default(0)
+  discountCents      Int                 @default(0)
+  totalCents         Int                 @default(0)
+  paidCents          Int                 @default(0)
+  balanceCents       Int                 @default(0)
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  patient            Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit              Visit?              @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  workItem           VisitWorkItem?      @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  createdBy          InternalUser?       @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items              SaleItem[]
+  payments           Payment[]
+  deliveredProducts  DeliveredProduct[]
+  cashMovements      CashMovement[]
+  followUpTasks      FollowUpTask[]
   inventoryMovements InventoryMovement[]
 
   @@index([patientId])
@@ -917,19 +947,19 @@ model Sale {
 }
 
 model SaleItem {
-  id             String       @id @default(cuid())
-  saleId         String
-  inventoryItemId String?
-  type           SaleItemType @default(other)
-  description    String
-  quantity       Int          @default(1)
-  unitPriceCents Int
-  totalCents     Int
-  delivered      Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  sale           Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  inventoryItem  InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  deliveredProducts DeliveredProduct[]
+  id                 String              @id @default(cuid())
+  saleId             String
+  inventoryItemId    String?
+  type               SaleItemType        @default(other)
+  description        String
+  quantity           Int                 @default(1)
+  unitPriceCents     Int
+  totalCents         Int
+  delivered          Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  sale               Sale                @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  inventoryItem      InventoryItem?      @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  deliveredProducts  DeliveredProduct[]
   inventoryMovements InventoryMovement[]
 
   @@index([saleId])
@@ -947,22 +977,22 @@ model PaymentMethod {
 }
 
 model Payment {
-  id           String        @id @default(cuid())
-  saleId       String
-  patientId    String
-  visitId      String?
-  methodId     String
-  receivedById String?
-  amountCents  Int
-  reference    String?
-  notes        String?
-  paidAt       DateTime      @default(now())
-  createdAt    DateTime      @default(now())
-  sale         Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit        Visit?        @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  method       PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Restrict)
-  receivedBy   InternalUser? @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  id            String         @id @default(cuid())
+  saleId        String
+  patientId     String
+  visitId       String?
+  methodId      String
+  receivedById  String?
+  amountCents   Int
+  reference     String?
+  notes         String?
+  paidAt        DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+  sale          Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit         Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  method        PaymentMethod  @relation(fields: [methodId], references: [id], onDelete: Restrict)
+  receivedBy    InternalUser?  @relation(fields: [receivedById], references: [id], onDelete: SetNull)
   cashMovements CashMovement[]
 
   @@index([saleId])
@@ -1021,7 +1051,7 @@ model CashMovement {
 }
 
 model FollowUpTask {
-  id              String                @id @default(cuid())
+  id              String                  @id @default(cuid())
   leadId          String?
   patientId       String?
   visitId         String?
@@ -1030,21 +1060,21 @@ model FollowUpTask {
   workItemId      String?
   assignedToId    String?
   createdById     String?
-  status          FollowUpStatus        @default(pending)
+  status          FollowUpStatus          @default(pending)
   title           String
   notes           String?
   dueAt           DateTime
   completedAt     DateTime?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  lead            Lead?                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  patient         Patient?              @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  visit           Visit?                @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  sale            Sale?                 @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  clinicalOrder   ClinicalOrder?        @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
-  workItem        VisitWorkItem?        @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  assignedTo      InternalUser?         @relation("FollowUpAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdBy       InternalUser?         @relation("FollowUpCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  lead            Lead?                   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  patient         Patient?                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  visit           Visit?                  @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  sale            Sale?                   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  clinicalOrder   ClinicalOrder?          @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
+  workItem        VisitWorkItem?          @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  assignedTo      InternalUser?           @relation("FollowUpAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy       InternalUser?           @relation("FollowUpCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   attempts        FollowUpAttempt[]
   statusHistory   FollowUpStatusHistory[]
 
@@ -1061,16 +1091,16 @@ model FollowUpTask {
 }
 
 model FollowUpAttempt {
-  id         String                @id @default(cuid())
-  taskId     String
-  userId     String?
-  method     FollowUpAttemptMethod @default(call)
-  result     FollowUpStatus
-  notes      String?
-  contactedAt DateTime             @default(now())
-  createdAt  DateTime              @default(now())
-  task       FollowUpTask          @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user       InternalUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id          String                @id @default(cuid())
+  taskId      String
+  userId      String?
+  method      FollowUpAttemptMethod @default(call)
+  result      FollowUpStatus
+  notes       String?
+  contactedAt DateTime              @default(now())
+  createdAt   DateTime              @default(now())
+  task        FollowUpTask          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        InternalUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([taskId])
   @@index([userId])
@@ -1118,23 +1148,23 @@ model Supplier {
 }
 
 model InventoryItem {
-  id              String              @id @default(cuid())
-  supplierId      String?
-  sku             String?             @unique
-  internalCode    String              @unique
-  name            String
-  description     String?
-  unit            String              @default("unidad")
-  currentStock    Int                 @default(0)
-  minimumStock    Int                 @default(0)
-  active          Boolean             @default(true)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  supplier        Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  saleItems       SaleItem[]
-  movements       InventoryMovement[]
-  adjustments     InventoryAdjustment[]
-  alerts          InventoryAlert[]
+  id           String                @id @default(cuid())
+  supplierId   String?
+  sku          String?               @unique
+  internalCode String                @unique
+  name         String
+  description  String?
+  unit         String                @default("unidad")
+  currentStock Int                   @default(0)
+  minimumStock Int                   @default(0)
+  active       Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  supplier     Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  saleItems    SaleItem[]
+  movements    InventoryMovement[]
+  adjustments  InventoryAdjustment[]
+  alerts       InventoryAlert[]
 
   @@index([supplierId])
   @@index([name])
@@ -1143,20 +1173,20 @@ model InventoryItem {
 }
 
 model InventoryMovement {
-  id              String                @id @default(cuid())
-  itemId          String
-  saleId          String?
-  saleItemId      String?
-  userId          String?
-  type            InventoryMovementType
-  quantityDelta   Int
-  stockAfter      Int
-  reason          String
-  createdAt       DateTime              @default(now())
-  item            InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  sale            Sale?                 @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  saleItem        SaleItem?             @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
-  user            InternalUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id            String                @id @default(cuid())
+  itemId        String
+  saleId        String?
+  saleItemId    String?
+  userId        String?
+  type          InventoryMovementType
+  quantityDelta Int
+  stockAfter    Int
+  reason        String
+  createdAt     DateTime              @default(now())
+  item          InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  sale          Sale?                 @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  saleItem      SaleItem?             @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+  user          InternalUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([itemId])
   @@index([saleId])
@@ -1166,14 +1196,14 @@ model InventoryMovement {
 }
 
 model InventoryAdjustment {
-  id              String        @id @default(cuid())
-  itemId          String
-  userId          String?
-  quantityDelta   Int
-  reason          String
-  createdAt       DateTime      @default(now())
-  item            InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  user            InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id            String        @id @default(cuid())
+  itemId        String
+  userId        String?
+  quantityDelta Int
+  reason        String
+  createdAt     DateTime      @default(now())
+  item          InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  user          InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([itemId])
   @@index([userId])
@@ -1181,13 +1211,13 @@ model InventoryAdjustment {
 }
 
 model InventoryAlert {
-  id        String               @id @default(cuid())
-  itemId    String
-  status    InventoryAlertStatus @default(open)
-  message   String
-  createdAt DateTime             @default(now())
+  id         String               @id @default(cuid())
+  itemId     String
+  status     InventoryAlertStatus @default(open)
+  message    String
+  createdAt  DateTime             @default(now())
   resolvedAt DateTime?
-  item      InventoryItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item       InventoryItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId])
   @@index([status, createdAt])

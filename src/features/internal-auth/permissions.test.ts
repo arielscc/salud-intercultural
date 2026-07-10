@@ -38,6 +38,16 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("direccion", "followups_read")).toBe(true);
   });
 
+  it("limits seguimiento to follow-up work and patient reads", () => {
+    expect(roleHasPermission("seguimiento", "followups_read")).toBe(true);
+    expect(roleHasPermission("seguimiento", "followups_write")).toBe(true);
+    expect(roleHasPermission("seguimiento", "patients_read")).toBe(true);
+    expect(roleHasPermission("seguimiento", "patients_update")).toBe(false);
+    expect(roleHasPermission("seguimiento", "leads_read")).toBe(false);
+    expect(roleHasPermission("seguimiento", "clinical_read")).toBe(false);
+    expect(roleHasPermission("seguimiento", "sales_read")).toBe(false);
+  });
+
   it("scopes inventory adjustments to authorized roles", () => {
     expect(roleHasPermission("administracion", "inventory_read")).toBe(true);
     expect(roleHasPermission("administracion", "inventory_write")).toBe(true);
