@@ -29,10 +29,13 @@ Antes de promover a staging:
 
 ```bash
 pnpm lint
-pnpm test
 pnpm typecheck
+pnpm test
+pnpm test:integration
 pnpm run build
 ```
+
+Hasta implementar [GitHub Actions](../project/github-actions-implementation-plan.md), estos controles son manuales y deben registrarse en el reporte de la entrega. Despues, los mismos checks seran obligatorios en PRs.
 
 ## Promover A Staging
 
@@ -45,7 +48,7 @@ git merge develop
 git push origin staging
 ```
 
-Despues revisar el deployment de staging en Vercel. Aunque Vercel lo muestre como Preview, internamente se trata como staging.
+Despues revisar el deployment de staging en Vercel. Aunque Vercel lo muestre como Preview, internamente se trata como staging. Para V3.7 ejecutar tambien la [prueba completa de Sigeco](./sigeco-v3-full-flow-testing.md).
 
 ## Promover A Produccion
 
@@ -65,6 +68,8 @@ Ese push a `main` despliega produccion.
 - No trabajar directo en `main`.
 - No hacer reset destructivo de `main` ni `staging`.
 - No ejecutar seeds destructivos contra produccion.
+- No ejecutar tests de integracion contra staging o produccion.
+- Aplicar migraciones remotas con backup y verificacion del ambiente.
 - Resolver conflictos localmente antes de hacer push.
 - Si un cambio urgente se corrige en `main`, devolverlo despues a `staging` y `develop`.
 

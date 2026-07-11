@@ -15,7 +15,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | 7 | Edicion de ficha de paciente | Completada (2026-07-11) |
 | 8 | Consulta medica prellenada y formularios simplificados | Completada (2026-07-11) |
 | 9 | Dashboard centrado en recepcion | Completada (2026-07-11) |
-| 10 | Documentacion y QA final | Pendiente |
+| 10 | Documentacion y QA final | Completada (2026-07-11) |
 
 El cierre documental consolidado se realizara en la Tarea 10, no de forma parcial durante las Tareas 8 y 9. La implementacion de GitHub Actions y los pendientes operativos/clinicos que no formen parte directa de la simplificacion quedan registrados en el backlog posterior de [Tareas de simplificacion](./tareas-de-simplificacion.md) y en el [plan de GitHub Actions](../github-actions-implementation-plan.md).
 
@@ -223,3 +223,32 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** la Tarea 10 debe ejecutar el QA final por cada rol y consolidar la documentacion V3.7. Los conteos del dashboard estan listos para esa validacion, pero todavia no constituyen reportes historicos o analitica avanzada.
 
 **Commit sugerido:** `feat(sigeco): refocus dashboard on reception metrics`
+
+### Tarea 10 — Documentacion Y QA Final (2026-07-11)
+
+**Estado:** Completada. V3.7 queda cerrada localmente; promocion a staging y produccion sigue siendo trabajo separado.
+
+**Documentacion consolidada:**
+
+- `docs/project/v3-implementation-status.md`: estado V3.7, flujo vigente, rutas, validacion, QA y backlog unico posterior.
+- `docs/project/v3-technical-implementation.md`: arquitectura actual, ownership Payload/Prisma, contratos transaccionales, permisos, responsive y deploy.
+- `docs/operations/sigeco-v3-full-flow-testing.md`: guia ejecutable del funnel, consulta prellenada, cuatro caminos de salida, enfermeria, caja, inventario, seguimiento y matriz de roles.
+- `docs/operations/testing.md`, `branch-flow.md`, `deploy.md`, indices de proyecto y operaciones: comandos, suite de integracion, staging y checklist vigentes.
+
+**QA funcional:**
+
+- Matriz de roles verificada cambiando temporalmente `test@test.si` mediante el script oficial y restaurandolo a `super_admin`: recepcion, seguimiento, medico, enfermeria, administracion y direccion muestran solo sus modulos; URLs no autorizadas regresan a `/sigeco`.
+- Flujo real nuevo: `Paciente QA Cierre V37`, registro minimo en funnel, visita abierta, abandono en recepcion, salida de la lista activa e historial con area y nota persistentes.
+- Redirects legacy de pacientes y visitas llegan a Recepcion; `/sigeco/leads` permanece retirado.
+- Las 17 pantallas activas de Sigeco cargaron a 390x844. Las diez rutas publicas cargaron en 390x844 y 1440x900 sin desplazamiento lateral. Payload conserva `/admin/login`.
+
+**Hallazgos corregidos:**
+
+1. La tabla de Recepcion podia ensanchar el documento a 390px. Se corrigio el `min-width` de las tarjetas, se aislo el overflow en el shell y se reforzo el scope `.sigeco-app`; la tabla conserva scroll interno.
+2. Una visita cerrada ocultaba acciones rapidas pero aun mostraba el formulario de derivacion y la query permitia reabrirla. El formulario ahora solo existe para visitas activas y `updateVisitRouteStatus` bloquea toda transicion posterior con `ClosedVisitTransitionError`; prueba de integracion agregada.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (20 archivos, 69 tests), `pnpm test:integration` (10 archivos, 21 tests) y `pnpm run build`. Migraciones reproducidas desde cero hasta V3.7.
+
+**Pendientes posteriores:** auditoria append-only, storage clinico seguro, auditoria formal de privacidad/permisos, backup/restauracion, realtime/polling, staging aislado, vulnerabilidades altas y GitHub Actions. Lista priorizada en [Estado de implementacion V3](../v3-implementation-status.md).
+
+**Commit sugerido:** `docs(sigeco): document simplification and run final qa`

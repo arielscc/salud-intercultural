@@ -1,321 +1,174 @@
 # Estado De Implementacion V3
 
-Resumen ejecutivo y tecnico del avance de Sigeco, el sistema interno de gestion clinica y operativa de Salud Intercultural.
-
-Este documento responde tres preguntas:
-
-1. Que se esta implementando.
-2. Que resultado dejo cada implementacion.
-3. Que falta para considerar V3 lista para uso operativo amplio.
+Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud Intercultural.
 
 ## Estado Actual
 
-V3 esta implementada localmente hasta **V3.6 Inventario**.
-
-Estado general:
+**V3.7 Simplificacion Sigeco esta implementada y validada localmente.** Las diez tareas de la fase estan cerradas: modelo aditivo, funnel de recepcion, retiro de la UI de leads, modulo Recepcion unificado, rol seguimiento, flujo flexible, edicion de paciente, consulta prellenada, dashboard operativo y QA/documentacion final.
 
 | Area | Estado | Resultado actual |
 | --- | --- | --- |
-| Sitio publico V1/V2 | Implementado | Presencia digital, paginas publicas, SEO, analytics y formularios. |
-| CMS V2 | Implementado | Payload administra contenido publico, media, paginas, servicios, equipo, testimonios y FAQs. |
-| Sigeco V3 | Implementado localmente hasta V3.6 | Sistema interno en `/sigeco` para operacion clinica, comercial, administrativa y de inventario. |
-| Rediseno visual Marea | Implementado localmente (2026-07-09) | Todo Sigeco usa el sistema visual Marea: shell de escritorio de pantalla completa, tablas de trabajo y tokens aislados del sitio publico. Ver [sistema visual](../design/sigeco-visual-system.md) y [progreso](./sigeco-redesign/progreso-de-diseno.md). |
-| Publicacion remota | Pendiente de promocion | `develop` contiene el avance local; requiere flujo `develop -> staging -> main`. |
-| QA manual mobile | Parcial pendiente | Los reportes de fases piden pruebas manuales en 390px para varias pantallas. |
+| Sitio publico | Estable | Paginas publicas, SEO, analytics y formulario de contacto. |
+| Payload CMS | Estable | Contenido editorial, media, servicios, equipo, testimonios y FAQs. |
+| Sigeco V3.7 | Implementado localmente | Operacion clinica y administrativa centrada en paciente y visita. |
+| Sistema visual Marea | Implementado | Shell responsive, tablas de trabajo y tokens aislados del sitio publico. |
+| QA final V3.7 | Completado localmente | Matriz de roles, flujo de abandono, 17 pantallas activas a 390px, sitio publico y CMS. |
+| Publicacion remota | Pendiente | Requiere promocion controlada `develop -> staging -> main`. |
 
 ## Fuentes Canonicas
 
-Leer en este orden cuando se necesite entender el proyecto:
+1. [Documento de Negocio V3.0](../masters/Documento_de_Negocio_V3_0.md).
+2. [Implementacion Tecnica V3.7](./v3-technical-implementation.md).
+3. [Ownership de datos](../architecture/data-ownership.md).
+4. [Plan de simplificacion](./sigeco-simplificacion/tareas-de-simplificacion.md) y [progreso](./sigeco-simplificacion/progreso-de-simplificacion.md).
+5. [Prueba del flujo completo](../operations/sigeco-v3-full-flow-testing.md).
+6. [Reportes por tarea](./task-reports/).
 
-1. [Documento de Negocio V3.0](../masters/Documento_de_Negocio_V3_0.md): que espera la clinica.
-2. [Implementacion Tecnica V3](./v3-technical-implementation.md): como se traduce a arquitectura y fases.
-3. [Ownership de datos](../architecture/data-ownership.md): que vive en Payload, Prisma o `src/data`.
-4. [Reportes por tarea](./task-reports/): que se implemento y valido en cada entrega.
-5. [Desarrollo asistido con skills](../operations/ai-assisted-development.md): como usar gstack/Codex para mantener calidad.
-6. [Prueba manual del flujo completo V3 Sigeco](../operations/sigeco-v3-full-flow-testing.md): como validar el flujo funcional end-to-end.
-
-## Objetivo De V3
-
-Construir el primer sistema operativo interno de la clinica, centrado en el paciente, para registrar y consultar el ciclo:
+## Flujo Operativo Vigente
 
 ```txt
-Lead
-↓
-Interesado
-↓
-Paciente
-↓
-Visita
-↓
-Consulta / Estudios / Enfermeria
-↓
-Venta / Cobro / Inventario
-↓
-Seguimiento
-↓
-Nueva visita
+Recepcion busca o registra al paciente
+  -> funnel corto y visita abierta
+  -> consulta medica con contexto prellenado
+  -> enfermeria, administracion o salida directa
+  -> cierre, abandono trazado o seguimiento
+  -> nueva visita sobre la misma ficha
 ```
 
-El sistema prioriza:
+El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cualquier area activa. Una visita cerrada no puede reabrirse ni derivarse de nuevo.
 
-- Trazabilidad del paciente.
-- Mobile-first para Android.
-- Permisos por rol.
-- Consistencia transaccional en PostgreSQL.
-- Separacion clara entre CMS publico y operacion clinica.
-- Historial cronologico asociado al paciente.
+## Resultado Funcional
 
-## Resultado Por Fase
+### Acceso Y Permisos
 
-### V3.1A - CRM Y Leads Internos
+- Autenticacion interna separada de Payload.
+- Roles activos: `super_admin`, `direccion`, `recepcion`, `medico`, `enfermeria`, `administracion` y `seguimiento`.
+- Navegacion y acciones filtradas por permisos server-side.
+- `captacion` permanece deprecado en base de datos para migrar usuarios existentes, sin modulos operativos.
 
-**Resultado:** existe una base interna de Sigeco con login propio, usuarios internos, sesiones, roles, permisos y pipeline de leads operativos.
+### Recepcion
 
-Implementado:
+- Busqueda por nombre, telefono o codigo.
+- Funnel de cuatro pasos con solo nombre, telefono y motivo obligatorios.
+- Creacion o actualizacion de paciente y apertura de visita en una transaccion.
+- Padron de pacientes, ficha permanente y edicion.
+- Visitas activas, detalle, historial, ruta y abandono en un toque.
 
-- Auth interna separada de Payload.
-- Login en `/sigeco/login`.
-- Dashboard interno inicial.
-- Leads internos en Prisma.
-- Busqueda, filtros, detalle, historial comercial, contactos y recordatorios.
-- Seed `pnpm internal:seed` para crear o actualizar un `super_admin`.
+### Consulta
 
-Validado:
+- Contexto de recepcion prellenado sin volver a pedir el motivo.
+- Diagnosticos, hallazgos, plan, indicaciones, receta y evolucion.
+- Ordenes para enfermeria, administracion o seguimiento.
+- Salida flexible hacia enfermeria, administracion o cierre directo.
 
-- Tests unitarios.
-- Lint.
-- Typecheck.
-- Build.
-- Tests de integracion.
+### Enfermeria Y Estudios
 
-Reporte: [V3.1A CRM y Leads Internos](./task-reports/2026-05-30-v3-1a-crm-leads-internos.md)
+- Bandeja de tareas e indicaciones medicas.
+- Signos vitales, aplicaciones, notas y estudios.
+- Formularios colapsables segun el tipo de orden.
+- Resultados visibles en consulta y ficha del paciente.
 
-### V3.1B - Pacientes, Recepcion Y Visitas
+### Administracion E Inventario
 
-**Resultado:** Sigeco puede crear pacientes, abrir visitas presenciales y mantener ruta activa del paciente entre areas.
+- Ventas, pagos, saldos y movimientos de caja.
+- Productos inventariables y descuento transaccional de stock.
+- Rollback total y error visible cuando el stock es insuficiente.
+- Entradas, ajustes autorizados y alertas de stock bajo.
 
-Implementado:
+### Seguimiento
 
-- Ficha permanente de paciente.
-- Contactos y notas.
-- Visitas y check-in de recepcion.
-- Historial de estado de visita.
-- Ruta activa con `PatientRoute` y `PatientRouteStep`.
-- Tareas por area con `VisitWorkItem`.
-- Conversion basica de lead a paciente.
+- Tareas vencidas, del dia y proximas.
+- Registro de llamadas, WhatsApp y resultados.
+- Advertencia cuando el paciente prefiere no recibir contacto.
+- Acceso compartido por recepcion y el rol dedicado de seguimiento.
 
-Validado:
+### Dashboard
 
-- Tests unitarios.
-- Lint.
-- Typecheck.
-- Build.
-- Tests de integracion con paciente, visita y ruta.
+- Pacientes unicos del dia.
+- Visitas activas totales y por area.
+- Abandonos ocurridos durante el dia.
+- Seguimientos de hoy y vencidos.
+- Stock bajo y ultimas llegadas.
 
-Reporte: [V3.1B Pacientes, Recepcion y Visitas](./task-reports/2026-05-30-v3-1b-pacientes-recepcion-visitas.md)
-
-### V3.2 - Atencion Medica
-
-**Resultado:** el medico puede registrar la consulta clinica dentro de una visita y generar indicaciones para otras areas.
-
-Implementado:
-
-- Consulta clinica.
-- Diagnosticos principal y secundarios.
-- Plan de tratamiento.
-- Receta rapida.
-- Evolucion clinica.
-- Ordenes clinicas.
-- Derivacion de tareas hacia enfermeria, administracion o seguimiento.
-
-Validado:
-
-- Tests unitarios.
-- Lint.
-- Typecheck.
-- Build.
-- Tests de integracion para consulta, diagnosticos, receta, evolucion y orden clinica.
-
-Reporte: [V3.2 Atencion Medica](./task-reports/2026-05-30-v3-2-atencion-medica.md)
-
-### V3.3 - Estudios Y Enfermeria
-
-**Resultado:** enfermeria puede recibir tareas, tomar indicaciones, registrar signos vitales, aplicaciones, notas y estudios asociados al paciente.
-
-Implementado:
-
-- Bandeja de enfermeria.
-- Toma y ejecucion de tareas.
-- Signos vitales.
-- Aplicaciones clinicas.
-- Notas de enfermeria.
-- Estudios y adjuntos modelados.
-- Vista de estudios/enfermeria en consulta y ficha del paciente.
-
-Validado:
-
-- Tests unitarios.
-- Lint.
-- Typecheck.
-- Build.
-- Tests de integracion para estudios, paciente, visita y ejecucion de tareas.
-
-Reporte: [V3.3 Estudios y Enfermeria](./task-reports/2026-05-30-v3-3-estudios-enfermeria.md)
-
-### V3.4 - Administracion, Ventas Y Cobros
-
-**Resultado:** administracion puede registrar ventas, items, cobros, movimientos de caja y comprobantes internos asociados al paciente.
-
-Implementado:
-
-- Bandeja administrativa.
-- Ventas asociadas a paciente y visita.
-- Items de venta.
-- Pagos y metodos de pago.
-- Movimientos de caja.
-- Productos entregados.
-- Resumen de ventas del dia, ventas del mes y saldo pendiente.
-- Cronologia administrativa en ficha del paciente.
-
-Validado:
-
-- Tests unitarios.
-- Lint.
-- Typecheck.
-- Build.
-- Tests de integracion para totales, pagos, estados, caja y cronologia.
-
-Reporte: [V3.4 Administracion, Ventas y Cobros](./task-reports/2026-05-30-v3-4-administracion-ventas-cobros.md)
-
-### V3.5 - Seguimiento
-
-**Resultado:** el sistema puede crear tareas de seguimiento, registrar intentos de contacto y mantener historial posterior a la atencion.
-
-Implementado:
-
-- Bandeja diaria de seguimientos.
-- Filtros por vencidos, hoy y proximos.
-- Acciones rapidas de llamada y WhatsApp.
-- Registro de intentos y resultados.
-- Historial de seguimiento en paciente.
-- Indicador en dashboard interno.
-- Plantillas modeladas para uso posterior.
-
-Validado:
-
-- Tests unitarios.
-- Lint.
-- Typecheck.
-- Build.
-- Tests de integracion para vencimientos, resolucion e historial.
-
-Reporte: [V3.5 Seguimiento](./task-reports/2026-05-30-v3-5-seguimiento.md)
-
-### V3.6 - Inventario
-
-**Resultado:** Sigeco puede gestionar productos, stock, movimientos append-only, alertas de stock bajo y descuento automatico desde ventas inventariables.
-
-Implementado:
-
-- Productos de inventario.
-- Proveedores modelados.
-- Movimientos de inventario append-only.
-- Entradas de stock.
-- Ajustes manuales autorizados.
-- Alertas de stock bajo.
-- Selector de producto inventariable en ventas.
-- Descuento automatico de stock desde venta.
-- Bloqueo transaccional si la venta excede stock disponible.
-- Indicador de stock bajo en dashboard interno.
-
-Validado:
-
-- Tests unitarios.
-- Lint.
-- Typecheck.
-- Build.
-- Tests de integracion para movimientos, stock, alertas y descuento por venta.
-
-Reporte: [V3.6 Inventario](./task-reports/2026-05-30-v3-6-inventario.md)
-
-## Mapa De Rutas Internas
-
-Rutas principales de Sigeco:
+## Mapa De Rutas Vigente
 
 | Ruta | Proposito |
 | --- | --- |
 | `/sigeco/login` | Login interno. |
 | `/sigeco` | Dashboard operativo. |
-| `/sigeco/leads` | Pipeline comercial interno. |
-| `/sigeco/pacientes` | Busqueda y gestion de pacientes. |
-| `/sigeco/visitas` | Visitas activas y ruta de atencion. |
+| `/sigeco/recepcion` | Llegadas activas y padron de pacientes. |
+| `/sigeco/recepcion/nuevo` | Funnel de llegada. |
+| `/sigeco/recepcion/pacientes/[id]` | Ficha y edicion del paciente. |
+| `/sigeco/recepcion/visitas/[id]` | Ruta e historial de la visita. |
 | `/sigeco/consultas` | Bandeja y atencion medica. |
 | `/sigeco/enfermeria` | Tareas, signos, aplicaciones y estudios. |
-| `/sigeco/administracion` | Ventas, cobros y pendientes administrativos. |
-| `/sigeco/seguimientos` | Recordatorios y llamadas posteriores. |
-| `/sigeco/inventario` | Productos, stock, entradas, ajustes y alertas. |
+| `/sigeco/administracion` | Ventas, cobros y pendientes. |
+| `/sigeco/seguimientos` | Tareas de contacto posterior. |
+| `/sigeco/inventario` | Productos, stock, entradas y ajustes. |
 
-## Validacion Tecnica Actual
+Las rutas antiguas de pacientes y visitas solo existen como redirects de compatibilidad hacia Recepcion. El modulo interno de leads fue retirado; sus modelos y datos historicos permanecen sin UI.
 
-La ultima validacion conocida del estado V3.6 paso con:
+## Validacion Tecnica De Cierre
+
+Comandos requeridos:
 
 ```bash
-pnpm test
 pnpm lint
 pnpm typecheck
-pnpm run build
+pnpm test
 pnpm test:integration
+pnpm run build
 ```
 
-Resultados registrados:
+Baseline V3.7:
 
-- Suite rapida: 18 archivos, 54 tests.
-- Suite de integracion: 8 archivos, 9 tests.
-- Build Next.js: paso y genero rutas publicas, Payload y Sigeco.
-- Migraciones aplicadas hasta `20260530006000_v3_6_inventory`.
+- Suite rapida: 20 archivos, 69 tests.
+- Suite de integracion: 10 archivos, 21 tests.
+- Migraciones reproducibles hasta `20260710000000_v3_7_simplification`.
+- Build de produccion Next.js validado desde un arbol limpio, con `next dev` detenido.
 
-## Pendientes Transversales
+## QA Final V3.7
 
-Pendientes repetidos en los reportes de fase:
+- Roles verificados: recepcion, seguimiento, medico, enfermeria, administracion y direccion.
+- Accesos directos no autorizados redirigen al dashboard.
+- Flujo real verificado: funnel minimo, visita activa, abandono en recepcion, salida de bandeja e historial persistente.
+- Una visita cerrada no muestra acciones y la base bloquea su reapertura.
+- Las 17 pantallas activas de Sigeco fueron recorridas a 390x844.
+- Corregido el overflow horizontal de la tabla de Recepcion; el scroll queda dentro de la tabla.
+- Las 10 rutas publicas cargan en 390x844 y 1440x900 sin scroll horizontal.
+- Payload CMS conserva `/admin/login` y carga su formulario.
 
-1. Probar manualmente todas las pantallas de Sigeco en mobile 390px.
-2. Mejorar estados visibles de error, especialmente venta con stock insuficiente.
-3. Agregar edicion de ficha permanente del paciente.
-4. Definir storage seguro antes de habilitar carga real de adjuntos clinicos.
-5. Agregar auditoria append-only para cambios clinicos, financieros, inventario, permisos y ruta.
-6. Configurar o documentar realtime/polling para tareas entre areas.
-7. Definir formato de receta o comprobante imprimible si la clinica lo requiere.
-8. Automatizar seguimientos desde reglas concretas de consulta o venta.
-9. Agregar UI de proveedores cuando se defina flujo de compras.
-10. Promover el avance local por el flujo `develop -> staging -> main`.
+## Pendientes Posteriores
 
-## Riesgos A Controlar
+### Bloqueantes Para Uso Clinico Amplio
 
-| Riesgo | Control recomendado |
-| --- | --- |
-| Exponer informacion clinica a roles comerciales | Revisar permisos server-side y ejecutar QA por rol. |
-| Duplicar fuentes de verdad entre Payload y Prisma | Revisar `docs/architecture/data-ownership.md` antes de crear entidades. |
-| Formularios largos dificiles en Android | Usar revisiones de diseno mobile-first y QA en 390px. |
-| Cambios de stock inconsistentes | Mantener movimientos append-only y tests de integracion. |
-| Ventas o cobros calculados en cliente | Recalcular totales en servidor dentro de transacciones. |
-| Publicar sin validar staging | Seguir `docs/operations/branch-flow.md` y `docs/operations/deploy.md`. |
-| Falta de auditoria clinica/financiera | Priorizar modulo transversal de auditoria antes de uso operativo amplio. |
+1. Auditoria append-only de cambios clinicos, financieros, inventario, permisos y ruta.
+2. Storage seguro con acceso, retencion y trazabilidad para adjuntos clinicos.
+3. Auditoria formal de privacidad y permisos con casos negativos.
+4. Procedimiento probado de backup, restauracion y respuesta a incidentes.
+5. Politica operativa de sesiones, secretos y accesos no autorizados.
 
-## Proximo Orden Recomendado
+### Operacion
 
-Antes de iniciar V4 o automatizaciones avanzadas:
+1. Realtime o polling formal para las bandejas entre areas.
+2. Deteccion de telefono duplicado al editar pacientes.
+3. Formatos imprimibles de receta y comprobante, si la clinica los requiere.
+4. Reglas aprobadas para automatizar seguimientos.
+5. Flujo de proveedores y compras.
+6. Reasignacion de usuarios `captacion` en cada ambiente.
 
-1. QA funcional completo de V3.1A a V3.6 en mobile siguiendo [la guia de prueba del flujo V3](../operations/sigeco-v3-full-flow-testing.md).
-2. Correccion de bugs encontrados por QA.
-3. Auditoria de permisos y privacidad.
-4. Auditoria append-only transversal.
-5. Mejoras de errores visibles y estados de formularios.
-6. Staging con base separada y seed seguro.
-7. Validacion con usuarios reales de la clinica en flujos diarios.
+### Plataforma
 
-Despues de cerrar esos puntos, las siguientes areas naturales son:
+1. Implementar [GitHub Actions](./github-actions-implementation-plan.md).
+2. Resolver vulnerabilidades altas de dependencias.
+3. Definir umbrales de cobertura para modulos criticos.
+4. Preparar staging aislado y ejecutar la promocion completa.
 
-- Dashboard de direccion mas completo.
-- Compras/proveedores como puente hacia V4 ERP.
-- Realtime o polling formal para bandejas de trabajo.
-- Automatizaciones de seguimiento una vez definidas reglas concretas.
+## Siguiente Orden Recomendado
+
+1. Publicar o respaldar la rama `develop`.
+2. Resolver vulnerabilidades altas.
+3. Preparar staging separado y ejecutar migraciones con backup.
+4. Implementar CI y proteccion de ramas.
+5. Validar V3.7 con usuarios reales de la clinica.
+6. Abordar auditoria y storage clinico antes de uso operativo amplio.

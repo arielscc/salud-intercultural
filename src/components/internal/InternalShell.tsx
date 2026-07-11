@@ -85,7 +85,7 @@ export function InternalShell({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6">{children}</main>
       </div>
     </div>
   );

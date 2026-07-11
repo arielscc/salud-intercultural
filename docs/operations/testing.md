@@ -65,17 +65,17 @@ Los tests nunca deben usar `.env.staging`, `.env.production.local`, Neon remoto 
 
 ## Integracion Actual
 
-La cobertura de integracion actual esta en:
+La suite contiene 10 archivos y cubre:
 
-- `src/modules/database/queries/leads.integration.test.ts`
+- Leads publicos e internos legacy, preservados sin UI operativa.
+- Funnel de recepcion, pacientes, visitas y dashboard.
+- Flujo flexible y bloqueo de reapertura de visitas cerradas.
+- Consulta clinica, enfermeria y estudios.
+- Ventas, pagos y caja.
+- Inventario, rollback por stock insuficiente y alertas.
+- Seguimientos y cronologia del paciente.
 
-Cubre:
-
-- `createLeadRecord`
-- `getLeads`
-- `updateLeadStatus`
-
-Cada test limpia la collection Payload `lead-submissions` antes de correr. El reset completo de la base ocurre antes de la suite de integracion.
+El baseline de cierre V3.7 es 21 tests de integracion. El reset completo ocurre antes de la suite; cada archivo tambien limpia los registros que crea.
 
 ## Agregar Tests De Integracion
 
@@ -89,9 +89,9 @@ Convenciones:
 
 Candidatos recomendados:
 
-- `POST /api/leads` contra DB real.
-- Queries de leads adicionales.
-- Seeds minimos si se vuelven parte de un contrato.
+- Acciones autenticadas con permisos negativos por rol.
+- Backup y restauracion cuando exista el procedimiento operativo.
+- Adjuntos clinicos cuando se defina storage seguro.
 - Fallbacks CMS criticos si empiezan a depender de DB real.
 
 ## Validacion Recomendada
@@ -100,13 +100,10 @@ Antes de abrir PR o promover cambios:
 
 ```bash
 pnpm lint
-pnpm test
 pnpm typecheck
+pnpm test
+pnpm test:integration
 pnpm run build
 ```
 
-Si el cambio toca queries, migraciones, Prisma o scripts de DB, agregar:
-
-```bash
-pnpm test:integration
-```
+Detener `next dev` antes del build; ambos procesos usan `.next`.

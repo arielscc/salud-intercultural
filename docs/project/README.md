@@ -12,13 +12,13 @@ Usar este directorio para:
 ## Guias
 
 1. [Estado de implementacion V3](./v3-implementation-status.md): estado actual de Sigeco, resultados por fase, validaciones, pendientes y siguiente orden recomendado.
-2. [Implementacion tecnica V3](./v3-technical-implementation.md): roadmap tecnico, arquitectura, modelos, tareas y criterios de aceptacion.
+2. [Implementacion tecnica V3.7](./v3-technical-implementation.md): arquitectura vigente, contratos transaccionales, permisos y deploy.
 3. [Estado de implementacion V2](./v2-implementation-status.md): baseline estable del sitio publico, CMS y marketing.
 4. [Preparacion V3](./v3-readiness.md): criterios y decisiones previas para iniciar V3.
 5. [Plan de limpieza de ownership de datos](./data-ownership-cleanup-plan.md): cierre de la separacion Payload/Prisma.
 6. [Reportes por tarea](./task-reports/): evidencia de cada entrega implementada.
 7. [Rediseno Sigeco (Marea)](./sigeco-redesign/tareas-de-rediseno.md): plan de tareas del rediseno del panel interno y su [progreso](./sigeco-redesign/progreso-de-diseno.md).
-8. [Simplificacion Sigeco V3.7](./sigeco-simplificacion/tareas-de-simplificacion.md): plan vigente de 10 tareas, progreso y backlog operativo/clinico posterior.
+8. [Simplificacion Sigeco V3.7](./sigeco-simplificacion/tareas-de-simplificacion.md): plan cerrado de 10 tareas, progreso y backlog operativo/clinico posterior.
 9. [Plan de GitHub Actions](./github-actions-implementation-plan.md): CI, pruebas con PostgreSQL y proteccion de ramas a implementar despues del cierre de V3.7.
 
 ## Documentacion relacionada

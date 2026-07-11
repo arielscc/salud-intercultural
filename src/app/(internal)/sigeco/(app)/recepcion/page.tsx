@@ -104,7 +104,7 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
             </form>
           </Card>
 
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             <Table>
               <thead>
                 <tr>
@@ -195,7 +195,7 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
             </form>
           </Card>
 
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             <Table>
               <thead>
                 <tr>

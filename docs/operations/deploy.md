@@ -40,10 +40,13 @@ CMS_READS_DURING_BUILD="false"
 
 ```bash
 pnpm lint
-pnpm test
 pnpm typecheck
+pnpm test
+pnpm test:integration
 pnpm run build
 ```
+
+Detener `next dev` antes del build. Confirmar que Git esta limpio y que el commit probado es el que se promovera.
 
 ## Migraciones
 
@@ -60,7 +63,8 @@ Ejecutar contra la base del ambiente correspondiente.
 1. Merge de `develop` a `staging`.
 2. Push a remoto.
 3. Vercel genera Preview Deployment.
-4. Validar sitio publico, `/admin`, leads, CMS, media, sitemap y robots.
+4. Validar sitio publico, `/admin`, CMS, media, formulario publico, sitemap y robots.
+5. Ejecutar la [prueba completa de Sigeco V3.7](./sigeco-v3-full-flow-testing.md) con usuarios y base exclusivos de staging.
 
 ## Produccion
 
@@ -68,7 +72,8 @@ Ejecutar contra la base del ambiente correspondiente.
 2. Merge de `staging` a `main`.
 3. Push a remoto.
 4. Vercel despliega produccion.
-5. Revisar logs y rutas craAticas.
+5. Revisar logs, rutas criticas y salud de la base.
+6. Ejecutar un canary no destructivo del sitio publico, CMS y login de Sigeco.
 
 ## Logs
 
@@ -78,6 +83,7 @@ Revisar en Vercel:
 - Runtime Logs.
 - Function Logs para `/api/leads`.
 - Logs relacionados con Payload.
+- Errores de Server Actions y Prisma bajo `/sigeco`.
 
 ## Dominio
 

@@ -8,6 +8,24 @@ import type {
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 
+export class ClosedVisitTransitionError extends Error {
+  constructor(public readonly visitId: string) {
+    super("VISIT_ALREADY_CLOSED");
+    this.name = "ClosedVisitTransitionError";
+  }
+}
+
+export function findClosedVisitTransitionError(error: unknown): ClosedVisitTransitionError | null {
+  let current = error;
+
+  while (current instanceof Error) {
+    if (current instanceof ClosedVisitTransitionError) return current;
+    current = "cause" in current ? current.cause : undefined;
+  }
+
+  return null;
+}
+
 export type CreateVisitRecordInput = {
   patientId: string;
   userId?: string;
@@ -194,6 +212,10 @@ export async function updateVisitRouteStatus(input: {
         where: { id: input.visitId },
         include: { route: true }
       });
+
+      if (["completed", "left_without_care", "cancelled"].includes(existing.status)) {
+        throw new ClosedVisitTransitionError(input.visitId);
+      }
 
       const now = new Date();
       const isClosed = ["completed", "left_without_care", "cancelled"].includes(input.status);

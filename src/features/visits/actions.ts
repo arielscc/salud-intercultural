@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import {
   createVisitRecord,
+  findClosedVisitTransitionError,
   getVisitFlowState,
   updateVisitRouteStatus
 } from "@/modules/database/queries/visits";
@@ -87,11 +88,18 @@ export async function applyVisitFlowAction(formData: FormData) {
     }
   };
 
-  await updateVisitRouteStatus({
-    visitId,
-    userId: user.id,
-    ...transitions[flow]
-  });
+  try {
+    await updateVisitRouteStatus({
+      visitId,
+      userId: user.id,
+      ...transitions[flow]
+    });
+  } catch (error) {
+    if (findClosedVisitTransitionError(error)) {
+      redirect(`/sigeco/recepcion/visitas/${visitId}?error=cerrada`);
+    }
+    throw error;
+  }
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");
@@ -109,10 +117,17 @@ export async function updateVisitStatusAction(formData: FormData) {
     redirect("/sigeco/recepcion?error=invalid-status");
   }
 
-  await updateVisitRouteStatus({
-    ...parsed.data,
-    userId: user.id
-  });
+  try {
+    await updateVisitRouteStatus({
+      ...parsed.data,
+      userId: user.id
+    });
+  } catch (error) {
+    if (findClosedVisitTransitionError(error)) {
+      redirect(`/sigeco/recepcion/visitas/${parsed.data.visitId}?error=cerrada`);
+    }
+    throw error;
+  }
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");

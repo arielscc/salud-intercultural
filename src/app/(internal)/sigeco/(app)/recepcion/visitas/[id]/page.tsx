@@ -147,38 +147,40 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           </Card>
         ) : null}
 
-        <Card>
-          <CardHeader title="Derivar paciente" />
-          <form action={updateVisitStatusAction} className="grid gap-3">
-            <input type="hidden" name="visitId" value={visit.id} />
-            <Field label="Estado">
-              <select className={internalInputClassName} name="status" defaultValue={visit.status}>
-                {statusOptions.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Área destino">
-              <select
-                className={internalInputClassName}
-                name="area"
-                defaultValue={visit.route?.currentArea ?? "recepcion"}
-              >
-                {areaOptions.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Nota">
-              <input className={internalInputClassName} name="note" />
-            </Field>
-            <Button type="submit">Actualizar ruta</Button>
-          </form>
-        </Card>
+        {isActive ? (
+          <Card>
+            <CardHeader title="Derivar paciente" />
+            <form action={updateVisitStatusAction} className="grid gap-3">
+              <input type="hidden" name="visitId" value={visit.id} />
+              <Field label="Estado">
+                <select className={internalInputClassName} name="status" defaultValue={visit.status}>
+                  {statusOptions.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Área destino">
+                <select
+                  className={internalInputClassName}
+                  name="area"
+                  defaultValue={visit.route?.currentArea ?? "recepcion"}
+                >
+                  {areaOptions.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Nota">
+                <input className={internalInputClassName} name="note" />
+              </Field>
+              <Button type="submit">Actualizar ruta</Button>
+            </form>
+          </Card>
+        ) : null}
       </div>
     </div>
   );

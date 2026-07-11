@@ -6,6 +6,7 @@
  */
 .sigeco-app {
   color-scheme: light;
+  overflow-x: hidden;
   --color-primary: 6 140 168;
   --color-primary-dark: 6 115 138;
   --color-secondary: 46 138 95;
@@ -25,6 +26,7 @@
 
 .sigeco-app body {
   font-family: var(--font-plex), var(--font-inter), system-ui, sans-serif;
+  overflow-x: hidden;
   padding-bottom: 0;
 }
 

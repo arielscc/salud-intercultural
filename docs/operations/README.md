@@ -5,9 +5,9 @@ Guias operativas para correr, configurar, validar, publicar y mantener Salud Int
 Usar este directorio para:
 
 - Desarrollo local, variables de entorno, base de datos, seeds y deploy.
-- Administracion de Payload CMS, media, leads, analytics y plataformas externas.
+- Administracion de Payload CMS, media, formulario publico, analytics y plataformas externas.
 - Checklists de accesibilidad, performance y troubleshooting.
-- Procedimientos repetibles que deben seguirse en V2 y servir como base para V3.
+- Procedimientos repetibles para el sitio publico, CMS y Sigeco V3.7.
 
 No usar este directorio para roadmap, estado historico o decisiones de producto; eso vive en `docs/project`.
 
@@ -38,7 +38,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 2. Validar localmente con `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build`.
 3. Si el cambio toca DB, migraciones o queries, correr `pnpm test:integration`.
 4. Promover a `staging` para Preview Deployment.
-5. Validar admin, CMS, media, leads, analytics y sitio publico en staging.
+5. Validar admin, CMS, formulario publico, analytics, sitio publico y Sigeco en staging.
 6. Revisar accesibilidad, responsive y performance en staging.
 7. Promover a `main` para produccion.
 
@@ -47,4 +47,4 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 - [Indice general de docs](../README.md)
 - [Arquitectura V2](../architecture/v2-architecture.md)
 - [Ownership de datos](../architecture/data-ownership.md)
-- [Estado de implementacion V2](../project/v2-implementation-status.md)
+- [Estado de implementacion V3](../project/v3-implementation-status.md)

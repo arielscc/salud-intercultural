@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/modules/database";
 import {
   createVisitRecord,
+  findClosedVisitTransitionError,
   getVisitFlowState,
   updateVisitRouteStatus
 } from "@/modules/database/queries/visits";
@@ -138,5 +139,29 @@ describe("flexible visit flow integration", () => {
 
     expect(state?.status).toBe("left_without_care");
     expect(state?.route?.currentArea).toBe("recepcion");
+  });
+
+  it("prevents reopening a visit after it is closed", async () => {
+    const visit = await createVisitInReception();
+
+    await updateVisitRouteStatus({
+      visitId: visit.id,
+      status: "left_without_care",
+      area: "recepcion"
+    });
+
+    let failure: unknown;
+    try {
+      await updateVisitRouteStatus({
+        visitId: visit.id,
+        status: "in_consultation",
+        area: "medico"
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(findClosedVisitTransitionError(failure)).toMatchObject({ visitId: visit.id });
+    expect((await getVisitFlowState(visit.id))?.status).toBe("left_without_care");
   });
 });
