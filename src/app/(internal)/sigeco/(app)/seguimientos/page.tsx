@@ -63,6 +63,7 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
               const phone = task.patient?.phone ?? task.lead?.phone;
               const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
               const isOverdue = task.dueAt < new Date() && task.status === "pending";
+              const declinedContact = task.patient?.followUpPreference === "no_contact";
 
               return (
                 <Tr key={task.id}>
@@ -78,7 +79,14 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
                     </span>
                   </Td>
                   <Td className="max-w-[280px] truncate">{task.title}</Td>
-                  <Td className="tabular-nums">{phone ?? "—"}</Td>
+                  <Td className="tabular-nums">
+                    {phone ?? "—"}
+                    {declinedContact ? (
+                      <span className="mt-0.5 block text-[11px] font-semibold text-warning">
+                        Pidió no recibir seguimiento
+                      </span>
+                    ) : null}
+                  </Td>
                   <Td className={cn("tabular-nums", isOverdue && "font-semibold text-error")}>
                     {task.dueAt.toLocaleString("es-BO")}
                     {isOverdue ? " · vencido" : ""}

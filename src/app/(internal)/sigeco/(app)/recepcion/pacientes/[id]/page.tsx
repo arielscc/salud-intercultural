@@ -10,6 +10,7 @@ import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpTaskAction } from "@/features/follow-ups/actions";
 import { followUpStatusLabels } from "@/features/follow-ups/labels";
+import { followUpContactPreferenceLabels } from "@/features/reception/labels";
 import {
   patientCaptureSourceLabels,
   patientGenderLabels,
@@ -17,6 +18,7 @@ import {
 } from "@/features/patients/labels";
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
 import { studyTypeLabels } from "@/features/studies/labels";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { getPatientById } from "@/modules/database/queries/patients";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
@@ -26,7 +28,7 @@ type PatientDetailPageProps = {
 };
 
 export default async function PatientDetailPage({ params }: PatientDetailPageProps) {
-  await requirePermission("patients_read");
+  const user = await requirePermission("patients_read");
   const { id } = await params;
   const patient = await getPatientById(id);
 
@@ -51,6 +53,10 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             <InfoRow label="Género" value={patientGenderLabels[patient.gender]} />
             {patient.city ? <InfoRow label="Ciudad" value={patient.city} /> : null}
             <InfoRow label="Fuente" value={patientCaptureSourceLabels[patient.captureSource]} />
+            <InfoRow
+              label="Seguimiento"
+              value={followUpContactPreferenceLabels[patient.followUpPreference]}
+            />
           </dl>
         </Card>
 
@@ -241,43 +247,63 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
       </div>
 
       <div className="grid gap-4">
-        <Card>
-          <CardHeader title="Registrar llegada" />
-          <p className="mb-3 text-sm text-muted">
-            Abre una visita con las preguntas de recepción; la ficha llega prellenada.
-          </p>
-          <Link
-            href={`/sigeco/recepcion/nuevo?paciente=${patient.id}`}
-            className={cn(buttonVariants(), "w-full")}
-          >
-            <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
-            Registrar llegada
-          </Link>
-        </Card>
+        {roleHasPermission(user.role, "visits_create") ? (
+          <Card>
+            <CardHeader title="Registrar llegada" />
+            <p className="mb-3 text-sm text-muted">
+              Abre una visita con las preguntas de recepción; la ficha llega prellenada.
+            </p>
+            <Link
+              href={`/sigeco/recepcion/nuevo?paciente=${patient.id}`}
+              className={cn(buttonVariants(), "w-full")}
+            >
+              <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
+              Registrar llegada
+            </Link>
+          </Card>
+        ) : null}
 
-        <Card>
-          <CardHeader title="Crear seguimiento" />
-          <form action={createFollowUpTaskAction} className="grid gap-3">
-            <input type="hidden" name="patientId" value={patient.id} />
-            <Field label="Título">
-              <input
-                className={internalInputClassName}
-                name="title"
-                defaultValue="Seguimiento a paciente"
-                required
-              />
-            </Field>
-            <Field label="Fecha y hora">
-              <input className={internalInputClassName} name="dueAt" type="datetime-local" required />
-            </Field>
-            <Field label="Notas">
-              <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
-            </Field>
-            <Button type="submit" variant="outline">
-              Crear seguimiento
-            </Button>
-          </form>
-        </Card>
+        {roleHasPermission(user.role, "followups_write") ? (
+          <Card>
+            <CardHeader title="Crear seguimiento" />
+            {patient.followUpPreference === "no_contact" ? (
+              <div className="mb-3 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+                <p className="flex items-center gap-1.5 font-semibold text-warning">
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+                  El paciente pidió no recibir seguimiento
+                </p>
+                <p className="mt-1 text-muted">
+                  Crea la tarea solo si es necesaria por razones clínicas y regístralo en las notas.
+                </p>
+              </div>
+            ) : null}
+            <form action={createFollowUpTaskAction} className="grid gap-3">
+              <input type="hidden" name="patientId" value={patient.id} />
+              <Field label="Título">
+                <input
+                  className={internalInputClassName}
+                  name="title"
+                  defaultValue="Seguimiento a paciente"
+                  required
+                />
+              </Field>
+              <Field label="Fecha y hora">
+                <input
+                  className={internalInputClassName}
+                  name="dueAt"
+                  type="datetime-local"
+                  required
+                />
+              </Field>
+              <Field label="Notas">
+                <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
+              </Field>
+              <Button type="submit" variant="outline">
+                Crear seguimiento
+              </Button>
+            </form>
+          </Card>
+        ) : null}
       </div>
     </div>
   );

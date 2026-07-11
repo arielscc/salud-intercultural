@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import type { InternalRole } from "@/generated/prisma/client";
 import { SidebarNav } from "@/components/internal/SidebarNav";
 
-export function MobileSidebar({ userSlot }: { userSlot: React.ReactNode }) {
+export function MobileSidebar({
+  role,
+  userSlot
+}: {
+  role: InternalRole;
+  userSlot: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -43,7 +50,7 @@ export function MobileSidebar({ userSlot }: { userSlot: React.ReactNode }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <SidebarNav onNavigate={() => setOpen(false)} />
+              <SidebarNav role={role} onNavigate={() => setOpen(false)} />
             </div>
             <div className="mt-2 border-t border-border px-5 pt-3">{userSlot}</div>
           </div>

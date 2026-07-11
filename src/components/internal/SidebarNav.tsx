@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { InternalRole } from "@/generated/prisma/client";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { sigecoNavItems } from "@/components/internal/nav-items";
 import { cn } from "@/lib/cn";
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarNav({ role, onNavigate }: { role: InternalRole; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const items = sigecoNavItems.filter((item) => roleHasPermission(role, item.permission));
 
   return (
     <nav className="flex flex-col gap-0.5 px-3" aria-label="Módulos de Sigeco">
-      {sigecoNavItems.map((item) => {
+      {items.map((item) => {
         const Icon = item.icon;
         const isActive =
           item.href === "/sigeco" ? pathname === "/sigeco" : pathname.startsWith(item.href);

@@ -10,7 +10,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | 2 | Funnel de recepcion | Completada (2026-07-10) |
 | 3 | Retirar UI y termino lead | Completada (2026-07-10) |
 | 4 | Fusionar Pacientes y Visitas en Recepcion | Completada (2026-07-10) |
-| 5 | Rol seguimiento y retiro de captacion | Pendiente |
+| 5 | Rol seguimiento y retiro de captacion | Completada (2026-07-11) |
 | 6 | Flujo de visita flexible | Pendiente |
 | 7 | Edicion de ficha de paciente | Pendiente |
 | 8 | Consulta medica prellenada y formularios simplificados | Pendiente |
@@ -113,3 +113,26 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** la edicion de la ficha permanente sigue pendiente (Tarea 7). El detalle de paciente y el de visita siguen siendo paginas separadas (unificarlas en pestanias puede evaluarse despues del QA con usuarios reales).
 
 **Commit sugerido:** `feat(sigeco): merge patients and visits into reception module`
+
+### Tarea 5 — Rol Seguimiento Y Retiro De Captacion (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/features/internal-auth/permissions.ts`: `recepcion` gana `followups_read`/`followups_write` (Marlen tambien trabaja seguimientos); `captacion` queda reducido a solo `internal_access` hasta que sus usuarios sean reasignados; export nuevo `assignableInternalRoles` (todos los roles menos los deprecados) derivado del mapa de permisos.
+- `src/features/internal-auth/permissions.test.ts`: tests nuevos de recepcion con seguimientos, captacion retirado y roles asignables (63 tests unitarios en total).
+- `scripts/set-internal-user-role.ts` + script `internal:set-role` en `package.json`: reasigna el rol de un usuario interno existente sin hardcodear datos personales. Uso: `INTERNAL_USER_EMAIL=<email> INTERNAL_USER_ROLE=seguimiento pnpm internal:set-role`. Rechaza roles deprecados (`captacion`) y roles desconocidos con mensaje claro. **Para reasignar a Yazmin en staging/produccion se corre ese comando con su email.**
+- `src/components/internal/nav-items.ts` + `SidebarNav.tsx` + `MobileSidebar.tsx` + `InternalShell.tsx`: cada item del sidebar declara el permiso que lo habilita y la navegacion se filtra por el rol del usuario (seguimiento ve Inicio + Seguimiento; captacion retirado ve solo Inicio; recepcion ve Inicio + Recepcion + Seguimiento).
+- `src/app/(internal)/sigeco/(app)/page.tsx` (dashboard): los KPIs y la accion "Registrar llegada" se muestran segun permisos del rol (`followups_read`, `inventory_read`, `visits_create`); se elimino el filtro especial de captacion (la bandeja de seguimientos es compartida entre Marlen y Yazmin); mensaje "Tu rol no tiene modulos asignados" para roles sin ningun modulo (captacion en transito).
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: la ficha muestra la preferencia de contacto ("Seguimiento" en los datos del paciente); si es "Prefiere no recibir seguimiento", panel de advertencia antes del form "Crear seguimiento" (advierte, no bloquea: puede haber razon clinica). Las tarjetas "Registrar llegada" y "Crear seguimiento" ahora se muestran solo a roles con `visits_create` / `followups_write`.
+- `src/app/(internal)/sigeco/(app)/seguimientos/page.tsx`: la bandeja marca "Pidio no recibir seguimiento" bajo el telefono de las tareas cuyo paciente rechazo el contacto.
+- `src/app/(internal)/sigeco/(app)/seguimientos/[taskId]/page.tsx`: advertencia equivalente en el detalle de la tarea, encima de los botones Llamar/WhatsApp y del form "Registrar contacto".
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (63), `pnpm test:integration` (13; reset de la base de test con el consentimiento ya otorgado), `pnpm run build`. Navegador (headless autenticado): login con rol `seguimiento` ve solo Inicio + Seguimiento, sin "Registrar llegada", con acceso a la bandeja y a fichas de pacientes pero rechazado en `/sigeco/recepcion` e `/sigeco/inventario`; login con rol `captacion` ve solo Inicio con el mensaje de rol sin modulos y es rechazado en seguimientos y fichas; rol `recepcion` ve y accede a Seguimiento; super_admin conserva las 7 secciones. El script se probo en dev: rechazo `captacion` y reasigno `seguimiento@test.si` de captacion a seguimiento. Advertencias de "no contactar" verificadas en ficha, bandeja y detalle de tarea con captura de pantalla.
+
+**Datos de QA en dev:** usuarios nuevos `seguimiento@test.si` (rol seguimiento) y `captacion@test.si` (rol captacion, para ver el estado retirado); la paciente SI-000002 Rosa Huanca Flores quedo con preferencia "Prefiere no recibir seguimiento" (antes WhatsApp) y una tarea de seguimiento pendiente creada por el usuario QA de seguimiento, para poder revisar las advertencias en vivo.
+
+**Pendientes que deja:** reasignar el usuario real de Yazmin en staging/produccion con `pnpm internal:set-role` (documentado arriba). La edicion de la preferencia de contacto desde la ficha llega con la Tarea 7.
+
+**Commit sugerido:** `feat(sigeco): add seguimiento role and retire captacion`

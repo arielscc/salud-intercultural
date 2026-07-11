@@ -25,7 +25,8 @@
     "payload:seed": "node --import tsx scripts/seed-payload.ts",
     "payload:seed:staging": "DOTENV_CONFIG_PATH=.env.staging pnpm payload:seed",
     "payload:generate-types": "payload generate:types",
-    "internal:seed": "node --import dotenv/config --import tsx scripts/seed-internal-user.ts"
+    "internal:seed": "node --import dotenv/config --import tsx scripts/seed-internal-user.ts",
+    "internal:set-role": "node --import dotenv/config --import tsx scripts/set-internal-user-role.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

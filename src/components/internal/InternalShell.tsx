@@ -57,7 +57,7 @@ export function InternalShell({
           <p className="text-[11px] text-muted">Salud Intercultural</p>
         </Link>
         <div className="flex-1 overflow-y-auto">
-          <SidebarNav />
+          <SidebarNav role={user.role} />
         </div>
         <div className="mt-2 border-t border-border px-5 pt-3">
           <UserBadge user={user} />
@@ -66,7 +66,7 @@ export function InternalShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
-          <MobileSidebar userSlot={<UserBadge user={user} />} />
+          <MobileSidebar role={user.role} userSlot={<UserBadge user={user} />} />
           <p className="font-sora text-sm font-bold text-text lg:hidden">Sigeco</p>
           <div className="ml-auto flex items-center gap-3">
             <p className="hidden text-xs text-muted md:block">{formatToday()}</p>

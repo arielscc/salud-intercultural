@@ -14,7 +14,8 @@ export const internalRoleLabels: Record<InternalRole, string> = {
 /**
  * Rol deprecado por la simplificacion V3.7: no asignar a usuarios nuevos.
  * El valor permanece en el enum de Prisma porque existen filas con ese rol;
- * sus permisos de leads se retiran en la Tarea 3 del plan de simplificacion.
+ * un usuario con este rol solo conserva `internal_access` hasta ser reasignado
+ * (script `pnpm internal:set-role`).
  */
 export const deprecatedInternalRoles: InternalRole[] = ["captacion"];
 
@@ -81,15 +82,11 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "visits_create",
     "visits_update",
     "patient_route_read",
-    "patient_route_update"
-  ],
-  captacion: [
-    "internal_access",
-    "patients_read",
-    "patients_create",
+    "patient_route_update",
     "followups_read",
     "followups_write"
   ],
+  captacion: ["internal_access"],
   administracion: [
     "internal_access",
     "patients_read",
@@ -120,6 +117,10 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "followups_write"
   ]
 };
+
+export const assignableInternalRoles = (
+  Object.keys(internalRolePermissions) as InternalRole[]
+).filter((role) => !deprecatedInternalRoles.includes(role));
 
 export function roleHasPermission(role: InternalRole, permission: InternalPermission) {
   return internalRolePermissions[role].includes(permission);
