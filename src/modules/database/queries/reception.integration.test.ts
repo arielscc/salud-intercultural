@@ -3,10 +3,12 @@ import { hashPassword } from "@/features/internal-auth/password";
 import { prisma } from "@/modules/database";
 import {
   createReceptionIntake,
+  getReceptionDashboardSummary,
   searchReceptionPatients,
   updateReceptionPatient
 } from "@/modules/database/queries/reception";
 import { createPatientRecord } from "@/modules/database/queries/patients";
+import { updateVisitRouteStatus } from "@/modules/database/queries/visits";
 
 async function cleanReceptionData() {
   await prisma.visit.deleteMany();
@@ -203,5 +205,42 @@ describe("reception intake integration", () => {
     expect(byPhone).toHaveLength(1);
     expect(byCode).toHaveLength(1);
     expect(noMatch).toHaveLength(0);
+  });
+
+  it("summarizes unique arrivals, active routes and today abandonments", async () => {
+    const user = await createReceptionUser();
+    const first = await createReceptionIntake({
+      userId: user.id,
+      patient: { fullName: "Paciente Uno", phone: "70000001" },
+      visit: { reason: "Primera llegada" }
+    });
+    await createReceptionIntake({
+      userId: user.id,
+      patientId: first.patientId,
+      patient: { fullName: "Paciente Uno", phone: "70000001" },
+      visit: { reason: "Segunda llegada" }
+    });
+    const second = await createReceptionIntake({
+      userId: user.id,
+      patient: { fullName: "Paciente Dos", phone: "70000002" },
+      visit: { reason: "Consulta del día" }
+    });
+
+    await updateVisitRouteStatus({
+      visitId: second.visit.id,
+      userId: user.id,
+      status: "left_without_care",
+      area: "recepcion",
+      note: "Se retiró en recepción"
+    });
+
+    const summary = await getReceptionDashboardSummary();
+
+    expect(summary.patientsToday).toBe(2);
+    expect(summary.activeTotal).toBe(2);
+    expect(summary.activeByArea.recepcion).toBe(2);
+    expect(summary.abandonmentsToday).toBe(1);
+    expect(summary.latestArrivals).toHaveLength(3);
+    expect(summary.latestArrivals.map((visit) => visit.patient.fullName)).toContain("Paciente Dos");
   });
 });

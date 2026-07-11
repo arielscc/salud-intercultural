@@ -14,7 +14,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | 6 | Flujo de visita flexible | Completada (2026-07-11) |
 | 7 | Edicion de ficha de paciente | Completada (2026-07-11) |
 | 8 | Consulta medica prellenada y formularios simplificados | Completada (2026-07-11) |
-| 9 | Dashboard centrado en recepcion | Pendiente |
+| 9 | Dashboard centrado en recepcion | Completada (2026-07-11) |
 | 10 | Documentacion y QA final | Pendiente |
 
 El cierre documental consolidado se realizara en la Tarea 10, no de forma parcial durante las Tareas 8 y 9. La implementacion de GitHub Actions y los pendientes operativos/clinicos que no formen parte directa de la simplificacion quedan registrados en el backlog posterior de [Tareas de simplificacion](./tareas-de-simplificacion.md) y en el [plan de GitHub Actions](../github-actions-implementation-plan.md).
@@ -206,3 +206,20 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** la Tarea 10 debe repetir estos caminos dentro del QA final por roles. Los formularios colapsables reducen carga visual sin retirar campos clinicos propios de cada area.
 
 **Commit sugerido:** `feat(sigeco): prefill consultation and simplify clinical forms`
+
+### Tarea 9 — Dashboard Centrado En Recepcion (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/modules/database/queries/reception.ts`: query `getReceptionDashboardSummary` con rango diario local. Calcula pacientes unicos que llegaron hoy, rutas activas agrupadas por area, abandonos ocurridos hoy desde `VisitStatusHistory` y las 8 llegadas mas recientes.
+- `src/app/(internal)/sigeco/(app)/page.tsx`: dashboard operativo con KPIs de pacientes del dia, visitas activas, abandonos, seguimientos de hoy/vencidos y stock bajo; desglose de visitas activas por area; tabla de ultimas llegadas con enlace al detalle; accesos rapidos para registrar llegada y buscar paciente.
+- El contenido se filtra por permisos: las metricas de recepcion requieren `visits_read`, seguimientos requieren `followups_read`, inventario requiere `inventory_read` y cada acceso rapido conserva su permiso especifico.
+- `src/modules/database/queries/reception.integration.test.ts`: escenario nuevo con dos pacientes unicos, tres llegadas, dos rutas activas y un abandono, verificando conteos, agrupacion y listado reciente.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (20 archivos, 69 tests) y `pnpm test:integration` (10 archivos, 20 tests). Navegador autenticado con datos reales en 1440x900 y 390x844: seis KPIs, accesos rapidos, areas activas y ultimas llegadas sin overflow horizontal (`scrollWidth=390`, `innerWidth=390`) ni solapamientos.
+
+**Pendientes que deja:** la Tarea 10 debe ejecutar el QA final por cada rol y consolidar la documentacion V3.7. Los conteos del dashboard estan listos para esa validacion, pero todavia no constituyen reportes historicos o analitica avanzada.
+
+**Commit sugerido:** `feat(sigeco): refocus dashboard on reception metrics`

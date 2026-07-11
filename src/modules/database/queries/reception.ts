@@ -2,6 +2,7 @@ import type {
   FollowUpContactPreference,
   PatientCaptureSource,
   PatientGender,
+  PatientRouteArea,
   SymptomDurationUnit,
   VisitIntakeType
 } from "@/generated/prisma/client";
@@ -96,6 +97,71 @@ export type ReceptionPatientEditData = {
   currentMedication: string | null;
   followUpPreference: FollowUpContactPreference;
 };
+
+const dashboardRouteAreas: PatientRouteArea[] = [
+  "recepcion",
+  "medico",
+  "enfermeria",
+  "administracion",
+  "seguimiento",
+  "cierre"
+];
+
+function getDayRange(date: Date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
+export async function getReceptionDashboardSummary(date = new Date()) {
+  const day = getDayRange(date);
+
+  return withDatabaseError("getReceptionDashboardSummary", async () => {
+    const [todayPatients, activeGroups, abandonmentEvents, latestArrivals] = await Promise.all([
+      prisma.visit.findMany({
+        where: { checkedInAt: { gte: day.start, lt: day.end } },
+        distinct: ["patientId"],
+        select: { patientId: true }
+      }),
+      prisma.patientRoute.groupBy({
+        by: ["currentArea"],
+        where: { active: true },
+        _count: { _all: true }
+      }),
+      prisma.visitStatusHistory.findMany({
+        where: {
+          toStatus: "left_without_care",
+          createdAt: { gte: day.start, lt: day.end }
+        },
+        distinct: ["visitId"],
+        select: { visitId: true }
+      }),
+      prisma.visit.findMany({
+        where: { checkedInAt: { gte: day.start, lt: day.end } },
+        include: { patient: true, route: true },
+        orderBy: { checkedInAt: "desc" },
+        take: 8
+      })
+    ]);
+
+    const activeByArea = Object.fromEntries(
+      dashboardRouteAreas.map((area) => [
+        area,
+        activeGroups.find((group) => group.currentArea === area)?._count._all ?? 0
+      ])
+    ) as Record<PatientRouteArea, number>;
+
+    return {
+      patientsToday: todayPatients.length,
+      activeTotal: activeGroups.reduce((total, group) => total + group._count._all, 0),
+      activeByArea,
+      abandonmentsToday: abandonmentEvents.length,
+      latestArrivals
+    };
+  });
+}
 
 export async function updateReceptionPatient(id: string, data: ReceptionPatientEditData) {
   return withDatabaseError("updateReceptionPatient", async () => {
