@@ -18,6 +18,8 @@ Usar este directorio para:
 5. [Plan de limpieza de ownership de datos](./data-ownership-cleanup-plan.md): cierre de la separacion Payload/Prisma.
 6. [Reportes por tarea](./task-reports/): evidencia de cada entrega implementada.
 7. [Rediseno Sigeco (Marea)](./sigeco-redesign/tareas-de-rediseno.md): plan de tareas del rediseno del panel interno y su [progreso](./sigeco-redesign/progreso-de-diseno.md).
+8. [Simplificacion Sigeco V3.7](./sigeco-simplificacion/tareas-de-simplificacion.md): plan vigente de 10 tareas, progreso y backlog operativo/clinico posterior.
+9. [Plan de GitHub Actions](./github-actions-implementation-plan.md): CI, pruebas con PostgreSQL y proteccion de ramas a implementar despues del cierre de V3.7.
 
 ## Documentacion relacionada
 

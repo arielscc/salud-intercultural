@@ -282,7 +282,45 @@ seguimiento
 
 - Actualizar `docs/project/v3-implementation-status.md` (mapa de rutas 7 secciones, fase V3.7, pendientes transversales que se cerraron).
 - Actualizar `docs/operations/sigeco-v3-full-flow-testing.md` al flujo nuevo (funnel -> consulta -> salidas flexibles -> seguimiento).
+- Revisar y corregir la documentacion que aun describe V3.6, rutas retiradas o conteos de tests anteriores. Como minimo: `docs/project/README.md`, `docs/project/v3-implementation-status.md`, `docs/project/v3-technical-implementation.md`, `docs/operations/testing.md`, `docs/operations/branch-flow.md` y `docs/operations/deploy.md`.
+- Consolidar una sola lista de pendientes posteriores a V3.7, separando bloqueantes para operacion clinica, mejoras operativas y trabajo de plataforma.
 - QA funcional por rol (recepcion, seguimiento, medico, enfermeria, administracion, direccion) en navegador con datos reales, incluyendo los caminos de abandono.
+- QA responsive en 390px para todas las pantallas activas de Sigeco y verificacion de estados de error visibles.
 - Verificar que sitio publico y CMS no cambiaron.
 
+**Criterios de aceptacion:** las 10 tareas figuran con estado final y evidencia; ningun documento canonico presenta V3.6 como estado actual ni ofrece rutas retiradas como flujo vigente; los comandos y conteos de pruebas coinciden con el repositorio; el QA por rol y 390px queda registrado con hallazgos y decisiones.
+
 **Commit sugerido:** `docs(sigeco): document simplification and run final qa`
+
+---
+
+## Backlog Posterior Al Cierre De V3.7
+
+Estos puntos se conservan fuera de las tareas 1-10 para no ampliar la implementacion funcional en curso. La Tarea 10 debe revisarlos, cerrar los que ya esten resueltos y trasladar los restantes al estado consolidado de V3.
+
+### Bloqueantes Para Uso Clinico Amplio
+
+1. Implementar auditoria append-only para cambios clinicos, financieros, inventario, permisos y ruta del paciente.
+2. Definir storage seguro, control de acceso, retencion y trazabilidad antes de habilitar adjuntos clinicos reales.
+3. Ejecutar auditoria de permisos y privacidad por rol con casos negativos server-side.
+4. Definir respaldo, restauracion y recuperacion ante incidentes de PostgreSQL y archivos clinicos.
+5. Definir politica de sesiones, bloqueo, rotacion de secretos y respuesta ante acceso no autorizado.
+
+### Pendientes Operativos
+
+1. Formalizar realtime o polling para bandejas entre recepcion, consulta, enfermeria, administracion y seguimiento.
+2. Mejorar errores visibles, en especial stock insuficiente, conflictos de formularios y acciones sobre visitas cerradas.
+3. Resolver la deteccion de telefono duplicado al editar una ficha de paciente.
+4. Definir receta, comprobante o documento imprimible si la clinica lo requiere.
+5. Automatizar seguimientos solo despues de acordar reglas clinicas y consentimiento de contacto.
+6. Agregar flujo de proveedores y compras cuando exista un proceso operativo aprobado.
+7. Preparar staging con base, usuarios de prueba, seeds y variables completamente separados de produccion.
+8. Reasignar usuarios de roles deprecados en cada ambiente antes de habilitar V3.7.
+
+### Calidad Y Plataforma
+
+1. Implementar GitHub Actions segun [el plan de CI](../github-actions-implementation-plan.md) despues de cerrar las 10 tareas.
+2. Resolver vulnerabilidades altas reportadas por `pnpm audit` antes de produccion.
+3. Definir umbrales de cobertura para modulos criticos, sin usar cobertura como reemplazo del QA funcional.
+4. Certificar build reproducible desde checkout limpio y evitar ejecutar `next dev` y `next build` sobre el mismo `.next` simultaneamente.
+5. Promover cambios mediante PRs `develop -> staging -> main`, con checks y aprobaciones obligatorias cuando CI este activo.

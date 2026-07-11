@@ -17,6 +17,8 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | 9 | Dashboard centrado en recepcion | Pendiente |
 | 10 | Documentacion y QA final | Pendiente |
 
+El cierre documental consolidado se realizara en la Tarea 10, no de forma parcial durante las Tareas 8 y 9. La implementacion de GitHub Actions y los pendientes operativos/clinicos que no formen parte directa de la simplificacion quedan registrados en el backlog posterior de [Tareas de simplificacion](./tareas-de-simplificacion.md) y en el [plan de GitHub Actions](../github-actions-implementation-plan.md).
+
 ## Contexto Y Decisiones (2026-07-10)
 
 Origen: al usuario le parecio que el flujo completo del paciente exige demasiado llenado (~89 campos en 13 formularios y 7+ pantallas, con datos pedidos hasta 3 veces). Se hizo un analisis con diagramas (artefacto "Analisis de flujo Sigeco") y el usuario respondio 5 preguntas de validacion. Feedback incorporado al plan:
