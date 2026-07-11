@@ -9,6 +9,8 @@ import { Chip } from "@/components/internal/ui/Chip";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
+import { applyVisitFlowAction } from "@/features/visits/actions";
+import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { getPatients } from "@/modules/database/queries/patients";
 import { getVisits } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
@@ -112,6 +114,9 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                   <Th>Área actual</Th>
                   <Th>Tareas</Th>
                   <Th>Estado</Th>
+                  <Th>
+                    <span className="sr-only">Acción rápida</span>
+                  </Th>
                 </tr>
               </thead>
               <tbody>
@@ -138,11 +143,27 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                     <Td>
                       <VisitStatusPill status={visit.status} />
                     </Td>
+                    <Td>
+                      {isActiveVisitStatus(visit.status) ? (
+                        <form action={applyVisitFlowAction}>
+                          <input type="hidden" name="visitId" value={visit.id} />
+                          <input type="hidden" name="flow" value="left" />
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="sm"
+                            className="text-error hover:bg-error/10 hover:text-error"
+                          >
+                            Se retiró
+                          </Button>
+                        </form>
+                      ) : null}
+                    </Td>
                   </Tr>
                 ))}
                 {visits.length === 0 ? (
                   <tr>
-                    <Td className="py-8 text-center" colSpan={6}>
+                    <Td className="py-8 text-center" colSpan={7}>
                       <span className="block font-semibold text-text">
                         No hay visitas con ese filtro.
                       </span>

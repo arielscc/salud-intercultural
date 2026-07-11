@@ -13,6 +13,8 @@ import {
 import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
+import { applyVisitFlowAction } from "@/features/visits/actions";
+import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
 import { requirePermission } from "@/modules/permissions";
 
@@ -176,6 +178,41 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
       </div>
 
       <div className="grid gap-4">
+        {isActiveVisitStatus(visit.status) ? (
+          <Card>
+            <CardHeader
+              title="Salida del paciente"
+              description="Al terminar la consulta el paciente puede seguir a otra área o irse."
+            />
+            <div className="grid gap-2">
+              <form action={applyVisitFlowAction}>
+                <input type="hidden" name="visitId" value={visit.id} />
+                <input type="hidden" name="flow" value="to_nursing" />
+                <input type="hidden" name="note" value="Pasa a enfermería tras la consulta" />
+                <Button type="submit" variant="outline" className="w-full">
+                  Enviar a enfermería
+                </Button>
+              </form>
+              <form action={applyVisitFlowAction}>
+                <input type="hidden" name="visitId" value={visit.id} />
+                <input type="hidden" name="flow" value="to_administration" />
+                <input type="hidden" name="note" value="Pasa a administración tras la consulta" />
+                <Button type="submit" variant="outline" className="w-full">
+                  Enviar a administración
+                </Button>
+              </form>
+              <form action={applyVisitFlowAction}>
+                <input type="hidden" name="visitId" value={visit.id} />
+                <input type="hidden" name="flow" value="complete" />
+                <input type="hidden" name="note" value="Salida directa después de la consulta" />
+                <Button type="submit" variant="outline" className="w-full">
+                  Se va — cerrar visita
+                </Button>
+              </form>
+            </div>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader title="Indicación para otra área" />
           <form action={createClinicalOrderAction} className="grid gap-3">

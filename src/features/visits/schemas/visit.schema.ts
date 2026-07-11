@@ -21,6 +21,12 @@ export const routeAreaSchema = z.enum([
   "cierre"
 ]);
 
+export const closedVisitStatuses = ["completed", "left_without_care", "cancelled"] as const;
+
+export function isActiveVisitStatus(status: string) {
+  return !closedVisitStatuses.includes(status as (typeof closedVisitStatuses)[number]);
+}
+
 export const createVisitSchema = z.object({
   patientId: z.string().min(1),
   reason: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
@@ -34,5 +40,12 @@ export const updateVisitStatusSchema = z.object({
   note: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional())
 });
 
+export const visitFlowSchema = z.object({
+  visitId: z.string().min(1),
+  flow: z.enum(["left", "complete", "to_nursing", "to_administration"]),
+  note: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional())
+});
+
 export type CreateVisitInput = z.infer<typeof createVisitSchema>;
 export type UpdateVisitStatusInput = z.infer<typeof updateVisitStatusSchema>;
+export type VisitFlowInput = z.infer<typeof visitFlowSchema>;

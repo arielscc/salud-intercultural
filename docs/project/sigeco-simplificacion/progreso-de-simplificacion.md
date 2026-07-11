@@ -11,7 +11,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | 3 | Retirar UI y termino lead | Completada (2026-07-10) |
 | 4 | Fusionar Pacientes y Visitas en Recepcion | Completada (2026-07-10) |
 | 5 | Rol seguimiento y retiro de captacion | Completada (2026-07-11) |
-| 6 | Flujo de visita flexible | Pendiente |
+| 6 | Flujo de visita flexible | Completada (2026-07-11) |
 | 7 | Edicion de ficha de paciente | Pendiente |
 | 8 | Consulta medica prellenada y formularios simplificados | Pendiente |
 | 9 | Dashboard centrado en recepcion | Pendiente |
@@ -136,3 +136,27 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** reasignar el usuario real de Yazmin en staging/produccion con `pnpm internal:set-role` (documentado arriba). La edicion de la preferencia de contacto desde la ficha llega con la Tarea 7.
 
 **Commit sugerido:** `feat(sigeco): add seguimiento role and retire captacion`
+
+### Tarea 6 — Flujo De Visita Flexible (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/features/visits/schemas/visit.schema.ts`: schema nuevo `visitFlowSchema` (visitId + flow `left`/`complete`/`to_nursing`/`to_administration` + nota opcional); helpers `closedVisitStatuses` e `isActiveVisitStatus` compartidos entre action y UI.
+- `src/features/visits/actions.ts`: action nueva `applyVisitFlowAction` (permiso `visits_update`). Mapea cada flujo a estado + area + nota por defecto; en `left` conserva el area actual de la ruta para dejar rastro de donde abandono y genera la nota "Se retiró en <area>". Guard: si la visita ya esta cerrada redirige a su detalle con `?error=cerrada` sin tocar nada. Revalida recepcion, consultas, administracion y el dashboard.
+- `src/modules/database/queries/visits.ts`: query liviana `getVisitFlowState` (status + area actual) para el guard.
+- `src/features/internal-auth/permissions.ts` + `.test.ts`: `administracion` gana `visits_update` (Maria cierra visitas tras el cobro); test nuevo verifica que no gana `visits_create`.
+- `src/app/(internal)/sigeco/(app)/recepcion/page.tsx`: columna nueva en la vista "Hoy" con el boton rapido "Se retiró" por fila (solo visitas activas, un toque, sin formulario).
+- `src/app/(internal)/sigeco/(app)/recepcion/visitas/[id]/page.tsx`: tarjeta "Acciones rápidas" ("Cerrar visita" y "Se retiró sin completar") visible en cualquier estado activo, encima del form "Derivar paciente"; banner de advertencia cuando llega `?error=cerrada`.
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: tarjeta "Salida del paciente" con tres destinos post-consulta: "Enviar a enfermería", "Enviar a administración" y "Se va — cerrar visita" (salida directa sin pasar por enfermeria ni caja).
+- `src/app/(internal)/sigeco/(app)/administracion/[workItemId]/page.tsx`: tarjeta "Salida del paciente" en el pendiente administrativo: "Cerrar visita" en un toque (paciente que solo compra/paga y se va) y "Se retiró sin completar".
+- `src/modules/database/queries/visit-flow.integration.test.ts`: 4 tests de integracion que cubren los tres caminos de aceptacion (consulta -> administracion -> salida, consulta -> salida directa, abandono en recepcion) verificando `VisitStatusHistory` completo, `completedAt`, ruta inactiva y area donde abandono.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (64), `pnpm test:integration` (17, 4 nuevos), `pnpm run build`. Navegador (autenticado): camino completo recepcion -> consulta -> administracion -> cierre en un toque con la visita de Rosa (historial SQL verificado: 4 transiciones con notas); salida directa desde consulta con la visita QA V3; visita nueva por funnel abandonada con un toque desde la lista de recepcion (nota automatica "Se retiró en recepción", area conservada, fila desaparece de la vista activa); en visitas cerradas las acciones rapidas se ocultan y el banner de `?error=cerrada` se muestra.
+
+**Datos de QA en dev:** las tres visitas quedaron cerradas (2 `completed`, 1 `left_without_care`) con su historial completo como evidencia; no quedan visitas activas.
+
+**Pendientes que deja:** enfermeria no tiene aun boton de salida propio (el paciente que termina en enfermeria se cierra desde el detalle de visita o administracion); puede evaluarse tras el QA con usuarios reales. El dashboard mostrara "abandonos del dia" en la Tarea 9.
+
+**Commit sugerido:** `feat(sigeco): support flexible visit flow and exits`

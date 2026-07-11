@@ -11,7 +11,8 @@ import {
   visitStatusLabels,
   workItemStatusLabels
 } from "@/features/patients/labels";
-import { updateVisitStatusAction } from "@/features/visits/actions";
+import { applyVisitFlowAction, updateVisitStatusAction } from "@/features/visits/actions";
+import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { getVisitById } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
 
@@ -20,18 +21,29 @@ const areaOptions = Object.entries(routeAreaLabels) as Array<[PatientRouteArea, 
 
 type VisitDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
-export default async function VisitDetailPage({ params }: VisitDetailPageProps) {
+export default async function VisitDetailPage({ params, searchParams }: VisitDetailPageProps) {
   await requirePermission("visits_read");
-  const { id } = await params;
+  const [{ id }, { error }] = await Promise.all([params, searchParams]);
   const visit = await getVisitById(id);
 
   if (!visit) notFound();
 
+  const isActive = isActiveVisitStatus(visit.status);
+
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
       <div className="grid gap-4">
+        {error === "cerrada" ? (
+          <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+            <p className="flex items-center gap-1.5 font-semibold text-warning">
+              <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+              Esta visita ya está cerrada; no se aplicó la acción.
+            </p>
+          </div>
+        ) : null}
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -106,6 +118,35 @@ export default async function VisitDetailPage({ params }: VisitDetailPageProps) 
       </div>
 
       <div className="grid gap-4">
+        {isActive ? (
+          <Card>
+            <CardHeader title="Acciones rápidas" />
+            <div className="grid gap-2">
+              <form action={applyVisitFlowAction}>
+                <input type="hidden" name="visitId" value={visit.id} />
+                <input type="hidden" name="flow" value="complete" />
+                <Button type="submit" variant="outline" className="w-full">
+                  Cerrar visita
+                </Button>
+              </form>
+              <form action={applyVisitFlowAction}>
+                <input type="hidden" name="visitId" value={visit.id} />
+                <input type="hidden" name="flow" value="left" />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="w-full border-error/30 text-error hover:border-error/50 hover:text-error"
+                >
+                  Se retiró sin completar
+                </Button>
+              </form>
+            </div>
+            <p className="mt-3 text-[13px] text-muted">
+              “Se retiró” guarda en qué punto abandonó; el historial queda en la ruta.
+            </p>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader title="Derivar paciente" />
           <form action={updateVisitStatusAction} className="grid gap-3">

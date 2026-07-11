@@ -166,6 +166,21 @@ export async function getVisitById(id: string) {
   });
 }
 
+export async function getVisitFlowState(id: string) {
+  return withDatabaseError("getVisitFlowState", async () => {
+    return prisma.visit.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        route: {
+          select: { currentArea: true }
+        }
+      }
+    });
+  });
+}
+
 export async function updateVisitRouteStatus(input: {
   visitId: string;
   userId?: string;

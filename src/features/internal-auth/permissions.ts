@@ -91,6 +91,7 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "internal_access",
     "patients_read",
     "visits_read",
+    "visits_update",
     "patient_route_read",
     "sales_read",
     "sales_write",

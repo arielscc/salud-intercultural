@@ -12,6 +12,8 @@ import {
   saleItemTypeLabels,
   saleStatusLabels
 } from "@/features/sales/labels";
+import { applyVisitFlowAction } from "@/features/visits/actions";
+import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { getInventoryItems } from "@/modules/database/queries/inventory";
 import { getAdministrationWorkItemById } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";
@@ -161,6 +163,36 @@ export default async function AdministrationWorkItemPage({ params }: Administrat
       </div>
 
       <div className="grid gap-4">
+        {isActiveVisitStatus(item.visit.status) ? (
+          <Card>
+            <CardHeader
+              title="Salida del paciente"
+              description="Cuando el paciente ya pagó o solo vino a comprar, cierra la visita aquí."
+            />
+            <div className="grid gap-2">
+              <form action={applyVisitFlowAction}>
+                <input type="hidden" name="visitId" value={item.visit.id} />
+                <input type="hidden" name="flow" value="complete" />
+                <input type="hidden" name="note" value="Visita cerrada desde administración" />
+                <Button type="submit" variant="outline" className="w-full">
+                  Cerrar visita
+                </Button>
+              </form>
+              <form action={applyVisitFlowAction}>
+                <input type="hidden" name="visitId" value={item.visit.id} />
+                <input type="hidden" name="flow" value="left" />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="w-full border-error/30 text-error hover:border-error/50 hover:text-error"
+                >
+                  Se retiró sin completar
+                </Button>
+              </form>
+            </div>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader title="Ventas de esta tarea" />
           <div className="grid gap-0">

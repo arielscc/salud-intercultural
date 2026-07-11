@@ -36,6 +36,11 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("administracion", "studies_write")).toBe(false);
   });
 
+  it("lets administration close visits after a sale (flexible flow)", () => {
+    expect(roleHasPermission("administracion", "visits_update")).toBe(true);
+    expect(roleHasPermission("administracion", "visits_create")).toBe(false);
+  });
+
   it("allows follow-up work for the roles that keep it after the simplification", () => {
     expect(roleHasPermission("medico", "followups_write")).toBe(true);
     expect(roleHasPermission("direccion", "followups_read")).toBe(true);
