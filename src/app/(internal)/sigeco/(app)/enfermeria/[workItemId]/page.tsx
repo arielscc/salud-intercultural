@@ -4,6 +4,7 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import {
   createNursingApplicationAction,
@@ -36,6 +37,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
 
   const patient = item.visit.patient;
   const order = item.clinicalOrders[0];
+  const applicationOrderTypes = ["nursing_application", "serum", "medication"];
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -71,7 +73,12 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
         </Card>
 
         <Card>
-          <CardHeader title="Signos vitales" />
+          <CollapsibleSection
+            title="Signos vitales"
+            description="Registrar cuando la orden o la atención lo requieran."
+            defaultOpen={order?.type === "vital_signs"}
+            className="border-0 bg-transparent open:bg-transparent"
+          >
           <form action={createVitalSignsAction} className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
@@ -111,10 +118,16 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               </Button>
             </div>
           </form>
+          </CollapsibleSection>
         </Card>
 
         <Card>
-          <CardHeader title="Aplicación clínica" />
+          <CollapsibleSection
+            title="Aplicación clínica"
+            description="La indicación médica ya viene prellenada."
+            defaultOpen={order ? applicationOrderTypes.includes(order.type) : false}
+            className="border-0 bg-transparent open:bg-transparent"
+          >
           <form action={createNursingApplicationAction} className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
@@ -146,10 +159,16 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               <Button type="submit">Registrar aplicación</Button>
             </div>
           </form>
+          </CollapsibleSection>
         </Card>
 
         <Card>
-          <CardHeader title="Estudio" />
+          <CollapsibleSection
+            title="Estudio"
+            description="Registrar solo cuando exista una orden o resultado."
+            defaultOpen={order?.type === "study"}
+            className="border-0 bg-transparent open:bg-transparent"
+          >
           <form action={createStudyAction} className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
@@ -199,6 +218,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               </Button>
             </div>
           </form>
+          </CollapsibleSection>
         </Card>
       </div>
 

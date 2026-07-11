@@ -4,6 +4,7 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/features/clinical-care/actions";
 import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { routeAreaLabels } from "@/features/patients/labels";
+import { symptomDurationUnitLabels, visitIntakeTypeLabels } from "@/features/reception/labels";
 import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
@@ -27,6 +29,20 @@ type ConsultationDetailPageProps = {
   params: Promise<{ visitId: string }>;
 };
 
+function calculatePatientAge(birthDate: Date | null) {
+  if (!birthDate) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birthDate.getFullYear();
+  const monthDelta = now.getMonth() - birthDate.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birthDate.getDate())) age -= 1;
+  return age >= 0 ? age : null;
+}
+
+function yesNoLabel(value: boolean | null) {
+  if (value === null) return "Sin registro";
+  return value ? "Sí" : "No";
+}
+
 export default async function ConsultationDetailPage({ params }: ConsultationDetailPageProps) {
   await requirePermission("clinical_read");
   const { visitId } = await params;
@@ -37,6 +53,12 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
   const primaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "primary");
   const secondaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "secondary");
   const prescriptionItem = visit.prescriptions[0]?.items[0];
+  const age = calculatePatientAge(visit.patient.birthDate);
+  const symptomDuration =
+    visit.symptomDurationValue && visit.symptomDurationUnit
+      ? `${visit.symptomDurationValue} ${symptomDurationUnitLabels[visit.symptomDurationUnit].toLocaleLowerCase("es-BO")}`
+      : "Sin registro";
+  const consultationMotive = visit.clinicalConsultation?.motive ?? visit.reason ?? "Sin motivo registrado";
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -54,14 +76,16 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
             </div>
             <VisitStatusPill status={visit.status} />
           </div>
-          <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
-            {visit.patient.allergies ? (
-              <InfoRow label="Alergias" value={visit.patient.allergies} wide />
-            ) : null}
-            {visit.patient.relevantHistory ? (
-              <InfoRow label="Antecedentes" value={visit.patient.relevantHistory} wide />
-            ) : null}
-            {visit.reason ? <InfoRow label="Motivo recepción" value={visit.reason} wide /> : null}
+          <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
+            <InfoRow label="Motivo de consulta" value={visit.reason} wide />
+            <InfoRow label="Desde cuándo" value={symptomDuration} />
+            <InfoRow label="Tipo de visita" value={visitIntakeTypeLabels[visit.intakeType]} />
+            <InfoRow label="Atención previa por esto" value={yesNoLabel(visit.previouslyTreated)} />
+            <InfoRow label="Trae estudios" value={yesNoLabel(visit.bringsStudies)} />
+            <InfoRow label="Edad" value={age === null ? "Sin registro" : `${age} años`} />
+            <InfoRow label="Alergias" value={visit.patient.allergies} />
+            <InfoRow label="Enfermedad de base" value={visit.patient.relevantHistory} />
+            <InfoRow label="Medicación actual" value={visit.patient.currentMedication} wide />
           </dl>
         </Card>
 
@@ -72,14 +96,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
           />
           <form action={saveClinicalConsultationAction} className="grid gap-4">
             <input type="hidden" name="visitId" value={visit.id} />
-            <Field label="Motivo">
-              <textarea
-                className={`${internalInputClassName} min-h-24 py-3`}
-                name="motive"
-                defaultValue={visit.clinicalConsultation?.motive ?? visit.reason ?? ""}
-                required
-              />
-            </Field>
+            <input type="hidden" name="motive" value={consultationMotive} />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Diagnóstico principal">
                 <input
@@ -126,8 +143,11 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
               />
             </Field>
 
-            <fieldset className="grid gap-3 rounded-[9px] border border-border bg-background p-4">
-              <legend className="px-1 text-[13px] font-semibold text-text">Receta rápida</legend>
+            <CollapsibleSection
+              title="Receta rápida"
+              description="Abrir solo cuando se indique medicación."
+              defaultOpen={Boolean(prescriptionItem)}
+            >
               <Field label="Medicamento">
                 <input
                   className={internalInputClassName}
@@ -165,11 +185,17 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
                   defaultValue={prescriptionItem?.observations ?? ""}
                 />
               </Field>
-            </fieldset>
+            </CollapsibleSection>
 
-            <Field label="Evolución">
-              <textarea className={`${internalInputClassName} min-h-24 py-3`} name="evolutionNote" />
-            </Field>
+            <CollapsibleSection
+              title="Evolución"
+              description="Agregar una nota solo cuando corresponda documentar evolución."
+              defaultOpen={visit.clinicalEvolutions.length > 0}
+            >
+              <Field label="Nota de evolución">
+                <textarea className={`${internalInputClassName} min-h-24 py-3`} name="evolutionNote" />
+              </Field>
+            </CollapsibleSection>
             <div className="flex justify-end border-t border-border pt-4">
               <Button type="submit">Guardar consulta</Button>
             </div>
@@ -214,7 +240,12 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
         ) : null}
 
         <Card>
-          <CardHeader title="Indicación para otra área" />
+          <CollapsibleSection
+            title="Indicación para otra área"
+            description="Crear una orden solo si otra área debe intervenir."
+            defaultOpen={visit.clinicalOrders.length > 0}
+            className="border-0 bg-transparent open:bg-transparent"
+          >
           <form action={createClinicalOrderAction} className="grid gap-3">
             <input type="hidden" name="visitId" value={visit.id} />
             <Field label="Tipo">
@@ -250,6 +281,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
               Crear indicación
             </Button>
           </form>
+          </CollapsibleSection>
         </Card>
 
         <Card>

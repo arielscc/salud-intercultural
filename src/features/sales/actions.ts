@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createPaymentRecord, createSaleRecord } from "@/modules/database/queries/sales";
+import { findInsufficientStockError } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
 import {
   createPaymentSchema,
@@ -16,28 +17,51 @@ function parseFormData(formData: FormData) {
 
 export async function createSaleAction(formData: FormData) {
   const user = await requirePermission("sales_write");
-  const parsed = createSaleSchema.safeParse(parseFormData(formData));
+  const rawInput = parseFormData(formData);
+  const parsed = createSaleSchema.safeParse(rawInput);
 
   if (!parsed.success) {
-    redirect("/sigeco/administracion?error=invalid-sale");
+    const workItemId = typeof rawInput.workItemId === "string" ? rawInput.workItemId : "";
+    redirect(
+      workItemId
+        ? `/sigeco/administracion/${workItemId}?error=invalid-sale`
+        : "/sigeco/administracion?error=invalid-sale"
+    );
   }
 
-  const sale = await createSaleRecord({
-    patientId: parsed.data.patientId,
-    visitId: parsed.data.visitId,
-    workItemId: parsed.data.workItemId,
-    createdById: user.id,
-    itemType: parsed.data.itemType,
-    inventoryItemId: parsed.data.inventoryItemId,
-    description: parsed.data.description,
-    quantity: parsed.data.quantity,
-    unitPriceCents: moneyToCents(parsed.data.unitPrice),
-    discountCents: moneyToCents(parsed.data.discount),
-    initialPaymentCents: moneyToCents(parsed.data.initialPayment),
-    paymentMethodCode: parsed.data.paymentMethodCode,
-    paymentReference: parsed.data.paymentReference,
-    notes: parsed.data.notes
-  });
+  let sale;
+  try {
+    sale = await createSaleRecord({
+      patientId: parsed.data.patientId,
+      visitId: parsed.data.visitId,
+      workItemId: parsed.data.workItemId,
+      createdById: user.id,
+      itemType: parsed.data.itemType,
+      inventoryItemId: parsed.data.inventoryItemId,
+      description: parsed.data.description,
+      quantity: parsed.data.quantity,
+      unitPriceCents: moneyToCents(parsed.data.unitPrice),
+      discountCents: moneyToCents(parsed.data.discount),
+      initialPaymentCents: moneyToCents(parsed.data.initialPayment),
+      paymentMethodCode: parsed.data.paymentMethodCode,
+      paymentReference: parsed.data.paymentReference,
+      notes: parsed.data.notes
+    });
+  } catch (error) {
+    const stockError = findInsufficientStockError(error);
+    if (!stockError) throw error;
+
+    const query = new URLSearchParams({
+      error: "insufficient-stock",
+      product: stockError.itemName,
+      available: String(stockError.available),
+      requested: String(stockError.requested)
+    });
+    const target = parsed.data.workItemId
+      ? `/sigeco/administracion/${parsed.data.workItemId}`
+      : "/sigeco/administracion";
+    redirect(`${target}?${query.toString()}`);
+  }
 
   revalidatePath("/sigeco/administracion");
   if (parsed.data.workItemId) revalidatePath(`/sigeco/administracion/${parsed.data.workItemId}`);

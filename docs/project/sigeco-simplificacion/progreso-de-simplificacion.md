@@ -13,7 +13,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | 5 | Rol seguimiento y retiro de captacion | Completada (2026-07-11) |
 | 6 | Flujo de visita flexible | Completada (2026-07-11) |
 | 7 | Edicion de ficha de paciente | Completada (2026-07-11) |
-| 8 | Consulta medica prellenada y formularios simplificados | Pendiente |
+| 8 | Consulta medica prellenada y formularios simplificados | Completada (2026-07-11) |
 | 9 | Dashboard centrado en recepcion | Pendiente |
 | 10 | Documentacion y QA final | Pendiente |
 
@@ -187,3 +187,22 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** la edicion no verifica colision de telefono con otra ficha existente (la deteccion de duplicados vive en el alta); anotado para evaluar tras el QA con usuarios reales.
 
 **Commit sugerido:** `feat(sigeco): add patient record editing`
+
+### Tarea 8 — Consulta Medica Prellenada Y Formularios Simplificados (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: cabecera clinica con todo el contexto capturado en recepcion (motivo, duracion, tipo de visita, atencion previa, estudios, edad calculada, alergias, enfermedad de base y medicacion). El motivo deja de pedirse por segunda vez y se envia como dato de solo lectura al guardar la consulta. Receta, evolucion e indicacion para otra area pasan a secciones colapsables, abiertas solo cuando ya tienen contenido.
+- `src/components/internal/ui/CollapsibleSection.tsx`: patron reutilizable basado en `details/summary`, con estado nativo, foco visible e icono de expansion.
+- `src/app/(internal)/sigeco/(app)/enfermeria/[workItemId]/page.tsx`: signos vitales, aplicacion clinica y estudio quedan colapsados; se abre automaticamente el formulario que corresponde al tipo de orden medica. La indicacion sigue prellenando el registro de aplicacion o estudio.
+- `src/modules/database/queries/inventory.ts`: error tipado `InsufficientStockError` con producto, existencia y cantidad solicitada, manteniendo el rollback transaccional.
+- `src/features/sales/actions.ts` y `src/app/(internal)/sigeco/(app)/administracion/[workItemId]/page.tsx`: una venta con stock insuficiente vuelve a la misma tarea y muestra un error visible con cantidades; errores de formulario tambien vuelven al contexto de la tarea.
+- `src/modules/database/queries/inventory-error.test.ts` y `inventory.integration.test.ts`: cobertura del error envuelto y del rollback total de venta, item, cobro y movimiento de caja.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (20 archivos, 69 tests) y `pnpm test:integration` (10 archivos, 19 tests). Navegador autenticado en escritorio y 390px: resumen completo de consulta sin campo Motivo duplicado; formularios de enfermeria colapsados con Aplicacion clinica abierta para una orden de suero; alerta de stock visible sin overflow horizontal. Prueba real de venta: solicitud de 999 unidades con stock 61, rollback SQL y redirect con producto/cantidades correctos.
+
+**Pendientes que deja:** la Tarea 10 debe repetir estos caminos dentro del QA final por roles. Los formularios colapsables reducen carga visual sin retirar campos clinicos propios de cada area.
+
+**Commit sugerido:** `feat(sigeco): prefill consultation and simplify clinical forms`

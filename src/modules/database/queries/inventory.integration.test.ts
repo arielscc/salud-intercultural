@@ -5,6 +5,7 @@ import {
   addInventoryEntryRecord,
   createInventoryAdjustmentRecord,
   createInventoryItemRecord,
+  findInsufficientStockError,
   getInventoryItemById,
   getInventorySummary
 } from "@/modules/database/queries/inventory";
@@ -114,5 +115,44 @@ describe("inventory integration", () => {
     expect(detail?.currentStock).toBe(3);
     expect(detail?.movements).toHaveLength(2);
     expect(detail?.movements[0]?.type).toBe("authorized_manual_adjustment");
+  });
+
+  it("rejects sales above stock and rolls back the complete sale", async () => {
+    const patient = await createPatientRecord({
+      fullName: "Paciente Sin Stock",
+      phone: "+591 70000067",
+      captureSource: "whatsapp"
+    });
+    const item = await createInventoryItemRecord({
+      internalCode: "SI-SUERO-002",
+      name: "Suero Escaso",
+      initialStock: 2
+    });
+
+    let failure: unknown;
+    try {
+      await createSaleRecord({
+        patientId: patient.id,
+        itemType: "product",
+        inventoryItemId: item.id,
+        description: "Suero Escaso",
+        quantity: 3,
+        unitPriceCents: 10000,
+        initialPaymentCents: 30000,
+        paymentMethodCode: "cash"
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(findInsufficientStockError(failure)).toMatchObject({
+      itemName: "Suero Escaso",
+      available: 2,
+      requested: 3
+    });
+    expect(await prisma.sale.count()).toBe(0);
+    expect(await prisma.payment.count()).toBe(0);
+    expect(await prisma.cashMovement.count()).toBe(0);
+    expect((await getInventoryItemById(item.id))?.currentStock).toBe(2);
   });
 });

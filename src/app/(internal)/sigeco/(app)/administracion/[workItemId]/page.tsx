@@ -23,11 +23,21 @@ const paymentMethodOptions = Object.entries(paymentMethodLabels);
 
 type AdministrationWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
+  searchParams: Promise<{
+    error?: string;
+    product?: string;
+    available?: string;
+    requested?: string;
+  }>;
 };
 
-export default async function AdministrationWorkItemPage({ params }: AdministrationWorkItemPageProps) {
+export default async function AdministrationWorkItemPage({
+  params,
+  searchParams
+}: AdministrationWorkItemPageProps) {
   await requirePermission("sales_read");
   const { workItemId } = await params;
+  const query = await searchParams;
   const [item, inventoryItems] = await Promise.all([
     getAdministrationWorkItemById(workItemId),
     getInventoryItems({ pageSize: 100 })
@@ -41,6 +51,26 @@ export default async function AdministrationWorkItemPage({ params }: Administrat
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
       <div className="grid gap-4">
+        {query.error === "insufficient-stock" ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+          >
+            <p className="font-semibold">No hay stock suficiente para completar la venta.</p>
+            <p className="mt-1">
+              {query.product ?? "Producto"}: disponible {query.available ?? "0"}, solicitado{" "}
+              {query.requested ?? "-"}. La venta no fue creada ni se registró ningún cobro.
+            </p>
+          </div>
+        ) : null}
+        {query.error === "invalid-sale" ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+          >
+            Revisa los datos de la venta. La descripción, cantidad y precio son obligatorios.
+          </div>
+        ) : null}
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>

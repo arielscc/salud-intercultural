@@ -2,6 +2,28 @@ import type { InventoryMovementType, Prisma } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 
+export class InsufficientStockError extends Error {
+  constructor(
+    public readonly itemName: string,
+    public readonly available: number,
+    public readonly requested: number
+  ) {
+    super("INSUFFICIENT_STOCK");
+    this.name = "InsufficientStockError";
+  }
+}
+
+export function findInsufficientStockError(error: unknown): InsufficientStockError | null {
+  let current = error;
+
+  while (current instanceof Error) {
+    if (current instanceof InsufficientStockError) return current;
+    current = "cause" in current ? current.cause : undefined;
+  }
+
+  return null;
+}
+
 async function syncLowStockAlert(tx: Prisma.TransactionClient, itemId: string) {
   const item = await tx.inventoryItem.findUniqueOrThrow({
     where: { id: itemId }
@@ -55,7 +77,7 @@ export async function applyInventoryMovement(
   const stockAfter = item.currentStock + input.quantityDelta;
 
   if (stockAfter < 0) {
-    throw new Error("INSUFFICIENT_STOCK");
+    throw new InsufficientStockError(item.name, item.currentStock, Math.abs(input.quantityDelta));
   }
 
   await tx.inventoryItem.update({
