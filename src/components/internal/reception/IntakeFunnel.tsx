@@ -19,47 +19,25 @@ import {
   searchReceptionPatientsAction,
   submitReceptionIntakeAction
 } from "@/features/reception/actions";
+import {
+  calculateAge,
+  ChipOption,
+  cityChips,
+  cityStateFrom,
+  NO_KNOWN_ALLERGIES,
+  normalizePhone,
+  type CityChoice
+} from "@/components/internal/reception/funnel-fields";
 import { cn } from "@/lib/cn";
 
 type PatientMatch = Awaited<ReturnType<typeof searchReceptionPatientsAction>>[number];
 
-const NO_KNOWN_ALLERGIES = "Ninguna conocida";
-const cityChips = ["El Alto", "La Paz"] as const;
 const stepTitles: Record<number, string> = {
   1: "¿Quién es?",
   2: "¿A qué viene?",
   3: "Antecedentes rápidos",
   4: "Origen y seguimiento"
 };
-
-function ChipOption({
-  selected,
-  onClick,
-  children
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={cn(
-        "focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition",
-        selected
-          ? "border-primary bg-surface-soft text-primary-dark"
-          : "border-border bg-surface text-muted hover:border-primary/40 hover:text-text"
-      )}
-    >
-      {selected ? (
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
-      ) : null}
-      {children}
-    </button>
-  );
-}
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -69,33 +47,6 @@ function SubmitButton() {
       {pending ? "Registrando…" : "Registrar llegada"}
     </Button>
   );
-}
-
-function calculateAge(birthDate: string) {
-  if (!birthDate) return null;
-  const date = new Date(`${birthDate}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - date.getFullYear();
-  const monthDelta = now.getMonth() - date.getMonth();
-  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < date.getDate())) {
-    age -= 1;
-  }
-  return age >= 0 && age < 130 ? age : null;
-}
-
-function normalizePhone(phone: string) {
-  return phone.replace(/\D/g, "");
-}
-
-type CityChoice = "" | (typeof cityChips)[number] | "otra";
-
-function cityStateFrom(city: string | null | undefined): { choice: CityChoice; other: string } {
-  if (!city) return { choice: "", other: "" };
-  if ((cityChips as readonly string[]).includes(city)) {
-    return { choice: city as (typeof cityChips)[number], other: "" };
-  }
-  return { choice: "otra", other: city };
 }
 
 export function IntakeFunnel({

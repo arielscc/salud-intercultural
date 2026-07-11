@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  patientEditSchema,
   receptionIntakeSchema,
+  toPatientEditRecord,
   toReceptionIntakeRecord
 } from "@/features/reception/schemas/intake.schema";
 
@@ -93,5 +95,69 @@ describe("reception intake schema", () => {
     const record = toReceptionIntakeRecord(parsed.data);
     expect(record.visit.previouslyTreated).toBeUndefined();
     expect(record.visit.bringsStudies).toBeUndefined();
+  });
+});
+
+describe("patient edit schema", () => {
+  it("maps a full edit to a clean record", () => {
+    const parsed = patientEditSchema.safeParse({
+      patientId: "abc123",
+      fullName: "  Rosa   Huanca ",
+      phone: " 765-43210 ",
+      birthDate: "1986-02-20",
+      gender: "female",
+      city: "La Paz",
+      allergies: "Penicilina",
+      relevantHistory: "Hipertensión",
+      currentMedication: "Enalapril",
+      captureSource: "referral",
+      followUpPreference: "call"
+    });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    const record = toPatientEditRecord(parsed.data);
+    expect(record.patientId).toBe("abc123");
+    expect(record.data.fullName).toBe("Rosa Huanca");
+    expect(record.data.phone).toBe("765-43210");
+    expect(record.data.city).toBe("La Paz");
+    expect(record.data.followUpPreference).toBe("call");
+  });
+
+  it("clears optional fields that were emptied", () => {
+    const parsed = patientEditSchema.safeParse({
+      patientId: "abc123",
+      fullName: "Rosa Huanca",
+      phone: "76543210",
+      birthDate: "",
+      city: "",
+      allergies: "",
+      relevantHistory: "",
+      currentMedication: "",
+      followUpPreference: "unknown"
+    });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    const record = toPatientEditRecord(parsed.data);
+    expect(record.data.birthDate).toBeNull();
+    expect(record.data.city).toBeNull();
+    expect(record.data.allergies).toBeNull();
+    expect(record.data.relevantHistory).toBeNull();
+    expect(record.data.currentMedication).toBeNull();
+    expect(record.data.gender).toBe("unknown");
+  });
+
+  it("rejects an edit without patient id or with a bad phone", () => {
+    expect(
+      patientEditSchema.safeParse({ patientId: "", fullName: "Rosa Huanca", phone: "76543210" })
+        .success
+    ).toBe(false);
+    expect(
+      patientEditSchema.safeParse({ patientId: "abc", fullName: "Rosa Huanca", phone: "tel#malo" })
+        .success
+    ).toBe(false);
   });
 });

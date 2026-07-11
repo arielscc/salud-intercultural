@@ -12,7 +12,7 @@ Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacio
 | 4 | Fusionar Pacientes y Visitas en Recepcion | Completada (2026-07-10) |
 | 5 | Rol seguimiento y retiro de captacion | Completada (2026-07-11) |
 | 6 | Flujo de visita flexible | Completada (2026-07-11) |
-| 7 | Edicion de ficha de paciente | Pendiente |
+| 7 | Edicion de ficha de paciente | Completada (2026-07-11) |
 | 8 | Consulta medica prellenada y formularios simplificados | Pendiente |
 | 9 | Dashboard centrado en recepcion | Pendiente |
 | 10 | Documentacion y QA final | Pendiente |
@@ -160,3 +160,28 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes que deja:** enfermeria no tiene aun boton de salida propio (el paciente que termina en enfermeria se cierra desde el detalle de visita o administracion); puede evaluarse tras el QA con usuarios reales. El dashboard mostrara "abandonos del dia" en la Tarea 9.
 
 **Commit sugerido:** `feat(sigeco): support flexible visit flow and exits`
+
+### Tarea 7 — Edicion De Ficha De Paciente (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/components/internal/reception/funnel-fields.tsx`: modulo nuevo con las piezas compartidas del funnel (`ChipOption`, chips de ciudad, `cityStateFrom`, `calculateAge`, `normalizePhone`, constante `NO_KNOWN_ALLERGIES`); `IntakeFunnel.tsx` ahora importa de aqui (sin cambios de comportamiento, regresion verificada en navegador).
+- `src/components/internal/reception/PatientEditForm.tsx`: formulario cliente de edicion con los mismos chips y campos del funnel en 3 tarjetas (Identificacion, Antecedentes, Origen y seguimiento), estado espejado en inputs ocultos, validacion inline de nombre/telefono antes de enviar, edad calculada en vivo, boton Cancelar de vuelta a la ficha.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/editar/page.tsx`: pagina de edicion (permiso `patients_update`) con banner para `?error=invalid`.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: boton "Editar ficha" en la cabecera de la ficha, visible solo con `patients_update`.
+- `src/features/reception/schemas/intake.schema.ts` + `.test.ts`: `patientEditSchema` y `toPatientEditRecord` (mismos campos permanentes del funnel; a diferencia del intake, un campo vaciado se limpia a `null` en la ficha); 3 tests unitarios nuevos.
+- `src/features/reception/actions.ts`: `updateReceptionPatientAction` (permiso `patients_update`, invalido -> `?error=invalid`, exito -> revalida y vuelve a la ficha).
+- `src/modules/database/queries/reception.ts`: `updateReceptionPatient` (update simple por id, nunca crea registros).
+- `src/modules/database/queries/reception.integration.test.ts`: test nuevo "corrects patient data in place without creating duplicates" (mismo id y codigo interno, conteo de pacientes estable, campos corregidos y limpiados).
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (67), `pnpm test:integration` (18), `pnpm run build`. Navegador: boton "Editar ficha" en la ficha de Rosa -> formulario prellenado con los chips correctos (ciudad, genero, "Ninguna conocida") -> correccion real (ciudad a La Paz, medicacion actualizada) -> redirect a la ficha con los datos nuevos y conteo de pacientes intacto (verificado por SQL). El funnel sigue funcionando tras la extraccion de piezas compartidas. El rol `seguimiento` (solo `patients_read`) no ve el boton y `/editar` lo rebota a Inicio.
+
+**Nota de QA:** durante la primera prueba el dev server devolvio un 500 con TypeError en el submit; era cache corrupta de `.next` por haber corrido `pnpm build` con `next dev` activo (no un bug del codigo): tras reiniciar el server la edicion funciono. Evitar correr build y dev a la vez.
+
+**Datos de QA en dev:** la ficha SI-000002 (Rosa) quedo con ciudad "La Paz" y medicacion "Enalapril 10 mg cada noche" como evidencia de la edicion.
+
+**Pendientes que deja:** la edicion no verifica colision de telefono con otra ficha existente (la deteccion de duplicados vive en el alta); anotado para evaluar tras el QA con usuarios reales.
+
+**Commit sugerido:** `feat(sigeco): add patient record editing`

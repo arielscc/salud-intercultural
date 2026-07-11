@@ -3,7 +3,8 @@ import { hashPassword } from "@/features/internal-auth/password";
 import { prisma } from "@/modules/database";
 import {
   createReceptionIntake,
-  searchReceptionPatients
+  searchReceptionPatients,
+  updateReceptionPatient
 } from "@/modules/database/queries/reception";
 import { createPatientRecord } from "@/modules/database/queries/patients";
 
@@ -149,6 +150,41 @@ describe("reception intake integration", () => {
     expect(result.visit.intakeType).toBe("first_visit");
     expect(result.visit.bringsStudies).toBe(false);
     expect(result.visit.previouslyTreated).toBeNull();
+  });
+
+  it("corrects patient data in place without creating duplicates", async () => {
+    const existing = await createPatientRecord({
+      fullName: "Rosa Wanca",
+      phone: "+591 76543211",
+      city: "La Paz",
+      captureSource: "referral",
+      allergies: "Penicilina"
+    });
+
+    const updated = await updateReceptionPatient(existing.id, {
+      fullName: "Rosa Huanca",
+      phone: "76543210",
+      birthDate: new Date("1986-02-20"),
+      gender: "female",
+      city: "El Alto",
+      captureSource: "referral",
+      allergies: null,
+      relevantHistory: "Hipertensión",
+      currentMedication: null,
+      followUpPreference: "no_contact"
+    });
+
+    const patients = await prisma.patient.findMany();
+
+    expect(patients).toHaveLength(1);
+    expect(updated.id).toBe(existing.id);
+    expect(updated.internalCode).toBe(existing.internalCode);
+    expect(updated.fullName).toBe("Rosa Huanca");
+    expect(updated.phone).toBe("76543210");
+    expect(updated.city).toBe("El Alto");
+    expect(updated.allergies).toBeNull();
+    expect(updated.relevantHistory).toBe("Hipertensión");
+    expect(updated.followUpPreference).toBe("no_contact");
   });
 
   it("finds patients for prefill by name, phone and internal code", async () => {

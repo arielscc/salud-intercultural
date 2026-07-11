@@ -64,6 +64,49 @@ export const receptionIntakeSchema = z
 
 export type ReceptionIntakeInput = z.infer<typeof receptionIntakeSchema>;
 
+/*
+ * Edicion de ficha (Tarea 7): mismos campos permanentes del funnel.
+ * A diferencia del intake, un campo vaciado se limpia (null) en la ficha.
+ */
+export const patientEditSchema = z.object({
+  patientId: z.string().trim().min(1),
+  fullName: z.string().trim().min(2, "Ingresa el nombre completo.").max(160),
+  phone: z
+    .string()
+    .trim()
+    .min(6, "Ingresa un telefono valido.")
+    .max(30)
+    .regex(/^[+()\d\s-]+$/, "Ingresa un telefono valido."),
+  birthDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
+  gender: patientGenderSchema.default("unknown"),
+  city: z.preprocess(emptyToUndefined, z.string().trim().max(120).optional()),
+  allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
+  relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
+  currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
+  captureSource: patientCaptureSourceSchema.default("other"),
+  followUpPreference: followUpContactPreferenceSchema.default("unknown")
+});
+
+export type PatientEditInput = z.infer<typeof patientEditSchema>;
+
+export function toPatientEditRecord(input: PatientEditInput) {
+  return {
+    patientId: input.patientId,
+    data: {
+      fullName: cleanText(input.fullName),
+      phone: cleanText(input.phone),
+      birthDate: input.birthDate ?? null,
+      gender: input.gender,
+      city: input.city ? cleanText(input.city) : null,
+      captureSource: input.captureSource,
+      allergies: input.allergies ? cleanText(input.allergies) : null,
+      relevantHistory: input.relevantHistory ? cleanText(input.relevantHistory) : null,
+      currentMedication: input.currentMedication ? cleanText(input.currentMedication) : null,
+      followUpPreference: input.followUpPreference
+    }
+  };
+}
+
 export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
   return {
     patientId: input.patientId,

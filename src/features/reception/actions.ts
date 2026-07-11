@@ -4,12 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   createReceptionIntake,
-  searchReceptionPatients
+  searchReceptionPatients,
+  updateReceptionPatient
 } from "@/modules/database/queries/reception";
 import { findPossibleDuplicatePatients } from "@/modules/database/queries/patients";
 import { requirePermission } from "@/modules/permissions";
 import {
+  patientEditSchema,
   receptionIntakeSchema,
+  toPatientEditRecord,
   toReceptionIntakeRecord
 } from "@/features/reception/schemas/intake.schema";
 
@@ -61,4 +64,21 @@ export async function submitReceptionIntakeAction(formData: FormData) {
   revalidatePath("/sigeco/recepcion");
   revalidatePath(`/sigeco/recepcion/pacientes/${result.patientId}`);
   redirect(`/sigeco/recepcion/visitas/${result.visit.id}`);
+}
+
+export async function updateReceptionPatientAction(formData: FormData) {
+  await requirePermission("patients_update");
+  const parsed = patientEditSchema.safeParse(Object.fromEntries(formData.entries()));
+
+  if (!parsed.success) {
+    const patientId = String(formData.get("patientId") ?? "");
+    redirect(`/sigeco/recepcion/pacientes/${encodeURIComponent(patientId)}/editar?error=invalid`);
+  }
+
+  const record = toPatientEditRecord(parsed.data);
+  await updateReceptionPatient(record.patientId, record.data);
+
+  revalidatePath("/sigeco/recepcion");
+  revalidatePath(`/sigeco/recepcion/pacientes/${record.patientId}`);
+  redirect(`/sigeco/recepcion/pacientes/${record.patientId}`);
 }

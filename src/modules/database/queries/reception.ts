@@ -84,6 +84,29 @@ const receptionPatientSelect = {
   followUpPreference: true
 } as const;
 
+export type ReceptionPatientEditData = {
+  fullName: string;
+  phone: string;
+  birthDate: Date | null;
+  gender: PatientGender;
+  city: string | null;
+  captureSource: PatientCaptureSource;
+  allergies: string | null;
+  relevantHistory: string | null;
+  currentMedication: string | null;
+  followUpPreference: FollowUpContactPreference;
+};
+
+export async function updateReceptionPatient(id: string, data: ReceptionPatientEditData) {
+  return withDatabaseError("updateReceptionPatient", async () => {
+    return prisma.patient.update({
+      where: { id },
+      data,
+      select: receptionPatientSelect
+    });
+  });
+}
+
 export async function getReceptionPatientById(id: string) {
   return withDatabaseError("getReceptionPatientById", async () => {
     return prisma.patient.findUnique({

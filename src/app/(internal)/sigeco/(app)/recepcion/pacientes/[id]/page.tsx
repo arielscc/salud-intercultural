@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { UserRoundPlus } from "lucide-react";
+import { PencilLine, UserRoundPlus } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
@@ -41,10 +41,23 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
       <div className="grid gap-4">
         <Card>
-          <p className="text-xs font-medium tabular-nums text-muted">{patient.internalCode}</p>
-          <h2 className="font-sora text-xl font-bold tracking-tight text-text">
-            {patient.fullName}
-          </h2>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium tabular-nums text-muted">{patient.internalCode}</p>
+              <h2 className="font-sora text-xl font-bold tracking-tight text-text">
+                {patient.fullName}
+              </h2>
+            </div>
+            {roleHasPermission(user.role, "patients_update") ? (
+              <Link
+                href={`/sigeco/recepcion/pacientes/${patient.id}/editar`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              >
+                <PencilLine className="h-4 w-4" aria-hidden="true" />
+                Editar ficha
+              </Link>
+            ) : null}
+          </div>
           <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
             <InfoRow label="Teléfono" value={patient.phone} />
             {patient.secondaryPhone ? (

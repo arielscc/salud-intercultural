@@ -1,0 +1,44 @@
+import { notFound } from "next/navigation";
+import { PatientEditForm } from "@/components/internal/reception/PatientEditForm";
+import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { getReceptionPatientById } from "@/modules/database/queries/reception";
+import { requirePermission } from "@/modules/permissions";
+
+type PatientEditPageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
+};
+
+export default async function PatientEditPage({ params, searchParams }: PatientEditPageProps) {
+  await requirePermission("patients_update");
+  const [{ id }, { error }] = await Promise.all([params, searchParams]);
+  const patient = await getReceptionPatientById(id);
+
+  if (!patient) notFound();
+
+  return (
+    <div className="mx-auto grid w-full max-w-2xl gap-4">
+      <PageHeader
+        title="Editar ficha"
+        description={`${patient.internalCode} · ${patient.fullName}`}
+      />
+
+      {error === "invalid" ? (
+        <div className="rounded-[9px] bg-error/10 px-4 py-3 text-sm">
+          <p className="flex items-center gap-1.5 font-semibold text-error">
+            <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+            No se pudieron guardar los cambios
+          </p>
+          <p className="mt-1 text-muted">Revisa el nombre y el teléfono e inténtalo de nuevo.</p>
+        </div>
+      ) : null}
+
+      <PatientEditForm
+        patient={{
+          ...patient,
+          birthDate: patient.birthDate ? patient.birthDate.toISOString().slice(0, 10) : ""
+        }}
+      />
+    </div>
+  );
+}
