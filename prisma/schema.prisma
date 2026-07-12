@@ -424,6 +424,7 @@ model Patient {
   department            String?
   address               String?
   captureSource         PatientCaptureSource      @default(other)
+  captureSources        PatientCaptureSource[]    @default([])
   firstVisitAt          DateTime?
   generalObservations   String?
   allergies             String?

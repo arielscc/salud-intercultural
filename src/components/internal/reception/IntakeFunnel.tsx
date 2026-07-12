@@ -94,7 +94,9 @@ export function IntakeFunnel({
     initialPatient?.currentMedication ?? ""
   );
 
-  const [captureSource, setCaptureSource] = useState(initialPatient?.captureSource ?? "");
+  const [captureSources, setCaptureSources] = useState<string[]>(
+    initialPatient?.captureSources ?? []
+  );
   const [followUpPreference, setFollowUpPreference] = useState(
     initialPatient && initialPatient.followUpPreference !== "unknown"
       ? initialPatient.followUpPreference
@@ -104,6 +106,12 @@ export function IntakeFunnel({
   const age = calculateAge(birthDate);
   const city = cityChoice === "otra" ? cityOther : cityChoice;
   const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
+
+  function toggleCaptureSource(value: string) {
+    setCaptureSources((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
+  }
 
   function prefillFromPatient(patient: PatientMatch) {
     setExistingPatient(patient);
@@ -118,7 +126,7 @@ export function IntakeFunnel({
     setAllergies(patient.allergies === NO_KNOWN_ALLERGIES ? "" : (patient.allergies ?? ""));
     setRelevantHistory(patient.relevantHistory ?? "");
     setCurrentMedication(patient.currentMedication ?? "");
-    setCaptureSource(patient.captureSource);
+    setCaptureSources(patient.captureSources);
     setFollowUpPreference(patient.followUpPreference === "unknown" ? "" : patient.followUpPreference);
     setPhoneMatches([]);
     setStepError(null);
@@ -210,7 +218,7 @@ export function IntakeFunnel({
       <input type="hidden" name="allergies" value={resolvedAllergies} />
       <input type="hidden" name="relevantHistory" value={relevantHistory} />
       <input type="hidden" name="currentMedication" value={currentMedication} />
-      <input type="hidden" name="captureSource" value={captureSource || "other"} />
+      <input type="hidden" name="captureSources" value={captureSources.join(",")} />
       <input type="hidden" name="followUpPreference" value={followUpPreference || "unknown"} />
       {allowDuplicate ? <input type="hidden" name="allowDuplicate" value="true" /> : null}
 
@@ -535,13 +543,13 @@ export function IntakeFunnel({
 
       <Card className={cn("grid gap-4", step === 4 ? "" : "hidden")}>
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
-          <span>¿Cómo nos conoció?</span>
+          <span>¿Cómo nos conoció? (puede elegir varios)</span>
           <div className="flex flex-wrap gap-2">
             {Object.entries(patientCaptureSourceLabels).map(([value, label]) => (
               <ChipOption
                 key={value}
-                selected={captureSource === value}
-                onClick={() => setCaptureSource(captureSource === value ? "" : value)}
+                selected={captureSources.includes(value)}
+                onClick={() => toggleCaptureSource(value)}
               >
                 {label}
               </ChipOption>

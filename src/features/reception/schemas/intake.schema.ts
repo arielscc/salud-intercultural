@@ -26,6 +26,12 @@ export const followUpContactPreferenceSchema = z.enum([
 
 const yesNoSchema = z.enum(["yes", "no"]);
 
+/* El form serializa las fuentes multiples como "a,b,c" en un input oculto. */
+const captureSourcesSchema = z.preprocess(
+  (value) => (typeof value === "string" ? (value === "" ? [] : value.split(",")) : value),
+  z.array(patientCaptureSourceSchema).max(9).default([])
+);
+
 export const receptionIntakeSchema = z
   .object({
     patientId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
@@ -51,7 +57,7 @@ export const receptionIntakeSchema = z
     allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
     relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
     currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
-    captureSource: patientCaptureSourceSchema.default("other"),
+    captureSources: captureSourcesSchema,
     followUpPreference: followUpContactPreferenceSchema.default("unknown")
   })
   .refine(
@@ -83,7 +89,7 @@ export const patientEditSchema = z.object({
   allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
   relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
   currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
-  captureSource: patientCaptureSourceSchema.default("other"),
+  captureSources: captureSourcesSchema,
   followUpPreference: followUpContactPreferenceSchema.default("unknown")
 });
 
@@ -98,7 +104,8 @@ export function toPatientEditRecord(input: PatientEditInput) {
       birthDate: input.birthDate ?? null,
       gender: input.gender,
       city: input.city ? cleanText(input.city) : null,
-      captureSource: input.captureSource,
+      captureSource: input.captureSources[0] ?? "other",
+      captureSources: input.captureSources,
       allergies: input.allergies ? cleanText(input.allergies) : null,
       relevantHistory: input.relevantHistory ? cleanText(input.relevantHistory) : null,
       currentMedication: input.currentMedication ? cleanText(input.currentMedication) : null,
@@ -116,7 +123,8 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
       birthDate: input.birthDate,
       gender: input.gender,
       city: input.city ? cleanText(input.city) : undefined,
-      captureSource: input.captureSource,
+      captureSource: input.captureSources[0] ?? "other",
+      captureSources: input.captureSources,
       allergies: input.allergies ? cleanText(input.allergies) : undefined,
       relevantHistory: input.relevantHistory ? cleanText(input.relevantHistory) : undefined,
       currentMedication: input.currentMedication ? cleanText(input.currentMedication) : undefined,

@@ -65,7 +65,16 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             ) : null}
             <InfoRow label="Género" value={patientGenderLabels[patient.gender]} />
             {patient.city ? <InfoRow label="Ciudad" value={patient.city} /> : null}
-            <InfoRow label="Fuente" value={patientCaptureSourceLabels[patient.captureSource]} />
+            <InfoRow
+              label="Fuente"
+              value={
+                patient.captureSources.length > 0
+                  ? patient.captureSources
+                      .map((source) => patientCaptureSourceLabels[source])
+                      .join(" · ")
+                  : patientCaptureSourceLabels[patient.captureSource]
+              }
+            />
             <InfoRow
               label="Seguimiento"
               value={followUpContactPreferenceLabels[patient.followUpPreference]}

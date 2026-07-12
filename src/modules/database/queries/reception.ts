@@ -19,6 +19,7 @@ export type ReceptionIntakeRecordInput = {
     gender?: PatientGender;
     city?: string;
     captureSource?: PatientCaptureSource;
+    captureSources?: PatientCaptureSource[];
     allergies?: string;
     relevantHistory?: string;
     currentMedication?: string;
@@ -79,6 +80,7 @@ const receptionPatientSelect = {
   gender: true,
   city: true,
   captureSource: true,
+  captureSources: true,
   allergies: true,
   relevantHistory: true,
   currentMedication: true,
@@ -92,6 +94,7 @@ export type ReceptionPatientEditData = {
   gender: PatientGender;
   city: string | null;
   captureSource: PatientCaptureSource;
+  captureSources: PatientCaptureSource[];
   allergies: string | null;
   relevantHistory: string | null;
   currentMedication: string | null;

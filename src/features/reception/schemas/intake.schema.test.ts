@@ -18,8 +18,9 @@ describe("reception intake schema", () => {
     if (!parsed.success) return;
     expect(parsed.data.gender).toBe("unknown");
     expect(parsed.data.intakeType).toBe("first_visit");
-    expect(parsed.data.captureSource).toBe("other");
+    expect(parsed.data.captureSources).toEqual([]);
     expect(parsed.data.followUpPreference).toBe("unknown");
+    expect(toReceptionIntakeRecord(parsed.data).patient.captureSource).toBe("other");
   });
 
   it("rejects a funnel without reason", () => {
@@ -61,7 +62,7 @@ describe("reception intake schema", () => {
       allergies: "Ninguna conocida",
       relevantHistory: "Diabetes tipo 2",
       currentMedication: "Metformina",
-      captureSource: "referral",
+      captureSources: "referral,facebook_ads",
       followUpPreference: "whatsapp"
     });
 
@@ -72,6 +73,8 @@ describe("reception intake schema", () => {
     expect(record.patientId).toBeUndefined();
     expect(record.patient.fullName).toBe("Maria Quispe");
     expect(record.patient.phone).toBe("+591 71234567");
+    expect(record.patient.captureSources).toEqual(["referral", "facebook_ads"]);
+    expect(record.patient.captureSource).toBe("referral");
     expect(record.patient.followUpPreference).toBe("whatsapp");
     expect(record.visit.reason).toBe("Dolor de espalda");
     expect(record.visit.symptomDurationValue).toBe(3);
@@ -110,7 +113,7 @@ describe("patient edit schema", () => {
       allergies: "Penicilina",
       relevantHistory: "Hipertensión",
       currentMedication: "Enalapril",
-      captureSource: "referral",
+      captureSources: "referral,whatsapp",
       followUpPreference: "call"
     });
 
@@ -122,7 +125,20 @@ describe("patient edit schema", () => {
     expect(record.data.fullName).toBe("Rosa Huanca");
     expect(record.data.phone).toBe("765-43210");
     expect(record.data.city).toBe("La Paz");
+    expect(record.data.captureSources).toEqual(["referral", "whatsapp"]);
+    expect(record.data.captureSource).toBe("referral");
     expect(record.data.followUpPreference).toBe("call");
+  });
+
+  it("rejects an unknown capture source in the list", () => {
+    const parsed = patientEditSchema.safeParse({
+      patientId: "abc123",
+      fullName: "Rosa Huanca",
+      phone: "76543210",
+      captureSources: "referral,invalido"
+    });
+
+    expect(parsed.success).toBe(false);
   });
 
   it("clears optional fields that were emptied", () => {

@@ -35,6 +35,7 @@ export async function createPatientRecord(input: CreatePatientRecordInput) {
           department: input.department,
           address: input.address,
           captureSource: input.captureSource ?? "other",
+          captureSources: input.captureSource ? [input.captureSource] : [],
           generalObservations: input.generalObservations,
           allergies: input.allergies,
           relevantHistory: input.relevantHistory

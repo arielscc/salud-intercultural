@@ -252,3 +252,34 @@ Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones s
 **Pendientes posteriores:** auditoria append-only, storage clinico seguro, auditoria formal de privacidad/permisos, backup/restauracion, realtime/polling, staging aislado, vulnerabilidades altas y GitHub Actions. Lista priorizada en [Estado de implementacion V3](../v3-implementation-status.md).
 
 **Commit sugerido:** `docs(sigeco): document simplification and run final qa`
+
+## Ajustes Post-Cierre (2026-07-11)
+
+Correcciones pedidas por el usuario durante su QA manual con la guia de flujo completo.
+
+### Chips sin punto al seleccionar
+
+- `src/components/internal/reception/funnel-fields.tsx`: `ChipOption` ya no muestra el punto al inicio del chip seleccionado; la seleccion se distingue solo por borde, fondo y color de texto. Aplica a funnel y edicion de ficha (componente compartido).
+- Validaciones: lint y tests unitarios.
+
+**Commit sugerido:** `style(sigeco): remove dot from selected chips`
+
+### Fuentes de captacion multiples
+
+"Como nos conocio?" permite elegir una o varias fuentes.
+
+- `prisma/schema.prisma` + `prisma/migrations/20260711200000_multi_capture_sources/`: campo nuevo `Patient.captureSources PatientCaptureSource[]` (aditivo) con backfill desde `captureSource`. El campo unico se conserva y sigue guardando la primera fuente elegida (compatibilidad con datos y consultas existentes).
+- `src/features/reception/schemas/intake.schema.ts` + `.test.ts`: el form serializa la lista como CSV en un input oculto (`captureSources`); el schema la parsea y valida contra el enum; `captureSource` se deriva de la primera. 4 tests actualizados/nuevos (incluye rechazo de fuente desconocida).
+- `src/modules/database/queries/reception.ts`: tipos y select incluyen `captureSources`; `src/modules/database/queries/patients.ts`: el alta legacy mantiene el invariante (`captureSources = [captureSource]`).
+- `src/components/internal/reception/IntakeFunnel.tsx` y `PatientEditForm.tsx`: chips de fuente con toggle multiple y label "(puede elegir varios)"; el prellenado desde ficha existente carga la lista.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: "Fuente" muestra todas las fuentes separadas por " · ".
+- `src/modules/database/queries/reception.integration.test.ts`: la edicion verifica la lista persistida.
+- `docs/operations/sigeco-v3-full-flow-testing.md`: la guia usa dos fuentes (Referido + Facebook Ads) en el paso 4.
+
+Validaciones: lint, typecheck, `pnpm test` (70), `pnpm test:integration` (21), build. Navegador: edicion de SI-000002 con dos fuentes (base: `{referral,facebook_ads}`, ficha "Referido · Facebook Ads") y funnel nuevo completo con TikTok + Volante (SI-000004, base `{tiktok,flyer}`, `captureSource=tiktok`).
+
+Datos de QA en dev: paciente nuevo SI-000004 "Paciente QA Fuentes" con una visita abierta.
+
+Nota operativa: si `next dev` estaba corriendo al aplicar la migracion, hay que reiniciarlo para que cargue el cliente Prisma regenerado (el server viejo da `PrismaClientValidationError`).
+
+**Commit sugerido:** `feat(sigeco): allow multiple capture sources`

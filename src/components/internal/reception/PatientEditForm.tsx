@@ -30,7 +30,7 @@ export type EditablePatient = {
   birthDate: string;
   gender: string;
   city: string | null;
-  captureSource: string;
+  captureSources: string[];
   allergies: string | null;
   relevantHistory: string | null;
   currentMedication: string | null;
@@ -64,7 +64,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
   const [relevantHistory, setRelevantHistory] = useState(patient.relevantHistory ?? "");
   const [currentMedication, setCurrentMedication] = useState(patient.currentMedication ?? "");
 
-  const [captureSource, setCaptureSource] = useState(patient.captureSource);
+  const [captureSources, setCaptureSources] = useState<string[]>(patient.captureSources);
   const [followUpPreference, setFollowUpPreference] = useState(
     patient.followUpPreference === "unknown" ? "" : patient.followUpPreference
   );
@@ -72,6 +72,12 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
   const age = calculateAge(birthDate);
   const city = cityChoice === "otra" ? cityOther : cityChoice;
   const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
+
+  function toggleCaptureSource(value: string) {
+    setCaptureSources((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
+  }
 
   function validateBeforeSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (fullName.trim().length < 2) {
@@ -102,7 +108,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       <input type="hidden" name="allergies" value={resolvedAllergies} />
       <input type="hidden" name="relevantHistory" value={relevantHistory} />
       <input type="hidden" name="currentMedication" value={currentMedication} />
-      <input type="hidden" name="captureSource" value={captureSource || "other"} />
+      <input type="hidden" name="captureSources" value={captureSources.join(",")} />
       <input type="hidden" name="followUpPreference" value={followUpPreference || "unknown"} />
 
       <Card className="grid gap-4">
@@ -219,13 +225,13 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       <Card className="grid gap-4">
         <CardHeader title="Origen y seguimiento" className="mb-0" />
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
-          <span>¿Cómo nos conoció?</span>
+          <span>¿Cómo nos conoció? (puede elegir varios)</span>
           <div className="flex flex-wrap gap-2">
             {Object.entries(patientCaptureSourceLabels).map(([value, label]) => (
               <ChipOption
                 key={value}
-                selected={captureSource === value}
-                onClick={() => setCaptureSource(captureSource === value ? "" : value)}
+                selected={captureSources.includes(value)}
+                onClick={() => toggleCaptureSource(value)}
               >
                 {label}
               </ChipOption>
