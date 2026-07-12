@@ -1,17 +1,21 @@
 # Prueba Del Flujo Completo Sigeco V3.7
 
-Guia operativa para validar el flujo vigente desde recepcion hasta cierre o seguimiento.
+Guia operativa y guiada para validar el flujo vigente desde recepcion hasta cierre o seguimiento. Esta pensada para ejecutarse a mano, pantalla por pantalla, con un paciente simulado y datos exactos para cada campo.
+
+**Tiempo estimado:** 60 a 90 minutos completa; las secciones 1 a 9 (flujo clinico) toman unos 40 minutos.
+
+**Como usar esta guia:** cada seccion indica la ruta, que hacer con valores concretos, el resultado esperado y, cuando aplica, un error intencional para confirmar que el sistema lo rechaza bien. Ejecuta en orden: las secciones reutilizan al paciente creado al inicio.
 
 ## Objetivo
 
 Confirmar que:
 
-- El paciente se registra una sola vez.
+- El paciente se registra una sola vez (una ficha, muchas visitas).
 - Cada llegada abre una visita independiente.
 - Consulta recibe el contexto de recepcion sin volver a pedirlo.
 - Las tareas llegan al area correcta.
-- La salida o abandono queda trazado.
-- Ventas, pagos y stock son consistentes.
+- La salida o abandono queda trazado en el historial.
+- Ventas, pagos y stock son consistentes (y el stock insuficiente se rechaza sin efectos).
 - Los permisos impiden acceso a modulos no autorizados.
 
 ## Preparacion
@@ -26,179 +30,298 @@ Usar solo base local o staging aislado. Nunca ejecutar QA destructivo contra pro
 
 Requisitos:
 
-- Usuario `super_admin` local.
-- Un producto activo con stock suficiente.
-- Viewports 390x844 y 1440x900.
-- Herramientas del navegador abiertas para revisar errores.
+- Usuario `super_admin` local (por defecto `test@test.si`; el password no se documenta).
+- Un producto activo en `/sigeco/inventario`. Antes de empezar, abre ese modulo y anota el **nombre y stock actual** del primer producto; lo usaras en la seccion 8.
+- Viewports 390x844 (movil) y 1440x900 (escritorio).
+- Consola del navegador abierta para detectar errores.
 
-No registrar passwords en reportes o commits.
+Advertencias:
 
-## Escenario Base
+- No registrar passwords en reportes o commits.
+- **No ejecutar `pnpm run build` mientras `next dev` este corriendo**: corrompe la cache de `.next` y los formularios devuelven error 500 hasta reiniciar el servidor.
+- Si algun dato sugerido (ej. el telefono) ya existe en tu base, cambia los ultimos digitos y anota el valor usado.
 
-Usar datos facilmente identificables, por ejemplo:
+## Paciente Simulado
 
-| Campo | Valor sugerido |
+Todo el recorrido usa a esta persona ficticia. Ten la tabla a mano: cada seccion indica cuando usar cada valor.
+
+| Campo | Valor a ingresar | Donde se usa |
+| --- | --- | --- |
+| Nombre completo | `Julia Mamani Condori` | Funnel paso 1 |
+| Telefono | `71112233` | Funnel paso 1 |
+| Fecha de nacimiento | `1979-03-15` | Funnel paso 1 (debe mostrar 47 anos) |
+| Ciudad | chip `El Alto` | Funnel paso 1 |
+| Genero | chip `Femenino` | Funnel paso 1 |
+| Motivo | `Dolor de cabeza fuerte` | Funnel paso 2 |
+| Desde cuando | `3` + chip `Dias` | Funnel paso 2 |
+| Tipo de visita | chip `Primera consulta` | Funnel paso 2 |
+| Ya se atendio antes | chip `No` | Funnel paso 2 |
+| Trae estudios | chip `No` | Funnel paso 2 |
+| Alergias | chip `Ninguna conocida` | Funnel paso 3 |
+| Enfermedad de base | `Hipertension` | Funnel paso 3 |
+| Medicacion actual | `Enalapril 10 mg cada manana` | Funnel paso 3 |
+| Como nos conocio | chip `Referido` | Funnel paso 4 |
+| Contacto para seguimiento | chip `WhatsApp` | Funnel paso 4 |
+
+Segundo personaje, solo para la prueba de duplicados (seccion 2, error B):
+
+| Campo | Valor |
 | --- | --- |
-| Nombre | `Paciente QA V37` |
-| Telefono | Numero local no usado |
-| Motivo | `Prueba completa V3.7` |
-| Tipo | `Primera consulta` |
-| Preferencia | `WhatsApp` |
+| Nombre | `Pedro Choque Flores` |
+| Telefono | `711-12233` (mismos 8 digitos que Julia, con guion a proposito) |
 
 ## 1. Login Y Dashboard
 
-1. Abrir `/sigeco/login`.
-2. Ingresar con el usuario QA.
-3. Confirmar dashboard, rol y navegacion.
-4. Verificar KPIs: pacientes de hoy, activas, abandonos, seguimientos y stock.
-5. Confirmar accesos `Buscar paciente` y `Registrar llegada` segun permisos.
+Ruta: `/sigeco/login`.
 
-## 2. Recepcion Y Funnel
+**Error intencional A — credenciales malas:** ingresa el email correcto con un password incorrecto. Esperado: mensaje de fallo generico que NO revela si la cuenta existe, y el email se conserva en el campo.
 
-1. Abrir `/sigeco/recepcion/nuevo`.
-2. Buscar por telefono para comprobar que no exista duplicado.
-3. Elegir `Es paciente nuevo`.
-4. Completar nombre y telefono.
-5. Completar motivo. El resto es opcional.
-6. Registrar llegada.
+Luego ingresa con las credenciales correctas.
 
-Resultado esperado:
+Verificar en `/sigeco` (dashboard "Trabajo de hoy"):
 
-- Se crea una ficha y una visita.
-- La visita queda `En recepcion` con ruta activa.
-- Existe check-in, historial y tarea de recepcion.
-- El dashboard incrementa pacientes del dia y visitas activas.
+1. Sidebar con 7 secciones: Inicio, Recepcion, Consulta, Enfermeria, Caja, Seguimiento, Inventario.
+2. Seis KPIs: `Pacientes de hoy`, `Visitas activas`, `Abandonos hoy`, `Seguimientos hoy`, `Seguimientos vencidos`, `Stock bajo`. Anota los valores iniciales: los compararas al final.
+3. Tarjeta `Visitas activas por area` y tabla `Ultimas llegadas`.
+4. Accesos rapidos `Buscar paciente` y `Registrar llegada` en la cabecera.
 
-Repetir desde la ficha con `Registrar llegada` para confirmar que una nueva visita no duplica al paciente.
+**Por que importa:** el dashboard es la foto operativa del dia; si sus conteos no cambian con tus acciones, hay un bug de conteo o de revalidacion.
 
-## 3. Edicion De Paciente
+## 2. Recepcion Y Funnel (Registrar A Julia)
 
-1. Abrir la ficha desde `Recepcion -> Pacientes`.
-2. Elegir `Editar ficha`.
-3. Corregir ciudad, antecedentes o preferencia.
-4. Guardar.
+Ruta: `/sigeco/recepcion/nuevo` (o el boton `Registrar llegada`).
 
-Resultado esperado: mismo ID y codigo interno, sin nuevo paciente.
+### Paso 0 — Busqueda previa
 
-## 4. Consulta Prellenada
+1. En "Ya nos visito antes?" escribe `71112233` y pulsa `Buscar`.
+2. Esperado: "Sin resultados. Registralo como paciente nuevo."
+3. Pulsa `Es paciente nuevo`.
 
-1. Derivar la visita a `Medico / En consulta`.
-2. Abrirla desde `/sigeco/consultas`.
-3. Confirmar motivo, duracion, tipo, atencion previa, estudios, edad, alergias, enfermedad de base y medicacion.
-4. Confirmar que el motivo no se solicita de nuevo.
-5. Registrar diagnostico principal y datos clinicos necesarios.
-6. Abrir receta, evolucion u orden solo si se usan.
+### Paso 1 — Quien es?
 
-Resultado esperado: consulta guardada y contexto de recepcion intacto.
+1. Nombre completo: `Julia Mamani Condori`.
+2. Telefono: `71112233`.
 
-## 5. Caminos De Salida
+**Error intencional B — telefono invalido:** antes de llenar bien el telefono, escribe `abc` y pulsa `Continuar`. Esperado: mensaje inline "Ingresa un telefono valido." y el funnel no avanza. Corrige a `71112233`.
 
-Probar en visitas separadas:
+3. Fecha de nacimiento: `15/03/1979` (con el selector de fecha). Esperado: el label cambia a "Fecha de nacimiento (47 anos)".
+4. Ciudad: toca el chip `El Alto` (opciones: El Alto, La Paz, Otra; "Otra" abre un campo de texto).
+5. Genero: toca `Femenino` (opciones: Femenino, Masculino, Otro; es opcional y se puede destildar).
+6. Pulsa `Continuar`.
 
-### Consulta A Enfermeria
+### Paso 2 — A que viene?
 
-1. Crear orden para enfermeria.
-2. Elegir `Enviar a enfermeria`.
-3. Confirmar tarea en `/sigeco/enfermeria`.
+1. Motivo: `Dolor de cabeza fuerte`.
 
-### Consulta A Administracion
+**Error intencional C — duracion incompleta:** escribe `3` en la cantidad de "Desde cuando?" SIN elegir unidad y pulsa `Continuar`. Esperado: "Para desde cuando completa la cantidad y la unidad, o deja ambas vacias."
 
-1. Crear orden administrativa.
-2. Elegir `Enviar a administracion`.
-3. Confirmar pendiente en `/sigeco/administracion`.
+2. Toca el chip `Dias` (opciones: Dias, Semanas, Meses, Anos).
+3. Tipo de visita: `Primera consulta` (opciones: Primera consulta, Control de tratamiento, Nuevo problema, Revision de resultados).
+4. "Ya se atendio antes por esto?": chip `No`.
+5. "Trae analisis o estudios?": chip `No`.
+6. `Continuar`.
 
-### Salida Directa
+### Paso 3 — Antecedentes rapidos
 
-1. Elegir `Se va - cerrar visita`.
-2. Confirmar estado final y ruta inactiva.
+1. Alergias: toca el chip `Ninguna conocida` (el campo de texto se oculta).
+2. Enfermedad de base: `Hipertension`.
+3. Medicacion actual: `Enalapril 10 mg cada manana`.
+4. `Continuar`.
 
-### Abandono
+### Paso 4 — Origen y seguimiento
 
-1. Desde una visita activa elegir `Se retiro sin completar`.
-2. Confirmar que sale de la lista activa.
-3. Abrir el detalle y revisar area, nota e historial.
-4. Confirmar que no aparecen acciones de cierre o derivacion.
-5. Intentar una transicion server-side en pruebas: debe devolver `VISIT_ALREADY_CLOSED`.
+1. "Como nos conocio?": chip `Referido` (opciones: Facebook Ads, Facebook organico, TikTok, WhatsApp, Referido, Paciente anterior, Volante, Sitio web, Otro).
+2. "Podemos contactarlo para seguimiento?": chip `WhatsApp` (opciones: WhatsApp, Llamada, Ambos, Prefiere no recibir seguimiento).
+3. Pulsa `Registrar llegada`.
+
+### Resultado esperado
+
+- Redirige al detalle de la visita nueva: Julia con codigo `SI-XXXXXX`, estado `En recepcion`, area `Recepcion`.
+- "Ruta del paciente" muestra un paso: Recepcion, "Llegada registrada en recepcion".
+- En `/sigeco` los KPIs `Pacientes de hoy` y `Visitas activas` suben en 1 y Julia aparece en `Ultimas llegadas`.
+
+**Por que importa:** este es el unico punto de entrada de pacientes; solo nombre, telefono y motivo son obligatorios para que el registro tome 2-3 minutos.
+
+### Error intencional D — telefono duplicado
+
+1. Vuelve a `/sigeco/recepcion/nuevo`, pulsa `Es paciente nuevo`.
+2. Nombre: `Pedro Choque Flores`. Telefono: `711-12233` (con guion).
+3. Pulsa `Continuar`. Esperado: panel amarillo "Ya existe una ficha con este telefono" mostrando a Julia, aunque el numero se escribio con guion (la comparacion normaliza los ultimos 8 digitos).
+4. Opciones: tocar la ficha de Julia (prellena todo) o "No es la misma persona, continuar como nuevo".
+5. Para esta prueba: **abandona con Atras / navegando fuera**, no registres a Pedro.
+
+## 3. Segunda Llegada Sin Duplicar
+
+Ruta: `Recepcion -> Pacientes` (`/sigeco/recepcion?vista=pacientes`).
+
+1. Busca `Julia` y abre su ficha.
+2. Pulsa `Registrar llegada` (tarjeta lateral). Esperado: el funnel abre directo en el paso 1 con el banner "Ficha existente SI-XXXXXX" y todo prellenado.
+3. Motivo de esta visita: `Control de presion`. Tipo: `Control de tratamiento`. Registra.
+
+Resultado esperado: segunda visita abierta para la MISMA ficha (mismo codigo interno). En la ficha, la tabla "Visitas" muestra 2 filas. El total de pacientes no cambio.
+
+## 4. Edicion De Ficha
+
+Ruta: ficha de Julia -> boton `Editar ficha` (cabecera).
+
+1. Verifica que el formulario llega prellenado con los mismos chips del funnel.
+2. Corrige la ciudad: toca `La Paz`.
+3. Cambia la medicacion a: `Enalapril 10 mg cada noche`.
+4. Pulsa `Guardar cambios`.
+
+Resultado esperado: vuelve a la ficha con Ciudad `La Paz`; mismo ID en la URL y mismo codigo interno; el buscador de pacientes sigue mostrando UNA sola Julia.
+
+**Error intencional E — nombre invalido:** vuelve a editar, borra el nombre dejando 1 letra y pulsa `Guardar cambios`. Esperado: error inline "Ingresa el nombre completo." sin enviar. Restaura el nombre y cancela.
+
+## 5. Consulta Prellenada
+
+1. Abre la visita activa de Julia (la de `Control de presion`) desde `Recepcion -> Hoy`.
+2. En "Derivar paciente": Estado `En consulta`, Area destino `Medico`, pulsa `Actualizar ruta`.
+3. Abre `/sigeco/consultas` y entra a la consulta de Julia.
+
+Verificar la cabecera clinica (nada de esto debe pedirse de nuevo):
+
+| Dato | Valor esperado |
+| --- | --- |
+| Motivo de consulta | Control de presion |
+| Desde cuando | segun lo capturado (vacio en esta visita) |
+| Tipo de visita | Control de tratamiento |
+| Atencion previa por esto | segun lo capturado |
+| Trae estudios | segun lo capturado |
+| Edad | 47 anos |
+| Alergias | Ninguna conocida |
+| Enfermedad de base | Hipertension |
+| Medicacion actual | Enalapril 10 mg cada noche |
+
+4. Registra la consulta: Diagnostico principal `Hipertension descompensada`, Hallazgos `PA elevada en control`. Pulsa `Guardar consulta`.
+5. Confirma que `Receta rapida` y `Evolucion` estan **colapsadas** por defecto; abre `Receta rapida` y registra: Medicamento `Enalapril 20 mg`, Dosis `1 tableta`, Frecuencia `cada 12 horas`, Duracion `30 dias`. Guarda de nuevo.
+6. En `Indicacion para otra area` (colapsable): Tipo `Signos vitales`, Area destino `Enfermeria`, Indicacion `Control de presion arterial`, pulsa `Crear indicacion`.
+
+Resultado esperado: consulta guardada, contexto de recepcion intacto, orden visible en "Ordenes clinicas".
 
 ## 6. Enfermeria
 
-1. Abrir la tarea indicada.
-2. Confirmar que se abre el formulario correspondiente a la orden.
-3. Registrar signos, aplicacion o estudio.
-4. Agregar nota y completar tarea.
+Ruta: `/sigeco/enfermeria` -> abrir la tarea de Julia.
 
-Resultado esperado: registros visibles en consulta y ficha del paciente.
+1. Esperado: el formulario `Signos vitales` (o el que corresponda al tipo de orden) llega **abierto automaticamente**; los demas colapsados.
+2. Registra: Presion sistolica `150`, Presion diastolica `95`, Pulso `82`.
+3. Agrega nota si corresponde y completa la tarea.
 
-## 7. Administracion E Inventario
+Resultado esperado: el registro aparece en el detalle de la consulta ("Estudios y enfermeria") y en la ficha de Julia ("Timeline de enfermeria").
 
-1. Abrir el pendiente administrativo.
-2. Crear venta con producto inventariable y pago parcial.
-3. Completar el saldo desde el detalle de venta.
-4. Confirmar movimientos de caja y descuento de stock.
-5. Cerrar la visita.
+## 7. Salida Post-Consulta Hacia Caja
 
-Prueba negativa:
+Vuelve a la consulta de Julia. En la tarjeta `Salida del paciente` (3 opciones: `Enviar a enfermeria`, `Enviar a administracion`, `Se va - cerrar visita`):
 
-1. Solicitar una cantidad superior al stock.
-2. Confirmar alerta con producto, disponible y solicitado.
-3. Confirmar que no se creo venta, pago ni movimiento de caja.
+1. Pulsa `Enviar a administracion`.
 
-## 8. Seguimiento
+Resultado esperado: en `/sigeco/administracion` aparece el pendiente "Paciente derivado - Pasa a administracion tras la consulta" para Julia.
 
-1. Crear tarea desde la ficha del paciente.
-2. Confirmar que aparece en hoy, vencidos o proximos.
-3. Registrar intento y resultado.
-4. Revisar historial del paciente.
-5. Si la preferencia es `no_contact`, confirmar advertencia antes de contactar.
+## 8. Administracion, Venta E Inventario
 
-## 9. Matriz De Roles
+Ruta: `/sigeco/administracion` -> abrir el pendiente de Julia.
 
-| Rol | Debe ver |
-| --- | --- |
-| Recepcion | Inicio, Recepcion, Seguimiento; puede registrar llegada. |
-| Seguimiento | Inicio y Seguimiento; sin registro de llegada. |
-| Medico | Inicio, Recepcion lectura, Consulta, Enfermeria lectura y Seguimiento. |
-| Enfermeria | Inicio, Recepcion lectura y Enfermeria. |
-| Administracion | Inicio, Recepcion lectura, Caja, Seguimiento e Inventario. |
-| Direccion | Todos los modulos en lectura; sin registrar llegada. |
+### Error intencional F — stock insuficiente (hazlo PRIMERO)
+
+1. En `Registrar venta`: Producto inventariable = el producto que anotaste en la preparacion; Cantidad `999`; Precio unitario `10`; pulsa `Crear venta`.
+2. Esperado: vuelve a la misma tarea con alerta roja "No hay stock suficiente para completar la venta." indicando producto, disponible y solicitado.
+3. Verifica en `/sigeco/inventario` que el stock NO cambio, y en la tarea que NO se creo venta ni pago (rollback completo).
+
+### Venta valida con pago parcial
+
+1. Misma pantalla: Tipo `Servicio` o `Producto` segun el caso; Producto inventariable = el mismo producto; Descripcion `Control + medicamento`; Cantidad `1`; Precio unitario `50`; Cobro inicial `30`; Forma de pago `Efectivo` (opciones: Efectivo, QR, Tarjeta, Transferencia, Otro).
+2. Pulsa `Crear venta`. Esperado: venta con saldo `Bs 20`.
+3. Abre el detalle de la venta y, en la tarjeta `Registrar cobro`, ingresa Monto Bs `20` y guarda.
+4. Verifica: venta saldada, movimiento de caja registrado y stock del producto reducido en 1.
+
+### Cierre en un toque
+
+1. De vuelta en el pendiente, tarjeta `Salida del paciente`: pulsa `Cerrar visita`.
+2. Esperado: la visita de Julia queda `Finalizada`; su historial muestra recepcion -> consulta -> administracion -> cierre con notas; desaparece de `Recepcion -> Hoy`.
+
+**Por que importa:** este es el camino real "consulta -> caja -> salida" mas el caso "el paciente solo compra y se va".
+
+## 9. Caminos De Salida Alternativos
+
+Usa la PRIMERA visita de Julia (la de `Dolor de cabeza fuerte`, que sigue activa) y una tercera llegada rapida:
+
+### Abandono (Se retiro)
+
+1. En `Recepcion -> Hoy`, la fila de la primera visita de Julia tiene el boton rojo `Se retiro`. Pulsalo.
+2. Esperado: la visita sale de la lista activa de inmediato; el KPI `Abandonos hoy` sube en 1.
+3. Abre el detalle de esa visita: estado `Abandono atencion`, historial con nota automatica `Se retiro en recepcion` (indica DONDE abandono) y sin tarjeta de acciones rapidas ni formulario de derivacion.
+
+### Error intencional G — actuar sobre visita cerrada
+
+1. Con la visita abandonada abierta, edita la URL agregando `?error=cerrada` para ver el aviso (o reintenta una accion desde una pestana vieja si tienes una abierta).
+2. Esperado: banner "Esta visita ya esta cerrada; no se aplico la accion." La base ademas bloquea cualquier reapertura server-side (`ClosedVisitTransitionError`).
+
+### Salida directa desde consulta
+
+1. Registra una tercera llegada de Julia desde su ficha (motivo `Revision rapida`).
+2. Derivala a `Medico / En consulta`, abre la consulta y pulsa `Se va - cerrar visita`.
+3. Esperado: visita `Finalizada` sin pasar por enfermeria ni caja; historial `in_reception -> in_consultation -> completed` con nota "Salida directa despues de la consulta".
+
+## 10. Seguimiento
+
+1. En la ficha de Julia, tarjeta `Crear seguimiento`: Titulo `Control de presion en 7 dias`, Fecha y hora = manana 10:00, pulsa `Crear seguimiento`.
+2. Esperado: redirige al detalle de la tarea; aparece en `/sigeco/seguimientos` (filtros Hoy / Vencidos / Proximos).
+3. Registra un contacto: Metodo `Llamada`, Resultado `Realizado`, nota breve. Verifica que queda en el "Historial" y en la ficha de Julia.
+
+### Caso no_contact
+
+1. Edita la ficha de Julia y cambia la preferencia a `Prefiere no recibir seguimiento`. Guarda.
+2. Verifica las 3 advertencias: en la ficha (panel amarillo sobre "Crear seguimiento"), en la bandeja (`Pidio no recibir seguimiento` bajo el telefono) y en el detalle de la tarea (panel sobre los botones Llamar / WhatsApp).
+3. Nota: advierte pero NO bloquea (puede existir razon clinica). Al terminar, restaura la preferencia a `WhatsApp`.
+
+## 11. Matriz De Roles
+
+Cambia el rol del usuario QA con el script oficial (y restauralo al final):
+
+```bash
+INTERNAL_USER_EMAIL=test@test.si INTERNAL_USER_ROLE=recepcion pnpm internal:set-role
+# ... probar, luego repetir con: seguimiento, medico, enfermeria, administracion, direccion
+INTERNAL_USER_EMAIL=test@test.si INTERNAL_USER_ROLE=super_admin pnpm internal:set-role
+```
+
+Cierra sesion y vuelve a entrar despues de cada cambio.
+
+| Rol | Debe ver en la sidebar | Notas |
+| --- | --- | --- |
+| recepcion | Inicio, Recepcion, Seguimiento | Puede registrar llegada y editar fichas. |
+| seguimiento | Inicio, Seguimiento | Sin `Registrar llegada`; abre fichas por enlace (solo lectura). |
+| medico | Inicio, Recepcion, Consulta, Enfermeria (lectura), Seguimiento | Ve la tarjeta `Salida del paciente`. |
+| enfermeria | Inicio, Recepcion, Enfermeria | |
+| administracion | Inicio, Recepcion, Caja, Seguimiento, Inventario | Puede cerrar visitas desde Caja. |
+| direccion | Todos en lectura | Sin registrar llegada ni editar. |
 
 Para cada rol:
 
-1. Revisar sidebar.
+1. Revisar la sidebar contra la tabla.
 2. Abrir un modulo permitido.
-3. Escribir directamente una URL no permitida.
-4. Confirmar redirect a `/sigeco`.
-5. Verificar que acciones de escritura no autorizadas no aparecen.
+3. **Error intencional H:** escribir a mano una URL no permitida (ej. `/sigeco/inventario` como recepcion). Esperado: redirect silencioso a `/sigeco`.
+4. Confirmar que los botones de escritura no autorizados no aparecen (ej. `Editar ficha` no existe para seguimiento).
+5. Extra: `captacion` es un rol retirado; un usuario con ese rol ve solo Inicio con el mensaje "Tu rol no tiene modulos asignados", y el script rechaza asignarlo.
 
-## 10. Responsive Y Regresiones
+## 12. Responsive Y Regresiones
 
-En 390x844 recorrer:
-
-- Dashboard.
-- Recepcion, pacientes, funnel, ficha, edicion y visita.
-- Consulta lista y detalle.
-- Enfermeria lista y detalle.
-- Caja lista, tarea y venta.
-- Seguimientos lista y detalle.
-- Inventario lista y detalle.
+En 390x844 recorrer: dashboard; Recepcion (Hoy, Pacientes, funnel, ficha, edicion, visita); Consulta (lista y detalle); Enfermeria (lista y detalle); Caja (lista, tarea, venta); Seguimientos (lista y detalle); Inventario (lista y detalle).
 
 Confirmar:
 
-- Sin desplazamiento horizontal del documento.
-- Tablas anchas desplazan dentro de su contenedor.
-- Botones y textos no se superponen.
-- Formularios conservan labels y estados de error.
+- Sin desplazamiento horizontal del documento (las tablas anchas se desplazan dentro de su contenedor).
+- Botones y textos no se superponen; formularios conservan labels y estados de error.
 
 Regresiones externas:
 
 - Las diez rutas publicas cargan en movil y escritorio.
 - `/admin` carga o redirige a `/admin/login`.
 - Sitemap y robots responden.
-- El formulario publico conserva `/api/leads`; este endpoint no es el modulo interno retirado.
+- El formulario publico conserva `/api/leads`; ese endpoint es del sitio publico, no el modulo interno retirado.
 
-## 11. Validacion Tecnica
+## 13. Validacion Tecnica
 
-Detener `next dev` y ejecutar:
+Detener `next dev` primero (nunca correr build con dev activo) y ejecutar:
 
 ```bash
 pnpm lint
@@ -208,14 +331,28 @@ pnpm test:integration
 pnpm run build
 ```
 
+## Resumen De Errores Intencionales
+
+| # | Donde | Accion | Resultado esperado |
+| --- | --- | --- | --- |
+| A | Login | Password incorrecto | Fallo generico, no revela si la cuenta existe, email conservado |
+| B | Funnel paso 1 | Telefono `abc` | "Ingresa un telefono valido.", no avanza |
+| C | Funnel paso 2 | Duracion `3` sin unidad | Pide cantidad y unidad juntas, no avanza |
+| D | Funnel paso 1 | Telefono de Julia con guion | Panel de duplicado con la ficha existente |
+| E | Editar ficha | Nombre de 1 letra | "Ingresa el nombre completo.", no envia |
+| F | Caja | Venta de 999 unidades | Alerta de stock con cantidades; sin venta, pago ni descuento |
+| G | Visita cerrada | Reintentar accion | Banner "visita ya cerrada"; reapertura bloqueada en base |
+| H | Cualquier rol | URL sin permiso | Redirect a `/sigeco` |
+
 ## Criterio De Aprobacion
 
 V3.7 puede promoverse a staging cuando:
 
-- Todos los comandos pasan.
+- Todos los comandos de la seccion 13 pasan.
 - No hay fallos criticos, altos o medios abiertos.
-- La matriz de roles pasa.
-- Los cuatro caminos de salida conservan historial.
+- La matriz de roles pasa completa.
+- Los cuatro caminos de salida (enfermeria, caja, directa, abandono) conservan historial.
+- Los 8 errores intencionales se comportan como se describe.
 - No hay overflow de pagina a 390px.
 - Sitio publico y CMS no presentan regresiones.
 - Los pendientes clinicos y operativos no resueltos estan documentados y aceptados.
@@ -225,9 +362,13 @@ V3.7 puede promoverse a staging cuando:
 Registrar:
 
 - Fecha y ambiente.
-- Commit probado.
+- Commit probado (`git rev-parse --short HEAD`).
 - Usuario y rol, sin password.
-- Paciente y visita QA.
-- Comandos y conteos.
+- Paciente y visitas QA creados (codigo interno de Julia).
+- Comandos y conteos de tests.
 - Hallazgos, correcciones y revalidacion.
-- Capturas de dashboard, flujo cerrado y mobile.
+- Capturas de dashboard inicial y final, flujo cerrado y una pantalla movil.
+
+## Limpieza Opcional
+
+Los datos QA pueden quedarse en la base local. Si quieres empezar de cero: `pnpm db:reset` (SOLO en local; destruye todos los datos de la base de desarrollo).
