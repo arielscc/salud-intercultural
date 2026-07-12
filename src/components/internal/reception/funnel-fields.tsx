@@ -55,15 +55,12 @@ export function ChipOption({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition",
+        "focus-ring inline-flex min-h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold transition",
         selected
           ? "border-primary bg-surface-soft text-primary-dark"
           : "border-border bg-surface text-muted hover:border-primary/40 hover:text-text"
       )}
     >
-      {selected ? (
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
-      ) : null}
       {children}
     </button>
   );
