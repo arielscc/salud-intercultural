@@ -95,12 +95,12 @@ Ruta: `/sigeco/recepcion/nuevo` (o el boton `Registrar llegada`).
 
 1. En "Ya nos visito antes?" escribe `71112233` y pulsa `Buscar`.
 2. Esperado: "Sin resultados. Registralo como paciente nuevo."
-3. Pulsa `Es paciente nuevo`.
+3. Pulsa `Es paciente nuevo`. Esperado: el paso 1 arranca limpio y solo trae precargado lo buscado (si el termino parece telefono llena el campo telefono; si es texto, el nombre; si el buscador esta vacio, todo vacio).
 
 ### Paso 1 — Quien es?
 
 1. Nombre completo: `Julia Mamani Condori`.
-2. Telefono: `71112233`.
+2. Telefono: `71112233` (ya viene precargado desde la busqueda del paso 0).
 
 **Error intencional B — telefono invalido:** antes de llenar bien el telefono, escribe `abc` y pulsa `Continuar`. Esperado: mensaje inline "Ingresa un telefono valido." y el funnel no avanza. Corrige a `71112233`.
 

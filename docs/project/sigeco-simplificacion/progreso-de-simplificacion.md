@@ -283,3 +283,15 @@ Datos de QA en dev: paciente nuevo SI-000004 "Paciente QA Fuentes" con una visit
 Nota operativa: si `next dev` estaba corriendo al aplicar la migracion, hay que reiniciarlo para que cargue el cliente Prisma regenerado (el server viejo da `PrismaClientValidationError`).
 
 **Commit sugerido:** `feat(sigeco): allow multiple capture sources`
+
+### "Es paciente nuevo" arranca limpio y siembra desde la busqueda
+
+Bug reportado por el usuario: si primero se entraba a una ficha desde el buscador y luego se volvia al paso 0 y se pulsaba "Es paciente nuevo", el paso 1 conservaba los datos del paciente anterior (riesgo de crear un duplicado con datos ajenos).
+
+- `src/components/internal/reception/IntakeFunnel.tsx`: `startAsNewPatient` resetea todos los campos permanentes del paciente y siembra solo el termino buscado: si parece telefono (`[+()\d\s-]`) llena telefono, si es texto llena nombre, y si el buscador esta vacio el paso 1 arranca vacio. Los campos de la visita del dia (paso 2) no se tocan.
+- Comportamientos confirmados como esperados (no eran bugs): entrar por un resultado de busqueda prellena los pasos 1, 3 y 4 con el banner de ficha existente; el paso 2 ("A que viene?") siempre arranca vacio porque son datos de la visita de hoy, no del paciente.
+- `docs/operations/sigeco-v3-full-flow-testing.md`: paso 0 documenta la siembra.
+
+Validaciones: lint, 70 tests unitarios. Navegador: escenario exacto del reporte (buscar "julia mamani condori" -> entrar a la ficha -> Atras -> "Es paciente nuevo" deja solo el nombre buscado y el resto vacio), variante con telefono buscado (siembra telefono) y buscador vacio (todo vacio).
+
+**Commit sugerido:** `fix(sigeco): reset new patient funnel and seed it from search`

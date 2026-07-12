@@ -133,8 +133,28 @@ export function IntakeFunnel({
     setStep(1);
   }
 
+  /*
+   * Arranca el funnel limpio. Lo unico que se conserva es el termino buscado:
+   * si parece telefono siembra el campo telefono, si no, el nombre.
+   */
   function startAsNewPatient() {
+    const term = searchTerm.trim();
+    const looksLikePhone = term !== "" && /^[+()\d\s-]+$/.test(term);
+
     setExistingPatient(null);
+    setFullName(looksLikePhone ? "" : term);
+    setPhone(looksLikePhone ? term : "");
+    setBirthDate("");
+    setGender("unknown");
+    setCityChoice("");
+    setCityOther("");
+    setNoKnownAllergies(false);
+    setAllergies("");
+    setRelevantHistory("");
+    setCurrentMedication("");
+    setCaptureSources([]);
+    setFollowUpPreference("");
+    setPhoneMatches([]);
     setStepError(null);
     setStep(1);
   }
