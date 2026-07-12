@@ -295,3 +295,17 @@ Bug reportado por el usuario: si primero se entraba a una ficha desde el buscado
 Validaciones: lint, 70 tests unitarios. Navegador: escenario exacto del reporte (buscar "julia mamani condori" -> entrar a la ficha -> Atras -> "Es paciente nuevo" deja solo el nombre buscado y el resto vacio), variante con telefono buscado (siembra telefono) y buscador vacio (todo vacio).
 
 **Commit sugerido:** `fix(sigeco): reset new patient funnel and seed it from search`
+
+### Rediseno de ficha de paciente, timeline y acciones visibles
+
+Pedido del usuario: la ficha se veia pequena, el timeline poco visual, faltaban ejemplos en los campos de nota y las acciones rapidas de la visita no estaban visibles.
+
+- `src/components/internal/ui/TimelineItem.tsx`: rediseno del timeline compartido (aplica a ficha, visita, consulta y caja) al estilo changelog elegido por el usuario (referencia: shadcn studio, bloque timeline-component-05): columna izquierda con pill oscura de estado y fecha alineadas a la derecha, punto teal con halo sobre el riel vertical entre columnas, titulo y cuerpo (en panel suave) a la derecha; en movil se apila en una columna. API intacta; los 6 llamadores que pasaban `aside` como span estilizado ahora pasan el texto plano (el pill lo estiliza el componente).
+- `src/components/internal/ui/InfoRow.tsx`: valor sube de `text-sm` a 15px para mejorar lectura en todas las fichas y detalles.
+- `src/lib/age.ts`: helper `calculateAgeFromDate` para server components.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: cabecera nueva con avatar de iniciales, nombre en 2xl, codigo en teal y chips de edad / genero / ciudad (+ chip de advertencia "No contactar" si aplica); el grid inferior queda con telefono, fuente(s) y preferencia. Placeholder de ejemplo en "Notas" de Crear seguimiento.
+- `src/app/(internal)/sigeco/(app)/recepcion/visitas/[id]/page.tsx`: "Cerrar visita" y "Se retiro sin completar" se movieron de la tarjeta lateral a la tarjeta principal de la visita (visibles sin scroll tambien en movil); la tarjeta lateral "Acciones rapidas" se elimino. Placeholder de ejemplo en la "Nota" de Derivar paciente.
+
+Validaciones: lint, typecheck, 70 tests unitarios, build. Navegador: ficha de Julia y detalle de visita verificados en 1280px y 390x844 sin overflow (`scrollWidth=390`).
+
+**Commit sugerido:** `style(sigeco): polish patient record, timeline and visit actions`

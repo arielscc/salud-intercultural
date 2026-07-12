@@ -62,7 +62,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
             </div>
             <VisitStatusPill status={visit.status} />
           </div>
-          <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
+          <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
             <InfoRow
               label="Área actual"
               value={visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
@@ -70,58 +70,8 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
             <InfoRow label="Llegada" value={visit.checkedInAt.toLocaleString("es-BO")} />
             {visit.reason ? <InfoRow label="Motivo" value={visit.reason} wide /> : null}
           </dl>
-        </Card>
-
-        <Card>
-          <CardHeader title="Tareas de visita" />
-          <div className="grid gap-0">
-            {visit.workItems.map((item) => (
-              <TimelineItem
-                key={item.id}
-                title={item.title}
-                meta={`${routeAreaLabels[item.area]} · ${item.createdAt.toLocaleString("es-BO")}`}
-                aside={
-                  <span className="text-[11px] font-semibold text-muted">
-                    {workItemStatusLabels[item.status]}
-                  </span>
-                }
-                body={item.description ?? undefined}
-              />
-            ))}
-            {visit.workItems.length === 0 ? (
-              <p className="py-2 text-sm text-muted">Sin tareas registradas para esta visita.</p>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader title="Ruta del paciente" />
-          <div className="grid gap-0">
-            {visit.route?.steps.map((step) => (
-              <TimelineItem
-                key={step.id}
-                title={routeAreaLabels[step.area]}
-                meta={step.startedAt.toLocaleString("es-BO")}
-                aside={
-                  <span className="text-[11px] font-semibold text-muted">
-                    {visitStatusLabels[step.status]}
-                  </span>
-                }
-                body={step.note ?? undefined}
-              />
-            ))}
-            {!visit.route || visit.route.steps.length === 0 ? (
-              <p className="py-2 text-sm text-muted">Sin pasos de ruta registrados.</p>
-            ) : null}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid gap-4">
-        {isActive ? (
-          <Card>
-            <CardHeader title="Acciones rápidas" />
-            <div className="grid gap-2">
+          {isActive ? (
+            <div className="mt-4 grid gap-2 border-t border-border pt-4 sm:grid-cols-2">
               <form action={applyVisitFlowAction}>
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="complete" />
@@ -140,13 +90,51 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                   Se retiró sin completar
                 </Button>
               </form>
+              <p className="text-[13px] text-muted sm:col-span-2">
+                “Se retiró” guarda en qué punto abandonó; el historial queda en la ruta.
+              </p>
             </div>
-            <p className="mt-3 text-[13px] text-muted">
-              “Se retiró” guarda en qué punto abandonó; el historial queda en la ruta.
-            </p>
-          </Card>
-        ) : null}
+          ) : null}
+        </Card>
 
+        <Card>
+          <CardHeader title="Tareas de visita" />
+          <div className="grid gap-0">
+            {visit.workItems.map((item) => (
+              <TimelineItem
+                key={item.id}
+                title={item.title}
+                meta={`${routeAreaLabels[item.area]} · ${item.createdAt.toLocaleString("es-BO")}`}
+                aside={workItemStatusLabels[item.status]}
+                body={item.description ?? undefined}
+              />
+            ))}
+            {visit.workItems.length === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin tareas registradas para esta visita.</p>
+            ) : null}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Ruta del paciente" />
+          <div className="grid gap-0">
+            {visit.route?.steps.map((step) => (
+              <TimelineItem
+                key={step.id}
+                title={routeAreaLabels[step.area]}
+                meta={step.startedAt.toLocaleString("es-BO")}
+                aside={visitStatusLabels[step.status]}
+                body={step.note ?? undefined}
+              />
+            ))}
+            {!visit.route || visit.route.steps.length === 0 ? (
+              <p className="py-2 text-sm text-muted">Sin pasos de ruta registrados.</p>
+            ) : null}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4">
         {isActive ? (
           <Card>
             <CardHeader title="Derivar paciente" />
@@ -175,7 +163,11 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 </select>
               </Field>
               <Field label="Nota">
-                <input className={internalInputClassName} name="note" />
+                <input
+                  className={internalInputClassName}
+                  name="note"
+                  placeholder="Ej. pasa a caja solo a comprar un producto"
+                />
               </Field>
               <Button type="submit">Actualizar ruta</Button>
             </form>

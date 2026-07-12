@@ -292,11 +292,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
                 key={order.id}
                 title={order.title}
                 meta={`${clinicalOrderTypeLabels[order.type]} · ${routeAreaLabels[order.targetArea]}`}
-                aside={
-                  <span className="text-[11px] font-semibold text-muted">
-                    {clinicalOrderStatusLabels[order.status]}
-                  </span>
-                }
+                aside={clinicalOrderStatusLabels[order.status]}
                 body={order.details ?? undefined}
               />
             ))}
@@ -314,11 +310,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
                 key={study.id}
                 title={study.title}
                 meta={`${studyTypeLabels[study.type]} · ${(study.performedAt ?? study.createdAt).toLocaleString("es-BO")}`}
-                aside={
-                  <span className="text-[11px] font-semibold text-muted">
-                    {studyStatusLabels[study.status]}
-                  </span>
-                }
+                aside={studyStatusLabels[study.status]}
                 body={
                   study.resultSummary || study.findings ? (
                     <>

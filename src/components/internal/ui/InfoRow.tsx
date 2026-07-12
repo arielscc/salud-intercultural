@@ -10,7 +10,7 @@ export function InfoRow({
   return (
     <div className={wide ? "sm:col-span-2" : undefined}>
       <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{label}</dt>
-      <dd className="m-0 mt-0.5 text-sm text-text">{value || "Sin registro"}</dd>
+      <dd className="m-0 mt-0.5 text-[15px] leading-snug text-text">{value || "Sin registro"}</dd>
     </div>
   );
 }

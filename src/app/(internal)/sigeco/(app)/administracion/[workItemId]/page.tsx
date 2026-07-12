@@ -237,11 +237,7 @@ export default async function AdministrationWorkItemPage({
                     {formatMoney(sale.totalCents)}
                   </a>
                 }
-                aside={
-                  <span className="text-[11px] font-semibold text-muted">
-                    {saleStatusLabels[sale.status]}
-                  </span>
-                }
+                aside={saleStatusLabels[sale.status]}
                 body={<span className="tabular-nums">Saldo: {formatMoney(sale.balanceCents)}</span>}
               />
             ))}

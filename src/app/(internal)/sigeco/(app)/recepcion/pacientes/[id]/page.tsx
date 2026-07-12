@@ -21,6 +21,8 @@ import { studyTypeLabels } from "@/features/studies/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { getPatientById } from "@/modules/database/queries/patients";
 import { requirePermission } from "@/modules/permissions";
+import { Chip } from "@/components/internal/ui/Chip";
+import { calculateAgeFromDate } from "@/lib/age";
 import { cn } from "@/lib/cn";
 
 type PatientDetailPageProps = {
@@ -36,17 +38,46 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
   const nursingCount =
     patient.vitalSigns.length + patient.nursingApplications.length + patient.nursingNotes.length;
+  const age = calculateAgeFromDate(patient.birthDate);
+  const initials = patient.fullName
+    .split(" ")
+    .map((part) => part.charAt(0))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
       <div className="grid gap-4">
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium tabular-nums text-muted">{patient.internalCode}</p>
-              <h2 className="font-sora text-xl font-bold tracking-tight text-text">
-                {patient.fullName}
-              </h2>
+            <div className="flex min-w-0 items-center gap-3.5">
+              <span
+                aria-hidden="true"
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-soft font-sora text-lg font-bold text-primary-dark"
+              >
+                {initials}
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold tabular-nums text-primary-dark">
+                  {patient.internalCode}
+                </p>
+                <h2 className="font-sora text-2xl font-bold leading-tight tracking-tight text-text">
+                  {patient.fullName}
+                </h2>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {age !== null ? <Chip>{age} años</Chip> : null}
+                  {patient.gender !== "unknown" ? (
+                    <Chip>{patientGenderLabels[patient.gender]}</Chip>
+                  ) : null}
+                  {patient.city ? <Chip>{patient.city}</Chip> : null}
+                  {patient.followUpPreference === "no_contact" ? (
+                    <Chip tone="warning" dot>
+                      No contactar
+                    </Chip>
+                  ) : null}
+                </div>
+              </div>
             </div>
             {roleHasPermission(user.role, "patients_update") ? (
               <Link
@@ -58,13 +89,11 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
               </Link>
             ) : null}
           </div>
-          <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
+          <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
             <InfoRow label="Teléfono" value={patient.phone} />
             {patient.secondaryPhone ? (
               <InfoRow label="Alternativo" value={patient.secondaryPhone} />
             ) : null}
-            <InfoRow label="Género" value={patientGenderLabels[patient.gender]} />
-            {patient.city ? <InfoRow label="Ciudad" value={patient.city} /> : null}
             <InfoRow
               label="Fuente"
               value={
@@ -253,11 +282,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                   </a>
                 }
                 meta={task.dueAt.toLocaleString("es-BO")}
-                aside={
-                  <span className="text-[11px] font-semibold text-muted">
-                    {followUpStatusLabels[task.status]}
-                  </span>
-                }
+                aside={followUpStatusLabels[task.status]}
                 body={task.attempts[0]?.notes ?? undefined}
               />
             ))}
@@ -318,7 +343,11 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                 />
               </Field>
               <Field label="Notas">
-                <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
+                <textarea
+                  className={`${internalInputClassName} min-h-20 py-3`}
+                  name="notes"
+                  placeholder="Ej. preguntar cómo sigue del dolor y si está tomando la medicación"
+                />
               </Field>
               <Button type="submit" variant="outline">
                 Crear seguimiento
