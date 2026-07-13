@@ -7,7 +7,7 @@ Registro de avance del plan [Tareas de branding](./tareas-de-branding.md). Cada 
 | Tarea | Nombre | Estado |
 | --- | --- | --- |
 | 1 | Infraestructura de estilos y tema claro | Completada (2026-07-13) |
-| 2 | Paleta y radios Marea | Pendiente |
+| 2 | Paleta y radios Marea | Completada (2026-07-13) |
 | 3 | Acento teal en acciones, navegacion y foco | Pendiente |
 | 4 | Tipografia IBM Plex Sans self-hosted | Pendiente |
 | 5 | Marca: logo, icono y meta | Pendiente |
@@ -50,3 +50,23 @@ Restricciones fijas: solo superficie del admin (`(payload)` + bloque `admin` del
 - El criterio "el toggle de tema desaparece de la cuenta" se verifico por codigo, no en pantalla: `ADMIN_EMAIL`/`ADMIN_PASSWORD` estan vacios en `.env` (hay 1 usuario CMS en la base pero sin credenciales documentadas), asi que no se pudo iniciar sesion en el admin. En el fuente instalado (`views/Account/Settings`), el selector solo se renderiza con `theme === 'all'`. Pendiente para la Tarea 6: conseguir credenciales del CMS con el usuario para el recorrido autenticado (dashboard, colecciones, cuenta).
 
 **Commit sugerido:** `feat(cms): scaffold admin stylesheet and force light theme`
+
+### Tarea 2 — Paleta Y Radios Marea (2026-07-13)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(payload)/admin/custom.css`: bloque `:root` con `--theme-bg: #f4f7f8`, `--theme-input-bg: #ffffff`, `--theme-text: #16262c`, `--theme-border-color: #dfe8ea`, `--style-radius-s: 9px`, `--style-radius-m: 9px`, `--style-radius-l: 12px`.
+- `docs/design/payload-admin-visual-system.md` y `tareas-de-branding.md`: mapeo de radios corregido con el hallazgo de abajo.
+
+**Hallazgos (ajustes al plan, documentados en la spec):**
+
+- Payload envuelve sus estilos en `@layer payload-default`; `custom.css` va sin layer, asi que un `:root` plano gana sin pelear especificidad ni selectores de tema.
+- `--style-radius-s` NO es un radio decorativo pequeno: es el radio ESTANDAR de inputs y botones (58 usos, contra 16 de `m` y 2 de `l`). El plan original (s=7px) dejaba los controles en 7px violando el criterio Marea de 9px; el mapeo final es s=9, m=9, l=12.
+- Los pills de Payload tienen `border-radius: 3px` hardcodeado (sin variable): quedan fuera del alcance.
+- Cobertura parcial de bordes: los componentes que leen `var(--theme-border-color)` toman `#DFE8EA`; otros (ej. inputs del login) usan `--theme-elevation-150` directo y quedan en el gris `#DDDDDD` por defecto (visualmente casi identico; corregirlo exigiria tocar la escala elevation, excluida por la spec).
+
+**Validaciones:** `pnpm lint`, `npx tsc --noEmit`, `pnpm test` (70 tests). Navegador (login de `/admin`, unica pantalla accesible sin credenciales CMS): fondo `#F4F7F8`, inputs blancos con radio 9px, boton radio 9px, texto `#16262C`; variables verificadas por computed style. Pendiente que arrastra: el QA de listado/edicion/modal requiere sesion en el admin (`ADMIN_EMAIL`/`ADMIN_PASSWORD` vacios en `.env`); se cubrira cuando haya credenciales, a mas tardar en la Tarea 6.
+
+**Commit sugerido:** `feat(cms): apply marea palette and radii to payload admin`

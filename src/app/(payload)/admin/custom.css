@@ -2,6 +2,24 @@
  * Hoja de estilos propia del admin de Payload. Se importa en layout.tsx
  * DESPUES de @payloadcms/next/css para ganar por orden de cascada.
  * Alcance y reglas: docs/design/payload-admin-visual-system.md
- * (solo variables --theme-* / --style-* y la lista cerrada de overrides;
- * el contenido visual llega con las Tareas 2-4 del plan de branding).
+ * (solo variables --theme-* / --style-* y la lista cerrada de overrides).
+ *
+ * Payload define sus estilos dentro de @layer payload-default; esta hoja va
+ * SIN layer, asi que estas declaraciones ganan sin pelear especificidad.
  */
+
+/* Tarea 2 — Paleta y radios Marea (mismos hex que sigeco.css) */
+:root {
+  --theme-bg: #f4f7f8;
+  --theme-input-bg: #ffffff;
+  --theme-text: #16262c;
+  --theme-border-color: #dfe8ea;
+
+  /*
+   * En Payload, radius-s es el radio ESTANDAR de inputs y botones (58 usos),
+   * no un radio decorativo pequeno: por eso s toma el radio base Marea (9px).
+   */
+  --style-radius-s: 9px;
+  --style-radius-m: 9px;
+  --style-radius-l: 12px;
+}

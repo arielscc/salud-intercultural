@@ -46,7 +46,7 @@ Es un trabajo **solo de presentacion**: no se tocan colecciones, campos, permiso
 **Alcance (solo `custom.css`):**
 
 - `--theme-bg: #F4F7F8`, `--theme-input-bg: #FFFFFF`, `--theme-text: #16262C`, `--theme-border-color: #DFE8EA`.
-- `--style-radius-s: 7px`, `--style-radius-m: 9px`, `--style-radius-l: 12px`.
+- `--style-radius-s: 9px`, `--style-radius-m: 9px`, `--style-radius-l: 12px` (en Payload `radius-s` es el radio estandar de inputs y botones; ver nota en la spec).
 
 **Fuera de alcance:** la escala `--theme-elevation-*` y las familias semanticas `success`/`error`/`warning` (quedan por defecto, razon en la spec); botones y acentos (Tarea 3).
 

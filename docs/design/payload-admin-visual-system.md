@@ -42,9 +42,11 @@ Solo se sobrescriben las variables que definen identidad. Valores identicos a la
 | `--theme-input-bg` | superficie | `#FFFFFF` | Inputs y controles. |
 | `--theme-text` | texto principal | `#16262C` | Texto general. |
 | `--theme-border-color` | borde hairline | `#DFE8EA` | Bordes de tablas, cards, inputs. |
-| `--style-radius-s` | radio pequeno | `7px` | Pills, controles chicos. |
-| `--style-radius-m` | radio base | `9px` | Botones, inputs, cards. |
-| `--style-radius-l` | radio grande | `12px` | Paneles, modales. |
+| `--style-radius-s` | radio base | `9px` | Radio ESTANDAR de Payload: inputs y botones (58 usos). |
+| `--style-radius-m` | radio base | `9px` | Superficies intermedias (16 usos). |
+| `--style-radius-l` | radio grande | `12px` | Paneles grandes (2 usos). |
+
+Nota (hallazgo de la Tarea 2): en Payload `radius-s` no es un radio decorativo pequeno sino el estandar de los controles; por eso mapea al radio base Marea (9px) y no al pequeno (7px). Los pills de Payload tienen `border-radius: 3px` hardcodeado (sin variable) y quedan fuera del alcance.
 
 Lo que **no** se toca y por que:
 
