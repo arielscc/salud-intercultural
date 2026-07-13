@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { DatePickerField } from "@/components/internal/ui/DatePickerField";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import {
   patientCaptureSourceLabels,
@@ -132,12 +133,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
           />
         </Field>
         <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
-          <input
-            className={internalInputClassName}
-            type="date"
-            value={birthDate}
-            onChange={(event) => setBirthDate(event.target.value)}
-          />
+          <DatePickerField value={birthDate} onChange={setBirthDate} />
         </Field>
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>Ciudad</span>

@@ -309,3 +309,22 @@ Pedido del usuario: la ficha se veia pequena, el timeline poco visual, faltaban 
 Validaciones: lint, typecheck, 70 tests unitarios, build. Navegador: ficha de Julia y detalle de visita verificados en 1280px y 390x844 sin overflow (`scrollWidth=390`).
 
 **Commit sugerido:** `style(sigeco): polish patient record, timeline and visit actions`
+
+### Selector de fecha y hora con calendario (shadcn studio)
+
+Pedido del usuario: reemplazar los `<input type="date">` / `<input type="datetime-local">` nativos por un calendario en popover, tomando como referencia los componentes de shadcn studio (`docs/components/date-picker` y `docs/components/calendar`), instalados via CLI (no copiados a mano) y adaptados al estilo Marea.
+
+- `components.json`: se agrego el bloque `registries` (patron `@shadcn-studio` / `@ss-components` / `@ss-blocks` / `@ss-themes`, documentado en `docs/getting-started/how-to-use-shadcn-cli`) y se cambio `style` a `radix-vega` (unico estilo valido para instalar de ese registro; el proyecto no tenia ningun componente shadcn instalado todavia, asi que no rompe nada existente).
+- Instalado con `pnpm dlx shadcn@latest add @ss-components/calendar-09` (calendario con dropdown de mes/ano, confirmado en el sitio via "View code") y `@ss-components/date-picker-10` (combo fecha + hora). Se agregaron `react-day-picker`, `date-fns` y el paquete unificado `radix-ui` como dependencias. `date-fns` quedo fijada en `4.1.0` exacta para compartir la misma copia que ya traia Payload (y que exige `react-day-picker`), evitando una tercera copia en `node_modules`.
+- `src/components/ui/{button,calendar,popover}.tsx`: los archivos generados usan sintaxis de Tailwind v4 (`rounded-(--cell-radius)`, `--spacing(8)`, variantes `in-data-*`) que no compila en Tailwind 3.4 de este proyecto, y tokens genericos de shadcn (`bg-popover`, `text-primary-foreground`, `--radius-md`) sin definir. Se reescribieron a sintaxis v3 valida y a los tokens Marea existentes (`bg-surface`, `text-text`, `bg-primary`, `rounded-[9px]`/`[7px]`, `focus-ring`, `internalInputClassName`), sin agregar variables CSS nuevas.
+- `src/components/internal/ui/DatePickerField.tsx` (nuevo): dos componentes reutilizables sobre esos primitivos.
+  - `DatePickerField`: controlado con el mismo string `yyyy-MM-dd` que usaba el input nativo (drop-in, sin tocar el resto del formulario); calendario con dropdown de mes/ano (rango 1900-hoy) para llegar rapido a decadas atras; fechas futuras deshabilitadas.
+  - `DateTimePickerField`: pensado para forms de server actions (no controlados desde el padre); expone un input oculto con el mismo `name` y formato `yyyy-MM-ddTHH:mm` que el `datetime-local` que reemplaza. Arranca prellenado con fecha/hora actuales.
+- Reemplazos: fecha de nacimiento en `IntakeFunnel.tsx` y `PatientEditForm.tsx` (`DatePickerField`); "Fecha y hora" de Crear seguimiento en la ficha de paciente y "Hora" de Registrar aplicacion en enfermeria (`DateTimePickerField`).
+- Se borraron los archivos de demo sin usar (`src/components/shadcn-studio/`) una vez construidos los componentes propios, y luego `src/components/ui/{input,label}.tsx`, que el CLI instalo para esos demos y quedaron sin ningun consumidor.
+
+Validaciones: lint, typecheck, 70 tests unitarios. Navegador: funnel (dropdown de ano hasta 1988, edad recalculada a 46 anos al elegir 15/jul/1979), Crear seguimiento en ficha de Rosa (tarea creada con `dueAt` correcto, verificado en base de datos) y Hora de aplicacion en enfermeria de Ariel (formato compacto "12 jul 2026" sin cortarse en la columna angosta).
+
+Nota operativa: Docker (Postgres) estaba caido al iniciar esta verificacion; se reanudo con Docker Desktop antes de continuar.
+
+**Commit sugerido:** `feat(sigeco): add popover date and datetime pickers from shadcn studio`

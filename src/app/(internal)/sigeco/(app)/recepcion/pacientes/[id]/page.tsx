@@ -5,6 +5,7 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
@@ -335,12 +336,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                 />
               </Field>
               <Field label="Fecha y hora">
-                <input
-                  className={internalInputClassName}
-                  name="dueAt"
-                  type="datetime-local"
-                  required
-                />
+                <DateTimePickerField name="dueAt" required />
               </Field>
               <Field label="Notas">
                 <textarea

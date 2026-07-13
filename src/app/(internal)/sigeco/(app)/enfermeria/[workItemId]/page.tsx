@@ -5,6 +5,7 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
+import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import {
   createNursingApplicationAction,
@@ -149,7 +150,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
                 <input className={internalInputClassName} name="route" />
               </Field>
               <Field label="Hora">
-                <input className={internalInputClassName} name="appliedAt" type="datetime-local" />
+                <DateTimePickerField name="appliedAt" />
               </Field>
             </div>
             <Field label="Observaciones">
