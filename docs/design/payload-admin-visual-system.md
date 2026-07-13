@@ -59,10 +59,10 @@ Lista **cerrada** de overrides de clases internas (cualquier adicion se justific
 
 | Selector | Override | Resultado |
 | --- | --- | --- |
-| `.btn--style-primary` | `--bg-color: #068CA8; --hover-bg: #06738A` | Botones primarios (Guardar, Crear) en teal, texto blanco. |
-| Links del contenido del admin | color `#06738A`, hover con subrayado | Links en la familia primaria (se usa `primary-dark` por contraste sobre blanco). |
-| Item activo de la navegacion | acento teal | El modulo actual se distingue con la marca, no con gris. |
-| `:focus-visible` de controles | anillo teal translucido (`rgba(6, 140, 168, 0.25)`) | Mismo lenguaje de foco que el `.focus-ring` de Sigeco. |
+| `.btn--style-primary` | `--bg-color: #068CA8; --hover-bg: #06738A; --color/--hover-color: #FFFFFF` | Botones primarios (Guardar, Crear) en teal, texto blanco. |
+| `a:not([class])` | color `#06738A`, subrayado solo al hover | Links de contenido (las anclas de componentes — botones, nav, cards — siempre llevan clase y no se tocan). |
+| `.nav__link.active` + `.nav__link-indicator` | texto `#06738A`, barra indicadora `#068CA8` | El modulo actual se distingue con la marca, no con gris. |
+| `--accessibility-outline` (variable, no clase) | `2px solid #068CA8` | Payload centraliza el foco en esta variable (51 reglas `:focus-visible` la consumen): un solo override de variable cubre todo el admin. Teal solido, no translucido: un outline de 2px con alpha 0.25 seria casi invisible (hallazgo de la Tarea 3). La redefinicion local de `.folder-file-card--selected` (familia success) se respeta por ser estado semantico. |
 
 Criterio de contraste: identico al aprobado en Marea (teal `#068CA8` con texto blanco en botones primarios; texto teal sobre blanco siempre en `#06738A`).
 

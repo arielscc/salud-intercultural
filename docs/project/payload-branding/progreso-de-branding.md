@@ -8,7 +8,7 @@ Registro de avance del plan [Tareas de branding](./tareas-de-branding.md). Cada 
 | --- | --- | --- |
 | 1 | Infraestructura de estilos y tema claro | Completada (2026-07-13) |
 | 2 | Paleta y radios Marea | Completada (2026-07-13) |
-| 3 | Acento teal en acciones, navegacion y foco | Pendiente |
+| 3 | Acento teal en acciones, navegacion y foco | Completada (2026-07-13) |
 | 4 | Tipografia IBM Plex Sans self-hosted | Pendiente |
 | 5 | Marca: logo, icono y meta | Pendiente |
 | 6 | QA integral y cierre documental | Pendiente |
@@ -70,3 +70,26 @@ Restricciones fijas: solo superficie del admin (`(payload)` + bloque `admin` del
 **Validaciones:** `pnpm lint`, `npx tsc --noEmit`, `pnpm test` (70 tests). Navegador (login de `/admin`, unica pantalla accesible sin credenciales CMS): fondo `#F4F7F8`, inputs blancos con radio 9px, boton radio 9px, texto `#16262C`; variables verificadas por computed style. Pendiente que arrastra: el QA de listado/edicion/modal requiere sesion en el admin (`ADMIN_EMAIL`/`ADMIN_PASSWORD` vacios en `.env`); se cubrira cuando haya credenciales, a mas tardar en la Tarea 6.
 
 **Commit sugerido:** `feat(cms): apply marea palette and radii to payload admin`
+
+### Tarea 3 — Acento Teal En Acciones, Navegacion Y Foco (2026-07-13)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(payload)/admin/custom.css`: bloque Tarea 3 con la lista cerrada definitiva (registrada tambien en la tabla de Acciones de la spec):
+  - `--accessibility-outline: 2px solid #068ca8` en `:root` — Payload centraliza el foco en esta variable (51 reglas `:focus-visible` la consumen), asi que el foco se rebrandea con una variable y no con overrides de clase.
+  - `.btn--style-primary`: `--bg-color #068ca8`, `--hover-bg #06738a`, `--color`/`--hover-color` blanco.
+  - `a:not([class])`: color `#06738a`, subrayado al hover (heuristica verificada: las anclas de componentes de Payload siempre llevan clase; las de contenido, no).
+  - `.nav__link.active` color `#06738a` + `.nav__link-indicator` fondo `#068ca8`.
+- `docs/design/payload-admin-visual-system.md`: tabla de Acciones actualizada con selectores concretos y el ajuste del foco.
+
+**Hallazgos:**
+
+- El foco por variable es mas robusto que lo planeado: un solo override cubre todo el admin. Se descarto el "anillo translucido rgba(6,140,168,0.25)" de la spec original: Payload usa `outline` de 2px y con alpha 0.25 seria casi invisible (regresion de accesibilidad); quedo teal solido.
+- La redefinicion local de `--accessibility-outline` en `.folder-file-card--selected` (familia success) se respeta: es un estado semantico de seleccion.
+- Ojo con inspeccionar CSS via `document.styleSheets` en el navegador: la serializacion de `@layer` hace que las busquedas por `cssText` den vacio; verificar contra el chunk CSS servido (curl) como se hizo aqui.
+
+**Validaciones:** `pnpm lint`, `npx tsc --noEmit`, `pnpm test` (70 tests). Navegador (login): boton Login `rgb(6,140,168)` con texto blanco, link sin clase `rgb(6,115,138)`, variable de foco resuelta a `2px solid #068ca8` en `:root` y consumida por las reglas `:focus-visible` del chunk servido. Pendiente que arrastra: verificar en pantalla la nav activa y el hover del boton requiere sesion CMS (Tarea 6, junto con el resto del QA autenticado).
+
+**Commit sugerido:** `feat(cms): brand admin actions and focus states in marea teal`

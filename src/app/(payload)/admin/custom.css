@@ -23,3 +23,44 @@
   --style-radius-m: 9px;
   --style-radius-l: 12px;
 }
+
+/* Tarea 3 — Acento teal en acciones, navegacion y foco (lista cerrada) */
+:root {
+  /*
+   * Payload centraliza el anillo de foco en esta variable (outline solido;
+   * un alpha translucido seria casi invisible a 2px, por eso teal pleno).
+   * La unica redefinicion local (.folder-file-card--selected, success) se
+   * respeta por ser estado semantico.
+   */
+  --accessibility-outline: 2px solid #068ca8;
+}
+
+/* Boton primario (Guardar, Crear): teal en lugar del gris elevation-800. */
+.btn--style-primary {
+  --bg-color: #068ca8;
+  --hover-bg: #06738a;
+  --color: #ffffff;
+  --hover-color: #ffffff;
+}
+
+/*
+ * Links de contenido: anclas sin clase (las anclas de componentes —
+ * botones, nav, cards — siempre llevan clase y no se tocan).
+ */
+a:not([class]) {
+  color: #06738a;
+  text-decoration: none;
+}
+
+a:not([class]):hover {
+  text-decoration: underline;
+}
+
+/* Item activo de la navegacion: texto y barra indicadora en teal. */
+.nav__link.active {
+  color: #06738a;
+}
+
+.nav__link-indicator {
+  background: #068ca8;
+}
