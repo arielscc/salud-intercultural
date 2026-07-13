@@ -68,7 +68,7 @@ Criterio de contraste: identico al aprobado en Marea (teal `#068CA8` con texto b
 
 ## Tipografia
 
-- `--font-body`: **IBM Plex Sans** (400/500/600), la misma del texto de Sigeco, **self-hosted**: archivos woff2 en `public/fonts/ibm-plex-sans/` + `@font-face` con `font-display: swap` en `custom.css`. Sin requests a CDNs externos (licencia OFL, redistribucion permitida).
+- `--font-body`: **IBM Plex Sans**, la misma del texto de Sigeco, **self-hosted**: un solo woff2 latin **variable** (45 KB, `font-weight: 100 700`; Google Fonts v23 ya la distribuye como fuente variable, no por pesos) en `public/fonts/ibm-plex-sans/` + `@font-face` con `font-display: swap` en `custom.css`. El subset latin cubre el espanol. Sin requests a CDNs externos (licencia OFL, redistribucion permitida).
 - **Sora no entra al admin**: es la voz de titulares de Sigeco y el sitio publico; el admin no distingue familia de titular y llevarla requeriria overrides extra sin beneficio.
 - `--font-mono` y `--font-serif` quedan por defecto.
 

@@ -9,7 +9,7 @@ Registro de avance del plan [Tareas de branding](./tareas-de-branding.md). Cada 
 | 1 | Infraestructura de estilos y tema claro | Completada (2026-07-13) |
 | 2 | Paleta y radios Marea | Completada (2026-07-13) |
 | 3 | Acento teal en acciones, navegacion y foco | Completada (2026-07-13) |
-| 4 | Tipografia IBM Plex Sans self-hosted | Pendiente |
+| 4 | Tipografia IBM Plex Sans self-hosted | Completada (2026-07-13) |
 | 5 | Marca: logo, icono y meta | Pendiente |
 | 6 | QA integral y cierre documental | Pendiente |
 
@@ -93,3 +93,18 @@ Restricciones fijas: solo superficie del admin (`(payload)` + bloque `admin` del
 **Validaciones:** `pnpm lint`, `npx tsc --noEmit`, `pnpm test` (70 tests). Navegador (login): boton Login `rgb(6,140,168)` con texto blanco, link sin clase `rgb(6,115,138)`, variable de foco resuelta a `2px solid #068ca8` en `:root` y consumida por las reglas `:focus-visible` del chunk servido. Pendiente que arrastra: verificar en pantalla la nav activa y el hover del boton requiere sesion CMS (Tarea 6, junto con el resto del QA autenticado).
 
 **Commit sugerido:** `feat(cms): brand admin actions and focus states in marea teal`
+
+### Tarea 4 — Tipografia IBM Plex Sans Self-Hosted (2026-07-13)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `public/fonts/ibm-plex-sans/ibm-plex-sans-latin-wght.woff2` (nuevo, 45 KB): IBM Plex Sans v23 de Google Fonts.
+- `src/app/(payload)/admin/custom.css`: `@font-face` con `font-display: swap` + `--font-body` con la familia y el fallback de sistema que Payload usa por defecto.
+
+**Hallazgo (mejora sobre el plan):** Google Fonts ahora sirve IBM Plex Sans como **fuente variable**: un solo woff2 latin (45 KB, `font-weight: 100 700`, `font-stretch: 100%`) reemplaza a los 3 archivos por peso del plan original (presupuesto: 150 KB). El subset latin (U+0000-00FF...) cubre el espanol completo (acentos, enie, signos). Licencia: SIL Open Font License 1.1.
+
+**Validaciones:** `pnpm lint`, `npx tsc --noEmit`, `pnpm test` (70 tests). Navegador (login `/admin`): `document.fonts` reporta `IBM Plex Sans/100 700/loaded`, `font-family` computada del body arranca con "IBM Plex Sans", y las requests de fuentes de la pagina son exactamente una: `/fonts/ibm-plex-sans/ibm-plex-sans-latin-wght.woff2` local — cero requests a gstatic/googleapis. Verificado que `public/fonts/` queda trackeado por git.
+
+**Commit sugerido:** `feat(cms): self-host ibm plex sans for payload admin`
