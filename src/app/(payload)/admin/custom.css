@@ -1,0 +1,7 @@
+/*
+ * Hoja de estilos propia del admin de Payload. Se importa en layout.tsx
+ * DESPUES de @payloadcms/next/css para ganar por orden de cascada.
+ * Alcance y reglas: docs/design/payload-admin-visual-system.md
+ * (solo variables --theme-* / --style-* y la lista cerrada de overrides;
+ * el contenido visual llega con las Tareas 2-4 del plan de branding).
+ */

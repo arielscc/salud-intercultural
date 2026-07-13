@@ -1,0 +1,52 @@
+# Progreso De Branding Del Admin Payload
+
+Registro de avance del plan [Tareas de branding](./tareas-de-branding.md). Cada tarea terminada agrega aqui su entrada con fecha, archivos tocados, validaciones ejecutadas y pendientes que deja. La spec visual es [Sistema visual del admin Payload](../../design/payload-admin-visual-system.md).
+
+## Estado General
+
+| Tarea | Nombre | Estado |
+| --- | --- | --- |
+| 1 | Infraestructura de estilos y tema claro | Completada (2026-07-13) |
+| 2 | Paleta y radios Marea | Pendiente |
+| 3 | Acento teal en acciones, navegacion y foco | Pendiente |
+| 4 | Tipografia IBM Plex Sans self-hosted | Pendiente |
+| 5 | Marca: logo, icono y meta | Pendiente |
+| 6 | QA integral y cierre documental | Pendiente |
+
+## Contexto Y Decisiones (2026-07-13)
+
+Origen: el usuario pregunto si los estilos del admin de Payload se pueden personalizar o poner a la par del sistema de diseno Marea. Se presentaron tres niveles (variables CSS, marca, paridad total) y el usuario aprobo la recomendacion: **nivel 1 + nivel 2, nivel 3 descartado**. El resultado buscado es que el admin comparta paleta, radios, tipografia de texto y marca con el resto del producto, sin replicar la anatomia de Sigeco.
+
+Decisiones y hallazgos que fijan el plan:
+
+1. **Mecanica verificada contra el paquete instalado** (`@payloadcms/ui` 3.84.1): el admin se tematiza con variables CSS publicas (`--theme-bg`, `--theme-input-bg`, `--theme-text`, `--theme-border-color`, `--theme-elevation-0..1000`, familias `success`/`error`/`warning`, `--style-radius-s/m/l`, `--font-body`).
+2. **El boton primario de Payload no usa color de marca**: `.btn--style-primary` toma su fondo de `--theme-elevation-800` (gris oscuro). El acento teal requiere una lista cerrada de overrides de clase (boton primario, links, nav activa, focus), documentada en la spec y re-verificable tras cada actualizacion del CMS.
+3. **No se tocan** la escala `elevation` ni las familias semanticas: sostienen contrastes y significados en pantallas que no controlamos; redefinirlas es nivel 3.
+4. **Punto de enganche**: `src/app/(payload)/admin/custom.css` importado despues de `@payloadcms/next/css` en el layout del admin. CSS plano; el proyecto no tiene `sass` y no se agregan dependencias.
+5. **Tema claro unico** (`admin.theme: "light"`), coherente con la decision Marea de Sigeco.
+6. **Los componentes admin propios ya usan `var(--theme-*)`** (`AdminDashboard`, `AdminQuickLinks`, `LeadListIntro`, `LeadDetailActions`): heredan el rebrand sin modificarlos; solo se verifican en QA.
+7. **Tipografia**: IBM Plex Sans (la de Sigeco) self-hosted en `public/fonts/`; Sora no entra al admin.
+8. **Marca**: no existe asset de logo en `public/`, asi que el logo del login sera un wordmark tipografico/SVG; si el usuario provee un archivo de logo, se reemplaza.
+
+Restricciones fijas: solo superficie del admin (`(payload)` + bloque `admin` del config + componentes de marca), cero cambios en Sigeco y sitio publico, cero cambios de logica/colecciones/permisos del CMS, migraciones no aplican (no hay cambios de datos), los commits los hace el usuario (uno por tarea).
+
+## Entradas Por Tarea
+
+### Tarea 1 — Infraestructura De Estilos Y Tema Claro (2026-07-13)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(payload)/admin/custom.css` (nuevo): hoja vacia con comentario de cabecera que remite a la spec; el contenido visual llega en las Tareas 2-4.
+- `src/app/(payload)/admin/layout.tsx`: import de `./custom.css` inmediatamente despues de `@payloadcms/next/css`.
+- `payload.config.ts`: `theme: "light"` en el bloque `admin`.
+
+**Validaciones:** `pnpm lint`, `npx tsc --noEmit` (dev server activo, por eso no `pnpm typecheck`), `pnpm test` (70 tests). Navegador: `/admin/login` renderiza con `data-theme="light"`; se forzo la cookie `payload-theme=dark` y el admin siguio en claro (el config gana, confirmado tambien en el codigo instalado: `getRequestTheme` retorna `config.admin.theme` antes de mirar cookie o header del sistema). Spot check de aislamiento: home publica y login de Sigeco sin cambios.
+
+**Hallazgos operativos:**
+
+- Los cambios en `payload.config.ts` NO se recargan con HMR: el dev server que estaba corriendo seguia sirviendo el config viejo (la cookie oscura ganaba). Hubo que reiniciar `next dev` para que `theme: "light"` tomara efecto. Regla practica: tras tocar `payload.config.ts`, reiniciar el dev server antes de verificar.
+- El criterio "el toggle de tema desaparece de la cuenta" se verifico por codigo, no en pantalla: `ADMIN_EMAIL`/`ADMIN_PASSWORD` estan vacios en `.env` (hay 1 usuario CMS en la base pero sin credenciales documentadas), asi que no se pudo iniciar sesion en el admin. En el fuente instalado (`views/Account/Settings`), el selector solo se renderiza con `theme === 'all'`. Pendiente para la Tarea 6: conseguir credenciales del CMS con el usuario para el recorrido autenticado (dashboard, colecciones, cuenta).
+
+**Commit sugerido:** `feat(cms): scaffold admin stylesheet and force light theme`
