@@ -328,3 +328,19 @@ Validaciones: lint, typecheck, 70 tests unitarios. Navegador: funnel (dropdown d
 Nota operativa: Docker (Postgres) estaba caido al iniciar esta verificacion; se reanudo con Docker Desktop antes de continuar.
 
 **Commit sugerido:** `feat(sigeco): add popover date and datetime pickers from shadcn studio`
+
+### Centralizacion de fechas y horas con date-fns (zona America/La_Paz)
+
+Pedido del usuario: migrar todo el manejo de fechas/horas a date-fns, ya instalado por los pickers. La revision previa encontro ademas un bug latente: todo el formateo (21 llamadas repetidas a `toLocaleString("es-BO")` en 12 archivos) y los rangos de "hoy" de las queries usaban la zona horaria del servidor, asi que en un despliegue UTC las horas se verian 4 horas adelantadas y el "hoy" del dashboard empezaria a las 20:00 de Bolivia.
+
+- `src/lib/dates.ts` (nuevo): helpers centrales sobre date-fns + `@date-fns/tz` (`TZDate`), siempre en `APP_TIME_ZONE = "America/La_Paz"` sin importar donde corra el servidor. `formatDateTime` ("13 jul 2026, 14:30", formato elegido por el usuario, sin segundos), `formatDate`, `formatTime`, `formatLongDate` (header del shell), `formatMonthYearFromDateOnly` (testimonios publicos), `toDateOnlyString` (Date -> "yyyy-MM-dd" en UTC, para inputs de fecha de nacimiento), `dayRange` y `monthRange` (limites del dia/mes boliviano como instantes UTC).
+- Reemplazos de formateo: las 19 llamadas `toLocaleString("es-BO")` -> `formatDateTime` (paginas de recepcion, visitas, pacientes, consultas, seguimientos, ventas, inventario), `toLocaleTimeString` del dashboard -> `formatTime`, `Intl.DateTimeFormat` del shell -> `formatLongDate` y el de testimonios -> `formatMonthYearFromDateOnly`.
+- Queries: `sales.ts`, `reception.ts` y `follow-ups.ts` tenian cada uno su propia copia de `dayRange`/`getDayRange` con `setHours(0,0,0,0)`; las tres ahora importan `dayRange`/`monthRange` de `lib/dates`.
+- Edad: `src/lib/age.ts` compara los componentes UTC de `birthDate` (se guarda como medianoche UTC) contra el "hoy" boliviano via `TZDate`; el `calculateAge` cliente de `funnel-fields.tsx` se reescribio con `parse` + `differenceInYears` (corre en el navegador, zona de quien edita).
+- Las 3 conversiones `birthDate.toISOString().slice(0, 10)` (actions de recepcion, pagina nuevo, pagina editar) ahora usan `toDateOnlyString`.
+- Sin cambios: expiracion de sesion y bloqueo por intentos fallidos (matematica de milisegundos, mas clara asi).
+- Dependencia nueva: `@date-fns/tz` fijada en `1.5.0` exacta (la misma copia que ya traia react-day-picker).
+
+Validaciones: lint, tsc, 70 tests unitarios. Script de verificacion ejecutado con `TZ=UTC` y `TZ=America/La_Paz`: salida identica en ambos (formatos, rangos a las 04:00Z = medianoche boliviana, edad). Navegador: header del shell, tabla de visitas de la ficha ("12 jul 2026, 09:15"), detalle de visita, testimonios publicos ("febrero de 2026") y edad en editar ficha (38 anos).
+
+**Commit sugerido:** `refactor(dates): centralize date and time handling with date-fns in La Paz timezone`

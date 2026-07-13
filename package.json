@@ -29,6 +29,7 @@
     "internal:set-role": "node --import dotenv/config --import tsx scripts/set-internal-user-role.ts"
   },
   "dependencies": {
+    "@date-fns/tz": "1.5.0",
     "@hookform/resolvers": "^3.9.1",
     "@next/env": "16.2.6",
     "@payloadcms/db-postgres": "^3.84.1",

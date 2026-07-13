@@ -7,6 +7,7 @@ import {
   searchReceptionPatients,
   updateReceptionPatient
 } from "@/modules/database/queries/reception";
+import { toDateOnlyString } from "@/lib/dates";
 import { findPossibleDuplicatePatients } from "@/modules/database/queries/patients";
 import { requirePermission } from "@/modules/permissions";
 import {
@@ -28,7 +29,7 @@ export async function searchReceptionPatientsAction(query: string) {
 
   return patients.map((patient) => ({
     ...patient,
-    birthDate: patient.birthDate ? patient.birthDate.toISOString().slice(0, 10) : ""
+    birthDate: toDateOnlyString(patient.birthDate)
   }));
 }
 

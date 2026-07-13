@@ -10,6 +10,7 @@ import {
   getPublicPageMetadata,
   getPublicTestimonials
 } from "@/lib/cms/public-content";
+import { formatMonthYearFromDateOnly } from "@/lib/dates";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 
 export const revalidate = 60;
@@ -28,10 +29,7 @@ function formatDate(date?: string) {
     return "Fecha no publicada";
   }
 
-  return new Intl.DateTimeFormat("es-BO", {
-    month: "long",
-    year: "numeric"
-  }).format(new Date(`${date}T00:00:00`));
+  return formatMonthYearFromDateOnly(date) ?? "Fecha no publicada";
 }
 
 export default async function TestimoniosPage() {

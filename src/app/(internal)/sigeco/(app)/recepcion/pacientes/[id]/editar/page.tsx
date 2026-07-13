@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PatientEditForm } from "@/components/internal/reception/PatientEditForm";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { toDateOnlyString } from "@/lib/dates";
 import { getReceptionPatientById } from "@/modules/database/queries/reception";
 import { requirePermission } from "@/modules/permissions";
 
@@ -36,7 +37,7 @@ export default async function PatientEditPage({ params, searchParams }: PatientE
       <PatientEditForm
         patient={{
           ...patient,
-          birthDate: patient.birthDate ? patient.birthDate.toISOString().slice(0, 10) : ""
+          birthDate: toDateOnlyString(patient.birthDate)
         }}
       />
     </div>

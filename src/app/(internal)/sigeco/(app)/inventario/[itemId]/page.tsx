@@ -10,6 +10,7 @@ import {
   createInventoryAdjustmentAction
 } from "@/features/inventory/actions";
 import { inventoryMovementTypeLabels } from "@/features/inventory/labels";
+import { formatDateTime } from "@/lib/dates";
 import { getInventoryItemById } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
@@ -94,7 +95,7 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
                     {movement.quantityDelta}
                   </Td>
                   <Td className="text-right tabular-nums">{movement.stockAfter}</Td>
-                  <Td className="tabular-nums">{movement.createdAt.toLocaleString("es-BO")}</Td>
+                  <Td className="tabular-nums">{formatDateTime(movement.createdAt)}</Td>
                   <Td className="max-w-[240px] truncate">{movement.reason}</Td>
                 </Tr>
               ))}

@@ -13,6 +13,7 @@ import {
 } from "@/features/patients/labels";
 import { applyVisitFlowAction, updateVisitStatusAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
+import { formatDateTime } from "@/lib/dates";
 import { getVisitById } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
 
@@ -67,7 +68,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
               label="Área actual"
               value={visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
             />
-            <InfoRow label="Llegada" value={visit.checkedInAt.toLocaleString("es-BO")} />
+            <InfoRow label="Llegada" value={formatDateTime(visit.checkedInAt)} />
             {visit.reason ? <InfoRow label="Motivo" value={visit.reason} wide /> : null}
           </dl>
           {isActive ? (
@@ -104,7 +105,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
               <TimelineItem
                 key={item.id}
                 title={item.title}
-                meta={`${routeAreaLabels[item.area]} · ${item.createdAt.toLocaleString("es-BO")}`}
+                meta={`${routeAreaLabels[item.area]} · ${formatDateTime(item.createdAt)}`}
                 aside={workItemStatusLabels[item.status]}
                 body={item.description ?? undefined}
               />
@@ -122,7 +123,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
               <TimelineItem
                 key={step.id}
                 title={routeAreaLabels[step.area]}
-                meta={step.startedAt.toLocaleString("es-BO")}
+                meta={formatDateTime(step.startedAt)}
                 aside={visitStatusLabels[step.status]}
                 body={step.note ?? undefined}
               />

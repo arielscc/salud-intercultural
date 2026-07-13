@@ -1,4 +1,5 @@
 import type { Prisma, SaleItemType } from "@/generated/prisma/client";
+import { dayRange, monthRange } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 import { applyInventoryMovement } from "@/modules/database/queries/inventory";
@@ -15,20 +16,6 @@ function getSaleStatus(totalCents: number, paidCents: number) {
   if (paidCents <= 0) return "pending";
   if (paidCents < totalCents) return "partial";
   return "paid";
-}
-
-function dayRange(date = new Date()) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start, end };
-}
-
-function monthRange(date = new Date()) {
-  const start = new Date(date.getFullYear(), date.getMonth(), 1);
-  const end = new Date(date.getFullYear(), date.getMonth() + 1, 1);
-  return { start, end };
 }
 
 async function ensurePaymentMethod(tx: Prisma.TransactionClient, code: string) {

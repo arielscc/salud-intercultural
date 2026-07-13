@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { routeAreaLabels } from "@/features/patients/labels";
+import { formatTime } from "@/lib/dates";
 import { getFollowUpWorkSummary } from "@/modules/database/queries/follow-ups";
 import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getReceptionDashboardSummary } from "@/modules/database/queries/reception";
@@ -197,10 +198,7 @@ export default async function SigecoDashboardPage() {
                       </Link>
                     </Td>
                     <Td className="whitespace-nowrap tabular-nums">
-                      {visit.checkedInAt.toLocaleTimeString("es-BO", {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
+                      {formatTime(visit.checkedInAt)}
                     </Td>
                     <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
                     <Td>

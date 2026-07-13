@@ -5,6 +5,7 @@ import { Chip } from "@/components/internal/ui/Chip";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels } from "@/features/patients/labels";
+import { formatDateTime } from "@/lib/dates";
 import { getConsultationVisits } from "@/modules/database/queries/clinical-care";
 import { requirePermission } from "@/modules/permissions";
 
@@ -40,7 +41,7 @@ export default async function ConsultationsPage() {
                   </Link>
                 </Td>
                 <Td className="tabular-nums">{visit.patient.phone}</Td>
-                <Td className="tabular-nums">{visit.checkedInAt.toLocaleString("es-BO")}</Td>
+                <Td className="tabular-nums">{formatDateTime(visit.checkedInAt)}</Td>
                 <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
                 <Td>
                   {visit.clinicalConsultation ? (

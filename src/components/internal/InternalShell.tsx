@@ -3,17 +3,12 @@ import { LogOut } from "lucide-react";
 import type { InternalUser } from "@/generated/prisma/client";
 import { logoutInternalUser } from "@/features/internal-auth/actions";
 import { internalRoleLabels } from "@/features/internal-auth/permissions";
+import { formatLongDate } from "@/lib/dates";
 import { MobileSidebar } from "@/components/internal/MobileSidebar";
 import { SidebarNav } from "@/components/internal/SidebarNav";
 
 function formatToday() {
-  const formatted = new Intl.DateTimeFormat("es-BO", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  }).format(new Date());
-
+  const formatted = formatLongDate(new Date());
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 

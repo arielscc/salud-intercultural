@@ -20,6 +20,7 @@ import {
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
 import { studyTypeLabels } from "@/features/studies/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
+import { formatDateTime } from "@/lib/dates";
 import { getPatientById } from "@/modules/database/queries/patients";
 import { requirePermission } from "@/modules/permissions";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -139,7 +140,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                       href={`/sigeco/recepcion/visitas/${visit.id}`}
                       className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
                     >
-                      {visit.checkedInAt.toLocaleString("es-BO")}
+                      {formatDateTime(visit.checkedInAt)}
                     </a>
                   </Td>
                   <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
@@ -166,7 +167,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
               <TimelineItem
                 key={item.id}
                 title="Signos vitales"
-                meta={item.recordedAt.toLocaleString("es-BO")}
+                meta={formatDateTime(item.recordedAt)}
                 body={
                   <>
                     <span className="tabular-nums">
@@ -183,7 +184,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
               <TimelineItem
                 key={item.id}
                 title={item.medication}
-                meta={item.appliedAt.toLocaleString("es-BO")}
+                meta={formatDateTime(item.appliedAt)}
                 body={
                   <>
                     {item.quantity ?? "Sin cantidad"} · {item.route ?? "Sin vía"}
@@ -196,7 +197,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
               <TimelineItem
                 key={item.id}
                 title="Nota de enfermería"
-                meta={item.createdAt.toLocaleString("es-BO")}
+                meta={formatDateTime(item.createdAt)}
                 body={item.note}
               />
             ))}
@@ -213,7 +214,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
               <TimelineItem
                 key={study.id}
                 title={study.title}
-                meta={(study.performedAt ?? study.createdAt).toLocaleString("es-BO")}
+                meta={formatDateTime(study.performedAt ?? study.createdAt)}
                 body={
                   <>
                     {studyTypeLabels[study.type]}
@@ -282,7 +283,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                     {task.title}
                   </a>
                 }
-                meta={task.dueAt.toLocaleString("es-BO")}
+                meta={formatDateTime(task.dueAt)}
                 aside={followUpStatusLabels[task.status]}
                 body={task.attempts[0]?.notes ?? undefined}
               />

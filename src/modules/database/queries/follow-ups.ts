@@ -1,4 +1,5 @@
 import type { FollowUpAttemptMethod, FollowUpStatus } from "@/generated/prisma/client";
+import { dayRange } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 
@@ -11,14 +12,6 @@ const closedStatuses: FollowUpStatus[] = [
   "requires_doctor_call",
   "cancelled"
 ];
-
-function getDayRange(date = new Date()) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start, end };
-}
 
 export async function createFollowUpTaskRecord(input: {
   leadId?: string;
@@ -65,7 +58,7 @@ export async function getFollowUpTasks(
 ) {
   const pagination = getPagination(input);
   const now = new Date();
-  const today = getDayRange(now);
+  const today = dayRange(now);
 
   return withDatabaseError("getFollowUpTasks", async () => {
     return prisma.followUpTask.findMany({
@@ -192,7 +185,7 @@ export async function getFollowUpTimelineForPatient(patientId: string) {
 
 export async function getFollowUpWorkSummary(userId?: string) {
   return withDatabaseError("getFollowUpWorkSummary", async () => {
-    const today = getDayRange();
+    const today = dayRange();
     const whereUser = userId ? { assignedToId: userId } : {};
     const [overdue, todayCount, upcoming] = await Promise.all([
       prisma.followUpTask.count({

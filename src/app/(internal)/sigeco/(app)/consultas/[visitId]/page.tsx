@@ -17,6 +17,7 @@ import { symptomDurationUnitLabels, visitIntakeTypeLabels } from "@/features/rec
 import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
+import { formatDateTime } from "@/lib/dates";
 import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
 import { requirePermission } from "@/modules/permissions";
 
@@ -309,7 +310,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
               <TimelineItem
                 key={study.id}
                 title={study.title}
-                meta={`${studyTypeLabels[study.type]} · ${(study.performedAt ?? study.createdAt).toLocaleString("es-BO")}`}
+                meta={`${studyTypeLabels[study.type]} · ${formatDateTime(study.performedAt ?? study.createdAt)}`}
                 aside={studyStatusLabels[study.status]}
                 body={
                   study.resultSummary || study.findings ? (
@@ -337,7 +338,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
               <TimelineItem
                 key={item.id}
                 title={item.medication}
-                meta={item.appliedAt.toLocaleString("es-BO")}
+                meta={formatDateTime(item.appliedAt)}
                 body={`${item.quantity ?? "Sin cantidad"} · ${item.route ?? "Sin vía"}`}
               />
             ))}

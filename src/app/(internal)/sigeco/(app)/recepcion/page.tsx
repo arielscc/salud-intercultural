@@ -11,6 +11,7 @@ import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
+import { formatDateTime } from "@/lib/dates";
 import { getPatients } from "@/modules/database/queries/patients";
 import { getVisits } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
@@ -131,7 +132,7 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                       </Link>
                     </Td>
                     <Td className="tabular-nums">{visit.patient.phone}</Td>
-                    <Td className="tabular-nums">{visit.checkedInAt.toLocaleString("es-BO")}</Td>
+                    <Td className="tabular-nums">{formatDateTime(visit.checkedInAt)}</Td>
                     <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
                     <Td className="tabular-nums">
                       {visit.workItems.length > 0 ? (

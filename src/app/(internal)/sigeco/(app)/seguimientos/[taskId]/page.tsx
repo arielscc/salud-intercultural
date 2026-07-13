@@ -9,6 +9,7 @@ import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpAttemptAction } from "@/features/follow-ups/actions";
 import { followUpAttemptMethodLabels, followUpStatusLabels } from "@/features/follow-ups/labels";
+import { formatDateTime } from "@/lib/dates";
 import { getFollowUpTaskById } from "@/modules/database/queries/follow-ups";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
@@ -56,7 +57,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
             <Chip dot>{followUpStatusLabels[task.status]}</Chip>
           </div>
           <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
-            <InfoRow label="Vence" value={task.dueAt.toLocaleString("es-BO")} />
+            <InfoRow label="Vence" value={formatDateTime(task.dueAt)} />
             {phone ? <InfoRow label="Teléfono" value={phone} /> : null}
           </dl>
           {patientDeclinedContact ? (
@@ -98,7 +99,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
               <TimelineItem
                 key={attempt.id}
                 title={followUpStatusLabels[attempt.result]}
-                meta={`${followUpAttemptMethodLabels[attempt.method]} · ${attempt.contactedAt.toLocaleString("es-BO")}`}
+                meta={`${followUpAttemptMethodLabels[attempt.method]} · ${formatDateTime(attempt.contactedAt)}`}
                 body={attempt.notes ?? undefined}
               />
             ))}

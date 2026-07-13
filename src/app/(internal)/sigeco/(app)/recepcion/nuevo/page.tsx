@@ -1,5 +1,6 @@
 import { IntakeFunnel } from "@/components/internal/reception/IntakeFunnel";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { toDateOnlyString } from "@/lib/dates";
 import { getReceptionPatientById } from "@/modules/database/queries/reception";
 import { requirePermission } from "@/modules/permissions";
 
@@ -16,7 +17,7 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
   const params = await searchParams;
   const patient = params.paciente ? await getReceptionPatientById(params.paciente) : null;
   const initialPatient = patient
-    ? { ...patient, birthDate: patient.birthDate ? patient.birthDate.toISOString().slice(0, 10) : "" }
+    ? { ...patient, birthDate: toDateOnlyString(patient.birthDate) }
     : undefined;
 
   return (

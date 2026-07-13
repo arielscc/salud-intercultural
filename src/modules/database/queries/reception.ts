@@ -6,6 +6,7 @@ import type {
   SymptomDurationUnit,
   VisitIntakeType
 } from "@/generated/prisma/client";
+import { dayRange } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { createVisitInTransaction } from "@/modules/database/queries/visits";
 
@@ -110,16 +111,8 @@ const dashboardRouteAreas: PatientRouteArea[] = [
   "cierre"
 ];
 
-function getDayRange(date: Date) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start, end };
-}
-
 export async function getReceptionDashboardSummary(date = new Date()) {
-  const day = getDayRange(date);
+  const day = dayRange(date);
 
   return withDatabaseError("getReceptionDashboardSummary", async () => {
     const [todayPatients, activeGroups, abandonmentEvents, latestArrivals] = await Promise.all([

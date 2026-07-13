@@ -11,6 +11,7 @@ import {
   saleItemTypeLabels,
   saleStatusLabels
 } from "@/features/sales/labels";
+import { formatDateTime } from "@/lib/dates";
 import { getSaleById } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
@@ -108,7 +109,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
                     {formatMoney(payment.amountCents)}
                   </Td>
                   <Td>{payment.method.name}</Td>
-                  <Td className="tabular-nums">{payment.paidAt.toLocaleString("es-BO")}</Td>
+                  <Td className="tabular-nums">{formatDateTime(payment.paidAt)}</Td>
                   <Td>{payment.reference ?? "—"}</Td>
                 </Tr>
               ))}

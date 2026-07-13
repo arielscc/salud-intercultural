@@ -10,6 +10,7 @@ import {
   getFollowUpTasks,
   getFollowUpWorkSummary
 } from "@/modules/database/queries/follow-ups";
+import { formatDateTime } from "@/lib/dates";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
 
@@ -88,7 +89,7 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
                     ) : null}
                   </Td>
                   <Td className={cn("tabular-nums", isOverdue && "font-semibold text-error")}>
-                    {task.dueAt.toLocaleString("es-BO")}
+                    {formatDateTime(task.dueAt)}
                     {isOverdue ? " · vencido" : ""}
                   </Td>
                   <Td>

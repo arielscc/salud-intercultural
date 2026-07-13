@@ -1,5 +1,7 @@
 "use client";
 
+import { differenceInYears, isValid, parse } from "date-fns";
+
 import { cn } from "@/lib/cn";
 
 /*
@@ -25,14 +27,10 @@ export function cityStateFrom(city: string | null | undefined): {
 
 export function calculateAge(birthDate: string) {
   if (!birthDate) return null;
-  const date = new Date(`${birthDate}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - date.getFullYear();
-  const monthDelta = now.getMonth() - date.getMonth();
-  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < date.getDate())) {
-    age -= 1;
-  }
+  // Corre en el navegador: fecha y "hoy" en la zona horaria de quien edita.
+  const date = parse(birthDate, "yyyy-MM-dd", new Date());
+  if (!isValid(date)) return null;
+  const age = differenceInYears(new Date(), date);
   return age >= 0 && age < 130 ? age : null;
 }
 
