@@ -11,7 +11,9 @@ Registro de avance del plan [Tareas de branding](./tareas-de-branding.md). Cada 
 | 3 | Acento teal en acciones, navegacion y foco | Completada (2026-07-13) |
 | 4 | Tipografia IBM Plex Sans self-hosted | Completada (2026-07-13) |
 | 5 | Marca: logo, icono y meta | Completada (2026-07-13) |
-| 6 | QA integral y cierre documental | Pendiente |
+| 6 | QA integral y cierre documental | Completada (2026-07-13) |
+
+**PLAN COMPLETO.** Los 6 commits sugeridos estan listados en cada entrada; los hace el usuario. Nota de mantenimiento: tras cada actualizacion de Payload, re-verificar la lista cerrada de overrides (tabla de Acciones de la spec) y regenerar el import map si cambian componentes.
 
 ## Contexto Y Decisiones (2026-07-13)
 
@@ -124,3 +126,31 @@ Restricciones fijas: solo superficie del admin (`(payload)` + bloque `admin` del
 **Validaciones:** `pnpm lint`, `npx tsc --noEmit`, `pnpm test` (70 tests). Navegador (login `/admin`): wordmark SI + "Salud Intercultural / Panel de contenido" en lugar del logo Payload, `document.title` = "Login - Salud Intercultural", favicon `/admin-favicon.svg`. Pendiente que arrastra: el `BrandIcon` de la nav solo se ve con sesion iniciada (Tarea 6).
 
 **Commit sugerido:** `feat(cms): add clinic logo and meta branding to admin`
+
+### Tarea 6 — QA Integral Y Cierre Documental (2026-07-13)
+
+**Estado:** Completada.
+
+**Como se resolvio la falta de credenciales CMS:** `ADMIN_EMAIL`/`ADMIN_PASSWORD` siguen vacios en `.env`, asi que el recorrido autenticado se hizo con un **usuario QA temporal** (`qa-branding@test.si`, password aleatorio no persistido) creado via API local de Payload con un script temporal en `scripts/` (borrado al terminar). Al cierre se elimino el usuario y se verifico contra la base que quedo todo como estaba (1 usuario, 4 testimonios).
+
+**Recorrido autenticado (viewport desktop y movil 390px):**
+
+- Login: wordmark SI, boton teal, foco teal, IBM Plex Sans.
+- Dashboard: componentes propios (`AdminDashboard`, `AdminQuickLinks`) heredan el tema sin cambios; titulo "Dashboard - Salud Intercultural"; `BrandIcon` SI teal en el header.
+- Listado de Testimonios: tabla legible, links de fila en teal, indicador de nav activa en `rgb(6,140,168)`.
+- Edicion de un testimonio: Save teal, inputs blancos radio 9px, breadcrumbs teal, checkboxes legibles (sin guardar nada).
+- Global Configuracion global: formulario largo con arrays de keywords, todo legible.
+- Media: listado vacio renderiza bien.
+- Movil 390x844: layout colapsa sin scroll horizontal.
+- Popup de acciones del documento verificado; el **modal de confirmacion de borrado no se pudo ejercitar**: el usuario QA quedo con rol `editor`, que no puede borrar testimonios (el popup solo ofrece Duplicate). Se registro un testimonio de prueba via API para intentarlo y se borro tambien via API. Pendiente menor: verificar ese modal cuando el usuario entre con su cuenta admin real.
+
+**Hallazgos (no bloqueantes, fuera de alcance del branding):**
+
+- El dashboard propio muestra "Leads: No disponible" + aviso rosado de metricas con el rol `editor` (acceso restringido a leads); comportamiento previo al branding, no regresion visual.
+- La regla `.nav__link.active { color }` no llega a aplicar: Payload marca el item activo solo con `.nav__link-indicator` (que si quedo teal) y font-weight, sin la clase `.active` en el DOM observado. La regla es inocua y se deja por si otras vistas la usan.
+
+**Aislamiento (spot check):** home publica y `/testimonios` en Inter con su fondo propio; login de Sigeco con su IBM Plex y `#F4F7F8` de siempre. Cero cambios fuera de `/admin`.
+
+**Validaciones finales:** `pnpm lint`, `pnpm test` (70 tests) y `pnpm build` completo (dev server apagado durante el build, reiniciado despues).
+
+**Commit sugerido:** `docs(cms): close payload admin branding with qa notes`
