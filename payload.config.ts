@@ -25,10 +25,30 @@ export default buildConfig({
           path: "@/payload/admin/AdminDashboard",
           exportName: "AdminDashboard"
         }
-      ]
+      ],
+      graphics: {
+        Icon: {
+          path: "@/payload/admin/BrandIcon",
+          exportName: "BrandIcon"
+        },
+        Logo: {
+          path: "@/payload/admin/BrandLogo",
+          exportName: "BrandLogo"
+        }
+      }
     },
     importMap: {
       baseDir: path.resolve(dirname)
+    },
+    meta: {
+      icons: [
+        {
+          rel: "icon",
+          type: "image/svg+xml",
+          url: "/admin-favicon.svg"
+        }
+      ],
+      titleSuffix: "- Salud Intercultural"
     },
     theme: "light"
   },

@@ -10,7 +10,7 @@ Registro de avance del plan [Tareas de branding](./tareas-de-branding.md). Cada 
 | 2 | Paleta y radios Marea | Completada (2026-07-13) |
 | 3 | Acento teal en acciones, navegacion y foco | Completada (2026-07-13) |
 | 4 | Tipografia IBM Plex Sans self-hosted | Completada (2026-07-13) |
-| 5 | Marca: logo, icono y meta | Pendiente |
+| 5 | Marca: logo, icono y meta | Completada (2026-07-13) |
 | 6 | QA integral y cierre documental | Pendiente |
 
 ## Contexto Y Decisiones (2026-07-13)
@@ -108,3 +108,19 @@ Restricciones fijas: solo superficie del admin (`(payload)` + bloque `admin` del
 **Validaciones:** `pnpm lint`, `npx tsc --noEmit`, `pnpm test` (70 tests). Navegador (login `/admin`): `document.fonts` reporta `IBM Plex Sans/100 700/loaded`, `font-family` computada del body arranca con "IBM Plex Sans", y las requests de fuentes de la pagina son exactamente una: `/fonts/ibm-plex-sans/ibm-plex-sans-latin-wght.woff2` local — cero requests a gstatic/googleapis. Verificado que `public/fonts/` queda trackeado por git.
 
 **Commit sugerido:** `feat(cms): self-host ibm plex sans for payload admin`
+
+### Tarea 5 — Marca: Logo, Icono Y Meta (2026-07-13)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/payload/admin/BrandLogo.tsx` (nuevo): wordmark del login — monograma SI en cuadrado teal + "Salud Intercultural" + subtitulo "Panel de contenido". Replica la marca del header del sitio publico (`src/components/landing/Header.tsx`); estilos inline con variables del tema, como los demas componentes admin propios.
+- `src/payload/admin/BrandIcon.tsx` (nuevo): isotipo SI compacto (24px) para la navegacion.
+- `public/admin-favicon.svg` (nuevo): favicon SVG teal con monograma SI.
+- `payload.config.ts`: `admin.components.graphics.{Icon,Logo}` + `admin.meta` con `titleSuffix "- Salud Intercultural"` e `icons` apuntando al SVG.
+- `src/app/(payload)/admin/importMap.js`: regenerado con `pnpm exec payload generate:importmap` (dev server apagado; el CLI dijo "No new imports found" pero SI actualizo el archivo — verificar siempre con `git status`, no con el mensaje).
+
+**Validaciones:** `pnpm lint`, `npx tsc --noEmit`, `pnpm test` (70 tests). Navegador (login `/admin`): wordmark SI + "Salud Intercultural / Panel de contenido" en lugar del logo Payload, `document.title` = "Login - Salud Intercultural", favicon `/admin-favicon.svg`. Pendiente que arrastra: el `BrandIcon` de la nav solo se ve con sesion iniciada (Tarea 6).
+
+**Commit sugerido:** `feat(cms): add clinic logo and meta branding to admin`
