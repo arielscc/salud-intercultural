@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -40,8 +41,9 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
 
   return (
     <div className={cn("grid items-start gap-4", hasBalance && "xl:grid-cols-[1.5fr_1fr]")}>
-      <div className="grid gap-4">
-        <Card>
+      <MobileBackLink href="/sigeco/administracion" label="Volver a Caja" />
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-muted">Comprobante interno</p>
@@ -58,7 +60,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
           </div>
         </Card>
 
-        <Card className="p-0">
+        <Card className="max-sm:order-3 p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Detalle" />
           <RecordList>
             {sale.items.map((item) => (
@@ -120,7 +122,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
           </div>
         </Card>
 
-        <Card className="p-0">
+        <Card className="max-sm:order-4 p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Pagos" />
           <RecordList>
             {sale.payments.map((payment) => (
@@ -174,8 +176,8 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
       </div>
 
       {hasBalance ? (
-        <div className="grid gap-4">
-          <Card>
+        <div className="grid gap-4 max-sm:contents">
+          <Card className="max-sm:order-2">
             <CardHeader title="Registrar cobro" />
             <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
               <input type="hidden" name="saleId" value={sale.id} />

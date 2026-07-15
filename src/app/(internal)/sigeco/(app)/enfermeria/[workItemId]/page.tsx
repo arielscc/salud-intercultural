@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { StudyStatus, StudyType, VisitWorkItemStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
+import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -43,8 +44,9 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
-      <div className="grid gap-4">
-        <Card>
+      <MobileBackLink href="/sigeco/enfermeria" label="Volver a Enfermería" />
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium tabular-nums text-muted">{patient.internalCode}</p>
@@ -74,7 +76,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
           </div>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-3">
           <CollapsibleSection
             title="Signos vitales"
             description="Registrar cuando la orden o la atención lo requieran."
@@ -121,7 +123,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
           </CollapsibleSection>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-2">
           <CollapsibleSection
             title="Aplicación clínica"
             description="La indicación médica ya viene prellenada."
@@ -162,7 +164,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
           </CollapsibleSection>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-4">
           <CollapsibleSection
             title="Estudio"
             description="Registrar solo cuando exista una orden o resultado."
@@ -220,8 +222,8 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
         </Card>
       </div>
 
-      <div className="grid gap-4">
-        <Card>
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-5">
           <CardHeader title="Estado de tarea" />
           <NoticeForm action={updateNursingWorkItemAction} notice="Tarea actualizada" className="grid gap-3">
             <input type="hidden" name="workItemId" value={item.id} />
@@ -245,7 +247,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
           </NoticeForm>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-6">
           <CardHeader title="Nota de enfermería" />
           <NoticeForm action={createNursingNoteAction} notice="Nota guardada" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />

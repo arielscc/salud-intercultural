@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { SaleItemType } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
+import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
@@ -51,7 +52,8 @@ export default async function AdministrationWorkItemPage({
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
-      <div className="grid gap-4">
+      <MobileBackLink href="/sigeco/administracion" label="Volver a Caja" />
+      <div className="grid gap-4 max-sm:contents">
         {query.error === "insufficient-stock" ? (
           <div
             className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
@@ -72,7 +74,7 @@ export default async function AdministrationWorkItemPage({
             Revisa los datos de la venta. La descripción, cantidad y precio son obligatorios.
           </div>
         ) : null}
-        <Card>
+        <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium tabular-nums text-muted">{patient.internalCode}</p>
@@ -94,7 +96,7 @@ export default async function AdministrationWorkItemPage({
           </div>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-2">
           <CardHeader title="Registrar venta" />
           <form action={createSaleAction} className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
@@ -193,9 +195,9 @@ export default async function AdministrationWorkItemPage({
         </Card>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 max-sm:contents">
         {isActiveVisitStatus(item.visit.status) ? (
-          <Card>
+          <Card className="max-sm:order-3">
             <CardHeader
               title="Salida del paciente"
               description="Cuando el paciente ya pagó o solo vino a comprar, cierra la visita aquí."
@@ -235,7 +237,7 @@ export default async function AdministrationWorkItemPage({
           </Card>
         ) : null}
 
-        <Card>
+        <Card className="max-sm:order-4">
           <CardHeader title="Ventas de esta tarea" />
           <div className="grid gap-0">
             {item.sales.map((sale) => (

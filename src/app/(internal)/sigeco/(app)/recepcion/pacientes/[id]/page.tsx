@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PencilLine, UserRoundPlus } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
@@ -57,8 +58,9 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
-      <div className="grid gap-4">
-        <Card>
+      <MobileBackLink href="/sigeco/recepcion?vista=pacientes" label="Volver a Recepción" />
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3.5">
               <span
@@ -120,7 +122,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           </dl>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-4">
           <CardHeader title="Ficha permanente" />
           <dl className="grid gap-y-3 text-sm">
             <InfoRow label="Alergias" value={patient.allergies} wide />
@@ -129,7 +131,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           </dl>
         </Card>
 
-        <Card className="p-0">
+        <Card className="max-sm:order-5 p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Visitas" />
           <RecordList>
             {patient.visits.map((visit) => (
@@ -188,7 +190,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           </RecordTable>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-6">
           <CardHeader title="Timeline de enfermería" />
           <div className="grid gap-0">
             {patient.vitalSigns.map((item) => (
@@ -235,7 +237,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           </div>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-7">
           <CardHeader title="Estudios" />
           <div className="grid gap-0">
             {patient.studies.map((study) => (
@@ -259,7 +261,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           </div>
         </Card>
 
-        <Card className="p-0">
+        <Card className="max-sm:order-8 p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Cronología administrativa" />
           <RecordList>
             {patient.sales.map((sale) => (
@@ -318,7 +320,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           </RecordTable>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-9">
           <CardHeader title="Historial de seguimiento" />
           <div className="grid gap-0">
             {patient.followUpTasks.map((task) => (
@@ -344,9 +346,9 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
         </Card>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 max-sm:contents">
         {roleHasPermission(user.role, "visits_create") ? (
-          <Card>
+          <Card className="max-sm:order-2">
             <CardHeader title="Registrar llegada" />
             <p className="mb-3 text-sm text-muted">
               Abre una visita con las preguntas de recepción; la ficha llega prellenada.
@@ -362,7 +364,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
         ) : null}
 
         {roleHasPermission(user.role, "followups_write") ? (
-          <Card>
+          <Card className="max-sm:order-3">
             <CardHeader title="Crear seguimiento" />
             {patient.followUpPreference === "no_contact" ? (
               <div className="mb-3 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">

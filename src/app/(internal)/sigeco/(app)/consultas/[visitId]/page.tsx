@@ -3,6 +3,7 @@ import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/cli
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
+import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -65,8 +66,9 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
-      <div className="grid gap-4">
-        <Card>
+      <MobileBackLink href="/sigeco/consultas" label="Volver a Consulta" />
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium tabular-nums text-muted">
@@ -92,7 +94,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
           </dl>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-3">
           <CardHeader
             title="Consulta médica"
             description="Registro clínico de la visita actual."
@@ -206,9 +208,9 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
         </Card>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 max-sm:contents">
         {isActiveVisitStatus(visit.status) ? (
-          <Card>
+          <Card className="max-sm:order-2">
             <CardHeader
               title="Salida del paciente"
               description="Al terminar la consulta el paciente puede seguir a otra área o irse."
@@ -248,7 +250,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
           </Card>
         ) : null}
 
-        <Card>
+        <Card className="max-sm:order-4">
           <CollapsibleSection
             title="Indicación para otra área"
             description="Crear una orden solo si otra área debe intervenir."
@@ -291,7 +293,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
           </CollapsibleSection>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-5">
           <CardHeader title="Órdenes clínicas" />
           <div className="grid gap-0">
             {visit.clinicalOrders.map((order) => (
@@ -309,7 +311,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
           </div>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-6">
           <CardHeader title="Estudios y enfermería" />
           <div className="grid gap-0">
             {visit.studies.map((study) => (

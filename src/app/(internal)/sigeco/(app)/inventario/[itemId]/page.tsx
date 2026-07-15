@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -37,8 +38,9 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
-      <div className="grid gap-4">
-        <Card>
+      <MobileBackLink href="/sigeco/inventario" label="Volver a Inventario" />
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium tabular-nums text-muted">{item.internalCode}</p>
@@ -74,7 +76,7 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
           </dl>
         </Card>
 
-        <Card className="p-0">
+        <Card className="max-sm:order-4 p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Movimientos" />
           <RecordList>
             {item.movements.map((movement) => (
@@ -149,8 +151,8 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
         </Card>
       </div>
 
-      <div className="grid gap-4">
-        <Card>
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-2">
           <CardHeader title="Entrada de stock" />
           <NoticeForm action={addInventoryEntryAction} notice="Entrada registrada" className="grid gap-3">
             <input type="hidden" name="itemId" value={item.id} />
@@ -169,7 +171,7 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
           </NoticeForm>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-3">
           <CardHeader title="Ajuste autorizado" />
           <NoticeForm action={createInventoryAdjustmentAction} notice="Ajuste registrado" className="grid gap-3">
             <input type="hidden" name="itemId" value={item.id} />

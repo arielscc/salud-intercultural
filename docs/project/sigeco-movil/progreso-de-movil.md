@@ -12,7 +12,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | 4 | Confirmacion de acciones irreversibles | Implementada (QA en Tarea 11) |
 | 5 | Estados de carga (skeleton y spinner) | Implementada (QA en Tarea 11) |
 | 6 | Busqueda de pacientes con autocomplete | Implementada (QA en Tarea 11) |
-| 7 | Acciones principales y retorno en detalles moviles | Pendiente |
+| 7 | Acciones principales y retorno en detalles moviles | Implementada (QA en Tarea 11) |
 | 8 | Filtros y tabs tactiles | Pendiente |
 | 9 | Telefono con mascara y teclado numerico | Pendiente |
 | 10 | Paginacion de listas largas | Pospuesta (compartida con web) |
@@ -175,3 +175,24 @@ Pendientes para el QA (Tarea 11): probar escritura rapida y respuestas fuera de 
 Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
 
 Commit sugerido: `feat(sigeco): patient search autocomplete in reception and intake`
+
+### Tarea 7 — Acciones Principales Y Retorno En Detalles Moviles (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/MobileBackLink.tsx`: enlace compartido `sm:hidden` con chevron, etiqueta del modulo, foco Marea y objetivo tactil de 40px. Se agrego al inicio de los ocho detalles: visita, consulta, enfermeria, pendiente de Caja, venta/cobro, seguimiento, ficha de paciente e item de inventario.
+- Los enlaces regresan al padre operativo correcto: Recepcion (visita y ficha), Consulta, Enfermeria, Caja (pendiente y venta), Seguimiento e Inventario. La ficha vuelve directamente a la vista `?vista=pacientes`.
+- Las dos columnas de cada detalle usan `max-sm:contents`: solo debajo de 640px sus cards participan directamente del grid padre y pueden intercalarse; desde `sm` los wrappers conservan el `grid gap-4` original.
+- Cada card usa `max-sm:order-*` para dejar primero la ficha y despues la accion del rol: Derivar paciente, Salida del paciente, Registrar aplicacion, Registrar venta, Registrar cobro, Registrar contacto, Registrar llegada/Crear seguimiento y Entrada/Ajuste de stock. Historiales, tablas y formularios secundarios quedan despues.
+
+Decisiones:
+
+- El reordenamiento se limito con `max-sm` en vez de usar `order-*` base: tablet y escritorio conservan exactamente la estructura anterior, incluidas las dos columnas desde `xl`.
+- No se agregaron barras inferiores pegajosas. Tras el nuevo orden, cada accion principal empieza inmediatamente despues de la ficha y su submit queda dentro del primer bloque o tras un scroll corto; una barra fija duplicaria acciones, restaria viewport al teclado y podria tapar toasts o confirmaciones.
+- No se duplicaron cards ni formularios para movil. `display: contents` permite un solo markup y evita dos server actions equivalentes en el DOM.
+
+Pendientes para el QA (Tarea 11): verificar los ocho retornos, medir acceso a cada submit en 390x844, confirmar orden condicional cuando la visita esta cerrada o el rol no tiene una accion, revisar foco/lectura con `display: contents` y comparar tablet/escritorio contra el estado anterior.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): mobile-first ordering and back links on detail pages`

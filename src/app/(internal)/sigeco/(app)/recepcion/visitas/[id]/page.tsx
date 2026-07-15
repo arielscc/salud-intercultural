@@ -3,6 +3,7 @@ import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
+import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -38,16 +39,17 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
-      <div className="grid gap-4">
+      <MobileBackLink href="/sigeco/recepcion" label="Volver a Recepción" />
+      <div className="grid gap-4 max-sm:contents">
         {error === "cerrada" ? (
-          <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+          <div className="max-sm:order-1 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
             <p className="flex items-center gap-1.5 font-semibold text-warning">
               <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
               Esta visita ya está cerrada; no se aplicó la acción.
             </p>
           </div>
         ) : null}
-        <Card>
+        <Card className="max-sm:order-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium tabular-nums text-muted">
@@ -111,7 +113,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           ) : null}
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-4">
           <CardHeader title="Tareas de visita" />
           <div className="grid gap-0">
             {visit.workItems.map((item) => (
@@ -129,7 +131,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           </div>
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-5">
           <CardHeader title="Ruta del paciente" />
           <div className="grid gap-0">
             {visit.route?.steps.map((step) => (
@@ -148,9 +150,9 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
         </Card>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 max-sm:contents">
         {isActive ? (
-          <Card>
+          <Card className="max-sm:order-3">
             <CardHeader title="Derivar paciente" />
             <NoticeForm action={updateVisitStatusAction} notice="Ruta actualizada" className="grid gap-3">
               <input type="hidden" name="visitId" value={visit.id} />

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { MessageCircle, Phone } from "lucide-react";
 import type { FollowUpAttemptMethod, FollowUpStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
@@ -46,8 +47,9 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
-      <div className="grid gap-4">
-        <Card>
+      <MobileBackLink href="/sigeco/seguimientos" label="Volver a Seguimiento" />
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium tabular-nums text-muted">
@@ -94,7 +96,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
           ) : null}
         </Card>
 
-        <Card>
+        <Card className="max-sm:order-3">
           <CardHeader title="Historial" />
           <div className="grid gap-0">
             {task.attempts.map((attempt) => (
@@ -112,8 +114,8 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
         </Card>
       </div>
 
-      <div className="grid gap-4">
-        <Card>
+      <div className="grid gap-4 max-sm:contents">
+        <Card className="max-sm:order-2">
           <CardHeader title="Registrar contacto" />
           <NoticeForm action={createFollowUpAttemptAction} notice="Contacto registrado" className="grid gap-3">
             <input type="hidden" name="taskId" value={task.id} />
