@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { MessageCircle, Phone } from "lucide-react";
 import type { FollowUpAttemptMethod, FollowUpStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -113,7 +114,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
       <div className="grid gap-4">
         <Card>
           <CardHeader title="Registrar contacto" />
-          <form action={createFollowUpAttemptAction} className="grid gap-3">
+          <NoticeForm action={createFollowUpAttemptAction} notice="Contacto registrado" className="grid gap-3">
             <input type="hidden" name="taskId" value={task.id} />
             <Field label="Método">
               <select className={internalInputClassName} name="method" defaultValue="call">
@@ -137,7 +138,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
               <textarea className={`${internalInputClassName} min-h-24 py-3`} name="notes" />
             </Field>
             <Button type="submit">Guardar seguimiento</Button>
-          </form>
+          </NoticeForm>
         </Card>
       </div>
     </div>

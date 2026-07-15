@@ -64,7 +64,7 @@ export async function submitReceptionIntakeAction(formData: FormData) {
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");
   revalidatePath(`/sigeco/recepcion/pacientes/${result.patientId}`);
-  redirect(`/sigeco/recepcion/visitas/${result.visit.id}`);
+  redirect(`/sigeco/recepcion/visitas/${result.visit.id}?aviso=llegada-registrada`);
 }
 
 export async function updateReceptionPatientAction(formData: FormData) {
@@ -81,5 +81,5 @@ export async function updateReceptionPatientAction(formData: FormData) {
 
   revalidatePath("/sigeco/recepcion");
   revalidatePath(`/sigeco/recepcion/pacientes/${record.patientId}`);
-  redirect(`/sigeco/recepcion/pacientes/${record.patientId}`);
+  redirect(`/sigeco/recepcion/pacientes/${record.patientId}?aviso=ficha-actualizada`);
 }

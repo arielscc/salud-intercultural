@@ -33,7 +33,7 @@ export async function createInventoryItemAction(formData: FormData) {
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/inventario");
-  redirect(`/sigeco/inventario/${item.id}`);
+  redirect(`/sigeco/inventario/${item.id}?aviso=producto-creado`);
 }
 
 export async function addInventoryEntryAction(formData: FormData) {

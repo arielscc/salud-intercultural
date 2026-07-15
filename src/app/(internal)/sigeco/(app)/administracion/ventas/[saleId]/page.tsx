@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -176,7 +177,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
         <div className="grid gap-4">
           <Card>
             <CardHeader title="Registrar cobro" />
-            <form action={createPaymentAction} className="grid gap-3">
+            <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
               <input type="hidden" name="saleId" value={sale.id} />
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Monto Bs">
@@ -205,7 +206,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
                 <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
               </Field>
               <Button type="submit">Registrar pago</Button>
-            </form>
+            </NoticeForm>
           </Card>
         </div>
       ) : null}

@@ -38,7 +38,7 @@ export async function createVisitAction(formData: FormData) {
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");
   revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
-  redirect(`/sigeco/recepcion/visitas/${visit.id}`);
+  redirect(`/sigeco/recepcion/visitas/${visit.id}?aviso=llegada-registrada`);
 }
 
 /*

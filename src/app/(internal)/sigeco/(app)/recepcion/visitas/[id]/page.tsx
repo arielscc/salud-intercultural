@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -73,14 +74,14 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           </dl>
           {isActive ? (
             <div className="mt-4 grid gap-2 border-t border-border pt-4 sm:grid-cols-2">
-              <form action={applyVisitFlowAction}>
+              <NoticeForm action={applyVisitFlowAction} notice="Visita cerrada">
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <Button type="submit" variant="outline" className="w-full">
                   Cerrar visita
                 </Button>
-              </form>
-              <form action={applyVisitFlowAction}>
+              </NoticeForm>
+              <NoticeForm action={applyVisitFlowAction} notice="Retiro registrado">
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="left" />
                 <Button
@@ -90,7 +91,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 >
                   Se retiró sin completar
                 </Button>
-              </form>
+              </NoticeForm>
               <p className="text-[13px] text-muted sm:col-span-2">
                 “Se retiró” guarda en qué punto abandonó; el historial queda en la ruta.
               </p>
@@ -139,7 +140,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
         {isActive ? (
           <Card>
             <CardHeader title="Derivar paciente" />
-            <form action={updateVisitStatusAction} className="grid gap-3">
+            <NoticeForm action={updateVisitStatusAction} notice="Ruta actualizada" className="grid gap-3">
               <input type="hidden" name="visitId" value={visit.id} />
               <Field label="Estado">
                 <select className={internalInputClassName} name="status" defaultValue={visit.status}>
@@ -171,7 +172,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 />
               </Field>
               <Button type="submit">Actualizar ruta</Button>
-            </form>
+            </NoticeForm>
           </Card>
         ) : null}
       </div>

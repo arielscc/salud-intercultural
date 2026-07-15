@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -95,7 +96,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
             title="Consulta médica"
             description="Registro clínico de la visita actual."
           />
-          <form action={saveClinicalConsultationAction} className="grid gap-4">
+          <NoticeForm action={saveClinicalConsultationAction} notice="Consulta guardada" className="grid gap-4">
             <input type="hidden" name="visitId" value={visit.id} />
             <input type="hidden" name="motive" value={consultationMotive} />
             <div className="grid gap-4 sm:grid-cols-2">
@@ -200,7 +201,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
             <div className="flex justify-end border-t border-border pt-4">
               <Button type="submit">Guardar consulta</Button>
             </div>
-          </form>
+          </NoticeForm>
         </Card>
       </div>
 
@@ -212,30 +213,30 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
               description="Al terminar la consulta el paciente puede seguir a otra área o irse."
             />
             <div className="grid gap-2">
-              <form action={applyVisitFlowAction}>
+              <NoticeForm action={applyVisitFlowAction} notice="Paciente enviado a enfermería">
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="to_nursing" />
                 <input type="hidden" name="note" value="Pasa a enfermería tras la consulta" />
                 <Button type="submit" variant="outline" className="w-full">
                   Enviar a enfermería
                 </Button>
-              </form>
-              <form action={applyVisitFlowAction}>
+              </NoticeForm>
+              <NoticeForm action={applyVisitFlowAction} notice="Paciente enviado a administración">
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="to_administration" />
                 <input type="hidden" name="note" value="Pasa a administración tras la consulta" />
                 <Button type="submit" variant="outline" className="w-full">
                   Enviar a administración
                 </Button>
-              </form>
-              <form action={applyVisitFlowAction}>
+              </NoticeForm>
+              <NoticeForm action={applyVisitFlowAction} notice="Visita cerrada">
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <input type="hidden" name="note" value="Salida directa después de la consulta" />
                 <Button type="submit" variant="outline" className="w-full">
                   Se va — cerrar visita
                 </Button>
-              </form>
+              </NoticeForm>
             </div>
           </Card>
         ) : null}
@@ -247,7 +248,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
             defaultOpen={visit.clinicalOrders.length > 0}
             className="border-0 bg-transparent open:bg-transparent"
           >
-          <form action={createClinicalOrderAction} className="grid gap-3">
+          <NoticeForm action={createClinicalOrderAction} notice="Indicación creada" className="grid gap-3">
             <input type="hidden" name="visitId" value={visit.id} />
             <Field label="Tipo">
               <select className={internalInputClassName} name="type" defaultValue="serum">
@@ -281,7 +282,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
             <Button type="submit" variant="outline">
               Crear indicación
             </Button>
-          </form>
+          </NoticeForm>
           </CollapsibleSection>
         </Card>
 

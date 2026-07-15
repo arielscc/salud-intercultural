@@ -3,6 +3,7 @@ import { UserRoundPlus } from "lucide-react";
 import type { VisitStatus } from "@/generated/prisma/client";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -51,7 +52,7 @@ const emptyPatientsMessage = (
 
 function VisitLeftForm({ visitId, buttonClassName }: { visitId: string; buttonClassName?: string }) {
   return (
-    <form action={applyVisitFlowAction}>
+    <NoticeForm action={applyVisitFlowAction} notice="Retiro registrado">
       <input type="hidden" name="visitId" value={visitId} />
       <input type="hidden" name="flow" value="left" />
       <Button
@@ -62,7 +63,7 @@ function VisitLeftForm({ visitId, buttonClassName }: { visitId: string; buttonCl
       >
         Se retiró
       </Button>
-    </form>
+    </NoticeForm>
   );
 }
 

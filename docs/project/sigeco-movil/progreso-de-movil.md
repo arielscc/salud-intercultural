@@ -8,7 +8,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | --- | --- | --- |
 | 1 | Patron de lista responsive y Recepcion en cards | Implementada (QA en Tarea 11) |
 | 2 | Resto de listas de trabajo en cards | Implementada (QA en Tarea 11) |
-| 3 | Feedback de acciones con toasts (sonner) | Pendiente |
+| 3 | Feedback de acciones con toasts (sonner) | Implementada (QA en Tarea 11) |
 | 4 | Confirmacion de acciones irreversibles | Pendiente |
 | 5 | Estados de carga (skeleton y spinner) | Pospuesta (compartida con web) |
 | 6 | Busqueda de pacientes con autocomplete | Pendiente |
@@ -83,3 +83,26 @@ Pendientes para el QA (Tarea 11): cards de Caja con 5 lineas (verificar densidad
 Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
 
 Commit sugerido: `feat(sigeco): render all work queues as cards on mobile`
+
+### Tarea 3 — Feedback De Acciones Con Toasts (2026-07-15)
+
+Que se hizo:
+
+- Dependencia nueva: `sonner` 2.0.7 (instalada directa con pnpm; el item de shadcn studio arrastra next-themes y demos, se replico el wrapper a mano como con el drawer).
+- `src/components/ui/sonner.tsx`: Toaster adaptado a Marea (unstyled + classNames con tokens: `bg-surface`, `border-border`, radio 9px, titulo `text-text`, icono por tipo con `text-success`/`text-error`/`text-warning`), posicion `bottom-center` (zona del pulgar), duracion 3.5 s.
+- Montaje solo movil en `(app)/layout.tsx`: `<div className="sm:hidden"><Toaster /></div>` dentro de `InternalShell` (queda dentro de `.sigeco-app`, los tokens resuelven; position fixed no se recorta porque no hay ancestros con transform). En >= 640 px el contenedor se oculta y desktop no muestra ningun toast.
+- Mecanismo 1 — actions que redirigen: se agrego `?aviso=<codigo>` al redirect de exito en 6 actions (`submitReceptionIntakeAction` y `createVisitAction` -> `llegada-registrada`, `updateReceptionPatientAction` -> `ficha-actualizada`, `createFollowUpTaskAction` -> `seguimiento-creado`, `createInventoryItemAction` -> `producto-creado`, `createSaleAction` -> `venta-creada`). `src/components/internal/ActionNotice.tsx` (cliente, montado en el layout bajo Suspense) lee el param, dispara el toast y limpia la URL con `router.replace` sin scroll.
+- Mecanismo 2 — actions que solo revalidan: `src/components/internal/NoticeForm.tsx` (cliente) envuelve el form con `useActionState`, ejecuta la server action recibida por prop y dispara el toast al resolver; si la action termina en redirect (exito con destino o `?error=`), el toast no se dispara y lo maneja la pagina destino. Aplicado en 8 paginas: recepcion (Se retiro), detalle de visita (Cerrar visita, Se retiro, Actualizar ruta), consulta (Guardar consulta, Crear indicacion, 3 salidas del paciente), enfermeria (signos, aplicacion, estudio, estado de tarea, nota), venta (Registrar pago), seguimiento (contacto), inventario item (entrada, ajuste), caja workItem (Cerrar visita, Se retiro).
+- Mensajes cortos en espanol: "Llegada registrada", "Visita cerrada", "Retiro registrado", "Consulta guardada", "Cobro registrado", etc.
+
+Decisiones:
+
+- El toast se dispara tambien en desktop (NoticeForm no distingue viewport) pero el Toaster esta oculto desde `sm`, asi que desktop no muestra nada y su flujo queda identico; se evito `matchMedia` porque el aislamiento CSS basta.
+- Los errores de validacion mantienen su comportamiento actual (redirects `?error=` y avisos inline); fuera de alcance por definicion de la tarea.
+- Se cubrieron tambien acciones hermanas de las listadas (estudio, nota y estado en enfermeria, entrada de stock, venta creada) por vivir en las mismas paginas y costar una linea cada una.
+
+Pendientes para el QA (Tarea 11): verificar que el toast no tape el boton recien tocado en 390x844; probar aviso + limpieza de URL con filtros activos (`?vista=pacientes&aviso=...`); confirmar que NoticeForm no rompe el submit sin JS (progressive enhancement de useActionState).
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+Commit sugerido: `feat(sigeco): add sonner toasts for action feedback`

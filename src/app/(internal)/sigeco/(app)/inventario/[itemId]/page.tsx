@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -151,7 +152,7 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
       <div className="grid gap-4">
         <Card>
           <CardHeader title="Entrada de stock" />
-          <form action={addInventoryEntryAction} className="grid gap-3">
+          <NoticeForm action={addInventoryEntryAction} notice="Entrada registrada" className="grid gap-3">
             <input type="hidden" name="itemId" value={item.id} />
             <Field label="Cantidad">
               <input className={internalInputClassName} name="quantity" inputMode="numeric" required />
@@ -165,12 +166,12 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
               />
             </Field>
             <Button type="submit">Registrar entrada</Button>
-          </form>
+          </NoticeForm>
         </Card>
 
         <Card>
           <CardHeader title="Ajuste autorizado" />
-          <form action={createInventoryAdjustmentAction} className="grid gap-3">
+          <NoticeForm action={createInventoryAdjustmentAction} notice="Ajuste registrado" className="grid gap-3">
             <input type="hidden" name="itemId" value={item.id} />
             <Field label="Diferencia">
               <input
@@ -187,7 +188,7 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
             <Button type="submit" variant="outline">
               Registrar ajuste
             </Button>
-          </form>
+          </NoticeForm>
         </Card>
       </div>
     </div>

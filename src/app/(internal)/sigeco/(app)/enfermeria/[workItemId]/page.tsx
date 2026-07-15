@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { StudyStatus, StudyType, VisitWorkItemStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -80,7 +81,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             defaultOpen={order?.type === "vital_signs"}
             className="border-0 bg-transparent open:bg-transparent"
           >
-          <form action={createVitalSignsAction} className="grid gap-3">
+          <NoticeForm action={createVitalSignsAction} notice="Signos vitales guardados" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
             <input type="hidden" name="workItemId" value={item.id} />
@@ -118,7 +119,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
                 Guardar signos
               </Button>
             </div>
-          </form>
+          </NoticeForm>
           </CollapsibleSection>
         </Card>
 
@@ -129,7 +130,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             defaultOpen={order ? applicationOrderTypes.includes(order.type) : false}
             className="border-0 bg-transparent open:bg-transparent"
           >
-          <form action={createNursingApplicationAction} className="grid gap-3">
+          <NoticeForm action={createNursingApplicationAction} notice="Aplicación registrada" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
             <input type="hidden" name="workItemId" value={item.id} />
@@ -159,7 +160,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             <div className="flex justify-end">
               <Button type="submit">Registrar aplicación</Button>
             </div>
-          </form>
+          </NoticeForm>
           </CollapsibleSection>
         </Card>
 
@@ -170,7 +171,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             defaultOpen={order?.type === "study"}
             className="border-0 bg-transparent open:bg-transparent"
           >
-          <form action={createStudyAction} className="grid gap-3">
+          <NoticeForm action={createStudyAction} notice="Estudio registrado" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
             <input type="hidden" name="workItemId" value={item.id} />
@@ -218,7 +219,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
                 Registrar estudio
               </Button>
             </div>
-          </form>
+          </NoticeForm>
           </CollapsibleSection>
         </Card>
       </div>
@@ -226,7 +227,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
       <div className="grid gap-4">
         <Card>
           <CardHeader title="Estado de tarea" />
-          <form action={updateNursingWorkItemAction} className="grid gap-3">
+          <NoticeForm action={updateNursingWorkItemAction} notice="Tarea actualizada" className="grid gap-3">
             <input type="hidden" name="workItemId" value={item.id} />
             <Field label="Estado">
               <select
@@ -245,12 +246,12 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
             <Button type="submit">Actualizar tarea</Button>
-          </form>
+          </NoticeForm>
         </Card>
 
         <Card>
           <CardHeader title="Nota de enfermería" />
-          <form action={createNursingNoteAction} className="grid gap-3">
+          <NoticeForm action={createNursingNoteAction} notice="Nota guardada" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
             <Field label="Nota">
@@ -259,7 +260,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             <Button type="submit" variant="outline">
               Guardar nota
             </Button>
-          </form>
+          </NoticeForm>
         </Card>
       </div>
     </div>

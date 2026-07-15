@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { SaleItemType } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -200,15 +201,15 @@ export default async function AdministrationWorkItemPage({
               description="Cuando el paciente ya pagó o solo vino a comprar, cierra la visita aquí."
             />
             <div className="grid gap-2">
-              <form action={applyVisitFlowAction}>
+              <NoticeForm action={applyVisitFlowAction} notice="Visita cerrada">
                 <input type="hidden" name="visitId" value={item.visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <input type="hidden" name="note" value="Visita cerrada desde administración" />
                 <Button type="submit" variant="outline" className="w-full">
                   Cerrar visita
                 </Button>
-              </form>
-              <form action={applyVisitFlowAction}>
+              </NoticeForm>
+              <NoticeForm action={applyVisitFlowAction} notice="Retiro registrado">
                 <input type="hidden" name="visitId" value={item.visit.id} />
                 <input type="hidden" name="flow" value="left" />
                 <Button
@@ -218,7 +219,7 @@ export default async function AdministrationWorkItemPage({
                 >
                   Se retiró sin completar
                 </Button>
-              </form>
+              </NoticeForm>
             </div>
           </Card>
         ) : null}
