@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BellRing, CalendarClock, PhoneCall } from "lucide-react";
 import { Card } from "@/components/internal/ui/Card";
+import { MobileTabs } from "@/components/internal/MobileTabs";
 import { Chip } from "@/components/internal/ui/Chip";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
@@ -57,7 +58,31 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
         <KpiCard icon={CalendarClock} label="Próximos" value={summary.upcoming} />
       </section>
 
-      <nav className="flex gap-2 overflow-x-auto" aria-label="Filtro de seguimientos">
+      <MobileTabs
+        label="Filtro de seguimientos"
+        items={[
+          {
+            href: "/sigeco/seguimientos?filtro=vencidos",
+            label: "Vencidos",
+            active: filter === "overdue",
+            count: summary.overdue
+          },
+          {
+            href: "/sigeco/seguimientos",
+            label: "Hoy",
+            active: filter === "today",
+            count: summary.today
+          },
+          {
+            href: "/sigeco/seguimientos?filtro=proximos",
+            label: "Próximos",
+            active: filter === "upcoming",
+            count: summary.upcoming
+          }
+        ]}
+      />
+
+      <nav className="hidden gap-2 overflow-x-auto sm:flex" aria-label="Filtro de seguimientos">
         <FilterTab href="/sigeco/seguimientos?filtro=vencidos" label="Vencidos" active={filter === "overdue"} />
         <FilterTab href="/sigeco/seguimientos" label="Hoy" active={filter === "today"} />
         <FilterTab href="/sigeco/seguimientos?filtro=proximos" label="Próximos" active={filter === "upcoming"} />

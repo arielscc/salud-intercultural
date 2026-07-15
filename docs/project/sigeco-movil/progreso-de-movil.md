@@ -13,7 +13,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | 5 | Estados de carga (skeleton y spinner) | Implementada (QA en Tarea 11) |
 | 6 | Busqueda de pacientes con autocomplete | Implementada (QA en Tarea 11) |
 | 7 | Acciones principales y retorno en detalles moviles | Implementada (QA en Tarea 11) |
-| 8 | Filtros y tabs tactiles | Pendiente |
+| 8 | Filtros y tabs tactiles | Implementada (QA en Tarea 11) |
 | 9 | Telefono con mascara y teclado numerico | Pendiente |
 | 10 | Paginacion de listas largas | Pospuesta (compartida con web) |
 | 11 | QA integral y cierre documental | Pendiente |
@@ -196,3 +196,26 @@ Pendientes para el QA (Tarea 11): verificar los ocho retornos, medir acceso a ca
 Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
 
 Commit sugerido: `feat(sigeco): mobile-first ordering and back links on detail pages`
+
+### Tarea 8 — Filtros Y Tabs Tactiles (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/MobileTabs.tsx`: control segmentado `sm:hidden` inspirado en tabs/toggle-group de shadcn studio, con links de 40px, foco Marea, estado activo por `aria-current`, scroll horizontal seguro y contador opcional.
+- Recepcion usa `MobileTabs` para Hoy/Pacientes. Los links `ViewTab` anteriores se conservan sin cambios dentro de `hidden sm:flex`.
+- Seguimiento usa el mismo componente para Vencidos/Hoy/Proximos y muestra los conteos ya disponibles en `getFollowUpWorkSummary`. El nav y `FilterTab` anteriores se conservan dentro de `hidden sm:flex`.
+- Nuevo `src/components/internal/MobileAutoSubmitSelect.tsx`: mantiene el select nativo y llama `form.requestSubmit()` al cambiar solo cuando `matchMedia("(max-width: 639px)")` coincide.
+- El filtro de estado de Recepcion tiene una rama movil con envio en un toque y una rama `hidden sm:block` con el form, select y boton "Filtrar" originales.
+
+Decisiones:
+
+- Los tabs son links reales y no estado cliente: conservan URLs compartibles, historial del navegador, apertura en otra pestana y operacion nativa con teclado.
+- No se reemplazaron selects de formularios por listboxes custom. El selector del sistema sigue siendo la mejor superficie tactil; solo cambia el momento de envio en telefono.
+- Los contadores son opcionales: Seguimiento los muestra porque ya existen para las tres vistas; Recepcion no ejecuta queries adicionales solo para decorar sus tabs.
+- La condicion de viewport se evalua en el handler. El select movil oculto en desktop no puede autoenviar y el flujo desktop sigue requiriendo el boton actual.
+
+Pendientes para el QA (Tarea 11): cambiar estados con un toque en 390x844, verificar Atrás/Adelante y URLs, recorrer tabs por teclado, revisar conteos de tres digitos y scroll horizontal, confirmar estado activo visible y comparar controles desktop desde 640px.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): one-tap filters and unified view tabs`

@@ -4,6 +4,8 @@ import type { VisitStatus } from "@/generated/prisma/client";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { internalInputClassName } from "@/components/internal/Field";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
+import { MobileAutoSubmitSelect } from "@/components/internal/MobileAutoSubmitSelect";
+import { MobileTabs } from "@/components/internal/MobileTabs";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
@@ -129,7 +131,19 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
         }
       />
 
-      <div className="flex flex-wrap gap-2">
+      <MobileTabs
+        label="Vista de Recepción"
+        items={[
+          { href: "/sigeco/recepcion", label: "Hoy", active: vista === "hoy" },
+          {
+            href: "/sigeco/recepcion?vista=pacientes",
+            label: "Pacientes",
+            active: vista === "pacientes"
+          }
+        ]}
+      />
+
+      <div className="hidden flex-wrap gap-2 sm:flex">
         <ViewTab href="/sigeco/recepcion" active={vista === "hoy"}>
           Hoy
         </ViewTab>
@@ -140,7 +154,18 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
 
       {vista === "hoy" ? (
         <>
-          <Card>
+          <Card className="sm:hidden">
+            <MobileAutoSubmitSelect
+              name="status"
+              defaultValue={params.status ?? ""}
+              label="Filtrar visitas por estado"
+              options={[
+                { value: "", label: "Solo activas" },
+                ...statusOptions.map(([value, label]) => ({ value, label }))
+              ]}
+            />
+          </Card>
+          <Card className="hidden sm:block">
             <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <select
                 className={internalInputClassName}
