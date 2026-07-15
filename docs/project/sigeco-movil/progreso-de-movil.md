@@ -14,7 +14,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | 6 | Busqueda de pacientes con autocomplete | Implementada (QA en Tarea 11) |
 | 7 | Acciones principales y retorno en detalles moviles | Implementada (QA en Tarea 11) |
 | 8 | Filtros y tabs tactiles | Implementada (QA en Tarea 11) |
-| 9 | Telefono con mascara y teclado numerico | Pendiente |
+| 9 | Telefono con mascara y teclado numerico | Implementada (QA en Tarea 11) |
 | 10 | Paginacion de listas largas | Pospuesta (compartida con web) |
 | 11 | QA integral y cierre documental | Pendiente |
 
@@ -219,3 +219,25 @@ Pendientes para el QA (Tarea 11): cambiar estados con un toque en 390x844, verif
 Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
 
 Commit sugerido: `feat(sigeco): one-tap filters and unified view tabs`
+
+### Tarea 9 — Telefono Con Mascara Y Teclado Numerico (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/reception/PhoneInput.tsx`: input controlado Marea con `type=tel`, `inputMode=tel`, `autoComplete=tel`, `enterKeyHint=next` y placeholder local `7123 4567`.
+- La funcion pura `formatBolivianPhone` elimina caracteres ajenos, limita el numero local a 8 digitos y presenta `7123 4567` o `+591 7123 4567` cuando detecta el codigo de pais opcional.
+- La mascara se aplica en `onChange` solo cuando coinciden telefono (`max-width: 639px`) y puntero tactil (`pointer: coarse`). Numeros pegados con espacios, guiones o parentesis se normalizan visualmente en ese momento.
+- El funnel paso 1 y la edicion de ficha reemplazan sus inputs inline por `PhoneInput`; ambos conservan el mismo estado `phone`, validacion previa e input oculto que llega a las server actions.
+
+Decisiones:
+
+- No se cambiaron schemas, actions, queries ni datos existentes. Los formatos producidos siguen dentro del contrato actual `^[+()\d\s-]+$` y `cleanText` los guarda como antes.
+- La mascara no reescribe un telefono historico solo por abrir la ficha. Se activa cuando el usuario realmente edita o pega el valor, evitando cambios silenciosos de datos.
+- En desktop y dispositivos sin puntero tactil, `onChange` entrega el texto original sin mascara. Los atributos `tel` y autocomplete son inertes para el teclado fisico y ayudan a gestores de formularios.
+- Se replico la mascara local necesaria en vez de agregar una libreria internacional: el alcance aprobado es Bolivia, 8 digitos y prefijo +591 opcional.
+
+Pendientes para el QA (Tarea 11): probar escritura, borrado y pegado con `76543210`, `7654-3210`, `+591 76543210` y `59176543210`; confirmar teclado telefonico, posicion del cursor, limite de 8 digitos, deteccion de duplicados y comportamiento desktop sin mascara.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): masked phone input with numeric keyboard`

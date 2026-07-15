@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { SubmitButton } from "@/components/internal/SubmitButton";
+import { PhoneInput } from "@/components/internal/reception/PhoneInput";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
@@ -113,14 +114,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
           />
         </Field>
         <Field label="Teléfono (WhatsApp) *">
-          <input
-            className={internalInputClassName}
-            type="tel"
-            inputMode="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            autoComplete="off"
-          />
+          <PhoneInput value={phone} onValueChange={setPhone} />
         </Field>
         <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
           <DatePickerField value={birthDate} onChange={setBirthDate} />

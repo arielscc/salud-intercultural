@@ -7,6 +7,7 @@ import {
   PatientAutocomplete,
   type PatientSearchResult
 } from "@/components/internal/reception/PatientAutocomplete";
+import { PhoneInput } from "@/components/internal/reception/PhoneInput";
 import { Button } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
@@ -352,14 +353,7 @@ export function IntakeFunnel({
           />
         </Field>
         <Field label="Teléfono (WhatsApp) *">
-          <input
-            className={internalInputClassName}
-            type="tel"
-            inputMode="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            autoComplete="off"
-          />
+          <PhoneInput value={phone} onValueChange={setPhone} />
         </Field>
         <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
           <DatePickerField value={birthDate} onChange={setBirthDate} />
