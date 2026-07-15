@@ -6,7 +6,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 
 | Tarea | Nombre | Estado |
 | --- | --- | --- |
-| 1 | Patron de lista responsive y Recepcion en cards | Pendiente |
+| 1 | Patron de lista responsive y Recepcion en cards | Implementada (QA en Tarea 11) |
 | 2 | Resto de listas de trabajo en cards | Pendiente |
 | 3 | Feedback de acciones con toasts (sonner) | Pendiente |
 | 4 | Confirmacion de acciones irreversibles | Pendiente |
@@ -37,4 +37,22 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 
 ## Entradas Por Tarea
 
-(sin entradas todavia; se agregan al implementar cada tarea)
+### Tarea 1 — Patron De Lista Responsive Y Recepcion En Cards (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/ui/RecordList.tsx` con cuatro piezas: `RecordList` (ul con `divide-y`, solo movil via `sm:hidden`), `RecordItem` (fila tocable: titulo con link estirado `after:absolute after:inset-0` que hace tap-target a toda la fila, status arriba a la derecha, lineas secundarias libres como children, accion opcional abajo a la derecha con `relative` para quedar sobre el link estirado), `RecordListEmpty` (estado vacio) y `RecordTable` (wrapper `hidden sm:block` que conserva la tabla actual intacta en desktop). Sin dependencias nuevas: es el patron list/card de shadcn studio replicado con tokens Marea (no hay item gratuito equivalente en el registry para listas de registros).
+- `recepcion/page.tsx`: ambas vistas dentro del mismo `Card p-0` ahora renderizan `RecordList` (movil) + `RecordTable` con la `Table` original (desktop). Vista Hoy: titulo = paciente, pill de estado, linea llegada + area, linea telefono, chip "N pendientes" solo si hay, y "Se retiro" como boton separado con target `min-h-10` (40px). Vista Pacientes: titulo = nombre, chip "N visitas", linea codigo + telefono, linea ciudad (solo si tiene).
+- Deduplicaciones en la pagina: el form "Se retiro" se extrajo a `VisitLeftForm` (usado por tabla y card) y los mensajes de vacio a `emptyVisitsMessage`/`emptyPatientsMessage` (usados por ambas presentaciones).
+
+Decisiones:
+
+- Filas divididas dentro del Card (patron lista) en vez de cards sueltas con borde propio: mayor densidad y menos ruido visual en 390px, alineado con la investigacion (registro = titulo + 1-2 datos + estado; el detalle vive en su pagina).
+- En movil el chip "Tareas" se omite cuando es cero (en la tabla se muestra "—"); la ausencia comunica lo mismo y ahorra una linea.
+- Regla solo movil respetada: la tabla desktop no cambio ni una clase; el markup movil es rama nueva `sm:hidden`.
+
+Pendientes para el QA (Tarea 11): verificar que el link estirado no tape el boton "Se retiro" en dispositivos reales; revisar nombres largos junto a pills anchas en 390px.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+Commit sugerido: `feat(sigeco): add responsive record list and apply to reception`
