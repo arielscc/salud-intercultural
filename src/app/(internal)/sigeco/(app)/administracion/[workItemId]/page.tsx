@@ -3,7 +3,7 @@ import type { SaleItemType } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { Button } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createSaleAction } from "@/features/sales/actions";
@@ -187,7 +187,7 @@ export default async function AdministrationWorkItemPage({
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
             <div className="flex justify-end border-t border-border pt-4">
-              <Button type="submit">Crear venta</Button>
+              <SubmitButton>Crear venta</SubmitButton>
             </div>
           </form>
         </Card>
@@ -211,9 +211,9 @@ export default async function AdministrationWorkItemPage({
                 <input type="hidden" name="visitId" value={item.visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <input type="hidden" name="note" value="Visita cerrada desde administración" />
-                <Button type="submit" variant="outline" className="w-full">
+                <SubmitButton variant="outline" className="w-full">
                   Cerrar visita
-                </Button>
+                </SubmitButton>
               </ConfirmForm>
               <ConfirmForm
                 action={applyVisitFlowAction}
@@ -224,13 +224,12 @@ export default async function AdministrationWorkItemPage({
               >
                 <input type="hidden" name="visitId" value={item.visit.id} />
                 <input type="hidden" name="flow" value="left" />
-                <Button
-                  type="submit"
+                <SubmitButton
                   variant="outline"
                   className="w-full border-error/30 text-error hover:border-error/50 hover:text-error"
                 >
                   Se retiró sin completar
-                </Button>
+                </SubmitButton>
               </ConfirmForm>
             </div>
           </Card>

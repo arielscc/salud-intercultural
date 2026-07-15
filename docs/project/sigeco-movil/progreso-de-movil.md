@@ -10,7 +10,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | 2 | Resto de listas de trabajo en cards | Implementada (QA en Tarea 11) |
 | 3 | Feedback de acciones con toasts (sonner) | Implementada (QA en Tarea 11) |
 | 4 | Confirmacion de acciones irreversibles | Implementada (QA en Tarea 11) |
-| 5 | Estados de carga (skeleton y spinner) | Pospuesta (compartida con web) |
+| 5 | Estados de carga (skeleton y spinner) | Implementada (QA en Tarea 11) |
 | 6 | Busqueda de pacientes con autocomplete | Pendiente |
 | 7 | Acciones principales y retorno en detalles moviles | Pendiente |
 | 8 | Filtros y tabs tactiles | Pendiente |
@@ -34,6 +34,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 - Tareas 5 (estados de carga) y 10 (paginacion) quedan pospuestas: no pueden aislarse a movil (`loading.tsx`, estados pending y datos paginados afectan ambos viewports). Se retomaran cuando el usuario habilite cambios compartidos.
 - Orden de ejecucion resultante: 1, 2, 7, 3, 4, 6, 8, 9, 11.
 - La Tarea 11 (QA) suma la verificacion explicita "desktop intacto" en 1280px sobre toda pantalla tocada.
+- El usuario habilito despues la excepcion compartida necesaria para la Tarea 5. Skeletons y estados pending pasan a movil y escritorio; la Tarea 10 sigue pospuesta.
 
 ## Entradas Por Tarea
 
@@ -130,3 +131,25 @@ Pendientes para el QA (Tarea 11): confirmar que el sheet abre sobre el teclado t
 Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
 
 Commit sugerido: `feat(sigeco): confirm irreversible visit actions with bottom sheet`
+
+### Tarea 5 — Estados De Carga: Skeleton Y Spinner (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/ui/Skeleton.tsx`: bloque de carga con `animate-pulse`, radio Marea de 7px y `bg-surface-soft`. Se replico el patron simple de skeleton en lugar de instalar demos o dependencias adicionales.
+- Nuevo `src/components/internal/ModuleLoading.tsx`: compositor accesible con `role=status`, aviso para lectores de pantalla y siluetas estables de `PageHeader`, KPIs, lista y panel lateral. Recibe cantidad de KPIs, acciones, filas y presencia de rail para parecerse a cada modulo sin duplicar markup.
+- Boundaries `loading.tsx` para dashboard, Recepcion, Consulta, Enfermeria, Caja, Seguimiento e Inventario. Los boundaries de modulo cubren tambien sus rutas de detalle mientras los Server Components resuelven datos.
+- `src/components/internal/SubmitButton.tsx` generaliza `useFormStatus`: deshabilita durante el envio, expone `aria-busy`, muestra spinner y admite texto pending sin perder variantes ni tamanos del `Button` Marea.
+- Los formularios principales de Recepcion, Consulta, Enfermeria, Caja, Seguimiento e Inventario usan `SubmitButton`, incluidos funnel de llegada y edicion de paciente. El login interno tambien muestra progreso. Los forms GET de busqueda y filtros se conservan porque no ejecutan server actions y su UX se resuelve en las Tareas 6 y 8.
+
+Decisiones:
+
+- Excepcion aprobada a la regla solo movil: `loading.tsx` y `useFormStatus` cambian necesariamente el comportamiento compartido. El feedback de carga queda activo tambien en escritorio.
+- No se agrego Suspense granular ni se tocaron queries. Cada boundary reemplaza el contenido de la ruta dentro del shell existente, que permanece visible y navegable.
+- Un solo compositor mantiene coherencia visual y permite que cada modulo ajuste su silueta con props pequenas, sin crear siete copias divergentes.
+
+Pendientes para el QA (Tarea 11): simular navegacion lenta en un navegador sin rutas precargadas para medir que el skeleton aparezca sin flash, confirmar que no haya saltos de ancho en labels largos y recorrer todos los boundaries en 390x844 y 1280px.
+
+Validaciones: `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 70 tests OK, `pnpm test:integration` 21 tests OK y `pnpm run build` OK. Navegador: el login muestra spinner, texto "Ingresando...", `aria-busy` y boton deshabilitado durante la server action; dashboard estable sin overflow horizontal en 390x844 y 1280x900. La latencia artificial no produjo una captura confiable del boundary porque Next habia precargado la ruta; queda como escenario explicito para la Tarea 11.
+
+Commit sugerido: `feat(sigeco): add loading skeletons and pending button states`

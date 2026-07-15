@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
-import { Button } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import {
@@ -205,7 +205,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
               <Field label="Notas">
                 <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
               </Field>
-              <Button type="submit">Registrar pago</Button>
+              <SubmitButton>Registrar pago</SubmitButton>
             </NoticeForm>
           </Card>
         </div>

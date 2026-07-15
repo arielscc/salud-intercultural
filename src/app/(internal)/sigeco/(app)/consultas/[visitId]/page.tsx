@@ -4,7 +4,7 @@ import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { Button } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
@@ -200,7 +200,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
               </Field>
             </CollapsibleSection>
             <div className="flex justify-end border-t border-border pt-4">
-              <Button type="submit">Guardar consulta</Button>
+              <SubmitButton>Guardar consulta</SubmitButton>
             </div>
           </NoticeForm>
         </Card>
@@ -218,17 +218,17 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="to_nursing" />
                 <input type="hidden" name="note" value="Pasa a enfermería tras la consulta" />
-                <Button type="submit" variant="outline" className="w-full">
+                <SubmitButton variant="outline" className="w-full">
                   Enviar a enfermería
-                </Button>
+                </SubmitButton>
               </NoticeForm>
               <NoticeForm action={applyVisitFlowAction} notice="Paciente enviado a administración">
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="to_administration" />
                 <input type="hidden" name="note" value="Pasa a administración tras la consulta" />
-                <Button type="submit" variant="outline" className="w-full">
+                <SubmitButton variant="outline" className="w-full">
                   Enviar a administración
-                </Button>
+                </SubmitButton>
               </NoticeForm>
               <ConfirmForm
                 action={applyVisitFlowAction}
@@ -240,9 +240,9 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <input type="hidden" name="note" value="Salida directa después de la consulta" />
-                <Button type="submit" variant="outline" className="w-full">
+                <SubmitButton variant="outline" className="w-full">
                   Se va — cerrar visita
-                </Button>
+                </SubmitButton>
               </ConfirmForm>
             </div>
           </Card>
@@ -286,9 +286,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
             <Field label="Detalle">
               <textarea className={`${internalInputClassName} min-h-24 py-3`} name="details" />
             </Field>
-            <Button type="submit" variant="outline">
-              Crear indicación
-            </Button>
+            <SubmitButton variant="outline">Crear indicación</SubmitButton>
           </NoticeForm>
           </CollapsibleSection>
         </Card>

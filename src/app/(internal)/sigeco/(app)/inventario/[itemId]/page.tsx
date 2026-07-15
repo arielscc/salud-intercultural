@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
-import { Button } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
@@ -165,7 +165,7 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
                 required
               />
             </Field>
-            <Button type="submit">Registrar entrada</Button>
+            <SubmitButton>Registrar entrada</SubmitButton>
           </NoticeForm>
         </Card>
 
@@ -185,9 +185,7 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
             <Field label="Motivo">
               <input className={internalInputClassName} name="reason" required />
             </Field>
-            <Button type="submit" variant="outline">
-              Registrar ajuste
-            </Button>
+            <SubmitButton variant="outline">Registrar ajuste</SubmitButton>
           </NoticeForm>
         </Card>
       </div>

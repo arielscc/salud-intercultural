@@ -4,7 +4,7 @@ import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { Button } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
@@ -84,9 +84,9 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
               >
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="complete" />
-                <Button type="submit" variant="outline" className="w-full">
+                <SubmitButton variant="outline" className="w-full">
                   Cerrar visita
-                </Button>
+                </SubmitButton>
               </ConfirmForm>
               <ConfirmForm
                 action={applyVisitFlowAction}
@@ -97,13 +97,12 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
               >
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="left" />
-                <Button
-                  type="submit"
+                <SubmitButton
                   variant="outline"
                   className="w-full border-error/30 text-error hover:border-error/50 hover:text-error"
                 >
                   Se retiró sin completar
-                </Button>
+                </SubmitButton>
               </ConfirmForm>
               <p className="text-[13px] text-muted sm:col-span-2">
                 “Se retiró” guarda en qué punto abandonó; el historial queda en la ruta.
@@ -184,7 +183,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                   placeholder="Ej. pasa a caja solo a comprar un producto"
                 />
               </Field>
-              <Button type="submit">Actualizar ruta</Button>
+              <SubmitButton>Actualizar ruta</SubmitButton>
             </NoticeForm>
           </Card>
         ) : null}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
 import { Search, UserRoundPlus } from "lucide-react";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Button } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
@@ -39,16 +39,6 @@ const stepTitles: Record<number, string> = {
   3: "Antecedentes rápidos",
   4: "Origen y seguimiento"
 };
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Registrando…" : "Registrar llegada"}
-    </Button>
-  );
-}
 
 export function IntakeFunnel({
   allowDuplicateFromServer = false,
@@ -619,7 +609,9 @@ export function IntakeFunnel({
               Continuar
             </Button>
           ) : null}
-          {step === 4 ? <SubmitButton /> : null}
+          {step === 4 ? (
+            <SubmitButton pendingLabel="Registrando...">Registrar llegada</SubmitButton>
+          ) : null}
         </div>
       ) : null}
     </form>

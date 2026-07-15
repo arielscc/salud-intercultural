@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
@@ -37,16 +37,6 @@ export type EditablePatient = {
   currentMedication: string | null;
   followUpPreference: string;
 };
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Guardando…" : "Guardar cambios"}
-    </Button>
-  );
-}
 
 export function PatientEditForm({ patient }: { patient: EditablePatient }) {
   const [formError, setFormError] = useState<string | null>(null);
@@ -264,7 +254,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
         >
           Cancelar
         </Link>
-        <SubmitButton />
+        <SubmitButton pendingLabel="Guardando...">Guardar cambios</SubmitButton>
       </div>
     </form>
   );

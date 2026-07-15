@@ -139,9 +139,9 @@ Orden de ejecucion resultante: 1, 2, 7, 3, 4, 6, 8, 9 y al final 11 (QA integral
 
 **Commit sugerido:** `feat(sigeco): confirm irreversible visit actions with bottom sheet`
 
-## Tarea 5 — Estados De Carga (Skeleton Y Spinner) [POSPUESTA]
+## Tarea 5 — Estados De Carga (Skeleton Y Spinner)
 
-**Pospuesta el 2026-07-15:** no puede aislarse a movil. `loading.tsx` cambia el comportamiento de navegacion del App Router en todos los viewports (hoy la pagina anterior queda visible hasta que llega la nueva) y los estados pending de botones (`useFormStatus` + disabled + spinner) son comportamiento compartido. Se retomara cuando el usuario habilite cambios que tambien toquen la web.
+**Retomada el 2026-07-15:** el usuario habilito expresamente los cambios compartidos con escritorio requeridos por esta tarea. Los `loading.tsx` y estados pending se aplican por igual en todos los viewports; esta es una excepcion aprobada a la regla transversal 4.
 
 **Objetivo:** que navegar y enviar formularios siempre muestre progreso, especialmente en red movil.
 

@@ -3,7 +3,7 @@ import type { StudyStatus, StudyType, VisitWorkItemStatus } from "@/generated/pr
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { Button } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
@@ -115,9 +115,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
             <div className="flex justify-end">
-              <Button type="submit" variant="outline">
-                Guardar signos
-              </Button>
+              <SubmitButton variant="outline">Guardar signos</SubmitButton>
             </div>
           </NoticeForm>
           </CollapsibleSection>
@@ -158,7 +156,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
             <div className="flex justify-end">
-              <Button type="submit">Registrar aplicación</Button>
+              <SubmitButton>Registrar aplicación</SubmitButton>
             </div>
           </NoticeForm>
           </CollapsibleSection>
@@ -215,9 +213,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               <textarea className={`${internalInputClassName} min-h-24 py-3`} name="findings" />
             </Field>
             <div className="flex justify-end">
-              <Button type="submit" variant="outline">
-                Registrar estudio
-              </Button>
+              <SubmitButton variant="outline">Registrar estudio</SubmitButton>
             </div>
           </NoticeForm>
           </CollapsibleSection>
@@ -245,7 +241,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             <Field label="Nota">
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
-            <Button type="submit">Actualizar tarea</Button>
+            <SubmitButton>Actualizar tarea</SubmitButton>
           </NoticeForm>
         </Card>
 
@@ -257,9 +253,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             <Field label="Nota">
               <textarea className={`${internalInputClassName} min-h-24 py-3`} name="note" required />
             </Field>
-            <Button type="submit" variant="outline">
-              Guardar nota
-            </Button>
+            <SubmitButton variant="outline">Guardar nota</SubmitButton>
           </NoticeForm>
         </Card>
       </div>

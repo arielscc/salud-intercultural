@@ -4,6 +4,7 @@ import type { VisitStatus } from "@/generated/prisma/client";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { internalInputClassName } from "@/components/internal/Field";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -69,14 +70,13 @@ function VisitLeftForm({
     >
       <input type="hidden" name="visitId" value={visitId} />
       <input type="hidden" name="flow" value="left" />
-      <Button
-        type="submit"
+      <SubmitButton
         variant="ghost"
         size="sm"
         className={cn("text-error hover:bg-error/10 hover:text-error", buttonClassName)}
       >
         Se retiró
-      </Button>
+      </SubmitButton>
     </ConfirmForm>
   );
 }

@@ -1,6 +1,7 @@
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { PasswordInput } from "@/components/internal/PasswordInput";
-import { Button, buttonVariants } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
+import { buttonVariants } from "@/components/internal/ui/Button";
 import { loginInternalUser } from "@/features/internal-auth/actions";
 import { cn } from "@/lib/cn";
 import { LockKeyhole } from "lucide-react";
@@ -65,9 +66,9 @@ export default async function SigecoLoginPage({
           <Field label="Contraseña">
             <PasswordInput required />
           </Field>
-          <Button type="submit" className="mt-1">
+          <SubmitButton className="mt-1" pendingLabel="Ingresando...">
             Entrar
-          </Button>
+          </SubmitButton>
         </form>
 
         <div className="mt-6 grid gap-2 border-t border-border pt-4 text-center">

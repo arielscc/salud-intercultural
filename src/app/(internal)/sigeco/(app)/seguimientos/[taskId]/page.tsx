@@ -3,7 +3,8 @@ import { MessageCircle, Phone } from "lucide-react";
 import type { FollowUpAttemptMethod, FollowUpStatus } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
-import { Button, buttonVariants } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
+import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
@@ -137,7 +138,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
             <Field label="Notas">
               <textarea className={`${internalInputClassName} min-h-24 py-3`} name="notes" />
             </Field>
-            <Button type="submit">Guardar seguimiento</Button>
+            <SubmitButton>Guardar seguimiento</SubmitButton>
           </NoticeForm>
         </Card>
       </div>

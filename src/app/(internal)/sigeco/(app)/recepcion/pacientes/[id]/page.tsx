@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { PencilLine, UserRoundPlus } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { Button, buttonVariants } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
+import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
@@ -394,9 +395,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                   placeholder="Ej. preguntar cómo sigue del dolor y si está tomando la medicación"
                 />
               </Field>
-              <Button type="submit" variant="outline">
-                Crear seguimiento
-              </Button>
+              <SubmitButton variant="outline">Crear seguimiento</SubmitButton>
             </form>
           </Card>
         ) : null}

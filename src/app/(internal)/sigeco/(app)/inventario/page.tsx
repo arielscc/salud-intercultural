@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Bell, Boxes, TriangleAlert } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
-import { Button } from "@/components/internal/ui/Button";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
@@ -202,7 +202,7 @@ export default async function InventoryPage() {
             <Field label="Descripción">
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="description" />
             </Field>
-            <Button type="submit">Crear producto</Button>
+            <SubmitButton>Crear producto</SubmitButton>
           </form>
         </Card>
       </div>
