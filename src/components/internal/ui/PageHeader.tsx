@@ -4,11 +4,13 @@ export function PageHeader({
   title,
   description,
   actions,
+  actionsClassName,
   className
 }: {
   title: string;
   description?: string;
   actions?: React.ReactNode;
+  actionsClassName?: string;
   className?: string;
 }) {
   return (
@@ -17,7 +19,7 @@ export function PageHeader({
         <h2 className="font-sora text-xl font-bold tracking-tight text-text">{title}</h2>
         {description ? <p className="mt-0.5 text-xs text-muted">{description}</p> : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className={cn("flex items-center gap-2", actionsClassName)}>{actions}</div> : null}
     </div>
   );
 }

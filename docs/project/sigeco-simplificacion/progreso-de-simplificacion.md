@@ -370,3 +370,14 @@ Pedido del usuario: que las cards del dashboard (Pacientes de hoy, Visitas activ
 Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
 
 **Commit sugerido:** `feat(sigeco): compact 3x2 kpi grid on mobile with per-card accent tones`
+
+### Acciones del dashboard a mitad y mitad en movil
+
+Pedido del usuario: que "Buscar paciente" y "Registrar llegada" ocupen 50% y 50% del ancho total. Se aplico solo en movil (en desktop los botones siguen a tamano natural junto al titulo, como hasta ahora). Nota de alcance: solo UI; QA en la fase final.
+
+- `src/components/internal/ui/PageHeader.tsx`: nuevo prop opcional `actionsClassName` que se mezcla con las clases del contenedor de acciones. Es opt-in para no cambiar el layout movil de las demas paginas que usan `PageHeader` sin pasar por QA.
+- `src/app/(internal)/sigeco/(app)/page.tsx`: el dashboard pasa `actionsClassName="w-full sm:w-auto"` (la fila de acciones ocupa todo el ancho en movil) y cada Link de accion agrega `flex-1 sm:flex-none` (mitad y mitad; el boton base ya centra su contenido con `justify-center`). Si el rol solo ve un boton, ese ocupa el ancho completo.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+**Commit sugerido:** `style(sigeco): stretch dashboard header actions half width each on mobile`

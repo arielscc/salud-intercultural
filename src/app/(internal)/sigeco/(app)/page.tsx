@@ -53,20 +53,24 @@ export default async function SigecoDashboardPage() {
       <PageHeader
         title="Trabajo de hoy"
         description="Resumen operativo de la clínica"
+        actionsClassName="w-full sm:w-auto"
         actions={
           canRegisterArrival || canSeePatients ? (
             <>
               {canSeePatients ? (
                 <Link
                   href="/sigeco/recepcion?vista=pacientes"
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1 sm:flex-none")}
                 >
                   <Search className="h-4 w-4" aria-hidden="true" />
                   Buscar paciente
                 </Link>
               ) : null}
               {canRegisterArrival ? (
-                <Link href="/sigeco/recepcion/nuevo" className={cn(buttonVariants({ size: "sm" }))}>
+                <Link
+                  href="/sigeco/recepcion/nuevo"
+                  className={cn(buttonVariants({ size: "sm" }), "flex-1 sm:flex-none")}
+                >
                   <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
                   Registrar llegada
                 </Link>
