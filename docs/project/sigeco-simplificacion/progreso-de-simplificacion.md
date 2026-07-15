@@ -356,3 +356,17 @@ Pedido del usuario: reemplazar el menu movil hecho a mano del dashboard de Sigec
 Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
 
 **Commit sugerido:** `feat(sigeco): replace mobile nav with left drawer from shadcn studio`
+
+### KPIs del dashboard compactos en movil con acento de color por card
+
+Pedido del usuario: que las cards del dashboard (Pacientes de hoy, Visitas activas, Abandonos hoy, Seguimientos hoy, Seguimientos vencidos, Stock bajo) entren 3 por fila en movil (grilla 3x2) y que cada una tenga un estilo que la identifique, tomando como referencia los componentes de shadcn studio. Nota de alcance: solo UI; tests y QA quedan para la fase final.
+
+- Referencia visual: los "Statistics Component" de shadcn studio (blocks de dashboard). Las 3 variantes publicadas (13, 15 y 19) son bloques de cuenta paga — su "Get Code" redirige a pricing y el registry devuelve 401 — asi que no se instalo nada: se replico a mano el patron de la variante 13 (badge de icono en cuadrado redondeado con color propio por card) con los tokens Marea de `sigeco.css`.
+- `src/components/internal/ui/KpiCard.tsx` (rediseno): nuevo prop `tone` (`primary` por defecto, retrocompatible con inventario, administracion y seguimientos que no lo pasan) que pinta el badge del icono con tinte al 10% + icono en el color pleno: `primary`, `primary-dark`, `secondary`, `accent`, `error`, `muted`. Layout nuevo: badge arriba, valor, label debajo. Compacta en movil (p-2.5, valor text-lg, label 10.5px, badge 28px) y amplia desde `sm` (p-[18px], valor 26px, badge 36px como antes). El pill de estado (`flag`) y la `note` se ocultan en movil por espacio; a cambio, cuando hay flag el badge muestra un punto de color (warning/error) en la esquina, visible solo en movil.
+- `src/app/(internal)/sigeco/(app)/page.tsx`: la seccion de KPIs pasa de 1 columna en movil a `grid-cols-3 gap-2` (3x2 exacto con las 6 cards); desde `sm` se mantiene el comportamiento anterior (2/3/6 columnas). Tonos asignados: Pacientes de hoy `primary` (teal), Visitas activas `secondary` (verde), Abandonos hoy `error` (rojo), Seguimientos hoy `accent` (ambar), Seguimientos vencidos `primary-dark` (teal profundo), Stock bajo `muted` (pizarra).
+- No se agrego una septima card: en el codigo ya existen 6 KPIs (el usuario contaba 5, probablemente porque su rol de prueba no ve "Stock bajo" por el permiso `inventory_read`), y con 6 la grilla 3x2 queda completa; una septima la romperia (3+3+1).
+- Pendiente de QA (fase final): verificar que los labels largos ("Seguimientos vencidos") quepan en cards de ~110px a 390px de ancho, y decidir si ocultar el flag en movil es aceptable para lectores de pantalla.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+**Commit sugerido:** `feat(sigeco): compact 3x2 kpi grid on mobile with per-card accent tones`

@@ -85,17 +85,19 @@ export default async function SigecoDashboardPage() {
         </Card>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <section className="grid grid-cols-3 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-3 2xl:grid-cols-6">
         {receptionSummary ? (
           <>
             <KpiCard
               icon={UsersRound}
+              tone="primary"
               label="Pacientes de hoy"
               value={receptionSummary.patientsToday}
               note="Llegadas únicas"
             />
             <KpiCard
               icon={Activity}
+              tone="secondary"
               label="Visitas activas"
               value={receptionSummary.activeTotal}
               flag={
@@ -104,6 +106,7 @@ export default async function SigecoDashboardPage() {
             />
             <KpiCard
               icon={UserX}
+              tone="error"
               label="Abandonos hoy"
               value={receptionSummary.abandonmentsToday}
               flag={
@@ -118,12 +121,14 @@ export default async function SigecoDashboardPage() {
           <>
             <KpiCard
               icon={PhoneCall}
+              tone="accent"
               label="Seguimientos hoy"
               value={followUpSummary.today}
               flag={followUpSummary.today > 0 ? { tone: "warn", label: "Contactar" } : undefined}
             />
             <KpiCard
               icon={ClockAlert}
+              tone="primary-dark"
               label="Seguimientos vencidos"
               value={followUpSummary.overdue}
               flag={followUpSummary.overdue > 0 ? { tone: "crit", label: "Atrasados" } : undefined}
@@ -133,6 +138,7 @@ export default async function SigecoDashboardPage() {
         {inventorySummary ? (
           <KpiCard
             icon={Boxes}
+            tone="muted"
             label="Stock bajo"
             value={inventorySummary.lowStock}
             flag={inventorySummary.lowStock > 0 ? { tone: "crit", label: "Reponer" } : undefined}
