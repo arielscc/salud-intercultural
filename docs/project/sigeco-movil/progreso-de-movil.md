@@ -11,7 +11,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | 3 | Feedback de acciones con toasts (sonner) | Implementada (QA en Tarea 11) |
 | 4 | Confirmacion de acciones irreversibles | Implementada (QA en Tarea 11) |
 | 5 | Estados de carga (skeleton y spinner) | Implementada (QA en Tarea 11) |
-| 6 | Busqueda de pacientes con autocomplete | Pendiente |
+| 6 | Busqueda de pacientes con autocomplete | Implementada (QA en Tarea 11) |
 | 7 | Acciones principales y retorno en detalles moviles | Pendiente |
 | 8 | Filtros y tabs tactiles | Pendiente |
 | 9 | Telefono con mascara y teclado numerico | Pendiente |
@@ -153,3 +153,25 @@ Pendientes para el QA (Tarea 11): simular navegacion lenta en un navegador sin r
 Validaciones: `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 70 tests OK, `pnpm test:integration` 21 tests OK y `pnpm run build` OK. Navegador: el login muestra spinner, texto "Ingresando...", `aria-busy` y boton deshabilitado durante la server action; dashboard estable sin overflow horizontal en 390x844 y 1280x900. La latencia artificial no produjo una captura confiable del boundary porque Next habia precargado la ruta; queda como escenario explicito para la Tarea 11.
 
 Commit sugerido: `feat(sigeco): add loading skeletons and pending button states`
+
+### Tarea 6 — Busqueda De Pacientes Con Autocomplete (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/reception/PatientAutocomplete.tsx`: combobox movil inspirado en el patron autocomplete/command de shadcn studio, adaptado directamente a Marea y a la server action existente. No agrega dependencias ni filtrado paralelo en cliente.
+- La busqueda arranca desde 2 caracteres con debounce de 300 ms, invalida respuestas obsoletas y muestra hasta los 5 resultados que entrega `searchReceptionPatientsAction`, con nombre, codigo y telefono.
+- El combobox soporta flechas arriba/abajo, Enter para elegir, Escape para cerrar, `role=combobox`, `aria-controls`, `aria-activedescendant`, lista con `role=listbox` y estado seleccionado. El panel limita su alto a `min(17rem, 35dvh)` para convivir con el teclado tactil.
+- En Recepcion, vista Pacientes, el autocomplete vive en `sm:hidden` y navega a la ficha al elegir. El formulario GET existente se conserva completo dentro de `hidden sm:block`; el padron y sus cards/tabla no cambian.
+- En el paso 0 del funnel, el autocomplete movil comparte `searchTerm`, precarga la ficha elegida mediante `prefillFromPatient` y conserva "Es paciente nuevo" para sembrar nombre o telefono. La busqueda manual, sus resultados y su boton existentes quedan intactos desde `sm`.
+
+Decisiones:
+
+- La server action y la query no cambiaron: se conserva ranking por `updatedAt desc`, limite de 5 y busqueda por nombre, telefonos o codigo.
+- Aunque el bloque movil existe en el DOM de escritorio, el efecto verifica `matchMedia("(max-width: 639px)")` antes de consultar. Asi el formulario desktop no dispara una segunda busqueda oculta.
+- Se replico solo la interaccion necesaria del patron command/autocomplete en vez de instalar un command palette completo: los resultados vienen del servidor y no necesitan coleccion, filtrado ni estado global adicionales.
+
+Pendientes para el QA (Tarea 11): probar escritura rapida y respuestas fuera de orden, teclado abierto en 390x844, seleccion tactil y por teclado, resultado vacio, navegacion a ficha, precarga del funnel y confirmacion de que desktop conserva el flujo manual sin consultas duplicadas.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): patient search autocomplete in reception and intake`

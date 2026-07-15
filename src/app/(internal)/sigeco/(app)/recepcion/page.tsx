@@ -5,6 +5,7 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { internalInputClassName } from "@/components/internal/Field";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { SubmitButton } from "@/components/internal/SubmitButton";
+import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -251,7 +252,10 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
         </>
       ) : (
         <>
-          <Card>
+          <Card className="sm:hidden">
+            <PatientAutocomplete mode="navigate" initialValue={params.search} />
+          </Card>
+          <Card className="hidden sm:block">
             <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <input type="hidden" name="vista" value="pacientes" />
               <input

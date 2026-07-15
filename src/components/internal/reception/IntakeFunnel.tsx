@@ -3,6 +3,10 @@
 import { useState, useTransition } from "react";
 import { Search, UserRoundPlus } from "lucide-react";
 import { SubmitButton } from "@/components/internal/SubmitButton";
+import {
+  PatientAutocomplete,
+  type PatientSearchResult
+} from "@/components/internal/reception/PatientAutocomplete";
 import { Button } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
@@ -31,7 +35,7 @@ import {
 } from "@/components/internal/reception/funnel-fields";
 import { cn } from "@/lib/cn";
 
-type PatientMatch = Awaited<ReturnType<typeof searchReceptionPatientsAction>>[number];
+type PatientMatch = PatientSearchResult;
 
 const stepTitles: Record<number, string> = {
   1: "¿Quién es?",
@@ -273,55 +277,67 @@ export function IntakeFunnel({
               Busca por nombre, teléfono o código antes de registrar para no duplicar fichas.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-            <input
-              className={internalInputClassName}
+          <div className="sm:hidden">
+            <PatientAutocomplete
+              mode="select"
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  runSearch();
-                }
-              }}
-              placeholder="Nombre, teléfono o código"
-              autoFocus
+              onValueChange={setSearchTerm}
+              onSelect={prefillFromPatient}
+              onCreateNew={startAsNewPatient}
             />
-            <Button type="button" variant="outline" onClick={runSearch} disabled={isSearching}>
-              <Search className="h-4 w-4" aria-hidden="true" />
-              {isSearching ? "Buscando…" : "Buscar"}
-            </Button>
           </div>
 
-          {searchResults !== null ? (
-            <div className="grid gap-2">
-              {searchResults.map((patient) => (
-                <button
-                  key={patient.id}
-                  type="button"
-                  onClick={() => prefillFromPatient(patient)}
-                  className="focus-ring grid gap-0.5 rounded-[9px] border border-border bg-surface px-4 py-3 text-left transition hover:border-primary/40"
-                >
-                  <span className="font-semibold text-text">{patient.fullName}</span>
-                  <span className="text-[13px] text-muted">
-                    {patient.internalCode} · {patient.phone}
-                    {patient.city ? ` · ${patient.city}` : ""}
-                  </span>
-                </button>
-              ))}
-              {searchResults.length === 0 ? (
-                <p className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted">
-                  Sin resultados. Regístralo como paciente nuevo.
-                </p>
-              ) : null}
+          <div className="hidden sm:grid sm:gap-4">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+              <input
+                className={internalInputClassName}
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    runSearch();
+                  }
+                }}
+                placeholder="Nombre, teléfono o código"
+                autoFocus
+              />
+              <Button type="button" variant="outline" onClick={runSearch} disabled={isSearching}>
+                <Search className="h-4 w-4" aria-hidden="true" />
+                {isSearching ? "Buscando…" : "Buscar"}
+              </Button>
             </div>
-          ) : null}
 
-          <div className="border-t border-border pt-4">
-            <Button type="button" onClick={startAsNewPatient}>
-              <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
-              Es paciente nuevo
-            </Button>
+            {searchResults !== null ? (
+              <div className="grid gap-2">
+                {searchResults.map((patient) => (
+                  <button
+                    key={patient.id}
+                    type="button"
+                    onClick={() => prefillFromPatient(patient)}
+                    className="focus-ring grid gap-0.5 rounded-[9px] border border-border bg-surface px-4 py-3 text-left transition hover:border-primary/40"
+                  >
+                    <span className="font-semibold text-text">{patient.fullName}</span>
+                    <span className="text-[13px] text-muted">
+                      {patient.internalCode} · {patient.phone}
+                      {patient.city ? ` · ${patient.city}` : ""}
+                    </span>
+                  </button>
+                ))}
+                {searchResults.length === 0 ? (
+                  <p className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted">
+                    Sin resultados. Regístralo como paciente nuevo.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="border-t border-border pt-4">
+              <Button type="button" onClick={startAsNewPatient}>
+                <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
+                Es paciente nuevo
+              </Button>
+            </div>
           </div>
         </Card>
       ) : null}
