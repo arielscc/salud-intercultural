@@ -37,6 +37,7 @@ export default function SigecoRootLayout({
       lang="es"
       className={`sigeco-app ${inter.variable} ${sora.variable} ${plexSans.variable}`}
       data-theme="light"
+      data-scroll-behavior="smooth"
     >
       <body>{children}</body>
     </html>

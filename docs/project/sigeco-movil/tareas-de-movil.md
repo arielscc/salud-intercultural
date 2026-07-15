@@ -261,6 +261,8 @@ Orden de ejecucion resultante: 1, 2, 7, 3, 4, 6, 8, 9 y al final 11 (QA integral
 
 ## Tarea 11 — QA Integral Y Cierre Documental
 
+**Completada el 2026-07-15:** matriz automatizada y QA autenticado responsive cerrados; resultados y hallazgos en `progreso-de-movil.md`.
+
 **Objetivo:** validar toda la tanda movil de una vez y cerrar la iniciativa.
 
 **Alcance:**

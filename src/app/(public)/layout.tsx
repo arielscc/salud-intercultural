@@ -39,6 +39,7 @@ export default function PublicRouteLayout({
       lang="es"
       className={`${inter.variable} ${sora.variable}`}
       data-theme="light"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <head>

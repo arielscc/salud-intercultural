@@ -2,6 +2,8 @@
 
 Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-movil.md`. Cada tarea deja aqui su entrada al implementarse: que se hizo, hallazgos, pendientes y commit sugerido. Las validaciones (lint, tsc, tests, QA de navegador) se corren todas juntas en la Tarea 11, no por tarea.
 
+**Estado de la iniciativa:** cerrada el 2026-07-15. Las Tareas 1-11 estan implementadas y la matriz final de calidad paso completa.
+
 ## Estado General
 
 | Tarea | Nombre | Estado |
@@ -16,7 +18,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | 8 | Filtros y tabs tactiles | Implementada (QA en Tarea 11) |
 | 9 | Telefono con mascara y teclado numerico | Implementada (QA en Tarea 11) |
 | 10 | Paginacion de listas largas | Implementada (QA en Tarea 11) |
-| 11 | QA integral y cierre documental | Pendiente |
+| 11 | QA integral y cierre documental | Completada |
 
 ## Contexto Y Decisiones (2026-07-14)
 
@@ -263,3 +265,44 @@ Pendientes para el QA (Tarea 11): poblar mas registros que cada `pageSize`, reco
 Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
 
 Commit sugerido: `feat(sigeco): paginate patient, follow-up and inventory lists`
+
+### Tarea 11 — QA Integral Y Cierre Documental (2026-07-15)
+
+Validaciones automatizadas finales:
+
+- `pnpm lint`: OK, cero warnings.
+- `pnpm typecheck`: OK; Prisma, tipos Payload, rutas Next y `tsc --noEmit` completaron.
+- `pnpm test`: 20 archivos y 70/70 tests unitarios OK.
+- `pnpm test:integration`: 10 archivos y 21/21 tests de integracion OK contra PostgreSQL 16 efimero local, con las 11 migraciones aplicadas desde cero.
+- `pnpm run build`: OK; build de produccion Next 16.2.6, TypeScript y 18 paginas estaticas generadas.
+
+QA de navegador movil (390x844):
+
+- Dashboard, Recepcion, Consulta, Enfermeria, Caja, Seguimiento e Inventario recorridos autenticados. En las seis bandejas se mostro la lista movil y ninguna tabla; `scrollWidth === 390` en todas.
+- Se recorrio un detalle real de visita, consulta, enfermeria, pendiente de Caja, venta, seguimiento, paciente e inventario. Todos mostraron el enlace `Volver` correcto, la accion del rol antes de historiales y cero overflow horizontal.
+- Funnel de llegada completo con paciente nuevo: cuatro pasos, telefono tactil `7654-3210` normalizado visualmente a `7654 3210`, `inputMode=tel`, pending `Registrando...`, redireccion al detalle y toast `Llegada registrada`.
+- Autocomplete de Recepcion: busqueda desde `Ari`, listbox con resultado, seleccion por teclado y navegacion a la ficha correcta.
+- Tabs/filtros: Recepcion Hoy/Pacientes y Seguimiento Vencidos/Hoy/Proximos conservaron URLs y estado activo. La accion reversible de ruta mostro pending y toast `Ruta actualizada`.
+- Confirmacion irreversible: `Cerrar visita` abrio bottom sheet modal con consecuencia, confirmar en rojo, cancelar y cierre por Escape; no ejecuto la accion durante esta prueba.
+- Alta de inventario: pending, redireccion al detalle y toast `Producto creado`.
+- Paginacion con fixtures por encima de los limites: pacientes 30, seguimientos 60 e inventario 80. Las tres listas llegaron a pagina 2/2, conservaron `vista`, `search` o `filtro` y mantuvieron `scrollWidth === 390`.
+- KPIs: ningun label quedo recortado. El flag visual movil tiene ahora equivalente `sr-only` (`Alerta: ...`) para lectores de pantalla.
+
+QA de navegador desktop (1280x800):
+
+- Las siete pantallas principales mostraron sus tablas y ocultaron las listas/cards moviles; los siete detalles recorridos ocultaron los links `Volver` moviles. `scrollWidth === 1280` en todas.
+- Los formularios GET de busqueda/filtro conservaron el flujo desktop; el autocomplete movil, los tabs moviles y el toaster no tuvieron superficie visible.
+- Una accion irreversible sobre el registro QA temporal se envio directamente, sin dialogo, y termino en estado Finalizada. No aparecio toast visible en desktop.
+- Consola y red se limpiaron antes de la pasada final: sin errores de aplicacion y sin respuestas 4xx/5xx.
+
+Hallazgos corregidos durante el cierre:
+
+- `KpiCard`: la etiqueta del flag estaba oculta tambien para lectores de pantalla en movil; se agrego texto `sr-only sm:hidden` sin alterar la presentacion visual.
+- Layouts raiz Sigeco/publico: se declaro `data-scroll-behavior="smooth"` para que Next gestione correctamente las transiciones cuando `globals.css` aplica scroll suave y deje de emitir la advertencia de desarrollo.
+
+Pendientes conscientes:
+
+- El skeleton de navegacion se habia validado funcionalmente en la Tarea 5 y todos sus boundaries compilaron; no se obtuvo captura determinista con red artificialmente lenta porque el navegador de QA no ofrece throttling y Next precarga rutas. No bloquea el cierre: pending de formularios, boundaries y build estan verificados.
+- Las capturas usan el badge flotante de Next dev en la esquina inferior derecha; no existe en produccion.
+
+Commit sugerido: `docs(sigeco): close mobile-first initiative with qa notes`

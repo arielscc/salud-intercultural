@@ -74,15 +74,18 @@ export function KpiCard({
         </span>
       </div>
       {flag ? (
-        <span
-          className={cn(
-            "hidden w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold sm:inline-flex",
-            flagToneClassName[flag.tone]
-          )}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-          {flag.label}
-        </span>
+        <>
+          <span className="sr-only sm:hidden">Alerta: {flag.label}</span>
+          <span
+            className={cn(
+              "hidden w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold sm:inline-flex",
+              flagToneClassName[flag.tone]
+            )}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+            {flag.label}
+          </span>
+        </>
       ) : note ? (
         <span className="hidden text-[11px] text-muted/80 sm:block">{note}</span>
       ) : null}
