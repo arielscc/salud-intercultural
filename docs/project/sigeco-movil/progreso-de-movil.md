@@ -9,7 +9,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | 1 | Patron de lista responsive y Recepcion en cards | Implementada (QA en Tarea 11) |
 | 2 | Resto de listas de trabajo en cards | Implementada (QA en Tarea 11) |
 | 3 | Feedback de acciones con toasts (sonner) | Implementada (QA en Tarea 11) |
-| 4 | Confirmacion de acciones irreversibles | Pendiente |
+| 4 | Confirmacion de acciones irreversibles | Implementada (QA en Tarea 11) |
 | 5 | Estados de carga (skeleton y spinner) | Pospuesta (compartida con web) |
 | 6 | Busqueda de pacientes con autocomplete | Pendiente |
 | 7 | Acciones principales y retorno en detalles moviles | Pendiente |
@@ -106,3 +106,27 @@ Pendientes para el QA (Tarea 11): verificar que el toast no tape el boton recien
 Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
 
 Commit sugerido: `feat(sigeco): add sonner toasts for action feedback`
+
+### Tarea 4 — Confirmacion De Acciones Irreversibles (2026-07-15)
+
+Que se hizo:
+
+- `src/components/internal/ConfirmForm.tsx` (cliente): form para acciones irreversibles sobre el Drawer vaul ya instalado. En el submit evalua `window.matchMedia("(max-width: 639px)")`; en movil hace preventDefault y abre un bottom sheet modal (scrim, handle, Escape y arrastre para cancelar) con titulo verbo + sustantivo, la consecuencia explicada, boton confirmar en variante `danger` (rojo) y boton Cancelar visible (guias NN/g). Al confirmar hace `requestSubmit()` del form con un flag que deja pasar el segundo submit. En desktop `matches` es false y el submit pasa directo, identico a hoy. Integra el toast de exito de la Tarea 3 (useActionState, mismo patron de NoticeForm).
+- Aplicado reemplazando NoticeForm por ConfirmForm en todos los flujos irreversibles (`applyVisitFlowAction` con `complete` o `left`):
+  - Recepcion, fila "Se retiro" (card movil y tabla): `VisitLeftForm` ahora recibe `patientName` para la consecuencia ("La visita de {nombre} se cerrara como retiro...").
+  - Detalle de visita: "Cerrar visita" y "Se retiro sin completar".
+  - Consulta: "Se va — cerrar visita" (las derivaciones a enfermeria/administracion siguen sin confirmacion: son reversibles via ruta).
+  - Caja (workItem): "Cerrar visita" y "Se retiro sin completar".
+
+Decisiones:
+
+- Se extendio el alcance a Consulta y Caja (el doc listaba recepcion + detalle de visita) porque el criterio de aceptacion es global ("ningun toque simple ejecuta una accion irreversible en movil") y los mismos flujos `complete`/`left` viven ahi; costo marginal.
+- "Actualizar ruta" y las derivaciones quedan como NoticeForm sin confirmacion: son acciones reversibles (fuera de alcance por definicion).
+- Confirmar en rojo tambien para "Cerrar visita" (no es negativa pero si irreversible; el rojo comunica irreversibilidad segun la investigacion).
+- No se instalo alert-dialog: el drawer bottom cubre movil y en desktop no hay confirmacion por la regla solo movil.
+
+Pendientes para el QA (Tarea 11): confirmar que el sheet abre sobre el teclado tactil cerrado; verificar doble submit rapido (flag `confirmedRef`); probar cancelar por arrastre, Escape y boton; verificar en desktop que el submit sigue directo sin flash del drawer.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+Commit sugerido: `feat(sigeco): confirm irreversible visit actions with bottom sheet`

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
+import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
@@ -74,14 +75,26 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           </dl>
           {isActive ? (
             <div className="mt-4 grid gap-2 border-t border-border pt-4 sm:grid-cols-2">
-              <NoticeForm action={applyVisitFlowAction} notice="Visita cerrada">
+              <ConfirmForm
+                action={applyVisitFlowAction}
+                notice="Visita cerrada"
+                confirmTitle="Cerrar visita"
+                confirmDescription={`La visita de ${visit.patient.fullName} quedará completada y saldrá de las bandejas activas. Esta acción no se puede deshacer.`}
+                confirmLabel="Cerrar visita"
+              >
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <Button type="submit" variant="outline" className="w-full">
                   Cerrar visita
                 </Button>
-              </NoticeForm>
-              <NoticeForm action={applyVisitFlowAction} notice="Retiro registrado">
+              </ConfirmForm>
+              <ConfirmForm
+                action={applyVisitFlowAction}
+                notice="Retiro registrado"
+                confirmTitle="Marcar retiro"
+                confirmDescription={`La visita de ${visit.patient.fullName} se cerrará como retiro sin atención completa. Esta acción no se puede deshacer.`}
+                confirmLabel="Marcar retiro"
+              >
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="left" />
                 <Button
@@ -91,7 +104,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 >
                   Se retiró sin completar
                 </Button>
-              </NoticeForm>
+              </ConfirmForm>
               <p className="text-[13px] text-muted sm:col-span-2">
                 “Se retiró” guarda en qué punto abandonó; el historial queda en la ruta.
               </p>

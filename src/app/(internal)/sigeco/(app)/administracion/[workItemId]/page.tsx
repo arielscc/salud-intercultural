@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { SaleItemType } from "@/generated/prisma/client";
+import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
-import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -201,15 +201,27 @@ export default async function AdministrationWorkItemPage({
               description="Cuando el paciente ya pagó o solo vino a comprar, cierra la visita aquí."
             />
             <div className="grid gap-2">
-              <NoticeForm action={applyVisitFlowAction} notice="Visita cerrada">
+              <ConfirmForm
+                action={applyVisitFlowAction}
+                notice="Visita cerrada"
+                confirmTitle="Cerrar visita"
+                confirmDescription={`La visita de ${patient.fullName} quedará completada y saldrá de las bandejas activas. Esta acción no se puede deshacer.`}
+                confirmLabel="Cerrar visita"
+              >
                 <input type="hidden" name="visitId" value={item.visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <input type="hidden" name="note" value="Visita cerrada desde administración" />
                 <Button type="submit" variant="outline" className="w-full">
                   Cerrar visita
                 </Button>
-              </NoticeForm>
-              <NoticeForm action={applyVisitFlowAction} notice="Retiro registrado">
+              </ConfirmForm>
+              <ConfirmForm
+                action={applyVisitFlowAction}
+                notice="Retiro registrado"
+                confirmTitle="Marcar retiro"
+                confirmDescription={`La visita de ${patient.fullName} se cerrará como retiro sin atención completa. Esta acción no se puede deshacer.`}
+                confirmLabel="Marcar retiro"
+              >
                 <input type="hidden" name="visitId" value={item.visit.id} />
                 <input type="hidden" name="flow" value="left" />
                 <Button
@@ -219,7 +231,7 @@ export default async function AdministrationWorkItemPage({
                 >
                   Se retiró sin completar
                 </Button>
-              </NoticeForm>
+              </ConfirmForm>
             </div>
           </Card>
         ) : null}

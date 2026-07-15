@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/client";
+import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
@@ -229,14 +230,20 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
                   Enviar a administración
                 </Button>
               </NoticeForm>
-              <NoticeForm action={applyVisitFlowAction} notice="Visita cerrada">
+              <ConfirmForm
+                action={applyVisitFlowAction}
+                notice="Visita cerrada"
+                confirmTitle="Cerrar visita"
+                confirmDescription={`La visita de ${visit.patient.fullName} quedará completada y saldrá de las bandejas activas. Esta acción no se puede deshacer.`}
+                confirmLabel="Cerrar visita"
+              >
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <input type="hidden" name="note" value="Salida directa después de la consulta" />
                 <Button type="submit" variant="outline" className="w-full">
                   Se va — cerrar visita
                 </Button>
-              </NoticeForm>
+              </ConfirmForm>
             </div>
           </Card>
         ) : null}

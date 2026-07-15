@@ -3,7 +3,7 @@ import { UserRoundPlus } from "lucide-react";
 import type { VisitStatus } from "@/generated/prisma/client";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { internalInputClassName } from "@/components/internal/Field";
-import { NoticeForm } from "@/components/internal/NoticeForm";
+import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -50,9 +50,23 @@ const emptyPatientsMessage = (
   </>
 );
 
-function VisitLeftForm({ visitId, buttonClassName }: { visitId: string; buttonClassName?: string }) {
+function VisitLeftForm({
+  visitId,
+  patientName,
+  buttonClassName
+}: {
+  visitId: string;
+  patientName: string;
+  buttonClassName?: string;
+}) {
   return (
-    <NoticeForm action={applyVisitFlowAction} notice="Retiro registrado">
+    <ConfirmForm
+      action={applyVisitFlowAction}
+      notice="Retiro registrado"
+      confirmTitle="Marcar retiro"
+      confirmDescription={`La visita de ${patientName} se cerrará como retiro sin atención completa. Esta acción no se puede deshacer.`}
+      confirmLabel="Marcar retiro"
+    >
       <input type="hidden" name="visitId" value={visitId} />
       <input type="hidden" name="flow" value="left" />
       <Button
@@ -63,7 +77,7 @@ function VisitLeftForm({ visitId, buttonClassName }: { visitId: string; buttonCl
       >
         Se retiró
       </Button>
-    </NoticeForm>
+    </ConfirmForm>
   );
 }
 
@@ -155,7 +169,11 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                   status={<VisitStatusPill status={visit.status} />}
                   action={
                     isActiveVisitStatus(visit.status) ? (
-                      <VisitLeftForm visitId={visit.id} buttonClassName="min-h-10" />
+                      <VisitLeftForm
+                        visitId={visit.id}
+                        patientName={visit.patient.fullName}
+                        buttonClassName="min-h-10"
+                      />
                     ) : undefined
                   }
                 >
@@ -214,7 +232,7 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                       </Td>
                       <Td>
                         {isActiveVisitStatus(visit.status) ? (
-                          <VisitLeftForm visitId={visit.id} />
+                          <VisitLeftForm visitId={visit.id} patientName={visit.patient.fullName} />
                         ) : null}
                       </Td>
                     </Tr>
