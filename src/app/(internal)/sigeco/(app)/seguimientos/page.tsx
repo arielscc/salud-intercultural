@@ -5,6 +5,7 @@ import { MobileTabs } from "@/components/internal/MobileTabs";
 import { Chip } from "@/components/internal/ui/Chip";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Pagination } from "@/components/internal/ui/Pagination";
 import {
   RecordItem,
   RecordList,
@@ -19,10 +20,11 @@ import {
 } from "@/modules/database/queries/follow-ups";
 import { formatDateTime } from "@/lib/dates";
 import { requirePermission } from "@/modules/permissions";
+import { parsePage } from "@/modules/database/pagination";
 import { cn } from "@/lib/cn";
 
 type FollowUpsPageProps = {
-  searchParams: Promise<{ filtro?: string }>;
+  searchParams: Promise<{ filtro?: string; page?: string }>;
 };
 
 const emptyFollowUpsMessage = (
@@ -36,12 +38,16 @@ const emptyFollowUpsMessage = (
 
 export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps) {
   await requirePermission("followups_read");
-  const { filtro } = await searchParams;
+  const { filtro, page: pageParam } = await searchParams;
   const filter = filtro === "vencidos" ? "overdue" : filtro === "proximos" ? "upcoming" : "today";
+  const page = parsePage(pageParam);
+  const pageSize = 60;
   const [tasks, summary] = await Promise.all([
-    getFollowUpTasks({ filter, pageSize: 60 }),
+    getFollowUpTasks({ filter, page, pageSize }),
     getFollowUpWorkSummary()
   ]);
+  const totalTasks =
+    filter === "overdue" ? summary.overdue : filter === "upcoming" ? summary.upcoming : summary.today;
 
   return (
     <div className="grid gap-4">
@@ -179,6 +185,13 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
             </tbody>
           </Table>
         </RecordTable>
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          totalItems={totalTasks}
+          pathname="/sigeco/seguimientos"
+          searchParams={{ filtro }}
+        />
       </Card>
     </div>
   );

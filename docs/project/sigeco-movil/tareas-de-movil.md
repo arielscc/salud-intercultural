@@ -53,7 +53,7 @@ El usuario pidio que toda la lista se priorice y ejecute solo para movil, sin mo
 
 - Solo movil directas: Tareas 1, 2 y 7.
 - Solo movil con tecnica de aislamiento (CSS por breakpoint o `matchMedia` en el handler): Tareas 3, 4, 6, 8 y 9.
-- Pospuestas por ser inseparables de la web: Tarea 5 (`loading.tsx` y estados pending cambian la navegacion y los submits tambien en desktop) y Tarea 10 (la paginacion cambia los datos servidos para ambos viewports). Se retomaran cuando el usuario habilite cambios compartidos.
+- Originalmente pospuestas por ser inseparables de la web: Tarea 5 (`loading.tsx` y estados pending cambian la navegacion y los submits tambien en desktop) y Tarea 10 (la paginacion cambia los datos servidos para ambos viewports). El usuario habilito despues ambas excepciones compartidas.
 
 Orden de ejecucion resultante: 1, 2, 7, 3, 4, 6, 8, 9 y al final 11 (QA integral, que ademas verifica que desktop quedo identico).
 
@@ -238,9 +238,9 @@ Orden de ejecucion resultante: 1, 2, 7, 3, 4, 6, 8, 9 y al final 11 (QA integral
 
 **Commit sugerido:** `feat(sigeco): masked phone input with numeric keyboard`
 
-## Tarea 10 — Paginacion De Listas Largas [POSPUESTA]
+## Tarea 10 — Paginacion De Listas Largas
 
-**Pospuesta el 2026-07-15:** no puede aislarse a movil. La paginacion por search params cambia los datos que el servidor envia, iguales para ambos viewports; una paginacion solo movil requeriria servir el padron completo a desktop y paginado a movil, lo que no es posible decidir en el servidor. Se retomara cuando el usuario habilite cambios que tambien toquen la web.
+**Retomada el 2026-07-15:** el usuario habilito la excepcion compartida. La paginacion por search params cambia los datos que el servidor envia tanto a movil como a escritorio.
 
 **Objetivo:** que el padron y las listas grandes sean navegables mas alla del corte actual.
 

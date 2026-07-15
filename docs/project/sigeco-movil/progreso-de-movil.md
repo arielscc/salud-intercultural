@@ -15,7 +15,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | 7 | Acciones principales y retorno en detalles moviles | Implementada (QA en Tarea 11) |
 | 8 | Filtros y tabs tactiles | Implementada (QA en Tarea 11) |
 | 9 | Telefono con mascara y teclado numerico | Implementada (QA en Tarea 11) |
-| 10 | Paginacion de listas largas | Pospuesta (compartida con web) |
+| 10 | Paginacion de listas largas | Implementada (QA en Tarea 11) |
 | 11 | QA integral y cierre documental | Pendiente |
 
 ## Contexto Y Decisiones (2026-07-14)
@@ -34,7 +34,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 - Tareas 5 (estados de carga) y 10 (paginacion) quedan pospuestas: no pueden aislarse a movil (`loading.tsx`, estados pending y datos paginados afectan ambos viewports). Se retomaran cuando el usuario habilite cambios compartidos.
 - Orden de ejecucion resultante: 1, 2, 7, 3, 4, 6, 8, 9, 11.
 - La Tarea 11 (QA) suma la verificacion explicita "desktop intacto" en 1280px sobre toda pantalla tocada.
-- El usuario habilito despues la excepcion compartida necesaria para la Tarea 5. Skeletons y estados pending pasan a movil y escritorio; la Tarea 10 sigue pospuesta.
+- El usuario habilito despues las excepciones compartidas necesarias para las Tareas 5 y 10. Skeletons, estados pending y datos paginados pasan a movil y escritorio.
 
 ## Entradas Por Tarea
 
@@ -241,3 +241,25 @@ Pendientes para el QA (Tarea 11): probar escritura, borrado y pegado con `765432
 Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
 
 Commit sugerido: `feat(sigeco): masked phone input with numeric keyboard`
+
+### Tarea 10 — Paginacion De Listas Largas (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/ui/Pagination.tsx`: navegacion server-side con links reales y search params. En movil muestra anterior, posicion y siguiente; desde `sm` muestra rango de registros, paginas numeradas, elipsis y controles anterior/siguiente.
+- `src/modules/database/pagination.ts` incorpora `parsePage` para normalizar parametros ausentes o invalidos a pagina 1; las queries conservan el `getPagination` existente para calcular `skip` y `take`.
+- Recepcion pagina el padron cada 30 pacientes. El conteo aplica la misma busqueda por nombre, telefono, codigo o ciudad, y los enlaces preservan `vista=pacientes` y `search`.
+- Seguimientos pagina cada 60 tareas y reutiliza los conteos ya disponibles de Vencidos/Hoy/Proximos. Cambiar de filtro reinicia la pagina; navegar entre paginas conserva `filtro`.
+- Inventario pagina cada 80 productos. Se agrego un conteo propio con el mismo criterio de la lista, que incluye activos e inactivos y por eso no reutiliza el KPI de productos activos.
+
+Decisiones:
+
+- Se mantuvieron los cortes actuales de 30, 60 y 80 registros para no alterar densidad ni ordenamiento; la tarea elimina el truncado silencioso al permitir avanzar mas alla del primer corte.
+- Los formularios de busqueda y los tabs no conservan `page`: un criterio nuevo siempre comienza en la pagina 1. Solo el componente de paginacion propaga los filtros activos.
+- Excepcion aprobada a la regla solo movil: la consulta paginada es necesariamente compartida. La presentacion se adapta por breakpoint dentro del mismo control accesible.
+
+Pendientes para el QA (Tarea 11): poblar mas registros que cada `pageSize`, recorrer primera/intermedia/ultima pagina, probar busqueda y filtros con varias paginas, validar historial Atrás/Adelante y comparar 390x844 con escritorio.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): paginate patient, follow-up and inventory lists`

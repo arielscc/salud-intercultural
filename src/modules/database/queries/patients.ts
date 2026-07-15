@@ -1,4 +1,4 @@
-import type { PatientCaptureSource, PatientGender } from "@/generated/prisma/client";
+import type { PatientCaptureSource, PatientGender, Prisma } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 
@@ -18,6 +18,21 @@ export type CreatePatientRecordInput = {
   sourceLeadId?: string;
   createdById?: string;
 };
+
+function patientListWhere(search?: string): Prisma.PatientWhereInput {
+  const normalizedSearch = search?.trim();
+
+  return {
+    OR: normalizedSearch
+      ? [
+          { fullName: { contains: normalizedSearch, mode: "insensitive" } },
+          { phone: { contains: normalizedSearch, mode: "insensitive" } },
+          { internalCode: { contains: normalizedSearch, mode: "insensitive" } },
+          { city: { contains: normalizedSearch, mode: "insensitive" } }
+        ]
+      : undefined
+  };
+}
 
 export async function createPatientRecord(input: CreatePatientRecordInput) {
   return withDatabaseError("createPatientRecord", async () => {
@@ -72,20 +87,10 @@ export async function getPatients(
   } = {}
 ) {
   const pagination = getPagination(input);
-  const search = input.search?.trim();
 
   return withDatabaseError("getPatients", async () => {
     return prisma.patient.findMany({
-      where: {
-        OR: search
-          ? [
-              { fullName: { contains: search, mode: "insensitive" } },
-              { phone: { contains: search, mode: "insensitive" } },
-              { internalCode: { contains: search, mode: "insensitive" } },
-              { city: { contains: search, mode: "insensitive" } }
-            ]
-          : undefined
-      },
+      where: patientListWhere(input.search),
       include: {
         visits: {
           orderBy: { checkedInAt: "desc" },
@@ -103,6 +108,12 @@ export async function getPatients(
       skip: pagination.skip,
       take: pagination.take
     });
+  });
+}
+
+export async function countPatients(input: { search?: string } = {}) {
+  return withDatabaseError("countPatients", async () => {
+    return prisma.patient.count({ where: patientListWhere(input.search) });
   });
 }
 

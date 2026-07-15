@@ -6,6 +6,7 @@ import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Pagination } from "@/components/internal/ui/Pagination";
 import {
   RecordItem,
   RecordList,
@@ -14,7 +15,12 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { createInventoryItemAction } from "@/features/inventory/actions";
-import { getInventoryItems, getInventorySummary } from "@/modules/database/queries/inventory";
+import {
+  countInventoryItems,
+  getInventoryItems,
+  getInventorySummary
+} from "@/modules/database/queries/inventory";
+import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
 
@@ -25,11 +31,19 @@ const emptyInventoryMessage = (
   </>
 );
 
-export default async function InventoryPage() {
+type InventoryPageProps = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function InventoryPage({ searchParams }: InventoryPageProps) {
   await requirePermission("inventory_read");
-  const [items, summary] = await Promise.all([
-    getInventoryItems({ pageSize: 80 }),
-    getInventorySummary()
+  const { page: pageParam } = await searchParams;
+  const page = parsePage(pageParam);
+  const pageSize = 80;
+  const [items, summary, totalItems] = await Promise.all([
+    getInventoryItems({ page, pageSize }),
+    getInventorySummary(),
+    countInventoryItems()
   ]);
 
   return (
@@ -162,6 +176,12 @@ export default async function InventoryPage() {
               </tbody>
             </Table>
           </RecordTable>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            pathname="/sigeco/inventario"
+          />
         </Card>
 
         <Card>

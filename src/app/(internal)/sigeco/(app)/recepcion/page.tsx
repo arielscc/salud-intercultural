@@ -12,6 +12,7 @@ import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { Pagination } from "@/components/internal/ui/Pagination";
 import {
   RecordItem,
   RecordList,
@@ -23,8 +24,9 @@ import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { formatDateTime } from "@/lib/dates";
-import { getPatients } from "@/modules/database/queries/patients";
+import { countPatients, getPatients } from "@/modules/database/queries/patients";
 import { getVisits } from "@/modules/database/queries/visits";
+import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
 
@@ -35,6 +37,7 @@ type ReceptionPageProps = {
     vista?: string;
     status?: VisitStatus;
     search?: string;
+    page?: string;
   }>;
 };
 
@@ -104,6 +107,8 @@ function ViewTab({ href, active, children }: { href: string; active: boolean; ch
 export default async function ReceptionPage({ searchParams }: ReceptionPageProps) {
   const params = await searchParams;
   const vista = params.vista === "pacientes" ? "pacientes" : "hoy";
+  const page = parsePage(params.page);
+  const pageSize = 30;
 
   if (vista === "pacientes") {
     await requirePermission("patients_read");
@@ -115,8 +120,15 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
     vista === "hoy"
       ? await getVisits({ status: params.status, activeOnly: !params.status, pageSize: 30 })
       : [];
-  const patients =
-    vista === "pacientes" ? await getPatients({ search: params.search, pageSize: 30 }) : [];
+  const patientPage =
+    vista === "pacientes"
+      ? await Promise.all([
+          getPatients({ search: params.search, page, pageSize }),
+          countPatients({ search: params.search })
+        ])
+      : null;
+  const patients = patientPage?.[0] ?? [];
+  const totalPatients = patientPage?.[1] ?? 0;
 
   return (
     <div className="grid gap-4">
@@ -353,6 +365,13 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                 </tbody>
               </Table>
             </RecordTable>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalPatients}
+              pathname="/sigeco/recepcion"
+              searchParams={{ vista: "pacientes", search: params.search }}
+            />
           </Card>
         </>
       )}

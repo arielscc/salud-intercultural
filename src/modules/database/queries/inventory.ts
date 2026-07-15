@@ -13,6 +13,20 @@ export class InsufficientStockError extends Error {
   }
 }
 
+function inventoryListWhere(search?: string): Prisma.InventoryItemWhereInput {
+  const normalizedSearch = search?.trim();
+
+  return {
+    OR: normalizedSearch
+      ? [
+          { name: { contains: normalizedSearch, mode: "insensitive" } },
+          { sku: { contains: normalizedSearch, mode: "insensitive" } },
+          { internalCode: { contains: normalizedSearch, mode: "insensitive" } }
+        ]
+      : undefined
+  };
+}
+
 export function findInsufficientStockError(error: unknown): InsufficientStockError | null {
   let current = error;
 
@@ -195,19 +209,10 @@ export async function createInventoryAdjustmentRecord(input: {
 
 export async function getInventoryItems(input: PaginationInput & { search?: string } = {}) {
   const pagination = getPagination(input);
-  const search = input.search?.trim();
 
   return withDatabaseError("getInventoryItems", async () => {
     return prisma.inventoryItem.findMany({
-      where: {
-        OR: search
-          ? [
-              { name: { contains: search, mode: "insensitive" } },
-              { sku: { contains: search, mode: "insensitive" } },
-              { internalCode: { contains: search, mode: "insensitive" } }
-            ]
-          : undefined
-      },
+      where: inventoryListWhere(input.search),
       include: {
         supplier: true,
         alerts: {
@@ -220,6 +225,12 @@ export async function getInventoryItems(input: PaginationInput & { search?: stri
       skip: pagination.skip,
       take: pagination.take
     });
+  });
+}
+
+export async function countInventoryItems(input: { search?: string } = {}) {
+  return withDatabaseError("countInventoryItems", async () => {
+    return prisma.inventoryItem.count({ where: inventoryListWhere(input.search) });
   });
 }
 
