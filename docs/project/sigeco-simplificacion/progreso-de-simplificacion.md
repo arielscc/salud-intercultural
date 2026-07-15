@@ -344,3 +344,15 @@ Pedido del usuario: migrar todo el manejo de fechas/horas a date-fns, ya instala
 Validaciones: lint, tsc, 70 tests unitarios. Script de verificacion ejecutado con `TZ=UTC` y `TZ=America/La_Paz`: salida identica en ambos (formatos, rangos a las 04:00Z = medianoche boliviana, edad). Navegador: header del shell, tabla de visitas de la ficha ("12 jul 2026, 09:15"), detalle de visita, testimonios publicos ("febrero de 2026") y edad en editar ficha (38 anos).
 
 **Commit sugerido:** `refactor(dates): centralize date and time handling with date-fns in La Paz timezone`
+
+### Drawer de navegacion movil (shadcn studio)
+
+Pedido del usuario: reemplazar el menu movil hecho a mano del dashboard de Sigeco por el componente Drawer de shadcn studio (`docs/components/drawer`, variante `left`), siguiendo el "View Code" del sitio. Nota de alcance: en esta tanda de tareas de diseno solo se implementa la UI; tests, typecheck y QA de navegador quedan para una fase final conjunta.
+
+- El "View Code" de la variante con direcciones (drawer-04) ofrece el CLI `pnpm dlx shadcn@latest add @ss-components/drawer-04`, pero no se uso: instala un demo que arrastra `input`/`label` (recien borrados como huerfanos) y la propia pagina recomienda copiar el codigo directamente. Se copio el primitivo `drawer` del registry oficial de shadcn (base vaul) y se agrego la dependencia `vaul ^1.1.2`.
+- `src/components/ui/drawer.tsx` (nuevo): adaptado a Tailwind 3.4 y tokens Marea igual que los otros primitivos instalados: overlay `bg-text/30` (el mismo velo del menu anterior), panel `bg-surface` con `border-border`, radios `rounded-[12px]` en las variantes top/bottom, handle `bg-border`, titulo `text-text`, descripcion `text-muted`. Se quitaron las clases `animate-in`/`animate-out` del original (requieren el plugin tailwindcss-animate, no instalado); vaul anima el deslizamiento del panel y el fade del overlay con sus propios estilos inyectados.
+- `src/components/internal/MobileSidebar.tsx`: reescrito sobre `Drawer direction="left"` controlado (`open`/`onOpenChange`), conservando el diseno anterior: trigger hamburguesa, panel de 264px, header Sigeco con `DrawerTitle`/`DrawerDescription` (vaul los exige para accesibilidad), boton X (`DrawerClose`), `SidebarNav` que cierra al navegar y `userSlot` al pie. El ancho se define con `data-[vaul-drawer-direction=left]:w-[264px]` (mismo grupo de variante que el `w-3/4` base, para que tailwind-merge lo reemplace; un `w-[264px]` plano perderia por especificidad CSS). Se gana sobre la version manual: gesto de arrastre para cerrar, cierre con Escape, bloqueo del scroll de fondo y manejo de foco.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+**Commit sugerido:** `feat(sigeco): replace mobile nav with left drawer from shadcn studio`
