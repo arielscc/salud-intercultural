@@ -3,6 +3,12 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import {
+  RecordItem,
+  RecordList,
+  RecordListEmpty,
+  RecordTable
+} from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { createPaymentAction } from "@/features/sales/actions";
 import {
@@ -53,28 +59,50 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
 
         <Card className="p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Detalle" />
-          <Table>
-            <thead>
-              <tr>
-                <Th>Descripción</Th>
-                <Th>Tipo</Th>
-                <Th className="text-right">Cantidad</Th>
-                <Th className="text-right">Precio unit.</Th>
-                <Th className="text-right">Total</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {sale.items.map((item) => (
-                <Tr key={item.id}>
-                  <Td className="font-medium text-text">{item.description}</Td>
-                  <Td>{saleItemTypeLabels[item.type]}</Td>
-                  <Td className="text-right tabular-nums">{item.quantity}</Td>
-                  <Td className="text-right tabular-nums">{formatMoney(item.unitPriceCents)}</Td>
-                  <Td className="text-right tabular-nums">{formatMoney(item.totalCents)}</Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <RecordList>
+            {sale.items.map((item) => (
+              <RecordItem
+                key={item.id}
+                title={item.description}
+                status={
+                  <span className="text-sm font-semibold tabular-nums text-text">
+                    {formatMoney(item.totalCents)}
+                  </span>
+                }
+              >
+                <span>
+                  {saleItemTypeLabels[item.type]} ·{" "}
+                  <span className="tabular-nums">
+                    {item.quantity} x {formatMoney(item.unitPriceCents)}
+                  </span>
+                </span>
+              </RecordItem>
+            ))}
+          </RecordList>
+          <RecordTable>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Descripción</Th>
+                  <Th>Tipo</Th>
+                  <Th className="text-right">Cantidad</Th>
+                  <Th className="text-right">Precio unit.</Th>
+                  <Th className="text-right">Total</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {sale.items.map((item) => (
+                  <Tr key={item.id}>
+                    <Td className="font-medium text-text">{item.description}</Td>
+                    <Td>{saleItemTypeLabels[item.type]}</Td>
+                    <Td className="text-right tabular-nums">{item.quantity}</Td>
+                    <Td className="text-right tabular-nums">{formatMoney(item.unitPriceCents)}</Td>
+                    <Td className="text-right tabular-nums">{formatMoney(item.totalCents)}</Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </RecordTable>
           <div className="border-t border-border px-[18px] py-4">
             <dl className="ml-auto grid w-full max-w-[280px] gap-1.5 text-sm">
               <SummaryRow label="Subtotal" value={formatMoney(sale.subtotalCents)} />
@@ -93,35 +121,54 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
 
         <Card className="p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Pagos" />
-          <Table>
-            <thead>
-              <tr>
-                <Th>Monto</Th>
-                <Th>Método</Th>
-                <Th>Fecha</Th>
-                <Th>Referencia</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {sale.payments.map((payment) => (
-                <Tr key={payment.id}>
-                  <Td className="font-semibold tabular-nums text-text">
-                    {formatMoney(payment.amountCents)}
-                  </Td>
-                  <Td>{payment.method.name}</Td>
-                  <Td className="tabular-nums">{formatDateTime(payment.paidAt)}</Td>
-                  <Td>{payment.reference ?? "—"}</Td>
-                </Tr>
-              ))}
-              {sale.payments.length === 0 ? (
+          <RecordList>
+            {sale.payments.map((payment) => (
+              <RecordItem
+                key={payment.id}
+                title={<span className="tabular-nums">{formatMoney(payment.amountCents)}</span>}
+                status={<Chip>{payment.method.name}</Chip>}
+              >
+                <span className="tabular-nums">{formatDateTime(payment.paidAt)}</span>
+                {payment.reference ? <span>Ref. {payment.reference}</span> : null}
+              </RecordItem>
+            ))}
+            {sale.payments.length === 0 ? (
+              <RecordListEmpty>
+                <span className="text-sm text-muted">Sin pagos registrados.</span>
+              </RecordListEmpty>
+            ) : null}
+          </RecordList>
+          <RecordTable>
+            <Table>
+              <thead>
                 <tr>
-                  <Td className="py-6 text-center" colSpan={4}>
-                    Sin pagos registrados.
-                  </Td>
+                  <Th>Monto</Th>
+                  <Th>Método</Th>
+                  <Th>Fecha</Th>
+                  <Th>Referencia</Th>
                 </tr>
-              ) : null}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {sale.payments.map((payment) => (
+                  <Tr key={payment.id}>
+                    <Td className="font-semibold tabular-nums text-text">
+                      {formatMoney(payment.amountCents)}
+                    </Td>
+                    <Td>{payment.method.name}</Td>
+                    <Td className="tabular-nums">{formatDateTime(payment.paidAt)}</Td>
+                    <Td>{payment.reference ?? "—"}</Td>
+                  </Tr>
+                ))}
+                {sale.payments.length === 0 ? (
+                  <tr>
+                    <Td className="py-6 text-center" colSpan={4}>
+                      Sin pagos registrados.
+                    </Td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </Table>
+          </RecordTable>
         </Card>
       </div>
 

@@ -4,6 +4,12 @@ import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import {
+  RecordItem,
+  RecordList,
+  RecordListEmpty,
+  RecordTable
+} from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { followUpStatusLabels } from "@/features/follow-ups/labels";
 import {
@@ -17,6 +23,15 @@ import { cn } from "@/lib/cn";
 type FollowUpsPageProps = {
   searchParams: Promise<{ filtro?: string }>;
 };
+
+const emptyFollowUpsMessage = (
+  <>
+    <span className="block font-semibold text-text">No hay seguimientos para este filtro.</span>
+    <span className="mt-1 block text-sm text-muted">
+      Los seguimientos se crean desde la ficha del paciente o tras la atención.
+    </span>
+  </>
+);
 
 export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps) {
   await requirePermission("followups_read");
@@ -49,69 +64,96 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
       </nav>
 
       <Card className="p-0">
-        <Table>
-          <thead>
-            <tr>
-              <Th>Paciente</Th>
-              <Th>Tarea</Th>
-              <Th>Teléfono</Th>
-              <Th>Vence</Th>
-              <Th>Estado</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((task) => {
-              const phone = task.patient?.phone ?? task.lead?.phone;
-              const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
-              const isOverdue = task.dueAt < new Date() && task.status === "pending";
-              const declinedContact = task.patient?.followUpPreference === "no_contact";
+        <RecordList>
+          {tasks.map((task) => {
+            const phone = task.patient?.phone ?? task.lead?.phone;
+            const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
+            const isOverdue = task.dueAt < new Date() && task.status === "pending";
+            const declinedContact = task.patient?.followUpPreference === "no_contact";
 
-              return (
-                <Tr key={task.id}>
-                  <Td className="font-semibold text-text">
-                    <Link
-                      href={`/sigeco/seguimientos/${task.id}`}
-                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
-                    >
-                      {name}
-                    </Link>
-                    <span className="block text-[11px] font-normal tabular-nums text-muted">
-                      {task.patient?.internalCode ?? "Sin ficha"}
-                    </span>
-                  </Td>
-                  <Td className="max-w-[280px] truncate">{task.title}</Td>
-                  <Td className="tabular-nums">
-                    {phone ?? "—"}
-                    {declinedContact ? (
-                      <span className="mt-0.5 block text-[11px] font-semibold text-warning">
-                        Pidió no recibir seguimiento
-                      </span>
-                    ) : null}
-                  </Td>
-                  <Td className={cn("tabular-nums", isOverdue && "font-semibold text-error")}>
-                    {formatDateTime(task.dueAt)}
-                    {isOverdue ? " · vencido" : ""}
-                  </Td>
-                  <Td>
-                    <Chip dot>{followUpStatusLabels[task.status]}</Chip>
-                  </Td>
-                </Tr>
-              );
-            })}
-            {tasks.length === 0 ? (
+            return (
+              <RecordItem
+                key={task.id}
+                href={`/sigeco/seguimientos/${task.id}`}
+                title={name}
+                status={<Chip dot>{followUpStatusLabels[task.status]}</Chip>}
+              >
+                <span className={cn("tabular-nums", isOverdue && "font-semibold text-error")}>
+                  Vence {formatDateTime(task.dueAt)}
+                  {isOverdue ? " · vencido" : ""}
+                </span>
+                <span className="min-w-0 truncate">{task.title}</span>
+                <span className="tabular-nums">
+                  {task.patient?.internalCode ?? "Sin ficha"} · {phone ?? "—"}
+                </span>
+                {declinedContact ? (
+                  <span className="font-semibold text-warning">Pidió no recibir seguimiento</span>
+                ) : null}
+              </RecordItem>
+            );
+          })}
+          {tasks.length === 0 ? <RecordListEmpty>{emptyFollowUpsMessage}</RecordListEmpty> : null}
+        </RecordList>
+        <RecordTable>
+          <Table>
+            <thead>
               <tr>
-                <Td className="py-8 text-center" colSpan={5}>
-                  <span className="block font-semibold text-text">
-                    No hay seguimientos para este filtro.
-                  </span>
-                  <span className="mt-1 block text-sm text-muted">
-                    Los seguimientos se crean desde la ficha del paciente o tras la atención.
-                  </span>
-                </Td>
+                <Th>Paciente</Th>
+                <Th>Tarea</Th>
+                <Th>Teléfono</Th>
+                <Th>Vence</Th>
+                <Th>Estado</Th>
               </tr>
-            ) : null}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {tasks.map((task) => {
+                const phone = task.patient?.phone ?? task.lead?.phone;
+                const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
+                const isOverdue = task.dueAt < new Date() && task.status === "pending";
+                const declinedContact = task.patient?.followUpPreference === "no_contact";
+
+                return (
+                  <Tr key={task.id}>
+                    <Td className="font-semibold text-text">
+                      <Link
+                        href={`/sigeco/seguimientos/${task.id}`}
+                        className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                      >
+                        {name}
+                      </Link>
+                      <span className="block text-[11px] font-normal tabular-nums text-muted">
+                        {task.patient?.internalCode ?? "Sin ficha"}
+                      </span>
+                    </Td>
+                    <Td className="max-w-[280px] truncate">{task.title}</Td>
+                    <Td className="tabular-nums">
+                      {phone ?? "—"}
+                      {declinedContact ? (
+                        <span className="mt-0.5 block text-[11px] font-semibold text-warning">
+                          Pidió no recibir seguimiento
+                        </span>
+                      ) : null}
+                    </Td>
+                    <Td className={cn("tabular-nums", isOverdue && "font-semibold text-error")}>
+                      {formatDateTime(task.dueAt)}
+                      {isOverdue ? " · vencido" : ""}
+                    </Td>
+                    <Td>
+                      <Chip dot>{followUpStatusLabels[task.status]}</Chip>
+                    </Td>
+                  </Tr>
+                );
+              })}
+              {tasks.length === 0 ? (
+                <tr>
+                  <Td className="py-8 text-center" colSpan={5}>
+                    {emptyFollowUpsMessage}
+                  </Td>
+                </tr>
+              ) : null}
+            </tbody>
+          </Table>
+        </RecordTable>
       </Card>
     </div>
   );

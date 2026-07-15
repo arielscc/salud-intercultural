@@ -7,7 +7,7 @@ Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-
 | Tarea | Nombre | Estado |
 | --- | --- | --- |
 | 1 | Patron de lista responsive y Recepcion en cards | Implementada (QA en Tarea 11) |
-| 2 | Resto de listas de trabajo en cards | Pendiente |
+| 2 | Resto de listas de trabajo en cards | Implementada (QA en Tarea 11) |
 | 3 | Feedback de acciones con toasts (sonner) | Pendiente |
 | 4 | Confirmacion de acciones irreversibles | Pendiente |
 | 5 | Estados de carga (skeleton y spinner) | Pospuesta (compartida con web) |
@@ -56,3 +56,30 @@ Pendientes para el QA (Tarea 11): verificar que el link estirado no tape el boto
 Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
 
 Commit sugerido: `feat(sigeco): add responsive record list and apply to reception`
+
+### Tarea 2 — Resto De Listas De Trabajo En Cards (2026-07-15)
+
+Que se hizo:
+
+- `RecordItem` se extendio para las tablas secundarias: `href` ahora es opcional (filas no navegables como items de venta, pagos y movimientos renderizan el titulo como texto y no llevan estado activo tactil) y `title` acepta ReactNode (titulos con formato: fecha de visita, montos en tabular-nums).
+- Bandejas convertidas (mismo patron de la Tarea 1: `RecordList` movil + `RecordTable` con la tabla intacta):
+  - Consultas: titulo paciente, pill de estado, llegada + area, telefono, chip "Registrada" si hay consulta.
+  - Enfermeria: titulo paciente, chip de estado, codigo, tarea (font-medium, truncada), descripcion, indicacion (tipo + medico).
+  - Caja (pendientes derivados): titulo paciente, chip de venta/area con tono, codigo, tarea, descripcion, indicacion, total + saldo.
+  - Seguimientos: titulo paciente, chip de estado, "Vence {fecha}" como primera linea (en error si vencido), tarea, codigo + telefono, aviso "Pidio no recibir seguimiento".
+  - Inventario (productos): titulo producto, chip "Stock bajo" solo si aplica, codigo + SKU, "Stock X · Minimo Y" con stock resaltado, mensaje de alerta si existe.
+- Tablas secundarias convertidas: ultimas llegadas del dashboard (hora + area), visitas de la ficha de paciente (fecha como titulo + area), cronologia administrativa de la ficha (total como titulo, chip de estado, pagado + saldo), detalle de venta (descripcion + total destacado, tipo + cantidad x precio), pagos de venta (monto como titulo, chip de metodo, fecha, referencia) y movimientos de inventario (tipo como titulo, delta con color como status, stock despues + fecha, motivo).
+- Mensajes de vacio compartidos entre tabla y lista movil en cada pagina (constantes extraidas para los multilinea; los de una linea se reutilizan inline).
+
+Decisiones:
+
+- En movil, "Vence" en seguimientos sube a primera linea (el vencimiento es el dato operativo del modulo; el doc de tareas pedia vencimiento visible).
+- En las cards se agrego contexto minimo que en la tabla daba el header ("Vence", "Stock", "Stock despues", "Pagado", "Ref."), siguiendo la guia de no depender de encabezados en filas moviles.
+- Valores "—" de columnas opcionales (SKU, ciudad, referencia, tarea sin chip) se omiten en la card en vez de mostrarse vacios.
+- Regla solo movil respetada en las 9 paginas tocadas: ninguna tabla desktop cambio de markup; todo lo nuevo vive en ramas `sm:hidden`.
+
+Pendientes para el QA (Tarea 11): cards de Caja con 5 lineas (verificar densidad en 390px); truncados con `min-w-0` dentro del grid; verificar que el detalle de venta sin filas vacias no muestre lista vacia sin mensaje (los items de venta siempre existen).
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+Commit sugerido: `feat(sigeco): render all work queues as cards on mobile`

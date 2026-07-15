@@ -16,6 +16,12 @@ import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import {
+  RecordItem,
+  RecordList,
+  RecordListEmpty,
+  RecordTable
+} from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { routeAreaLabels } from "@/features/patients/labels";
@@ -25,6 +31,15 @@ import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getReceptionDashboardSummary } from "@/modules/database/queries/reception";
 import { requireInternalUser } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
+
+const emptyArrivalsMessage = (
+  <>
+    <span className="block font-semibold text-text">Todavía no hay llegadas hoy.</span>
+    <span className="mt-1 block text-sm text-muted">
+      Registra al primer paciente desde el acceso rápido.
+    </span>
+  </>
+);
 
 const operationalAreas: PatientRouteArea[] = [
   "recepcion",
@@ -187,47 +202,64 @@ export default async function SigecoDashboardPage() {
                 }
               />
             </div>
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Paciente</Th>
-                  <Th>Llegada</Th>
-                  <Th>Área</Th>
-                  <Th>Estado</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {receptionSummary.latestArrivals.map((visit) => (
-                  <Tr key={visit.id}>
-                    <Td className="font-semibold text-text">
-                      <Link
-                        href={`/sigeco/recepcion/visitas/${visit.id}`}
-                        className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
-                      >
-                        {visit.patient.fullName}
-                      </Link>
-                    </Td>
-                    <Td className="whitespace-nowrap tabular-nums">
-                      {formatTime(visit.checkedInAt)}
-                    </Td>
-                    <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
-                    <Td>
-                      <VisitStatusPill status={visit.status} />
-                    </Td>
-                  </Tr>
-                ))}
-                {receptionSummary.latestArrivals.length === 0 ? (
+            <RecordList>
+              {receptionSummary.latestArrivals.map((visit) => (
+                <RecordItem
+                  key={visit.id}
+                  href={`/sigeco/recepcion/visitas/${visit.id}`}
+                  title={visit.patient.fullName}
+                  status={<VisitStatusPill status={visit.status} />}
+                >
+                  <span className="tabular-nums">
+                    {formatTime(visit.checkedInAt)} ·{" "}
+                    {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
+                  </span>
+                </RecordItem>
+              ))}
+              {receptionSummary.latestArrivals.length === 0 ? (
+                <RecordListEmpty>{emptyArrivalsMessage}</RecordListEmpty>
+              ) : null}
+            </RecordList>
+            <RecordTable>
+              <Table>
+                <thead>
                   <tr>
-                    <Td className="py-8 text-center" colSpan={4}>
-                      <span className="block font-semibold text-text">Todavía no hay llegadas hoy.</span>
-                      <span className="mt-1 block text-sm text-muted">
-                        Registra al primer paciente desde el acceso rápido.
-                      </span>
-                    </Td>
+                    <Th>Paciente</Th>
+                    <Th>Llegada</Th>
+                    <Th>Área</Th>
+                    <Th>Estado</Th>
                   </tr>
-                ) : null}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {receptionSummary.latestArrivals.map((visit) => (
+                    <Tr key={visit.id}>
+                      <Td className="font-semibold text-text">
+                        <Link
+                          href={`/sigeco/recepcion/visitas/${visit.id}`}
+                          className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                        >
+                          {visit.patient.fullName}
+                        </Link>
+                      </Td>
+                      <Td className="whitespace-nowrap tabular-nums">
+                        {formatTime(visit.checkedInAt)}
+                      </Td>
+                      <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
+                      <Td>
+                        <VisitStatusPill status={visit.status} />
+                      </Td>
+                    </Tr>
+                  ))}
+                  {receptionSummary.latestArrivals.length === 0 ? (
+                    <tr>
+                      <Td className="py-8 text-center" colSpan={4}>
+                        {emptyArrivalsMessage}
+                      </Td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </Table>
+            </RecordTable>
           </Card>
         </section>
       ) : null}

@@ -26,22 +26,32 @@ export function RecordItem({
   className,
   children
 }: {
-  href: string;
-  title: string;
+  href?: string;
+  title: React.ReactNode;
   status?: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
   children?: React.ReactNode;
 }) {
   return (
-    <li className={cn("relative grid gap-2 px-4 py-3.5 transition active:bg-surface-soft/60", className)}>
+    <li
+      className={cn(
+        "relative grid gap-2 px-4 py-3.5",
+        href && "transition active:bg-surface-soft/60",
+        className
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
-        <Link
-          href={href}
-          className="focus-ring min-w-0 rounded-[7px] text-sm font-semibold leading-snug text-text after:absolute after:inset-0"
-        >
-          {title}
-        </Link>
+        {href ? (
+          <Link
+            href={href}
+            className="focus-ring min-w-0 rounded-[7px] text-sm font-semibold leading-snug text-text after:absolute after:inset-0"
+          >
+            {title}
+          </Link>
+        ) : (
+          <span className="min-w-0 text-sm font-semibold leading-snug text-text">{title}</span>
+        )}
         {status ? <span className="shrink-0">{status}</span> : null}
       </div>
       {children ? <div className="grid gap-1 text-[13px] text-muted">{children}</div> : null}

@@ -7,6 +7,12 @@ import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
+import {
+  RecordItem,
+  RecordList,
+  RecordListEmpty,
+  RecordTable
+} from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpTaskAction } from "@/features/follow-ups/actions";
@@ -124,40 +130,61 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
         <Card className="p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Visitas" />
-          <Table>
-            <thead>
-              <tr>
-                <Th>Llegada</Th>
-                <Th>Área actual</Th>
-                <Th>Estado</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {patient.visits.map((visit) => (
-                <Tr key={visit.id}>
-                  <Td className="font-semibold tabular-nums text-text">
-                    <a
-                      href={`/sigeco/recepcion/visitas/${visit.id}`}
-                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
-                    >
-                      {formatDateTime(visit.checkedInAt)}
-                    </a>
-                  </Td>
-                  <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
-                  <Td>
-                    <VisitStatusPill status={visit.status} />
-                  </Td>
-                </Tr>
-              ))}
-              {patient.visits.length === 0 ? (
+          <RecordList>
+            {patient.visits.map((visit) => (
+              <RecordItem
+                key={visit.id}
+                href={`/sigeco/recepcion/visitas/${visit.id}`}
+                title={<span className="tabular-nums">{formatDateTime(visit.checkedInAt)}</span>}
+                status={<VisitStatusPill status={visit.status} />}
+              >
+                <span>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</span>
+              </RecordItem>
+            ))}
+            {patient.visits.length === 0 ? (
+              <RecordListEmpty>
+                <span className="text-sm text-muted">
+                  Este paciente aún no tiene visitas registradas.
+                </span>
+              </RecordListEmpty>
+            ) : null}
+          </RecordList>
+          <RecordTable>
+            <Table>
+              <thead>
                 <tr>
-                  <Td className="py-6 text-center" colSpan={3}>
-                    Este paciente aún no tiene visitas registradas.
-                  </Td>
+                  <Th>Llegada</Th>
+                  <Th>Área actual</Th>
+                  <Th>Estado</Th>
                 </tr>
-              ) : null}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {patient.visits.map((visit) => (
+                  <Tr key={visit.id}>
+                    <Td className="font-semibold tabular-nums text-text">
+                      <a
+                        href={`/sigeco/recepcion/visitas/${visit.id}`}
+                        className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                      >
+                        {formatDateTime(visit.checkedInAt)}
+                      </a>
+                    </Td>
+                    <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
+                    <Td>
+                      <VisitStatusPill status={visit.status} />
+                    </Td>
+                  </Tr>
+                ))}
+                {patient.visits.length === 0 ? (
+                  <tr>
+                    <Td className="py-6 text-center" colSpan={3}>
+                      Este paciente aún no tiene visitas registradas.
+                    </Td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </Table>
+          </RecordTable>
         </Card>
 
         <Card>
@@ -233,40 +260,61 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
         <Card className="p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Cronología administrativa" />
-          <Table>
-            <thead>
-              <tr>
-                <Th>Total</Th>
-                <Th>Pagado</Th>
-                <Th>Saldo</Th>
-                <Th>Estado</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {patient.sales.map((sale) => (
-                <Tr key={sale.id}>
-                  <Td className="font-semibold tabular-nums text-text">
-                    <a
-                      href={`/sigeco/administracion/ventas/${sale.id}`}
-                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
-                    >
-                      {formatMoney(sale.totalCents)}
-                    </a>
-                  </Td>
-                  <Td className="tabular-nums">{formatMoney(sale.paidCents)}</Td>
-                  <Td className="tabular-nums">{formatMoney(sale.balanceCents)}</Td>
-                  <Td>{saleStatusLabels[sale.status]}</Td>
-                </Tr>
-              ))}
-              {patient.sales.length === 0 ? (
+          <RecordList>
+            {patient.sales.map((sale) => (
+              <RecordItem
+                key={sale.id}
+                href={`/sigeco/administracion/ventas/${sale.id}`}
+                title={<span className="tabular-nums">{formatMoney(sale.totalCents)}</span>}
+                status={<Chip>{saleStatusLabels[sale.status]}</Chip>}
+              >
+                <span className="tabular-nums">
+                  Pagado {formatMoney(sale.paidCents)} · Saldo {formatMoney(sale.balanceCents)}
+                </span>
+              </RecordItem>
+            ))}
+            {patient.sales.length === 0 ? (
+              <RecordListEmpty>
+                <span className="text-sm text-muted">Sin ventas ni cobros registrados.</span>
+              </RecordListEmpty>
+            ) : null}
+          </RecordList>
+          <RecordTable>
+            <Table>
+              <thead>
                 <tr>
-                  <Td className="py-6 text-center" colSpan={4}>
-                    Sin ventas ni cobros registrados.
-                  </Td>
+                  <Th>Total</Th>
+                  <Th>Pagado</Th>
+                  <Th>Saldo</Th>
+                  <Th>Estado</Th>
                 </tr>
-              ) : null}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {patient.sales.map((sale) => (
+                  <Tr key={sale.id}>
+                    <Td className="font-semibold tabular-nums text-text">
+                      <a
+                        href={`/sigeco/administracion/ventas/${sale.id}`}
+                        className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                      >
+                        {formatMoney(sale.totalCents)}
+                      </a>
+                    </Td>
+                    <Td className="tabular-nums">{formatMoney(sale.paidCents)}</Td>
+                    <Td className="tabular-nums">{formatMoney(sale.balanceCents)}</Td>
+                    <Td>{saleStatusLabels[sale.status]}</Td>
+                  </Tr>
+                ))}
+                {patient.sales.length === 0 ? (
+                  <tr>
+                    <Td className="py-6 text-center" colSpan={4}>
+                      Sin ventas ni cobros registrados.
+                    </Td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </Table>
+          </RecordTable>
         </Card>
 
         <Card>

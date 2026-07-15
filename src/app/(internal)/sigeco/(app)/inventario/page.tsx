@@ -6,11 +6,24 @@ import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import {
+  RecordItem,
+  RecordList,
+  RecordListEmpty,
+  RecordTable
+} from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { createInventoryItemAction } from "@/features/inventory/actions";
 import { getInventoryItems, getInventorySummary } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
+
+const emptyInventoryMessage = (
+  <>
+    <span className="block font-semibold text-text">Sin productos registrados.</span>
+    <span className="mt-1 block text-sm text-muted">Crea el primer producto con el formulario.</span>
+  </>
+);
 
 export default async function InventoryPage() {
   await requirePermission("inventory_read");
@@ -42,74 +55,113 @@ export default async function InventoryPage() {
       <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
         <Card className="p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Productos" />
-          <Table>
-            <thead>
-              <tr>
-                <Th>Producto</Th>
-                <Th>SKU</Th>
-                <Th className="text-right">Stock</Th>
-                <Th className="text-right">Mínimo</Th>
-                <Th>Estado</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const lowStock = item.currentStock <= item.minimumStock;
+          <RecordList>
+            {items.map((item) => {
+              const lowStock = item.currentStock <= item.minimumStock;
 
-                return (
-                  <Tr key={item.id}>
-                    <Td className="font-semibold text-text">
-                      <Link
-                        href={`/sigeco/inventario/${item.id}`}
-                        className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
-                      >
-                        {item.name}
-                      </Link>
-                      <span className="block text-[11px] font-normal tabular-nums text-muted">
-                        {item.internalCode}
-                      </span>
-                    </Td>
-                    <Td className="tabular-nums">{item.sku ?? "—"}</Td>
-                    <Td
-                      className={cn(
-                        "text-right tabular-nums",
-                        lowStock && "font-semibold text-warning"
-                      )}
-                    >
+              return (
+                <RecordItem
+                  key={item.id}
+                  href={`/sigeco/inventario/${item.id}`}
+                  title={item.name}
+                  status={
+                    lowStock ? (
+                      <Chip tone="warning" dot>
+                        Stock bajo
+                      </Chip>
+                    ) : undefined
+                  }
+                >
+                  <span className="tabular-nums">
+                    {item.internalCode}
+                    {item.sku ? ` · ${item.sku}` : ""}
+                  </span>
+                  <span className="tabular-nums">
+                    Stock{" "}
+                    <span className={cn("font-semibold", lowStock ? "text-warning" : "text-text")}>
                       {item.currentStock} {item.unit}
-                    </Td>
-                    <Td className="text-right tabular-nums">
-                      {item.minimumStock} {item.unit}
-                    </Td>
-                    <Td className="max-w-[220px]">
-                      {lowStock ? (
-                        <Chip tone="warning" dot>
-                          Stock bajo
-                        </Chip>
-                      ) : (
-                        "—"
-                      )}
-                      {item.alerts[0] ? (
-                        <span className="mt-1 block truncate text-[11px] text-error">
-                          {item.alerts[0].message}
-                        </span>
-                      ) : null}
-                    </Td>
-                  </Tr>
-                );
-              })}
-              {items.length === 0 ? (
-                <tr>
-                  <Td className="py-8 text-center" colSpan={5}>
-                    <span className="block font-semibold text-text">Sin productos registrados.</span>
-                    <span className="mt-1 block text-sm text-muted">
-                      Crea el primer producto con el formulario.
+                    </span>{" "}
+                    · Mínimo {item.minimumStock} {item.unit}
+                  </span>
+                  {item.alerts[0] ? (
+                    <span className="min-w-0 truncate text-[11px] text-error">
+                      {item.alerts[0].message}
                     </span>
-                  </Td>
+                  ) : null}
+                </RecordItem>
+              );
+            })}
+            {items.length === 0 ? (
+              <RecordListEmpty>{emptyInventoryMessage}</RecordListEmpty>
+            ) : null}
+          </RecordList>
+          <RecordTable>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Producto</Th>
+                  <Th>SKU</Th>
+                  <Th className="text-right">Stock</Th>
+                  <Th className="text-right">Mínimo</Th>
+                  <Th>Estado</Th>
                 </tr>
-              ) : null}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {items.map((item) => {
+                  const lowStock = item.currentStock <= item.minimumStock;
+
+                  return (
+                    <Tr key={item.id}>
+                      <Td className="font-semibold text-text">
+                        <Link
+                          href={`/sigeco/inventario/${item.id}`}
+                          className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                        >
+                          {item.name}
+                        </Link>
+                        <span className="block text-[11px] font-normal tabular-nums text-muted">
+                          {item.internalCode}
+                        </span>
+                      </Td>
+                      <Td className="tabular-nums">{item.sku ?? "—"}</Td>
+                      <Td
+                        className={cn(
+                          "text-right tabular-nums",
+                          lowStock && "font-semibold text-warning"
+                        )}
+                      >
+                        {item.currentStock} {item.unit}
+                      </Td>
+                      <Td className="text-right tabular-nums">
+                        {item.minimumStock} {item.unit}
+                      </Td>
+                      <Td className="max-w-[220px]">
+                        {lowStock ? (
+                          <Chip tone="warning" dot>
+                            Stock bajo
+                          </Chip>
+                        ) : (
+                          "—"
+                        )}
+                        {item.alerts[0] ? (
+                          <span className="mt-1 block truncate text-[11px] text-error">
+                            {item.alerts[0].message}
+                          </span>
+                        ) : null}
+                      </Td>
+                    </Tr>
+                  );
+                })}
+                {items.length === 0 ? (
+                  <tr>
+                    <Td className="py-8 text-center" colSpan={5}>
+                      {emptyInventoryMessage}
+                    </Td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </Table>
+          </RecordTable>
         </Card>
 
         <Card>
