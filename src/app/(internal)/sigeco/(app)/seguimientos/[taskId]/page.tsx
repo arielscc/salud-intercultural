@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpAttemptAction } from "@/features/follow-ups/actions";
@@ -114,7 +115,13 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
         </Card>
       </div>
 
-      <div className="grid gap-4 max-sm:contents">
+      <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <DesktopDetailContext
+          eyebrow={task.patient?.internalCode ?? "Sin ficha"}
+          title={name}
+          meta={phone}
+          status={<Chip dot>{followUpStatusLabels[task.status]}</Chip>}
+        />
         <Card className="max-sm:order-2">
           <CardHeader title="Registrar contacto" />
           <NoticeForm action={createFollowUpAttemptAction} notice="Contacto registrado" className="grid gap-3">

@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
+import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import {
   createNursingApplicationAction,
@@ -222,7 +223,13 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
         </Card>
       </div>
 
-      <div className="grid gap-4 max-sm:contents">
+      <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <DesktopDetailContext
+          eyebrow={patient.internalCode}
+          title={patient.fullName}
+          meta={patient.phone}
+          status={<VisitStatusPill status={item.visit.status} />}
+        />
         <Card className="max-sm:order-5">
           <CardHeader title="Estado de tarea" />
           <NoticeForm action={updateNursingWorkItemAction} notice="Tarea actualizada" className="grid gap-3">

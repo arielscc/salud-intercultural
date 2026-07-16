@@ -8,6 +8,7 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
+import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import {
@@ -208,7 +209,13 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
         </Card>
       </div>
 
-      <div className="grid gap-4 max-sm:contents">
+      <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <DesktopDetailContext
+          eyebrow={visit.patient.internalCode}
+          title={visit.patient.fullName}
+          meta={visit.patient.phone}
+          status={<VisitStatusPill status={visit.status} />}
+        />
         {isActiveVisitStatus(visit.status) ? (
           <Card className="max-sm:order-2">
             <CardHeader

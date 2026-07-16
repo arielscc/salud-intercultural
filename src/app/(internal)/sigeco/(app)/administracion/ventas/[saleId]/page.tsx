@@ -5,6 +5,7 @@ import { NoticeForm } from "@/components/internal/NoticeForm";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import {
   RecordItem,
   RecordList,
@@ -176,7 +177,17 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
       </div>
 
       {hasBalance ? (
-        <div className="grid gap-4 max-sm:contents">
+        <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+          <DesktopDetailContext
+            eyebrow={sale.patient.internalCode}
+            title={sale.patient.fullName}
+            meta={`Venta ${sale.id}`}
+            status={
+              <Chip tone={hasBalance ? "warning" : "success"} dot>
+                {saleStatusLabels[sale.status]}
+              </Chip>
+            }
+          />
           <Card className="max-sm:order-2">
             <CardHeader title="Registrar cobro" />
             <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">

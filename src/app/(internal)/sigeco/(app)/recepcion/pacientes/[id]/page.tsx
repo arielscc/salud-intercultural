@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
+import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import {
   RecordItem,
@@ -346,7 +347,12 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
         </Card>
       </div>
 
-      <div className="grid gap-4 max-sm:contents">
+      <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <DesktopDetailContext
+          eyebrow={patient.internalCode}
+          title={patient.fullName}
+          meta={patient.phone}
+        />
         {roleHasPermission(user.role, "visits_create") ? (
           <Card className="max-sm:order-2">
             <CardHeader title="Registrar llegada" />

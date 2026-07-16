@@ -13,7 +13,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | 3. Toolbar de bandejas | Completada | Patron comun aplicado a los 6 modulos |
 | 4. Tabla operativa | Completada | Semantica, foco y columnas prioritarias |
 | 5. Lista + preview | Completada | Piloto en Recepcion/Hoy desde `xl` |
-| 6. Detalles persistentes | Pendiente | Preserva orden movil |
+| 6. Detalles persistentes | Completada | Contexto y acciones en rail `xl` |
 | 7. Historiales y secciones | Pendiente | Tabs solo donde no haya comparacion |
 | 8. Formularios por flujo | Pendiente | Grillas solo desde `lg` |
 | 9. Confirmacion y feedback | Pendiente | Complemento desktop del patron movil |
@@ -131,6 +131,28 @@ Validacion focal: ESLint sobre Recepcion y `DesktopPreviewDismiss`, `git diff --
 
 Commit sugerido: `feat(sigeco): pilot desktop queue detail preview`
 
+## Tarea 6 - Detalles Con Resumen Y Acciones Persistentes (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `DesktopDetailContext`: encabezado compacto para el rail con eyebrow/codigo, nombre, metadato y estado opcional. Vive oculto hasta `xl`, usa tokens Marea y no crea una card adicional.
+- La segunda columna de ficha de paciente, visita, consulta, enfermeria, cobro administrativo, venta con saldo, seguimiento e inventario es pegajosa desde `xl`, con alto maximo relativo al viewport, scroll propio y overscroll contenido.
+- El contexto dentro del rail tambien es sticky: identidad y estado permanecen arriba mientras el usuario recorre formularios y acciones de la columna lateral.
+- Cada pantalla reutiliza datos ya cargados: codigo/nombre/telefono y estado de visita, venta, seguimiento o stock. No se agregaron queries, permisos, server actions ni estados cliente.
+- Los formularios existentes permanecen en su columna y conservan sus acciones primarias/secundarias. No se duplicaron submits ni se movieron acciones destructivas junto a la identidad.
+- Breadcrumbs de la Tarea 1, resumen principal de la primera columna y back links moviles siguen siendo la anatomia de entrada; este cambio agrega persistencia desktop sin reemplazarlos.
+
+Decisiones:
+
+- El rail empieza en `xl` porque es el mismo breakpoint de las dos columnas; bajo 1280 px las clases base y `max-sm:contents` quedan intactas.
+- El rail puede desplazarse internamente cuando sus formularios superan 800 px de alto. Esto mantiene accesible la accion sin inmovilizar toda la pagina.
+- Una venta sin saldo no crea segunda columna ni rail: no existe accion pendiente que justificar y la identidad permanece en el resumen principal.
+- El contexto es una banda sin marco con separador inferior, evitando cards anidadas o una tercera jerarquia visual.
+
+Validacion focal: ESLint sobre el componente y los ocho detalles, `git diff --check` y auditoria estructural de ubicacion/aislamiento `xl`, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): add persistent desktop detail context`
+
 ## Siguiente Paso
 
-Ejecutar la Tarea 6: detalles con resumen y acciones persistentes en desktop.
+Ejecutar la Tarea 7: historiales y secciones escaneables en desktop.

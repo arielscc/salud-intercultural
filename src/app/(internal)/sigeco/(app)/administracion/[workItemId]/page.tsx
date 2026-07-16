@@ -6,6 +6,7 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createSaleAction } from "@/features/sales/actions";
 import {
@@ -195,7 +196,13 @@ export default async function AdministrationWorkItemPage({
         </Card>
       </div>
 
-      <div className="grid gap-4 max-sm:contents">
+      <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <DesktopDetailContext
+          eyebrow={patient.internalCode}
+          title={patient.fullName}
+          meta={patient.phone}
+          status={<VisitStatusPill status={item.visit.status} />}
+        />
         {isActiveVisitStatus(item.visit.status) ? (
           <Card className="max-sm:order-3">
             <CardHeader

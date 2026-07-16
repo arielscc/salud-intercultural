@@ -5,6 +5,7 @@ import { NoticeForm } from "@/components/internal/NoticeForm";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import {
   RecordItem,
@@ -151,7 +152,23 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
         </Card>
       </div>
 
-      <div className="grid gap-4 max-sm:contents">
+      <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <DesktopDetailContext
+          eyebrow={item.internalCode}
+          title={item.name}
+          meta={item.sku ?? "Sin SKU"}
+          status={
+            lowStock ? (
+              <Chip tone="warning" dot>
+                Stock bajo
+              </Chip>
+            ) : (
+              <Chip tone="success" dot>
+                Stock normal
+              </Chip>
+            )
+          }
+        />
         <Card className="max-sm:order-2">
           <CardHeader title="Entrada de stock" />
           <NoticeForm action={addInventoryEntryAction} notice="Entrada registrada" className="grid gap-3">
