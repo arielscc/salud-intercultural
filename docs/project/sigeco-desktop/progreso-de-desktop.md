@@ -12,7 +12,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | 2. Busqueda global de pacientes | Completada | Command search desktop en el header |
 | 3. Toolbar de bandejas | Completada | Patron comun aplicado a los 6 modulos |
 | 4. Tabla operativa | Completada | Semantica, foco y columnas prioritarias |
-| 5. Lista + preview | Pendiente | Piloto condicionado a evaluacion |
+| 5. Lista + preview | Completada | Piloto en Recepcion/Hoy desde `xl` |
 | 6. Detalles persistentes | Pendiente | Preserva orden movil |
 | 7. Historiales y secciones | Pendiente | Tabs solo donde no haya comparacion |
 | 8. Formularios por flujo | Pendiente | Grillas solo desde `lg` |
@@ -109,6 +109,28 @@ Validacion focal: ESLint sobre la tabla base, el popover de acciones y las seis 
 
 Commit sugerido: `feat(sigeco): improve desktop operational data tables`
 
+## Tarea 5 - Piloto Lista Y Preview Persistente (2026-07-15)
+
+Que se hizo:
+
+- Recepcion/Hoy tiene una rama master-detail exclusiva desde `xl`: lista compacta y escaneable a la izquierda, preview pegajoso a la derecha. El bloque actual queda intacto con `xl:hidden` para movil, tableta y desktop de 1024-1279 px.
+- La seleccion se representa con `?visita=<id>` y conserva `status`. Los links usan `scroll={false}`, por lo que cambiar de registro no pierde la posicion; back/forward del navegador recorre selecciones.
+- La fila seleccionada combina fondo y ring, expone `aria-current` y mantiene visibles paciente, codigo, llegada, area, pendientes y estado.
+- El preview reutiliza exclusivamente los datos ya cargados por `getVisits`: identidad, telefono, estado, area, llegada, motivo y cantidad de tareas. No se agregaron queries ni cargas ocultas.
+- Las acciones de consulta abren el detalle completo de visita o la ficha del paciente. La edicion y las server actions permanecen en sus paginas originales.
+- Nuevo `DesktopPreviewDismiss`: boton de cierre con icono Lucide y Escape; el listener solo actua con `matchMedia("(min-width: 1280px)")` y limpia la seleccion sin scroll.
+
+Decisiones:
+
+- Se uso grid estable en vez de Resizable: introducir tamanos persistentes y manejo de puntero no aporta valor probado en el primer piloto. El patron puede evolucionar despues de QA y uso real.
+- No se selecciona automaticamente la primera visita: la URL sigue siendo la unica fuente de seleccion y back/forward no recibe estados implicitos.
+- El preview no replica formularios ni acciones destructivas; evita dos superficies de edicion y mantiene clara la separacion entre inspeccionar y actuar.
+- El piloto no se extendio a Pacientes ni a otros modulos. Primero debe superar la validacion integral y demostrar reduccion real de cambios de contexto.
+
+Validacion focal: ESLint sobre Recepcion y `DesktopPreviewDismiss`, `git diff --check`, auditoria de aislamiento `xl`, estado en URL y contrato de `getVisits`, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): pilot desktop queue detail preview`
+
 ## Siguiente Paso
 
-Ejecutar la Tarea 5: piloto de lista y preview persistente en una cola de alta frecuencia.
+Ejecutar la Tarea 6: detalles con resumen y acciones persistentes en desktop.

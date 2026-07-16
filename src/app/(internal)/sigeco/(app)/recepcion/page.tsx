@@ -5,6 +5,7 @@ import { MobileTabs } from "@/components/internal/MobileTabs";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
+import { DesktopPreviewDismiss } from "@/components/internal/reception/DesktopPreviewDismiss";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -45,8 +46,17 @@ type ReceptionPageProps = {
     status?: VisitStatus;
     search?: string;
     page?: string;
+    visita?: string;
   }>;
 };
+
+function receptionSelectionHref(status?: VisitStatus, visitId?: string) {
+  const query = new URLSearchParams();
+  if (status) query.set("status", status);
+  if (visitId) query.set("visita", visitId);
+  const search = query.toString();
+  return search ? `/sigeco/recepcion?${search}` : "/sigeco/recepcion";
+}
 
 const emptyVisitsMessage = (
   <>
@@ -159,6 +169,8 @@ export default async function ReceptionPage({
       : null;
   const patients = patientPage?.[0] ?? [];
   const totalPatients = patientPage?.[1] ?? 0;
+  const selectedVisit = visits.find((visit) => visit.id === params.visita);
+  const clearSelectionHref = receptionSelectionHref(params.status);
 
   return (
     <div className="grid gap-4">
@@ -313,7 +325,7 @@ export default async function ReceptionPage({
             </form>
           </Card>
 
-          <Card className="min-w-0 p-0">
+          <Card className="min-w-0 p-0 xl:hidden">
             <RecordList>
               {visits.map((visit) => (
                 <RecordItem
@@ -432,6 +444,139 @@ export default async function ReceptionPage({
               </Table>
             </RecordTable>
           </Card>
+
+          <div className="hidden min-w-0 items-start gap-4 xl:grid xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+            <section
+              className="min-w-0 overflow-hidden rounded-[9px] border border-border bg-surface"
+              aria-label="Visitas de recepción"
+            >
+              <div className="flex min-h-11 items-center justify-between border-b border-border px-4">
+                <h3 className="text-sm font-semibold text-text">Visitas</h3>
+                <span className="text-xs tabular-nums text-muted">{visits.length}</span>
+              </div>
+              <div className="max-h-[calc(100dvh-15rem)] overflow-y-auto">
+                {visits.map((visit) => {
+                  const selected = selectedVisit?.id === visit.id;
+
+                  return (
+                    <Link
+                      key={visit.id}
+                      href={receptionSelectionHref(params.status, visit.id)}
+                      scroll={false}
+                      aria-current={selected ? "true" : undefined}
+                      className={cn(
+                        "focus-ring grid min-h-[72px] grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 border-b border-border px-4 py-3 transition last:border-b-0 hover:bg-surface-soft/40",
+                        selected &&
+                          "bg-surface-soft/70 ring-1 ring-inset ring-primary/40 hover:bg-surface-soft/70",
+                      )}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-text">
+                          {visit.patient.fullName}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs tabular-nums text-muted">
+                          {visit.patient.internalCode} · {formatDateTime(visit.checkedInAt)}
+                        </span>
+                      </span>
+                      <VisitStatusPill status={visit.status} />
+                      <span className="min-w-0 truncate text-xs text-muted">
+                        {visit.route
+                          ? routeAreaLabels[visit.route.currentArea]
+                          : "Sin ruta"}
+                        {visit.workItems.length > 0
+                          ? ` · ${visit.workItems.length} pendientes`
+                          : ""}
+                      </span>
+                    </Link>
+                  );
+                })}
+                {visits.length === 0 ? (
+                  <div className="px-4 py-8 text-center">{emptyVisitsMessage}</div>
+                ) : null}
+              </div>
+            </section>
+
+            <aside className="sticky top-0 min-w-0" aria-label="Vista previa de la visita">
+              {selectedVisit ? (
+                <section className="rounded-[9px] border border-border bg-surface p-[18px]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold tabular-nums text-primary-dark">
+                        {selectedVisit.patient.internalCode}
+                      </p>
+                      <h3 className="truncate font-sora text-lg font-bold text-text">
+                        {selectedVisit.patient.fullName}
+                      </h3>
+                      <p className="mt-0.5 text-sm tabular-nums text-muted">
+                        {selectedVisit.patient.phone}
+                      </p>
+                    </div>
+                    <DesktopPreviewDismiss href={clearSelectionHref} />
+                  </div>
+
+                  <div className="mt-4">
+                    <VisitStatusPill status={selectedVisit.status} />
+                  </div>
+
+                  <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-sm">
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        Área actual
+                      </dt>
+                      <dd className="mt-0.5 font-medium text-text">
+                        {selectedVisit.route
+                          ? routeAreaLabels[selectedVisit.route.currentArea]
+                          : "Sin ruta"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        Llegada
+                      </dt>
+                      <dd className="mt-0.5 tabular-nums text-text">
+                        {formatDateTime(selectedVisit.checkedInAt)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        Motivo
+                      </dt>
+                      <dd className="mt-0.5 text-text">
+                        {selectedVisit.reason || "Sin motivo registrado"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        Tareas
+                      </dt>
+                      <dd className="mt-0.5 tabular-nums text-text">
+                        {selectedVisit.workItems.length} pendientes
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-5 grid gap-2 border-t border-border pt-4">
+                    <Link
+                      href={`/sigeco/recepcion/visitas/${selectedVisit.id}`}
+                      className={cn(buttonVariants({ size: "sm" }), "w-full")}
+                    >
+                      Abrir visita
+                    </Link>
+                    <Link
+                      href={`/sigeco/recepcion/pacientes/${selectedVisit.patientId}`}
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full")}
+                    >
+                      Ver ficha
+                    </Link>
+                  </div>
+                </section>
+              ) : (
+                <section className="rounded-[9px] border border-border bg-surface px-5 py-10 text-center">
+                  <p className="text-sm font-semibold text-text">Sin visita seleccionada</p>
+                </section>
+              )}
+            </aside>
+          </div>
         </>
       ) : (
         <>
