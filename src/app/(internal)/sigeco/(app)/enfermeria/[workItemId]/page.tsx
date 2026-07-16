@@ -9,6 +9,7 @@ import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
+import { FormActions } from "@/components/internal/ui/FormActions";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import {
   createNursingApplicationAction,
@@ -158,9 +159,9 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             <Field label="Observaciones">
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
-            <div className="flex justify-end">
+            <FormActions className="justify-end border-t-0 pt-0">
               <SubmitButton>Registrar aplicación</SubmitButton>
-            </div>
+            </FormActions>
           </NoticeForm>
           </CollapsibleSection>
         </Card>

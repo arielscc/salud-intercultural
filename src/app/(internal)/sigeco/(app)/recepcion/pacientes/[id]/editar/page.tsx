@@ -18,7 +18,7 @@ export default async function PatientEditPage({ params, searchParams }: PatientE
   if (!patient) notFound();
 
   return (
-    <div className="mx-auto grid w-full max-w-2xl gap-4">
+    <div className="mx-auto grid w-full max-w-2xl gap-4 lg:max-w-5xl">
       <PageHeader
         title="Editar ficha"
         description={`${patient.internalCode} · ${patient.fullName}`}

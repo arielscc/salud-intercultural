@@ -15,7 +15,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | 5. Lista + preview | Completada | Piloto en Recepcion/Hoy desde `xl` |
 | 6. Detalles persistentes | Completada | Contexto y acciones en rail `xl` |
 | 7. Historiales y secciones | Completada | Tabs/hash en ficha y metadata collapsible |
-| 8. Formularios por flujo | Pendiente | Grillas solo desde `lg` |
+| 8. Formularios por flujo | Completada | Grillas relacionadas y acciones sticky |
 | 9. Confirmacion y feedback | Pendiente | Complemento desktop del patron movil |
 | 10. QA y cierre | Pendiente | Validacion integral final |
 
@@ -181,6 +181,29 @@ Validacion focal: ESLint sobre `DesktopSectionTabs` y la ficha de paciente, `git
 
 Commit sugerido: `feat(sigeco): organize desktop detail histories`
 
+## Tarea 8 - Formularios Desktop Por Flujo (2026-07-16)
+
+Que se hizo:
+
+- Nuevo `FormActions`: conserva la fila de acciones base y desde `lg` se vuelve pegajosa al borde inferior, con fondo Marea. Se aplica al funnel, edicion de paciente, guardar consulta, registrar aplicacion y crear venta.
+- El funnel amplia su contenedor solo desde `lg` y organiza cada paso en dos columnas segun relacion: identidad; motivo/duracion/tipo; antecedentes/medicacion; origen/seguimiento. Motivo, ciudad, genero, alergias, alertas y resumen conservan ancho completo cuando forman un bloque unico.
+- El error por paso del funnel permanece junto a las acciones y se vuelve visible sobre el footer sticky en desktop. No cambia validacion ni avance entre pasos.
+- La edicion de paciente amplia su contenedor solo desde `lg` y usa una grilla 1.1/0.9: Identificacion a la izquierda; Antecedentes y Origen/seguimiento a la derecha. Telefono + fecha y enfermedad + medicacion son las unicas parejas internas.
+- La edicion muestra un resumen de error desktop antes de las secciones y conserva el aviso inferior bajo `lg`. Nombre y telefono muestran ademas el error junto al campo; nombre expone `aria-invalid` y `aria-describedby`.
+- Los formularios largos de Consulta, aplicacion de Enfermeria y venta reutilizan el footer comun. Sus agrupaciones clinicas, Collapsible, labels y orden de campos no cambiaron.
+- Los formularios cortos del rail (estado, nota, contacto, stock) no se forzaron a dos columnas: su ancho y secuencia no justifican dividirlos.
+
+Decisiones:
+
+- Todas las grillas, anchos, sticky y resumen duplicado usan prefijo `lg`; las clases base moviles permanecen iguales.
+- No se crearon columnas por simetria. Campos que requieren lectura secuencial o espacio para chips/textarea conservan ancho completo.
+- `FormActions` no duplica botones ni forms: mueve solo la presentacion del mismo submit y mantiene `useFormStatus`/server actions existentes.
+- No se agregaron validaciones de negocio. Los errores de servidor siguen en sus banners de pagina y los errores cliente existentes solo ganan una segunda ubicacion desktop.
+
+Validacion focal: ESLint sobre el componente, funnel, edicion y tres detalles largos, `git diff --check` y auditoria de aislamiento `lg`/helpers moviles, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): structure desktop forms by workflow`
+
 ## Siguiente Paso
 
-Ejecutar la Tarea 8: formularios desktop estructurados por flujo.
+Ejecutar la Tarea 9: confirmacion y feedback de acciones en desktop.

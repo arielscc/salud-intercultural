@@ -7,6 +7,7 @@ import { PhoneInput } from "@/components/internal/reception/PhoneInput";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
+import { FormActions } from "@/components/internal/ui/FormActions";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import {
   patientCaptureSourceLabels,
@@ -64,6 +65,8 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
   const age = calculateAge(birthDate);
   const city = cityChoice === "otra" ? cityOther : cityChoice;
   const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
+  const nameError = formError === "Ingresa el nombre completo.";
+  const phoneError = formError === "Ingresa un teléfono válido.";
 
   function toggleCaptureSource(value: string) {
     setCaptureSources((current) =>
@@ -89,7 +92,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
     <form
       action={updateReceptionPatientAction}
       onSubmit={validateBeforeSubmit}
-      className="grid gap-4"
+      className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
     >
       <input type="hidden" name="patientId" value={patient.id} />
       <input type="hidden" name="fullName" value={fullName} />
@@ -103,7 +106,17 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       <input type="hidden" name="captureSources" value={captureSources.join(",")} />
       <input type="hidden" name="followUpPreference" value={followUpPreference || "unknown"} />
 
-      <Card className="grid gap-4">
+      {formError ? (
+        <p
+          className="hidden items-center gap-1.5 rounded-[9px] bg-error/10 px-4 py-3 text-sm font-semibold text-error lg:col-span-2 lg:flex"
+          role="alert"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+          {formError}
+        </p>
+      ) : null}
+
+      <Card className="grid gap-4 lg:row-span-2">
         <CardHeader title="Identificación" className="mb-0" />
         <Field label="Nombre completo *">
           <input
@@ -111,14 +124,28 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
             autoComplete="off"
+            aria-invalid={nameError}
+            aria-describedby={nameError ? "patient-name-error" : undefined}
           />
+          {nameError ? (
+            <span id="patient-name-error" className="text-xs font-semibold text-error">
+              {formError}
+            </span>
+          ) : null}
         </Field>
-        <Field label="Teléfono (WhatsApp) *">
-          <PhoneInput value={phone} onValueChange={setPhone} />
-        </Field>
-        <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
-          <DatePickerField value={birthDate} onChange={setBirthDate} />
-        </Field>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Field label="Teléfono (WhatsApp) *">
+            <PhoneInput value={phone} onValueChange={setPhone} />
+            {phoneError ? (
+              <span className="text-xs font-semibold text-error">{formError}</span>
+            ) : null}
+          </Field>
+          <Field
+            label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}
+          >
+            <DatePickerField value={birthDate} onChange={setBirthDate} />
+          </Field>
+        </div>
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>Ciudad</span>
           <div className="flex flex-wrap gap-2">
@@ -184,22 +211,24 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
             />
           )}
         </div>
-        <Field label="Enfermedad de base (opcional)">
-          <input
-            className={internalInputClassName}
-            value={relevantHistory}
-            onChange={(event) => setRelevantHistory(event.target.value)}
-            placeholder="Ej. diabetes, hipertensión"
-          />
-        </Field>
-        <Field label="Medicación actual (opcional)">
-          <input
-            className={internalInputClassName}
-            value={currentMedication}
-            onChange={(event) => setCurrentMedication(event.target.value)}
-            placeholder="Ej. metformina cada mañana"
-          />
-        </Field>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Field label="Enfermedad de base (opcional)">
+            <input
+              className={internalInputClassName}
+              value={relevantHistory}
+              onChange={(event) => setRelevantHistory(event.target.value)}
+              placeholder="Ej. diabetes, hipertensión"
+            />
+          </Field>
+          <Field label="Medicación actual (opcional)">
+            <input
+              className={internalInputClassName}
+              value={currentMedication}
+              onChange={(event) => setCurrentMedication(event.target.value)}
+              placeholder="Ej. metformina cada mañana"
+            />
+          </Field>
+        </div>
       </Card>
 
       <Card className="grid gap-4">
@@ -235,13 +264,13 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       </Card>
 
       {formError ? (
-        <p className="flex items-center gap-1.5 text-sm font-semibold text-error" role="alert">
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-error lg:hidden" role="alert">
           <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
           {formError}
         </p>
       ) : null}
 
-      <div className="flex items-center justify-between border-t border-border pt-4">
+      <FormActions className="lg:col-span-2">
         <Link
           href={`/sigeco/recepcion/pacientes/${patient.id}`}
           className={cn(buttonVariants({ variant: "ghost" }))}
@@ -249,7 +278,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
           Cancelar
         </Link>
         <SubmitButton pendingLabel="Guardando...">Guardar cambios</SubmitButton>
-      </div>
+      </FormActions>
     </form>
   );
 }

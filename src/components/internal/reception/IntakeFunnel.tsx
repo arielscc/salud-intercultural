@@ -10,6 +10,7 @@ import {
 import { PhoneInput } from "@/components/internal/reception/PhoneInput";
 import { Button } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
+import { FormActions } from "@/components/internal/ui/FormActions";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import {
@@ -343,7 +344,7 @@ export function IntakeFunnel({
         </Card>
       ) : null}
 
-      <Card className={cn("grid gap-4", step === 1 ? "" : "hidden")}>
+      <Card className={cn("grid gap-4 lg:grid-cols-2", step === 1 ? "" : "hidden")}>
         <Field label="Nombre completo *">
           <input
             className={internalInputClassName}
@@ -358,7 +359,7 @@ export function IntakeFunnel({
         <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
           <DatePickerField value={birthDate} onChange={setBirthDate} />
         </Field>
-        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+        <div className="grid gap-1.5 text-[13px] font-medium text-text lg:col-span-2">
           <span>Ciudad</span>
           <div className="flex flex-wrap gap-2">
             {cityChips.map((option) => (
@@ -386,7 +387,7 @@ export function IntakeFunnel({
             />
           ) : null}
         </div>
-        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+        <div className="grid gap-1.5 text-[13px] font-medium text-text lg:col-span-2">
           <span>Género (opcional)</span>
           <div className="flex flex-wrap gap-2">
             {(["female", "male", "other"] as const).map((option) => (
@@ -402,7 +403,7 @@ export function IntakeFunnel({
         </div>
 
         {phoneMatches.length > 0 ? (
-          <div className="grid gap-2 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+          <div className="grid gap-2 rounded-[9px] bg-warning/10 px-4 py-3 text-sm lg:col-span-2">
             <p className="flex items-center gap-1.5 font-semibold text-warning">
               <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
               Ya existe una ficha con este teléfono
@@ -436,8 +437,8 @@ export function IntakeFunnel({
         ) : null}
       </Card>
 
-      <Card className={cn("grid gap-4", step === 2 ? "" : "hidden")}>
-        <Field label="¿Qué le trae hoy? *">
+      <Card className={cn("grid gap-4 lg:grid-cols-2", step === 2 ? "" : "hidden")}>
+        <Field label="¿Qué le trae hoy? *" className="lg:col-span-2">
           <input
             className={internalInputClassName}
             value={reason}
@@ -519,8 +520,8 @@ export function IntakeFunnel({
         </div>
       </Card>
 
-      <Card className={cn("grid gap-4", step === 3 ? "" : "hidden")}>
-        <div className="grid gap-1.5 text-[13px] font-medium text-text">
+      <Card className={cn("grid gap-4 lg:grid-cols-2", step === 3 ? "" : "hidden")}>
+        <div className="grid gap-1.5 text-[13px] font-medium text-text lg:col-span-2">
           <span>Alergias</span>
           <div className="flex flex-wrap gap-2">
             <ChipOption
@@ -557,7 +558,7 @@ export function IntakeFunnel({
         </Field>
       </Card>
 
-      <Card className={cn("grid gap-4", step === 4 ? "" : "hidden")}>
+      <Card className={cn("grid gap-4 lg:grid-cols-2", step === 4 ? "" : "hidden")}>
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>¿Cómo nos conoció? (puede elegir varios)</span>
           <div className="flex flex-wrap gap-2">
@@ -586,21 +587,24 @@ export function IntakeFunnel({
             ))}
           </div>
         </div>
-        <div className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted">
+        <div className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted lg:col-span-2">
           Al registrar se crea la ficha y la visita queda abierta en recepción. Lo médico lo completa
           el doctor en consulta.
         </div>
       </Card>
 
       {stepError ? (
-        <p className="flex items-center gap-1.5 text-sm font-semibold text-error" role="alert">
+        <p
+          className="flex items-center gap-1.5 text-sm font-semibold text-error lg:sticky lg:bottom-16 lg:z-[6] lg:rounded-[7px] lg:bg-error/10 lg:px-3 lg:py-2"
+          role="alert"
+        >
           <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
           {stepError}
         </p>
       ) : null}
 
       {step > 0 ? (
-        <div className="flex items-center justify-between border-t border-border pt-4">
+        <FormActions>
           <Button type="button" variant="ghost" onClick={goBack}>
             Atrás
           </Button>
@@ -622,7 +626,7 @@ export function IntakeFunnel({
           {step === 4 ? (
             <SubmitButton pendingLabel="Registrando...">Registrar llegada</SubmitButton>
           ) : null}
-        </div>
+        </FormActions>
       ) : null}
     </form>
   );

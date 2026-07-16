@@ -7,6 +7,7 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
+import { FormActions } from "@/components/internal/ui/FormActions";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createSaleAction } from "@/features/sales/actions";
 import {
@@ -189,9 +190,9 @@ export default async function AdministrationWorkItemPage({
             <Field label="Notas">
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
-            <div className="flex justify-end border-t border-border pt-4">
+            <FormActions className="justify-end">
               <SubmitButton>Crear venta</SubmitButton>
-            </div>
+            </FormActions>
           </form>
         </Card>
       </div>

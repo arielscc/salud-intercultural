@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
+import { FormActions } from "@/components/internal/ui/FormActions";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import {
@@ -202,9 +203,9 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
                 <textarea className={`${internalInputClassName} min-h-24 py-3`} name="evolutionNote" />
               </Field>
             </CollapsibleSection>
-            <div className="flex justify-end border-t border-border pt-4">
+            <FormActions className="justify-end">
               <SubmitButton>Guardar consulta</SubmitButton>
-            </div>
+            </FormActions>
           </NoticeForm>
         </Card>
       </div>

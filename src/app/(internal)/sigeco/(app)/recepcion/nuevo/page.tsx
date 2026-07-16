@@ -21,7 +21,7 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
     : undefined;
 
   return (
-    <div className="mx-auto grid w-full max-w-2xl gap-4">
+    <div className="mx-auto grid w-full max-w-2xl gap-4 lg:max-w-4xl">
       <PageHeader
         title="Registrar llegada"
         description="Recepción · Crea la ficha y abre la visita en un solo paso"
