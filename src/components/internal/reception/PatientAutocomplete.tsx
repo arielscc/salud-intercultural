@@ -194,7 +194,7 @@ export function PatientAutocomplete({
       {onCreateNew ? (
         <Button type="button" onClick={onCreateNew} className="w-full">
           <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
-          Es paciente nuevo
+          Es una persona nueva
         </Button>
       ) : null}
     </div>

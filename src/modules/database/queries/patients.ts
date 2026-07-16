@@ -1,6 +1,7 @@
 import type { PatientCaptureSource, PatientGender, Prisma } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
+import { patientSearchWhere } from "@/modules/database/queries/patient-search";
 
 export type CreatePatientRecordInput = {
   fullName: string;
@@ -20,18 +21,7 @@ export type CreatePatientRecordInput = {
 };
 
 function patientListWhere(search?: string): Prisma.PatientWhereInput {
-  const normalizedSearch = search?.trim();
-
-  return {
-    OR: normalizedSearch
-      ? [
-          { fullName: { contains: normalizedSearch, mode: "insensitive" } },
-          { phone: { contains: normalizedSearch, mode: "insensitive" } },
-          { internalCode: { contains: normalizedSearch, mode: "insensitive" } },
-          { city: { contains: normalizedSearch, mode: "insensitive" } }
-        ]
-      : undefined
-  };
+  return patientSearchWhere(search);
 }
 
 export async function createPatientRecord(input: CreatePatientRecordInput) {

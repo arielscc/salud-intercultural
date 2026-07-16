@@ -9,6 +9,7 @@ import type {
 import { dayRange } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { createVisitInTransaction } from "@/modules/database/queries/visits";
+import { patientSearchWhere } from "@/modules/database/queries/patient-search";
 
 export type ReceptionIntakeRecordInput = {
   userId?: string;
@@ -181,14 +182,7 @@ export async function getReceptionPatientById(id: string) {
 export async function searchReceptionPatients(search: string) {
   return withDatabaseError("searchReceptionPatients", async () => {
     return prisma.patient.findMany({
-      where: {
-        OR: [
-          { fullName: { contains: search, mode: "insensitive" } },
-          { phone: { contains: search, mode: "insensitive" } },
-          { secondaryPhone: { contains: search, mode: "insensitive" } },
-          { internalCode: { contains: search, mode: "insensitive" } }
-        ]
-      },
+      where: patientSearchWhere(search),
       select: receptionPatientSelect,
       orderBy: { updatedAt: "desc" },
       take: 5

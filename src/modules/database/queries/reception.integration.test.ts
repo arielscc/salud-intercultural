@@ -193,17 +193,19 @@ describe("reception intake integration", () => {
 
   it("finds patients for prefill by name, phone and internal code", async () => {
     await createPatientRecord({
-      fullName: "Lucia Choque",
+      fullName: "Lucia Fernanda Choque Mamani",
       phone: "+591 71112222",
       city: "El Alto"
     });
 
     const byName = await searchReceptionPatients("lucia");
+    const bySeparatedNames = await searchReceptionPatients("lucia choque");
     const byPhone = await searchReceptionPatients("7111");
     const byCode = await searchReceptionPatients("SI-0000");
     const noMatch = await searchReceptionPatients("inexistente");
 
     expect(byName).toHaveLength(1);
+    expect(bySeparatedNames).toHaveLength(1);
     expect(byPhone).toHaveLength(1);
     expect(byCode).toHaveLength(1);
     expect(noMatch).toHaveLength(0);
