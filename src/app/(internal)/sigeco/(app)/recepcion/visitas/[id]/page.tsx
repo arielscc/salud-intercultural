@@ -78,6 +78,13 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           </dl>
           {isActive ? (
             <div className="mt-4 grid gap-2 border-t border-border pt-4 sm:grid-cols-2">
+              {visit.status !== "in_consultation" ? (
+                <NoticeForm action={applyVisitFlowAction} notice="Paciente enviado a consulta">
+                  <input type="hidden" name="visitId" value={visit.id} />
+                  <input type="hidden" name="flow" value="to_consultation" />
+                  <SubmitButton className="w-full">Enviar a consulta</SubmitButton>
+                </NoticeForm>
+              ) : null}
               <ConfirmForm
                 action={applyVisitFlowAction}
                 notice="Visita cerrada"

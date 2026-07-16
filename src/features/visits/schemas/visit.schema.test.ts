@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createVisitSchema, updateVisitStatusSchema } from "@/features/visits/schemas/visit.schema";
+import {
+  createVisitSchema,
+  updateVisitStatusSchema,
+  visitFlowSchema
+} from "@/features/visits/schemas/visit.schema";
 
 describe("visit schemas", () => {
   it("validates visit creation and route updates", () => {
@@ -35,5 +39,11 @@ describe("visit schemas", () => {
         area: "medico"
       })
     ).toThrow();
+  });
+
+  it("accepts the direct transition to consultation", () => {
+    expect(
+      visitFlowSchema.parse({ visitId: "visit_1", flow: "to_consultation" })
+    ).toMatchObject({ visitId: "visit_1", flow: "to_consultation" });
   });
 });

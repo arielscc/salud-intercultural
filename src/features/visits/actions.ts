@@ -76,6 +76,11 @@ export async function applyVisitFlowAction(formData: FormData) {
       note: note ?? `Se retiró en ${routeAreaLabels[currentArea].toLowerCase()}`
     },
     complete: { status: "completed", area: "cierre", note: note ?? "Visita cerrada" },
+    to_consultation: {
+      status: "in_consultation",
+      area: "medico",
+      note: note ?? "Derivado a consulta médica"
+    },
     to_nursing: {
       status: "in_nursing",
       area: "enfermeria",
@@ -107,6 +112,7 @@ export async function applyVisitFlowAction(formData: FormData) {
   revalidatePath("/sigeco/consultas");
   revalidatePath(`/sigeco/consultas/${visitId}`);
   revalidatePath("/sigeco/administracion");
+  revalidatePath("/sigeco/enfermeria");
 }
 
 export async function updateVisitStatusAction(formData: FormData) {
