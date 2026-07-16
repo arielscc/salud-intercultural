@@ -67,7 +67,7 @@ export default async function NursingWorkQueuePage() {
           ) : null}
         </RecordList>
         <RecordTable>
-          <Table>
+          <Table caption="Indicaciones activas de enfermería">
             <thead>
               <tr>
                 <Th>Paciente</Th>

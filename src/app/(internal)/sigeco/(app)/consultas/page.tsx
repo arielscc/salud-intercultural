@@ -63,11 +63,11 @@ export default async function ConsultationsPage() {
           ) : null}
         </RecordList>
         <RecordTable>
-          <Table>
+          <Table caption="Pacientes en consulta">
             <thead>
               <tr>
                 <Th>Paciente</Th>
-                <Th>Teléfono</Th>
+                <Th className="lg:hidden xl:table-cell">Teléfono</Th>
                 <Th>Llegada</Th>
                 <Th>Área actual</Th>
                 <Th>Consulta</Th>
@@ -85,7 +85,7 @@ export default async function ConsultationsPage() {
                       {visit.patient.fullName}
                     </Link>
                   </Td>
-                  <Td className="tabular-nums">{visit.patient.phone}</Td>
+                  <Td className="tabular-nums lg:hidden xl:table-cell">{visit.patient.phone}</Td>
                   <Td className="tabular-nums">{formatDateTime(visit.checkedInAt)}</Td>
                   <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
                   <Td>

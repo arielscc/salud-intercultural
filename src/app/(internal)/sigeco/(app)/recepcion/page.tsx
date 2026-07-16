@@ -8,6 +8,7 @@ import { PatientAutocomplete } from "@/components/internal/reception/PatientAuto
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopRowActions } from "@/components/internal/ui/DesktopRowActions";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Pagination } from "@/components/internal/ui/Pagination";
@@ -351,12 +352,12 @@ export default async function ReceptionPage({
               ) : null}
             </RecordList>
             <RecordTable>
-              <Table>
+              <Table caption="Visitas de recepción">
                 <thead>
                   <tr>
                     <Th>Paciente</Th>
-                    <Th>Teléfono</Th>
-                    <Th>Llegada</Th>
+                    <Th className="lg:hidden xl:table-cell">Teléfono</Th>
+                    <Th className="lg:hidden xl:table-cell">Llegada</Th>
                     <Th>Área actual</Th>
                     <Th>Tareas</Th>
                     <Th>Estado</Th>
@@ -376,8 +377,10 @@ export default async function ReceptionPage({
                           {visit.patient.fullName}
                         </Link>
                       </Td>
-                      <Td className="tabular-nums">{visit.patient.phone}</Td>
-                      <Td className="tabular-nums">
+                      <Td className="tabular-nums lg:hidden xl:table-cell">
+                        {visit.patient.phone}
+                      </Td>
+                      <Td className="tabular-nums lg:hidden xl:table-cell">
                         {formatDateTime(visit.checkedInAt)}
                       </Td>
                       <Td>
@@ -399,10 +402,21 @@ export default async function ReceptionPage({
                       </Td>
                       <Td>
                         {isActiveVisitStatus(visit.status) ? (
-                          <VisitLeftForm
-                            visitId={visit.id}
-                            patientName={visit.patient.fullName}
-                          />
+                          <>
+                            <div className="lg:hidden">
+                              <VisitLeftForm
+                                visitId={visit.id}
+                                patientName={visit.patient.fullName}
+                              />
+                            </div>
+                            <DesktopRowActions label={`Acciones de ${visit.patient.fullName}`}>
+                              <VisitLeftForm
+                                visitId={visit.id}
+                                patientName={visit.patient.fullName}
+                                buttonClassName="w-full justify-start"
+                              />
+                            </DesktopRowActions>
+                          </>
                         ) : null}
                       </Td>
                     </Tr>
@@ -460,14 +474,14 @@ export default async function ReceptionPage({
               ) : null}
             </RecordList>
             <RecordTable>
-              <Table>
+              <Table caption="Padrón de pacientes">
                 <thead>
                   <tr>
                     <Th>Nombre</Th>
                     <Th>Código</Th>
                     <Th>Teléfono</Th>
-                    <Th>Ciudad</Th>
-                    <Th>Visitas</Th>
+                    <Th className="lg:hidden xl:table-cell">Ciudad</Th>
+                    <Th className="text-right">Visitas</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -483,8 +497,8 @@ export default async function ReceptionPage({
                       </Td>
                       <Td className="tabular-nums">{patient.internalCode}</Td>
                       <Td className="tabular-nums">{patient.phone}</Td>
-                      <Td>{patient.city || "—"}</Td>
-                      <Td className="tabular-nums">{patient._count.visits}</Td>
+                      <Td className="lg:hidden xl:table-cell">{patient.city || "—"}</Td>
+                      <Td className="text-right tabular-nums">{patient._count.visits}</Td>
                     </Tr>
                   ))}
                   {patients.length === 0 ? (

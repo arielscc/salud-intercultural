@@ -106,12 +106,12 @@ export default async function AdministrationPage() {
           ) : null}
         </RecordList>
         <RecordTable>
-          <Table>
+          <Table caption="Cobros y entregas pendientes">
             <thead>
               <tr>
                 <Th>Paciente</Th>
                 <Th>Tarea</Th>
-                <Th>Indicación</Th>
+                <Th className="lg:hidden xl:table-cell">Indicación</Th>
                 <Th>Venta</Th>
                 <Th>Estado</Th>
               </tr>
@@ -140,7 +140,7 @@ export default async function AdministrationPage() {
                         <span className="block truncate text-[11px] text-muted">{item.description}</span>
                       ) : null}
                     </Td>
-                    <Td>
+                    <Td className="lg:hidden xl:table-cell">
                       {order
                         ? `${clinicalOrderTypeLabels[order.type]} · ${order.doctor?.name ?? order.doctor?.email ?? "Médico"}`
                         : "—"}

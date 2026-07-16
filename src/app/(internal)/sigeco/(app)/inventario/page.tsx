@@ -113,11 +113,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             ) : null}
           </RecordList>
           <RecordTable>
-            <Table>
+            <Table caption="Productos de inventario">
               <thead>
                 <tr>
                   <Th>Producto</Th>
-                  <Th>SKU</Th>
+                  <Th className="lg:hidden xl:table-cell">SKU</Th>
                   <Th className="text-right">Stock</Th>
                   <Th className="text-right">Mínimo</Th>
                   <Th>Estado</Th>
@@ -140,7 +140,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                           {item.internalCode}
                         </span>
                       </Td>
-                      <Td className="tabular-nums">{item.sku ?? "—"}</Td>
+                      <Td className="tabular-nums lg:hidden xl:table-cell">{item.sku ?? "—"}</Td>
                       <Td
                         className={cn(
                           "text-right tabular-nums",

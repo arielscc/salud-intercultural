@@ -77,6 +77,7 @@ Viven en `src/components/internal/ui/`. Regla: usar estos componentes antes de e
 - `Button`: variantes `primary`, `outline`, `ghost`, `danger`, `link` (sin borde ni fondo, texto primario con subrayado al hover, sin padding; soporta iconos); tamanos `sm`, `md`.
 - `Card` / `CardHeader`: superficie blanca, borde hairline, radio 9px, padding 18px.
 - `Table` (+ `Th`, `Td`): encabezado en versalitas sobre fondo `background`, filas con borde inferior, hover con tint suave, contenedor con scroll horizontal propio.
+- En desktop (`lg`), las tablas operativas agregan caption accesible, encabezado pegajoso y foco de fila con ring. Entre 1024 y 1279 px pueden ocultar columnas secundarias que reaparecen en `xl`; identidad, estado, plazo/area y accion permanecen visibles.
 - `KpiCard`: etiqueta muted, cifra Sora `tabular-nums`, nota secundaria y bandera opcional `warn`/`crit` (icono + texto).
 - `PageHeader`: titulo Sora + subtitulo muted + slot de acciones a la derecha.
 - `StatusPill` (existente, restilizado): punto + etiqueta, tint semantico por familia de estado.

@@ -11,7 +11,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | 1. Navegacion y contexto | Completada | Sidebar agrupada y breadcrumbs desde `lg` |
 | 2. Busqueda global de pacientes | Completada | Command search desktop en el header |
 | 3. Toolbar de bandejas | Completada | Patron comun aplicado a los 6 modulos |
-| 4. Tabla operativa | Pendiente | Sin paginacion nueva |
+| 4. Tabla operativa | Completada | Semantica, foco y columnas prioritarias |
 | 5. Lista + preview | Pendiente | Piloto condicionado a evaluacion |
 | 6. Detalles persistentes | Pendiente | Preserva orden movil |
 | 7. Historiales y secciones | Pendiente | Tabs solo donde no haya comparacion |
@@ -88,6 +88,27 @@ Validacion focal: ESLint sobre el componente y las seis bandejas, `git diff --ch
 
 Commit sugerido: `feat(sigeco): unify desktop work queue toolbars`
 
+## Tarea 4 - Tabla Desktop Operativa (2026-07-15)
+
+Que se hizo:
+
+- `Table` admite caption accesible y, desde `lg`, usa encabezados pegajosos dentro del scroll real de `main`, overflow horizontal visible y foco de fila con fondo + ring mediante `focus-within`.
+- Las seis bandejas tienen captions especificos: visitas/pacientes de Recepcion, Consulta, Enfermeria, Caja, Seguimientos e Inventario.
+- Se definieron prioridades solo para el rango 1024-1279 px con `lg:hidden xl:table-cell`: telefono y llegada en visitas de Recepcion, ciudad en padron, telefono en Consulta y Seguimientos, indicacion en Caja y SKU en Inventario. En `xl` reaparecen; bajo `lg` la tabla de tableta conserva todas sus columnas.
+- Identidad, estado, area/plazo y acciones permanecen visibles. Enfermeria conserva sus cuatro columnas porque ya caben sin reducir contexto.
+- Los conteos de visitas del padron se alinearon a la derecha; el stock ya mantenia alineacion numerica y todas las cifras conservan `tabular-nums`.
+- La accion secundaria `Se retiro` pasa en desktop a un popover contextual de elipsis con label accesible. Entre `sm` y `lg` conserva el boton directo y la card movil no cambia.
+
+Decisiones:
+
+- No se agrego ordenamiento, seleccion ni configuracion persistente de columnas: requieren estado y contratos que no existen en esta tarea.
+- Se uso el Popover Radix existente para la unica accion secundaria actual, evitando una dependencia nueva. La accion y su server action no cambiaron.
+- El foco de fila no depende solo del color: agrega un ring interior mientras un enlace o control de la fila tiene foco.
+
+Validacion focal: ESLint sobre la tabla base, el popover de acciones y las seis bandejas, `git diff --check`, auditoria de captions y correspondencia `Th`/`Td`, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): improve desktop operational data tables`
+
 ## Siguiente Paso
 
-Ejecutar la Tarea 4: tabla desktop operativa con semantica, prioridad de columnas y estados de fila.
+Ejecutar la Tarea 5: piloto de lista y preview persistente en una cola de alta frecuencia.

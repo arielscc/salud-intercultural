@@ -138,12 +138,12 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
           {tasks.length === 0 ? <RecordListEmpty>{emptyFollowUpsMessage}</RecordListEmpty> : null}
         </RecordList>
         <RecordTable>
-          <Table>
+          <Table caption="Seguimientos del filtro activo">
             <thead>
               <tr>
                 <Th>Paciente</Th>
                 <Th>Tarea</Th>
-                <Th>Teléfono</Th>
+                <Th className="lg:hidden xl:table-cell">Teléfono</Th>
                 <Th>Vence</Th>
                 <Th>Estado</Th>
               </tr>
@@ -169,7 +169,7 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
                       </span>
                     </Td>
                     <Td className="max-w-[280px] truncate">{task.title}</Td>
-                    <Td className="tabular-nums">
+                    <Td className="tabular-nums lg:hidden xl:table-cell">
                       {phone ?? "—"}
                       {declinedContact ? (
                         <span className="mt-0.5 block text-[11px] font-semibold text-warning">
