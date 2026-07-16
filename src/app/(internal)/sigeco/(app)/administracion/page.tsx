@@ -5,6 +5,7 @@ import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { PriorityCollectionDialog } from "@/components/internal/PriorityCollectionDialog";
 import {
   RecordItem,
   RecordList,
@@ -31,29 +32,54 @@ const emptyAdministrationMessage = (
 );
 
 export default async function AdministrationPage() {
-  await requirePermission("sales_read");
+  const user = await requirePermission("sales_read");
   const [workItems, summary] = await Promise.all([
     getAdministrationWorkItems({ pageSize: 40 }),
     getSalesSummary()
   ]);
 
   const pendingBalance = summary.pendingSales._sum.balanceCents ?? 0;
+  const isPersonalAdministrationAccount = user.role === "administracion";
+  const priorityCollection = isPersonalAdministrationAccount
+    ? workItems.find((item) => {
+        const sale = item.sales[0];
+        return !sale || sale.balanceCents > 0;
+      })
+    : undefined;
 
   return (
     <div className="grid gap-4">
       <PageHeader title="Ventas y cobros" description="Administración" />
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      {priorityCollection ? (
+        <PriorityCollectionDialog
+          workItemId={priorityCollection.id}
+          patientName={priorityCollection.visit.patient.fullName}
+          patientCode={priorityCollection.visit.patient.internalCode}
+          orderTitle={priorityCollection.title}
+          orderDescription={priorityCollection.description}
+          requestedBy={
+            priorityCollection.clinicalOrders[0]?.doctor?.name ??
+            priorityCollection.clinicalOrders[0]?.doctor?.email
+          }
+          amount={priorityCollection.sales[0] ? formatMoney(priorityCollection.sales[0].totalCents) : undefined}
+          balance={priorityCollection.sales[0] ? formatMoney(priorityCollection.sales[0].balanceCents) : undefined}
+        />
+      ) : null}
+
+      <section className={`grid gap-3 ${isPersonalAdministrationAccount ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
         <KpiCard
           icon={Banknote}
           label="Cobrado hoy"
           value={formatMoney(summary.todaySales._sum.paidCents ?? 0)}
         />
-        <KpiCard
-          icon={CalendarDays}
-          label="Ventas del mes"
-          value={formatMoney(summary.monthSales._sum.totalCents ?? 0)}
-        />
+        {!isPersonalAdministrationAccount ? (
+          <KpiCard
+            icon={CalendarDays}
+            label="Ventas del mes"
+            value={formatMoney(summary.monthSales._sum.totalCents ?? 0)}
+          />
+        ) : null}
         <KpiCard
           icon={Clock}
           label="Saldo pendiente"

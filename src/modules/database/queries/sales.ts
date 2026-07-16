@@ -273,13 +273,18 @@ export async function createPaymentRecord(input: {
       });
 
       if (sale.workItemId && balanceCents === 0) {
-        await tx.visitWorkItem.update({
-          where: { id: sale.workItemId },
-          data: {
-            status: "completed",
-            completedAt: new Date()
-          }
+        const paidStudyOrders = await tx.clinicalOrder.count({
+          where: { workItemId: sale.workItemId, type: "study", targetArea: "enfermeria" }
         });
+        if (paidStudyOrders === 0) {
+          await tx.visitWorkItem.update({
+            where: { id: sale.workItemId },
+            data: {
+              status: "completed",
+              completedAt: new Date()
+            }
+          });
+        }
       }
 
       return payment;

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { SaleItemType } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
@@ -9,7 +10,11 @@ import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
-import { createSaleAction } from "@/features/sales/actions";
+import {
+  createPaymentAction,
+  createSaleAction,
+  sendPaidStudiesToNursingAction
+} from "@/features/sales/actions";
 import {
   formatMoney,
   paymentMethodLabels,
@@ -51,6 +56,8 @@ export default async function AdministrationWorkItemPage({
 
   const patient = item.visit.patient;
   const order = item.clinicalOrders[0];
+  const generatedSale = item.sales[0];
+  const isPaidStudyOrder = Boolean(generatedSale && item.clinicalOrders.some((entry) => entry.type === "study"));
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -98,6 +105,40 @@ export default async function AdministrationWorkItemPage({
           </div>
         </Card>
 
+        {query.error === "pago-pendiente" ? (
+          <div className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning" role="alert">
+            Debes registrar el pago completo antes de enviar al paciente a Enfermería.
+          </div>
+        ) : null}
+
+        {isPaidStudyOrder && generatedSale ? (
+          <Card className="max-sm:order-2">
+            <CardHeader title="Cobrar estudios" description={`Total: ${formatMoney(generatedSale.totalCents)} · Saldo: ${formatMoney(generatedSale.balanceCents)}`} />
+            {generatedSale.balanceCents > 0 ? (
+              <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
+                <input type="hidden" name="saleId" value={generatedSale.id} />
+                <input type="hidden" name="workItemId" value={item.id} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Monto Bs">
+                    <input className={internalInputClassName} name="amount" inputMode="decimal" defaultValue={(generatedSale.balanceCents / 100).toFixed(2)} required />
+                  </Field>
+                  <Field label="Forma de pago">
+                    <select className={internalInputClassName} name="paymentMethodCode" defaultValue="cash">
+                      {paymentMethodOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  </Field>
+                </div>
+                <Field label="Referencia"><input className={internalInputClassName} name="reference" /></Field>
+                <SubmitButton>Registrar pago completo</SubmitButton>
+              </NoticeForm>
+            ) : (
+              <NoticeForm action={sendPaidStudiesToNursingAction} notice="Paciente enviado a Enfermería">
+                <input type="hidden" name="workItemId" value={item.id} />
+                <SubmitButton className="w-full">Pago confirmado · Enviar a Enfermería</SubmitButton>
+              </NoticeForm>
+            )}
+          </Card>
+        ) : (
         <Card className="max-sm:order-2">
           <CardHeader title="Registrar venta" />
           <form action={createSaleAction} className="grid gap-3">
@@ -195,6 +236,7 @@ export default async function AdministrationWorkItemPage({
             </FormActions>
           </form>
         </Card>
+        )}
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
@@ -204,7 +246,7 @@ export default async function AdministrationWorkItemPage({
           meta={patient.phone}
           status={<VisitStatusPill status={item.visit.status} />}
         />
-        {isActiveVisitStatus(item.visit.status) ? (
+        {isActiveVisitStatus(item.visit.status) && !isPaidStudyOrder ? (
           <Card className="max-sm:order-3">
             <CardHeader
               title="Salida del paciente"

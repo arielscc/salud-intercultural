@@ -6,6 +6,10 @@ import { createPaymentRecord, createSaleRecord } from "@/modules/database/querie
 import { findInsufficientStockError } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
 import {
+  hasPaidStudyFlowError,
+  releasePaidStudiesToNursing
+} from "@/modules/database/queries/paid-studies";
+import {
   createPaymentSchema,
   createSaleSchema,
   moneyToCents
@@ -71,6 +75,7 @@ export async function createSaleAction(formData: FormData) {
 
 export async function createPaymentAction(formData: FormData) {
   const user = await requirePermission("payments_write");
+  const workItemId = String(formData.get("workItemId") ?? "");
   const parsed = createPaymentSchema.safeParse(parseFormData(formData));
 
   if (!parsed.success) {
@@ -88,5 +93,24 @@ export async function createPaymentAction(formData: FormData) {
   });
 
   revalidatePath("/sigeco/administracion");
+  if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
   revalidatePath(`/sigeco/administracion/ventas/${parsed.data.saleId}`);
+}
+
+export async function sendPaidStudiesToNursingAction(formData: FormData) {
+  const user = await requirePermission("visits_update");
+  const workItemId = String(formData.get("workItemId") ?? "");
+  if (!workItemId) redirect("/sigeco/administracion?error=invalid-study-order");
+  try {
+    await releasePaidStudiesToNursing({ workItemId, userId: user.id });
+    revalidatePath("/sigeco/administracion");
+    revalidatePath("/sigeco/enfermeria");
+    revalidatePath("/sigeco/consultas");
+    redirect("/sigeco/administracion?aviso=paciente-enviado-enfermeria");
+  } catch (error) {
+    if (hasPaidStudyFlowError(error, "STUDY_PAYMENT_REQUIRED")) {
+      redirect(`/sigeco/administracion/${workItemId}?error=pago-pendiente`);
+    }
+    throw error;
+  }
 }

@@ -15,6 +15,7 @@ import {
   createNursingApplicationAction,
   createNursingNoteAction,
   createVitalSignsAction,
+  returnStudiesToDoctorAction,
   updateNursingWorkItemAction
 } from "@/features/nursing/actions";
 import { nursingWorkItemStatusLabels } from "@/features/nursing/labels";
@@ -31,11 +32,13 @@ const studyStatusOptions = Object.entries(studyStatusLabels) as Array<[StudyStat
 
 type NursingWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
-export default async function NursingWorkItemPage({ params }: NursingWorkItemPageProps) {
+export default async function NursingWorkItemPage({ params, searchParams }: NursingWorkItemPageProps) {
   await requirePermission("nursing_read");
   const { workItemId } = await params;
+  const query = await searchParams;
   const item = await getNursingWorkItemById(workItemId);
 
   if (!item) notFound();
@@ -43,6 +46,8 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
   const patient = item.visit.patient;
   const order = item.clinicalOrders[0];
   const applicationOrderTypes = ["nursing_application", "serum", "medication"];
+  const studyOrders = item.clinicalOrders.filter((entry) => entry.type === "study");
+  const studiesCompleted = studyOrders.length > 0 && studyOrders.every((entry) => entry.status === "completed");
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -173,17 +178,23 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
             defaultOpen={order?.type === "study"}
             className="border-0 bg-transparent open:bg-transparent"
           >
-          <NoticeForm action={createStudyAction} notice="Estudio registrado" className="grid gap-3">
+          <div className="grid gap-5">
+          {studyOrders.map((studyOrder) => studyOrder.status === "completed" ? (
+            <div key={studyOrder.id} className="rounded-[7px] border border-success/30 bg-success/10 p-3 text-sm font-medium text-success">
+              {studyOrder.title}: resultado registrado
+            </div>
+          ) : (
+          <NoticeForm key={studyOrder.id} action={createStudyAction} notice={`${studyOrder.title} registrado`} className="grid gap-3 border-b border-border pb-5 last:border-0 last:pb-0">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
             <input type="hidden" name="workItemId" value={item.id} />
-            <input type="hidden" name="clinicalOrderId" value={order?.id ?? ""} />
+            <input type="hidden" name="clinicalOrderId" value={studyOrder.id} />
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Tipo">
                 <select
                   className={internalInputClassName}
                   name="type"
-                  defaultValue={order?.type === "study" ? "laboratory" : "other"}
+                  defaultValue={studyOrder.title === "Resonancia" ? "resonance" : "laboratory"}
                 >
                   {studyTypeOptions.map(([value, label]) => (
                     <option key={value} value={value}>
@@ -206,7 +217,7 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               <input
                 className={internalInputClassName}
                 name="title"
-                defaultValue={order?.title ?? ""}
+                defaultValue={studyOrder.title}
                 required
               />
             </Field>
@@ -220,6 +231,9 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
               <SubmitButton variant="outline">Registrar estudio</SubmitButton>
             </div>
           </NoticeForm>
+          ))}
+          {studyOrders.length === 0 ? <p className="text-sm text-muted">Esta tarea no tiene estudios asociados.</p> : null}
+          </div>
           </CollapsibleSection>
         </Card>
       </div>
@@ -232,6 +246,16 @@ export default async function NursingWorkItemPage({ params }: NursingWorkItemPag
           status={<VisitStatusPill status={item.visit.status} />}
         />
         <Card className="max-sm:order-5">
+          {query.error === "estudios-incompletos" ? (
+            <p className="mb-3 rounded-[7px] bg-warning/10 p-3 text-sm text-warning">Registra el resultado de todos los estudios antes de devolver al paciente.</p>
+          ) : null}
+          {studyOrders.length > 0 ? (
+            <NoticeForm action={returnStudiesToDoctorAction} notice="Paciente devuelto al médico" className="mb-4">
+              <input type="hidden" name="workItemId" value={item.id} />
+              <input type="hidden" name="visitId" value={item.visit.id} />
+              <SubmitButton className="w-full" disabled={!studiesCompleted}>Finalizar análisis y devolver al médico</SubmitButton>
+            </NoticeForm>
+          ) : null}
           <CardHeader title="Estado de tarea" />
           <NoticeForm action={updateNursingWorkItemAction} notice="Tarea actualizada" className="grid gap-3">
             <input type="hidden" name="workItemId" value={item.id} />

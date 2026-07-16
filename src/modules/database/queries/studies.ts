@@ -32,12 +32,17 @@ export async function createStudyRecord(input: {
       }
 
       if (input.workItemId && input.status !== "requested") {
+        const remainingOrders = await tx.clinicalOrder.count({
+          where: {
+            workItemId: input.workItemId,
+            status: { in: ["pending", "acknowledged", "blocked"] }
+          }
+        });
         await tx.visitWorkItem.update({
           where: { id: input.workItemId },
-          data: {
-            status: input.status === "cancelled" ? "cancelled" : "completed",
-            completedAt: input.status === "cancelled" ? undefined : new Date()
-          }
+          data: remainingOrders === 0
+            ? { status: "completed", completedAt: new Date() }
+            : { status: "in_progress", completedAt: null }
         });
       }
 

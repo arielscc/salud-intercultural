@@ -4,6 +4,7 @@ import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
+import { PaidStudyOrderDialog } from "@/components/internal/PaidStudyOrderDialog";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
@@ -14,6 +15,7 @@ import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import {
   createClinicalOrderAction,
+  createPaidStudyOrderAction,
   saveClinicalConsultationAction
 } from "@/features/clinical-care/actions";
 import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
@@ -26,7 +28,9 @@ import { formatDateTime } from "@/lib/dates";
 import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
 import { requirePermission } from "@/modules/permissions";
 
-const orderTypeOptions = Object.entries(clinicalOrderTypeLabels) as Array<[ClinicalOrderType, string]>;
+const orderTypeOptions = (Object.entries(clinicalOrderTypeLabels) as Array<
+  [ClinicalOrderType, string]
+>).filter(([type]) => type !== "study");
 const targetAreaOptions = (["enfermeria", "administracion", "seguimiento"] as PatientRouteArea[]).map(
   (area) => [area, routeAreaLabels[area]] as [PatientRouteArea, string]
 );
@@ -224,14 +228,7 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
               description="Al terminar la consulta el paciente puede seguir a otra área o irse."
             />
             <div className="grid gap-2">
-              <NoticeForm action={applyVisitFlowAction} notice="Paciente enviado a enfermería">
-                <input type="hidden" name="visitId" value={visit.id} />
-                <input type="hidden" name="flow" value="to_nursing" />
-                <input type="hidden" name="note" value="Pasa a enfermería tras la consulta" />
-                <SubmitButton variant="outline" className="w-full">
-                  Enviar a enfermería
-                </SubmitButton>
-              </NoticeForm>
+              <PaidStudyOrderDialog visitId={visit.id} action={createPaidStudyOrderAction} />
               <NoticeForm action={applyVisitFlowAction} notice="Paciente enviado a administración">
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="to_administration" />

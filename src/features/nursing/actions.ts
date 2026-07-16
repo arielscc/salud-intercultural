@@ -10,6 +10,10 @@ import {
 } from "@/modules/database/queries/nursing";
 import { requirePermission } from "@/modules/permissions";
 import {
+  hasPaidStudyFlowError,
+  returnCompletedStudiesToDoctor
+} from "@/modules/database/queries/paid-studies";
+import {
   createNursingApplicationSchema,
   createNursingNoteSchema,
   createVitalSignsSchema,
@@ -91,4 +95,23 @@ export async function createNursingNoteAction(formData: FormData) {
   revalidatePath("/sigeco/enfermeria");
   if (workItemId) revalidatePath(`/sigeco/enfermeria/${workItemId}`);
   revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
+}
+
+export async function returnStudiesToDoctorAction(formData: FormData) {
+  const user = await requirePermission("nursing_write");
+  const workItemId = String(formData.get("workItemId") ?? "");
+  const visitId = String(formData.get("visitId") ?? "");
+  if (!workItemId || !visitId) redirect("/sigeco/enfermeria?error=invalid-study-return");
+  try {
+    await returnCompletedStudiesToDoctor({ workItemId, userId: user.id });
+  } catch (error) {
+    if (hasPaidStudyFlowError(error, "STUDIES_INCOMPLETE")) {
+      redirect(`/sigeco/enfermeria/${workItemId}?error=estudios-incompletos`);
+    }
+    throw error;
+  }
+  revalidatePath("/sigeco/enfermeria");
+  revalidatePath("/sigeco/consultas");
+  revalidatePath(`/sigeco/consultas/${visitId}`);
+  redirect("/sigeco/enfermeria?aviso=paciente-devuelto-medico");
 }
