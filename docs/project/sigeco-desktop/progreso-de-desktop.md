@@ -10,7 +10,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | --- | --- | --- |
 | 1. Navegacion y contexto | Completada | Sidebar agrupada y breadcrumbs desde `lg` |
 | 2. Busqueda global de pacientes | Completada | Command search desktop en el header |
-| 3. Toolbar de bandejas | Pendiente | Empieza en Recepcion y Seguimientos |
+| 3. Toolbar de bandejas | Completada | Patron comun aplicado a los 6 modulos |
 | 4. Tabla operativa | Pendiente | Sin paginacion nueva |
 | 5. Lista + preview | Pendiente | Piloto condicionado a evaluacion |
 | 6. Detalles persistentes | Pendiente | Preserva orden movil |
@@ -67,6 +67,27 @@ Validacion focal: ESLint sobre `DesktopPatientSearch` e `InternalShell`, `git di
 
 Commit sugerido: `feat(sigeco): add desktop patient command search`
 
+## Tarea 3 - Toolbar Comun Para Bandejas (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `DesktopTableToolbar` en `ui/`: banda operativa exclusiva `lg` con slots para vistas, filtros/busqueda, contador y acciones. Usa bordes horizontales, superficie Marea y distribucion estable sin presentarse como card.
+- Recepcion integra Hoy/Pacientes, filtro de estado o busqueda segun la vista, contador y Registrar llegada. Los forms conservan los mismos nombres, defaults, metodo GET y search params.
+- Seguimientos integra Vencidos/Hoy/Proximos y el contador del filtro activo, conservando los mismos enlaces y paginacion.
+- Consulta, Enfermeria, Caja e Inventario usan la misma zona con el conteo de su cola actual; no se inventaron filtros, busquedas ni acciones sin soporte existente.
+- Los tabs y cards de filtro anteriores siguen visibles entre `sm` y `lg`; solo se les agrego `lg:hidden`. Los componentes moviles `MobileTabs`, `MobileAutoSubmitSelect`, `PatientAutocomplete` y RecordList no cambiaron.
+- La accion Registrar llegada permanece en `PageHeader` bajo `lg` y se mueve al extremo derecho de la toolbar solo en desktop.
+
+Decisiones:
+
+- La toolbar no administra estado cliente. Links y forms siguen usando los search params existentes como unica fuente de verdad.
+- Los contadores muestran el lote visible y, donde existe total confiable por paginacion, tambien el total. No se agregaron queries.
+- Los modulos sin controles existentes reciben solo contador; esto conserva una anatomia comun sin anticipar funcionalidades de tareas futuras.
+
+Validacion focal: ESLint sobre el componente y las seis bandejas, `git diff --check` y auditoria estatica de ramas responsive, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): unify desktop work queue toolbars`
+
 ## Siguiente Paso
 
-Ejecutar la Tarea 3: toolbar comun para busqueda, vistas, filtros y acciones de las bandejas desktop.
+Ejecutar la Tarea 4: tabla desktop operativa con semantica, prioridad de columnas y estados de fila.

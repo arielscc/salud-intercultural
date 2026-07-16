@@ -1,36 +1,42 @@
-import Link from "next/link";
-import { UserRoundPlus } from "lucide-react";
-import type { VisitStatus } from "@/generated/prisma/client";
-import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { internalInputClassName } from "@/components/internal/Field";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
+import { internalInputClassName } from "@/components/internal/Field";
 import { MobileAutoSubmitSelect } from "@/components/internal/MobileAutoSubmitSelect";
 import { MobileTabs } from "@/components/internal/MobileTabs";
+import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Pagination } from "@/components/internal/ui/Pagination";
 import {
   RecordItem,
   RecordList,
   RecordListEmpty,
-  RecordTable
+  RecordTable,
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
-import { formatDateTime } from "@/lib/dates";
-import { countPatients, getPatients } from "@/modules/database/queries/patients";
-import { getVisits } from "@/modules/database/queries/visits";
-import { parsePage } from "@/modules/database/pagination";
-import { requirePermission } from "@/modules/permissions";
+import type { VisitStatus } from "@/generated/prisma/client";
 import { cn } from "@/lib/cn";
+import { formatDateTime } from "@/lib/dates";
+import { parsePage } from "@/modules/database/pagination";
+import {
+  countPatients,
+  getPatients,
+} from "@/modules/database/queries/patients";
+import { getVisits } from "@/modules/database/queries/visits";
+import { requirePermission } from "@/modules/permissions";
+import { UserRoundPlus } from "lucide-react";
+import Link from "next/link";
 
-const statusOptions = Object.entries(visitStatusLabels) as Array<[VisitStatus, string]>;
+const statusOptions = Object.entries(visitStatusLabels) as Array<
+  [VisitStatus, string]
+>;
 
 type ReceptionPageProps = {
   searchParams: Promise<{
@@ -43,7 +49,9 @@ type ReceptionPageProps = {
 
 const emptyVisitsMessage = (
   <>
-    <span className="block font-semibold text-text">No hay visitas con ese filtro.</span>
+    <span className="block font-semibold text-text">
+      No hay visitas con ese filtro.
+    </span>
     <span className="mt-1 block text-sm text-muted">
       Registra la llegada de un paciente para abrir su visita.
     </span>
@@ -52,15 +60,19 @@ const emptyVisitsMessage = (
 
 const emptyPatientsMessage = (
   <>
-    <span className="block font-semibold text-text">No hay pacientes con esa búsqueda.</span>
-    <span className="mt-1 block text-sm text-muted">Regístralo desde “Registrar llegada”.</span>
+    <span className="block font-semibold text-text">
+      No hay pacientes con esa búsqueda.
+    </span>
+    <span className="mt-1 block text-sm text-muted">
+      Regístralo desde “Registrar llegada”.
+    </span>
   </>
 );
 
 function VisitLeftForm({
   visitId,
   patientName,
-  buttonClassName
+  buttonClassName,
 }: {
   visitId: string;
   patientName: string;
@@ -79,7 +91,10 @@ function VisitLeftForm({
       <SubmitButton
         variant="ghost"
         size="sm"
-        className={cn("text-error hover:bg-error/10 hover:text-error", buttonClassName)}
+        className={cn(
+          "text-error hover:bg-error/10 hover:text-error",
+          buttonClassName,
+        )}
       >
         Se retiró
       </SubmitButton>
@@ -87,7 +102,15 @@ function VisitLeftForm({
   );
 }
 
-function ViewTab({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+function ViewTab({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <Link
       href={href}
@@ -96,7 +119,7 @@ function ViewTab({ href, active, children }: { href: string; active: boolean; ch
         "focus-ring inline-flex min-h-9 items-center rounded-[9px] border px-3.5 text-[13px] font-semibold transition",
         active
           ? "border-primary/30 bg-surface-soft text-primary-dark"
-          : "border-border bg-surface text-muted hover:border-primary/40 hover:text-text"
+          : "border-border bg-surface text-muted hover:border-primary/40 hover:text-text",
       )}
     >
       {children}
@@ -104,7 +127,9 @@ function ViewTab({ href, active, children }: { href: string; active: boolean; ch
   );
 }
 
-export default async function ReceptionPage({ searchParams }: ReceptionPageProps) {
+export default async function ReceptionPage({
+  searchParams,
+}: ReceptionPageProps) {
   const params = await searchParams;
   const vista = params.vista === "pacientes" ? "pacientes" : "hoy";
   const page = parsePage(params.page);
@@ -118,13 +143,17 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
 
   const visits =
     vista === "hoy"
-      ? await getVisits({ status: params.status, activeOnly: !params.status, pageSize: 30 })
+      ? await getVisits({
+          status: params.status,
+          activeOnly: !params.status,
+          pageSize: 30,
+        })
       : [];
   const patientPage =
     vista === "pacientes"
       ? await Promise.all([
           getPatients({ search: params.search, page, pageSize }),
-          countPatients({ search: params.search })
+          countPatients({ search: params.search }),
         ])
       : null;
   const patients = patientPage?.[0] ?? [];
@@ -135,8 +164,12 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
       <PageHeader
         title="Recepción"
         description="Llegadas del día y padrón de pacientes"
+        actionsClassName="lg:hidden"
         actions={
-          <Link href="/sigeco/recepcion/nuevo" className={cn(buttonVariants({ size: "sm" }))}>
+          <Link
+            href="/sigeco/recepcion/nuevo"
+            className={cn(buttonVariants({ size: "sm" }))}
+          >
             <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
             Registrar llegada
           </Link>
@@ -150,19 +183,101 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
           {
             href: "/sigeco/recepcion?vista=pacientes",
             label: "Pacientes",
-            active: vista === "pacientes"
-          }
+            active: vista === "pacientes",
+          },
         ]}
       />
 
-      <div className="hidden flex-wrap gap-2 sm:flex">
+      <div className="hidden flex-wrap gap-2 sm:flex lg:hidden">
         <ViewTab href="/sigeco/recepcion" active={vista === "hoy"}>
           Hoy
         </ViewTab>
-        <ViewTab href="/sigeco/recepcion?vista=pacientes" active={vista === "pacientes"}>
+        <ViewTab
+          href="/sigeco/recepcion?vista=pacientes"
+          active={vista === "pacientes"}
+        >
           Pacientes
         </ViewTab>
       </div>
+
+      <DesktopTableToolbar
+        views={
+          <>
+            <ViewTab href="/sigeco/recepcion" active={vista === "hoy"}>
+              Hoy
+            </ViewTab>
+            <ViewTab
+              href="/sigeco/recepcion?vista=pacientes"
+              active={vista === "pacientes"}
+            >
+              Pacientes
+            </ViewTab>
+          </>
+        }
+        filters={
+          vista === "hoy" ? (
+            <form className="flex min-w-0 flex-1 items-center gap-2">
+              <label className="sr-only" htmlFor="desktop-reception-status">
+                Filtrar visitas por estado
+              </label>
+              <select
+                id="desktop-reception-status"
+                className={cn(
+                  internalInputClassName,
+                  "h-9 min-h-9 max-w-64 py-1.5 text-[13px]",
+                )}
+                name="status"
+                defaultValue={params.status ?? ""}
+              >
+                <option value="">Solo activas</option>
+                {statusOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <Button type="submit" variant="outline" size="sm">
+                Filtrar
+              </Button>
+            </form>
+          ) : (
+            <form className="flex min-w-0 flex-1 items-center gap-2">
+              <input type="hidden" name="vista" value="pacientes" />
+              <label className="sr-only" htmlFor="desktop-patient-search">
+                Buscar pacientes
+              </label>
+              <input
+                id="desktop-patient-search"
+                className={cn(
+                  internalInputClassName,
+                  "h-9 min-h-9 min-w-0 max-w-sm py-1.5 text-[13px]",
+                )}
+                type="search"
+                name="search"
+                placeholder="Nombre, teléfono, código o ciudad"
+                defaultValue={params.search}
+              />
+              <Button type="submit" variant="outline" size="sm">
+                Buscar
+              </Button>
+            </form>
+          )
+        }
+        count={
+          vista === "hoy"
+            ? `${visits.length} visitas`
+            : `${patients.length} de ${totalPatients} pacientes`
+        }
+        actions={
+          <Link
+            href="/sigeco/recepcion/nuevo"
+            className={cn(buttonVariants({ size: "sm" }))}
+          >
+            <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
+            Registrar llegada
+          </Link>
+        }
+      />
 
       {vista === "hoy" ? (
         <>
@@ -173,11 +288,11 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
               label="Filtrar visitas por estado"
               options={[
                 { value: "", label: "Solo activas" },
-                ...statusOptions.map(([value, label]) => ({ value, label }))
+                ...statusOptions.map(([value, label]) => ({ value, label })),
               ]}
             />
           </Card>
-          <Card className="hidden sm:block">
+          <Card className="hidden sm:block lg:hidden">
             <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <select
                 className={internalInputClassName}
@@ -217,17 +332,23 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                 >
                   <span className="tabular-nums">
                     {formatDateTime(visit.checkedInAt)} ·{" "}
-                    {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
+                    {visit.route
+                      ? routeAreaLabels[visit.route.currentArea]
+                      : "Sin ruta"}
                   </span>
                   <span className="tabular-nums">{visit.patient.phone}</span>
                   {visit.workItems.length > 0 ? (
                     <span>
-                      <Chip tone="primary">{visit.workItems.length} pendientes</Chip>
+                      <Chip tone="primary">
+                        {visit.workItems.length} pendientes
+                      </Chip>
                     </span>
                   ) : null}
                 </RecordItem>
               ))}
-              {visits.length === 0 ? <RecordListEmpty>{emptyVisitsMessage}</RecordListEmpty> : null}
+              {visits.length === 0 ? (
+                <RecordListEmpty>{emptyVisitsMessage}</RecordListEmpty>
+              ) : null}
             </RecordList>
             <RecordTable>
               <Table>
@@ -256,11 +377,19 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                         </Link>
                       </Td>
                       <Td className="tabular-nums">{visit.patient.phone}</Td>
-                      <Td className="tabular-nums">{formatDateTime(visit.checkedInAt)}</Td>
-                      <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
+                      <Td className="tabular-nums">
+                        {formatDateTime(visit.checkedInAt)}
+                      </Td>
+                      <Td>
+                        {visit.route
+                          ? routeAreaLabels[visit.route.currentArea]
+                          : "Sin ruta"}
+                      </Td>
                       <Td className="tabular-nums">
                         {visit.workItems.length > 0 ? (
-                          <Chip tone="primary">{visit.workItems.length} pendientes</Chip>
+                          <Chip tone="primary">
+                            {visit.workItems.length} pendientes
+                          </Chip>
                         ) : (
                           "—"
                         )}
@@ -270,7 +399,10 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
                       </Td>
                       <Td>
                         {isActiveVisitStatus(visit.status) ? (
-                          <VisitLeftForm visitId={visit.id} patientName={visit.patient.fullName} />
+                          <VisitLeftForm
+                            visitId={visit.id}
+                            patientName={visit.patient.fullName}
+                          />
                         ) : null}
                       </Td>
                     </Tr>
@@ -292,7 +424,7 @@ export default async function ReceptionPage({ searchParams }: ReceptionPageProps
           <Card className="sm:hidden">
             <PatientAutocomplete mode="navigate" initialValue={params.search} />
           </Card>
-          <Card className="hidden sm:block">
+          <Card className="hidden sm:block lg:hidden">
             <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <input type="hidden" name="vista" value="pacientes" />
               <input

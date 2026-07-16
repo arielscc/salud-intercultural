@@ -3,6 +3,7 @@ import { BellRing, CalendarClock, PhoneCall } from "lucide-react";
 import { Card } from "@/components/internal/ui/Card";
 import { MobileTabs } from "@/components/internal/MobileTabs";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Pagination } from "@/components/internal/ui/Pagination";
@@ -88,11 +89,22 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
         ]}
       />
 
-      <nav className="hidden gap-2 overflow-x-auto sm:flex" aria-label="Filtro de seguimientos">
+      <nav className="hidden gap-2 overflow-x-auto sm:flex lg:hidden" aria-label="Filtro de seguimientos">
         <FilterTab href="/sigeco/seguimientos?filtro=vencidos" label="Vencidos" active={filter === "overdue"} />
         <FilterTab href="/sigeco/seguimientos" label="Hoy" active={filter === "today"} />
         <FilterTab href="/sigeco/seguimientos?filtro=proximos" label="Próximos" active={filter === "upcoming"} />
       </nav>
+
+      <DesktopTableToolbar
+        views={
+          <>
+            <FilterTab href="/sigeco/seguimientos?filtro=vencidos" label="Vencidos" active={filter === "overdue"} />
+            <FilterTab href="/sigeco/seguimientos" label="Hoy" active={filter === "today"} />
+            <FilterTab href="/sigeco/seguimientos?filtro=proximos" label="Próximos" active={filter === "upcoming"} />
+          </>
+        }
+        count={`${tasks.length} de ${totalTasks} seguimientos`}
+      />
 
       <Card className="p-0">
         <RecordList>

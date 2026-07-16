@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Banknote, CalendarDays, Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import {
@@ -60,6 +61,8 @@ export default async function AdministrationPage() {
           flag={pendingBalance > 0 ? { tone: "warn", label: "Por cobrar" } : undefined}
         />
       </section>
+
+      <DesktopTableToolbar count={`${workItems.length} pendientes derivados`} />
 
       <Card className="p-0">
         <CardHeader className="mb-0 p-[18px] pb-3" title="Pendientes derivados" />

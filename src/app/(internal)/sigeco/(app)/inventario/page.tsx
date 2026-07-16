@@ -4,6 +4,7 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { Pagination } from "@/components/internal/ui/Pagination";
@@ -65,6 +66,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           flag={summary.openAlerts > 0 ? { tone: "crit", label: "Revisar" } : undefined}
         />
       </section>
+
+      <DesktopTableToolbar count={`${items.length} de ${totalItems} productos`} />
 
       <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
         <Card className="p-0">

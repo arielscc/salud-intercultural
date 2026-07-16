@@ -68,6 +68,7 @@ Regla central del rediseno: **el shell ocupa toda la pantalla y solo el area de 
 - En movil (`< lg`): la sidebar se oculta y se abre como drawer desde un boton hamburguesa en el header. Reemplaza a la tab bar inferior anterior.
 - Los contadores de pendientes junto a los items de navegacion (visibles en el mockup de la propuesta) requieren queries nuevas: quedan fuera del rediseno visual y se listan como pendiente funcional.
 - El header desktop incluye busqueda global de pacientes desde `lg`, con command/autocomplete, atajo `Ctrl/Cmd+K` y resultados por nombre, codigo y telefono. Bajo 1024 px no se muestra ni ejecuta consultas.
+- Las bandejas desktop usan una toolbar comun desde `lg`: vistas y filtros a la izquierda, contador y accion primaria a la derecha. Es una banda operativa con bordes horizontales, no una card; movil y tableta conservan sus controles actuales.
 
 ## Componentes Base
 

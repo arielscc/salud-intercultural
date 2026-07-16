@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import {
   RecordItem,
@@ -32,6 +33,8 @@ export default async function NursingWorkQueuePage() {
   return (
     <div className="grid gap-4">
       <PageHeader title="Enfermería" description="Bandeja operativa" />
+
+      <DesktopTableToolbar count={`${workItems.length} indicaciones activas`} />
 
       <Card className="p-0">
         <RecordList>

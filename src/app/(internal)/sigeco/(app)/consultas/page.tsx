@@ -2,6 +2,7 @@ import Link from "next/link";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Card } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import {
   RecordItem,
@@ -31,6 +32,8 @@ export default async function ConsultationsPage() {
   return (
     <div className="grid gap-4">
       <PageHeader title="Consultas" description="Atención médica" />
+
+      <DesktopTableToolbar count={`${visits.length} pacientes en atención`} />
 
       <Card className="p-0">
         <RecordList>
