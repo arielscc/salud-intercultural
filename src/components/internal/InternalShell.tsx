@@ -4,8 +4,8 @@ import type { InternalUser } from "@/generated/prisma/client";
 import { logoutInternalUser } from "@/features/internal-auth/actions";
 import { internalRoleLabels } from "@/features/internal-auth/permissions";
 import { formatLongDate } from "@/lib/dates";
+import { DesktopSidebarNav } from "@/components/internal/DesktopSidebarNav";
 import { MobileSidebar } from "@/components/internal/MobileSidebar";
-import { SidebarNav } from "@/components/internal/SidebarNav";
 
 function formatToday() {
   const formatted = formatLongDate(new Date());
@@ -52,7 +52,7 @@ export function InternalShell({
           <p className="text-[11px] text-muted">Salud Intercultural</p>
         </Link>
         <div className="flex-1 overflow-y-auto">
-          <SidebarNav role={user.role} />
+          <DesktopSidebarNav role={user.role} />
         </div>
         <div className="mt-2 border-t border-border px-5 pt-3">
           <UserBadge user={user} />

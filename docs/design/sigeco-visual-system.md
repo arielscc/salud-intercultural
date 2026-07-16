@@ -62,7 +62,8 @@ Regla central del rediseno: **el shell ocupa toda la pantalla y solo el area de 
 
 ### Navegacion
 
-- Sidebar con los 9 modulos (Inicio, Leads, Pacientes, Visitas, Consulta, Enfermeria, Caja, Seguimiento, Inventario), icono Lucide + etiqueta, estado activo con tint primario + texto `primary-dark`.
+- Sidebar desktop con los 7 modulos vigentes, icono Lucide + etiqueta y estado activo con tint primario + texto `primary-dark`. Inicio queda como acceso principal; los demas se agrupan visualmente en Atencion (Recepcion, Consulta, Enfermeria), Operacion (Caja, Seguimiento) y Control (Inventario), sin cambiar rutas, orden relativo ni permisos.
+- Los detalles y formularios muestran breadcrumb desde `lg`; movil y tableta conservan el drawer y los enlaces de retorno existentes sin breadcrumb visible.
 - Usuario y rol al pie de la sidebar, con logout.
 - En movil (`< lg`): la sidebar se oculta y se abre como drawer desde un boton hamburguesa en el header. Reemplaza a la tab bar inferior anterior.
 - Los contadores de pendientes junto a los items de navegacion (visibles en el mockup de la propuesta) requieren queries nuevas: quedan fuera del rediseno visual y se listan como pendiente funcional.
