@@ -35,6 +35,11 @@ export async function searchReceptionPatientsAction(query: string) {
 
 export async function submitReceptionIntakeAction(formData: FormData) {
   const user = await requirePermission("visits_create");
+
+  if (formData.get("funnelCompleted") !== "true") {
+    redirect("/sigeco/recepcion/nuevo?error=incomplete-funnel");
+  }
+
   const parsed = receptionIntakeSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!parsed.success) {

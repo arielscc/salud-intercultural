@@ -123,6 +123,8 @@ export async function getVisits(
   input: PaginationInput & {
     status?: VisitStatus;
     activeOnly?: boolean;
+    checkedInFrom?: Date;
+    checkedInTo?: Date;
   } = {}
 ) {
   const pagination = getPagination(input);
@@ -131,6 +133,10 @@ export async function getVisits(
     return prisma.visit.findMany({
       where: {
         status: input.status,
+        checkedInAt:
+          input.checkedInFrom || input.checkedInTo
+            ? { gte: input.checkedInFrom, lt: input.checkedInTo }
+            : undefined,
         route: input.activeOnly
           ? {
               active: true
@@ -156,6 +162,26 @@ export async function getVisits(
       },
       skip: pagination.skip,
       take: pagination.take
+    });
+  });
+}
+
+export async function countVisits(input: {
+  status?: VisitStatus;
+  activeOnly?: boolean;
+  checkedInFrom?: Date;
+  checkedInTo?: Date;
+} = {}) {
+  return withDatabaseError("countVisits", async () => {
+    return prisma.visit.count({
+      where: {
+        status: input.status,
+        checkedInAt:
+          input.checkedInFrom || input.checkedInTo
+            ? { gte: input.checkedInFrom, lt: input.checkedInTo }
+            : undefined,
+        route: input.activeOnly ? { active: true } : undefined
+      }
     });
   });
 }

@@ -52,6 +52,19 @@ export function dayRange(date: Date = new Date()) {
   return { start: new Date(start.getTime()), end: new Date(addDays(start, 1).getTime()) };
 }
 
+/** Convierte límites yyyy-MM-dd en un rango de instantes de la zona boliviana. */
+export function dateOnlyRange(from?: string, to?: string) {
+  const parseBoundary = (value?: string) => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+    const [year, month, day] = value.split("-").map(Number);
+    const date = new TZDate(year, month - 1, day, 0, 0, 0, APP_TIME_ZONE);
+    return Number.isNaN(date.getTime()) ? undefined : new Date(date.getTime());
+  };
+  const start = parseBoundary(from);
+  const endDay = parseBoundary(to);
+  return { start, end: endDay ? new Date(addDays(endDay, 1).getTime()) : undefined };
+}
+
 /** Limites del mes boliviano que contiene `date`, como instantes UTC. */
 export function monthRange(date: Date = new Date()) {
   const start = startOfMonth(inAppZone(date));

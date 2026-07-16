@@ -40,7 +40,7 @@ import { cn } from "@/lib/cn";
 type PatientMatch = PatientSearchResult;
 
 const stepTitles: Record<number, string> = {
-  1: "¿Quién es?",
+  1: "Datos de la persona",
   2: "¿A qué viene?",
   3: "Antecedentes rápidos",
   4: "Origen y seguimiento"
@@ -219,7 +219,14 @@ export function IntakeFunnel({
   }
 
   return (
-    <form action={submitReceptionIntakeAction} className="grid gap-4">
+    <form
+      action={submitReceptionIntakeAction}
+      className="grid gap-4"
+      onSubmit={(event) => {
+        if (step !== 4) event.preventDefault();
+      }}
+    >
+      <input type="hidden" name="funnelCompleted" value={step === 4 ? "true" : "false"} />
       <input type="hidden" name="patientId" value={existingPatient?.id ?? ""} />
       <input type="hidden" name="fullName" value={fullName} />
       <input type="hidden" name="phone" value={phone} />
@@ -328,7 +335,7 @@ export function IntakeFunnel({
                 ))}
                 {searchResults.length === 0 ? (
                   <p className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted">
-                    Sin resultados. Regístralo como paciente nuevo.
+                    Sin resultados. Continúa con los datos de la persona nueva.
                   </p>
                 ) : null}
               </div>
@@ -337,7 +344,7 @@ export function IntakeFunnel({
             <div className="border-t border-border pt-4">
               <Button type="button" onClick={startAsNewPatient}>
                 <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
-                Es paciente nuevo
+                Es una persona nueva
               </Button>
             </div>
           </div>
@@ -431,7 +438,7 @@ export function IntakeFunnel({
                 setStep(2);
               }}
             >
-              No es la misma persona, continuar como nuevo
+              No es la misma persona, continuar como persona nueva
             </Button>
           </div>
         ) : null}
@@ -443,7 +450,7 @@ export function IntakeFunnel({
             className={internalInputClassName}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Motivo en palabras del paciente"
+            placeholder="Motivo en palabras de la persona"
           />
         </Field>
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
@@ -588,8 +595,8 @@ export function IntakeFunnel({
           </div>
         </div>
         <div className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted lg:col-span-2">
-          Al registrar se crea la ficha y la visita queda abierta en recepción. Lo médico lo completa
-          el doctor en consulta.
+          Solo al confirmar este último paso la persona se convierte en paciente: se crea su ficha y
+          la visita queda abierta en recepción. Lo médico lo completa el doctor en consulta.
         </div>
       </Card>
 
@@ -624,7 +631,7 @@ export function IntakeFunnel({
             </Button>
           ) : null}
           {step === 4 ? (
-            <SubmitButton pendingLabel="Registrando...">Registrar llegada</SubmitButton>
+            <SubmitButton pendingLabel="Registrando...">Finalizar y registrar paciente</SubmitButton>
           ) : null}
         </FormActions>
       ) : null}

@@ -4,11 +4,13 @@ import * as React from "react";
 import { format, parse, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/cn";
 import { internalInputClassName } from "@/components/internal/Field";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/internal/ui/Button";
 
 const DATE_VALUE_FORMAT = "yyyy-MM-dd";
 const DATE_DISPLAY_FORMAT = "d 'de' MMMM 'de' yyyy";
@@ -74,6 +76,77 @@ export function DatePickerField({
         />
       </PopoverContent>
     </Popover>
+  );
+}
+
+export function DateRangePickerField({
+  fromName,
+  toName,
+  defaultFrom = "",
+  defaultTo = "",
+  placeholder = "Selecciona un rango",
+  className,
+  triggerClassName
+}: {
+  fromName: string;
+  toName: string;
+  defaultFrom?: string;
+  defaultTo?: string;
+  placeholder?: string;
+  className?: string;
+  triggerClassName?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [range, setRange] = React.useState<DateRange | undefined>(() => {
+    const from = parseDateValue(defaultFrom);
+    const to = parseDateValue(defaultTo);
+    return from || to ? { from, to } : undefined;
+  });
+  const fromValue = range?.from ? format(range.from, DATE_VALUE_FORMAT) : "";
+  const toValue = range?.to ? format(range.to, DATE_VALUE_FORMAT) : "";
+  const displayValue = range?.from
+    ? range.to
+      ? `${format(range.from, "d MMM yyyy", { locale: es })} – ${format(range.to, "d MMM yyyy", { locale: es })}`
+      : `Desde ${format(range.from, "d MMM yyyy", { locale: es })}`
+    : placeholder;
+
+  return (
+    <div className={className}>
+      <input type="hidden" name={fromName} value={fromValue} />
+      <input type="hidden" name={toName} value={toValue} />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          type="button"
+          className={cn(
+            internalInputClassName,
+            "flex items-center justify-between gap-2 text-left font-normal",
+            !range?.from && "text-muted",
+            triggerClassName
+          )}
+        >
+          <span className="truncate tabular-nums">{displayValue}</span>
+          <CalendarIcon className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-auto p-2">
+          <Calendar
+            mode="range"
+            locale={es}
+            selected={range}
+            defaultMonth={range?.from}
+            disabled={{ after: new Date() }}
+            onSelect={(nextRange) => setRange(nextRange)}
+          />
+          <div className="flex justify-end gap-2 border-t border-border px-2 pt-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setRange(undefined)}>
+              Limpiar
+            </Button>
+            <Button type="button" size="sm" onClick={() => setOpen(false)}>
+              Aplicar rango
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 

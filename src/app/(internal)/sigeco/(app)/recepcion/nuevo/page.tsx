@@ -24,8 +24,17 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
     <div className="mx-auto grid w-full max-w-2xl gap-4 lg:max-w-4xl">
       <PageHeader
         title="Registrar llegada"
-        description="Recepción · Crea la ficha y abre la visita en un solo paso"
+        description="Recepción · Completa el funnel para crear la ficha y abrir la visita"
       />
+
+      {params.error === "incomplete-funnel" ? (
+        <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-warning">El registro todavía no estaba completo</p>
+          <p className="mt-1 text-muted">
+            La persona no fue creada como paciente. Completa todos los pasos y confirma al final.
+          </p>
+        </div>
+      ) : null}
 
       {params.error === "invalid" ? (
         <div className="rounded-[9px] bg-error/10 px-4 py-3 text-sm">

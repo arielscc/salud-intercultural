@@ -1,11 +1,11 @@
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { internalInputClassName } from "@/components/internal/Field";
-import { MobileAutoSubmitSelect } from "@/components/internal/MobileAutoSubmitSelect";
 import { MobileTabs } from "@/components/internal/MobileTabs";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
 import { DesktopPreviewDismiss } from "@/components/internal/reception/DesktopPreviewDismiss";
+import { DateRangePickerField } from "@/components/internal/ui/DatePickerField";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -25,13 +25,13 @@ import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import type { VisitStatus } from "@/generated/prisma/client";
 import { cn } from "@/lib/cn";
-import { formatDateTime } from "@/lib/dates";
+import { dateOnlyRange, dayRange, formatDateTime } from "@/lib/dates";
 import { parsePage } from "@/modules/database/pagination";
 import {
   countPatients,
   getPatients,
 } from "@/modules/database/queries/patients";
-import { getVisits } from "@/modules/database/queries/visits";
+import { countVisits, getVisits } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
 import { UserRoundPlus } from "lucide-react";
 import Link from "next/link";
@@ -43,16 +43,50 @@ const statusOptions = Object.entries(visitStatusLabels) as Array<
 type ReceptionPageProps = {
   searchParams: Promise<{
     vista?: string;
-    status?: VisitStatus;
+    status?: VisitStatus | "all";
     search?: string;
     page?: string;
     visita?: string;
+    periodo?: string;
+    desde?: string;
+    hasta?: string;
   }>;
 };
 
-function receptionSelectionHref(status?: VisitStatus, visitId?: string) {
+type VisitPeriod = "all" | "today" | "7days" | "30days" | "custom";
+
+const periodOptions: Array<{ value: VisitPeriod; label: string }> = [
+  { value: "all", label: "Cualquier fecha" },
+  { value: "today", label: "Hoy" },
+  { value: "7days", label: "Últimos 7 días" },
+  { value: "30days", label: "Últimos 30 días" },
+  { value: "custom", label: "Rango personalizado" },
+];
+
+function visitDateRange(
+  period: VisitPeriod,
+  from?: string,
+  to?: string,
+): { start?: Date; end?: Date } {
+  if (period === "custom") return dateOnlyRange(from, to);
+  if (period === "all") return {};
+  const today = dayRange();
+  const days = period === "today" ? 1 : period === "7days" ? 7 : 30;
+  return {
+    start: new Date(today.start.getTime() - (days - 1) * 24 * 60 * 60 * 1000),
+    end: today.end,
+  };
+}
+
+function receptionSelectionHref(
+  filters: { status?: VisitStatus | "all"; periodo?: string; desde?: string; hasta?: string },
+  visitId?: string,
+) {
   const query = new URLSearchParams();
-  if (status) query.set("status", status);
+  if (filters.status) query.set("status", filters.status);
+  if (filters.periodo && filters.periodo !== "all") query.set("periodo", filters.periodo);
+  if (filters.desde) query.set("desde", filters.desde);
+  if (filters.hasta) query.set("hasta", filters.hasta);
   if (visitId) query.set("visita", visitId);
   const search = query.toString();
   return search ? `/sigeco/recepcion?${search}` : "/sigeco/recepcion";
@@ -142,9 +176,19 @@ export default async function ReceptionPage({
   searchParams,
 }: ReceptionPageProps) {
   const params = await searchParams;
-  const vista = params.vista === "pacientes" ? "pacientes" : "hoy";
+  const vista = params.vista === "pacientes" ? "pacientes" : "visitas";
   const page = parsePage(params.page);
   const pageSize = 30;
+  const period: VisitPeriod = periodOptions.some((option) => option.value === params.periodo)
+    ? (params.periodo as VisitPeriod)
+    : "all";
+  const dateRange = visitDateRange(period, params.desde, params.hasta);
+  const selectedStatus =
+    params.status === "all" || statusOptions.some(([status]) => status === params.status)
+      ? params.status
+      : undefined;
+  const statusFilter = selectedStatus === "all" ? undefined : selectedStatus;
+  const activeOnly = !selectedStatus;
 
   if (vista === "pacientes") {
     await requirePermission("patients_read");
@@ -152,14 +196,25 @@ export default async function ReceptionPage({
     await requirePermission("visits_read");
   }
 
-  const visits =
-    vista === "hoy"
-      ? await getVisits({
-          status: params.status,
-          activeOnly: !params.status,
-          pageSize: 30,
-        })
-      : [];
+  const visitPage =
+    vista === "visitas"
+      ? await Promise.all([
+        getVisits({
+          status: statusFilter,
+          activeOnly,
+          page,
+          pageSize,
+          checkedInFrom: dateRange.start,
+          checkedInTo: dateRange.end,
+        }),
+        countVisits({
+          status: statusFilter,
+          activeOnly,
+          checkedInFrom: dateRange.start,
+          checkedInTo: dateRange.end,
+        }),
+      ])
+      : null;
   const patientPage =
     vista === "pacientes"
       ? await Promise.all([
@@ -169,14 +224,22 @@ export default async function ReceptionPage({
       : null;
   const patients = patientPage?.[0] ?? [];
   const totalPatients = patientPage?.[1] ?? 0;
-  const selectedVisit = visits.find((visit) => visit.id === params.visita);
-  const clearSelectionHref = receptionSelectionHref(params.status);
+  const visitRows = visitPage?.[0] ?? [];
+  const totalVisits = visitPage?.[1] ?? 0;
+  const selectedVisit = visitRows.find((visit) => visit.id === params.visita);
+  const visitFilters = {
+    status: selectedStatus,
+    periodo: period,
+    desde: period === "custom" ? params.desde : undefined,
+    hasta: period === "custom" ? params.hasta : undefined,
+  };
+  const clearSelectionHref = receptionSelectionHref(visitFilters);
 
   return (
     <div className="grid gap-4">
       <PageHeader
         title="Recepción"
-        description="Llegadas del día y padrón de pacientes"
+        description="Visitas, rutas de atención y padrón de pacientes"
         actionsClassName="lg:hidden"
         actions={
           <Link
@@ -192,7 +255,7 @@ export default async function ReceptionPage({
       <MobileTabs
         label="Vista de Recepción"
         items={[
-          { href: "/sigeco/recepcion", label: "Hoy", active: vista === "hoy" },
+          { href: "/sigeco/recepcion", label: "Visitas", active: vista === "visitas" },
           {
             href: "/sigeco/recepcion?vista=pacientes",
             label: "Pacientes",
@@ -202,8 +265,8 @@ export default async function ReceptionPage({
       />
 
       <div className="hidden flex-wrap gap-2 sm:flex lg:hidden">
-        <ViewTab href="/sigeco/recepcion" active={vista === "hoy"}>
-          Hoy
+        <ViewTab href="/sigeco/recepcion" active={vista === "visitas"}>
+          Visitas
         </ViewTab>
         <ViewTab
           href="/sigeco/recepcion?vista=pacientes"
@@ -216,8 +279,8 @@ export default async function ReceptionPage({
       <DesktopTableToolbar
         views={
           <>
-            <ViewTab href="/sigeco/recepcion" active={vista === "hoy"}>
-              Hoy
+            <ViewTab href="/sigeco/recepcion" active={vista === "visitas"}>
+              Visitas
             </ViewTab>
             <ViewTab
               href="/sigeco/recepcion?vista=pacientes"
@@ -228,8 +291,8 @@ export default async function ReceptionPage({
           </>
         }
         filters={
-          vista === "hoy" ? (
-            <form className="flex min-w-0 flex-1 items-center gap-2">
+          vista === "visitas" ? (
+            <form className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <label className="sr-only" htmlFor="desktop-reception-status">
                 Filtrar visitas por estado
               </label>
@@ -240,15 +303,37 @@ export default async function ReceptionPage({
                   "h-9 min-h-9 max-w-64 py-1.5 text-[13px]",
                 )}
                 name="status"
-                defaultValue={params.status ?? ""}
+                defaultValue={selectedStatus ?? ""}
               >
                 <option value="">Solo activas</option>
+                <option value="all">Todos los estados</option>
                 {statusOptions.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
               </select>
+              <label className="sr-only" htmlFor="desktop-reception-period">
+                Filtrar visitas por fecha
+              </label>
+              <select
+                id="desktop-reception-period"
+                className={cn(internalInputClassName, "h-9 min-h-9 max-w-48 py-1.5 text-[13px]")}
+                name="periodo"
+                defaultValue={period}
+              >
+                {periodOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <DateRangePickerField
+                fromName="desde"
+                toName="hasta"
+                defaultFrom={params.desde}
+                defaultTo={params.hasta}
+                className="w-72"
+                triggerClassName="h-9 min-h-9 py-1.5 text-[13px]"
+              />
               <Button type="submit" variant="outline" size="sm">
                 Filtrar
               </Button>
@@ -277,8 +362,8 @@ export default async function ReceptionPage({
           )
         }
         count={
-          vista === "hoy"
-            ? `${visits.length} visitas`
+          vista === "visitas"
+            ? `${visitRows.length} de ${totalVisits} visitas`
             : `${patients.length} de ${totalPatients} pacientes`
         }
         actions={
@@ -292,47 +377,65 @@ export default async function ReceptionPage({
         }
       />
 
-      {vista === "hoy" ? (
+      {vista === "visitas" ? (
         <>
           <Card className="sm:hidden">
-            <MobileAutoSubmitSelect
-              name="status"
-              defaultValue={params.status ?? ""}
-              label="Filtrar visitas por estado"
-              options={[
-                { value: "", label: "Solo activas" },
-                ...statusOptions.map(([value, label]) => ({ value, label })),
-              ]}
-            />
+            <form className="grid gap-3">
+              <p className="text-sm font-semibold text-text">Filtrar visitas</p>
+              <select className={internalInputClassName} name="status" defaultValue={selectedStatus ?? ""} aria-label="Estado">
+                <option value="">Solo activas</option>
+                <option value="all">Todos los estados</option>
+                {statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              <select className={internalInputClassName} name="periodo" defaultValue={period} aria-label="Período">
+                {periodOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+              <DateRangePickerField
+                fromName="desde"
+                toName="hasta"
+                defaultFrom={params.desde}
+                defaultTo={params.hasta}
+              />
+              <Button type="submit" variant="outline">Aplicar filtros</Button>
+            </form>
           </Card>
           <Card className="hidden sm:block lg:hidden">
-            <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <form className="grid gap-3 sm:grid-cols-2">
               <select
                 className={internalInputClassName}
                 name="status"
-                defaultValue={params.status ?? ""}
+                defaultValue={selectedStatus ?? ""}
               >
                 <option value="">Solo activas</option>
+                <option value="all">Todos los estados</option>
                 {statusOptions.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
               </select>
-              <Button type="submit" variant="outline">
-                Filtrar
-              </Button>
+              <select className={internalInputClassName} name="periodo" defaultValue={period} aria-label="Período">
+                {periodOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+              <DateRangePickerField
+                fromName="desde"
+                toName="hasta"
+                defaultFrom={params.desde}
+                defaultTo={params.hasta}
+                className="sm:col-span-2"
+              />
+              <Button type="submit" variant="outline" className="sm:col-span-2">Aplicar filtros</Button>
             </form>
           </Card>
 
           <Card className="min-w-0 p-0 xl:hidden">
             <CardHeader
               className="mb-0 p-[18px] pb-3"
-              title="Visitas registradas hoy"
-              description="Pacientes que llegaron a recepción y su ubicación actual dentro del flujo."
+              title="Visitas registradas"
+              description="Episodios de atención que coinciden con los filtros seleccionados."
             />
             <RecordList>
-              {visits.map((visit) => (
+              {visitRows.map((visit) => (
                 <RecordItem
                   key={visit.id}
                   href={`/sigeco/recepcion/visitas/${visit.id}`}
@@ -364,7 +467,7 @@ export default async function ReceptionPage({
                   ) : null}
                 </RecordItem>
               ))}
-              {visits.length === 0 ? (
+              {visitRows.length === 0 ? (
                 <RecordListEmpty>{emptyVisitsMessage}</RecordListEmpty>
               ) : null}
             </RecordList>
@@ -384,7 +487,7 @@ export default async function ReceptionPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {visits.map((visit) => (
+                  {visitRows.map((visit) => (
                     <Tr key={visit.id}>
                       <Td className="font-semibold text-text">
                         <Link
@@ -438,7 +541,7 @@ export default async function ReceptionPage({
                       </Td>
                     </Tr>
                   ))}
-                  {visits.length === 0 ? (
+                  {visitRows.length === 0 ? (
                     <tr>
                       <Td className="py-8 text-center" colSpan={7}>
                         {emptyVisitsMessage}
@@ -448,6 +551,18 @@ export default async function ReceptionPage({
                 </tbody>
               </Table>
             </RecordTable>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalVisits}
+              pathname="/sigeco/recepcion"
+              searchParams={{
+                status: selectedStatus,
+                periodo: period === "all" ? undefined : period,
+                desde: period === "custom" ? params.desde : undefined,
+                hasta: period === "custom" ? params.hasta : undefined,
+              }}
+            />
           </Card>
 
           <div className="hidden min-w-0 items-start gap-4 xl:grid xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
@@ -457,19 +572,19 @@ export default async function ReceptionPage({
             >
               <div className="flex min-h-14 items-center justify-between gap-4 border-b border-border px-4 py-2">
                 <div>
-                  <h3 className="text-sm font-semibold text-text">Visitas registradas hoy</h3>
-                  <p className="text-xs text-muted">Pacientes activos y área actual de atención.</p>
+                  <h3 className="text-sm font-semibold text-text">Visitas registradas</h3>
+                  <p className="text-xs text-muted">Resultados del estado y período seleccionados.</p>
                 </div>
-                <span className="text-xs tabular-nums text-muted">{visits.length}</span>
+                <span className="text-xs tabular-nums text-muted">{totalVisits}</span>
               </div>
               <div className="max-h-[calc(100dvh-15rem)] overflow-y-auto">
-                {visits.map((visit) => {
+                {visitRows.map((visit) => {
                   const selected = selectedVisit?.id === visit.id;
 
                   return (
                     <Link
                       key={visit.id}
-                      href={receptionSelectionHref(params.status, visit.id)}
+                      href={receptionSelectionHref(visitFilters, visit.id)}
                       scroll={false}
                       aria-current={selected ? "true" : undefined}
                       className={cn(
@@ -498,10 +613,22 @@ export default async function ReceptionPage({
                     </Link>
                   );
                 })}
-                {visits.length === 0 ? (
+                {visitRows.length === 0 ? (
                   <div className="px-4 py-8 text-center">{emptyVisitsMessage}</div>
                 ) : null}
               </div>
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                totalItems={totalVisits}
+                pathname="/sigeco/recepcion"
+                searchParams={{
+                  status: selectedStatus,
+                  periodo: period === "all" ? undefined : period,
+                  desde: period === "custom" ? params.desde : undefined,
+                  hasta: period === "custom" ? params.hasta : undefined,
+                }}
+              />
             </section>
 
             <aside className="sticky top-0 min-w-0" aria-label="Vista previa de la visita">
