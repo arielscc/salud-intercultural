@@ -9,7 +9,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | Tarea | Estado | Nota |
 | --- | --- | --- |
 | 1. Navegacion y contexto | Completada | Sidebar agrupada y breadcrumbs desde `lg` |
-| 2. Busqueda global de pacientes | Pendiente | Reutiliza busqueda existente |
+| 2. Busqueda global de pacientes | Completada | Command search desktop en el header |
 | 3. Toolbar de bandejas | Pendiente | Empieza en Recepcion y Seguimientos |
 | 4. Tabla operativa | Pendiente | Sin paginacion nueva |
 | 5. Lista + preview | Pendiente | Piloto condicionado a evaluacion |
@@ -46,6 +46,27 @@ Validacion focal: ESLint sobre los cuatro archivos de implementacion, `git diff 
 
 Commit sugerido: `feat(sigeco): add desktop navigation hierarchy and breadcrumbs`
 
+## Tarea 2 - Busqueda Global De Pacientes En Header (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `DesktopPatientSearch`, inspirado en Command, Autocomplete y Popover de shadcn studio y adaptado a Marea. El trigger ocupa el espacio flexible del header sin desplazar fecha, usuario o logout.
+- Reutiliza `searchReceptionPatientsAction`, su permiso `patients_read`, el minimo de 2 caracteres, debounce de 300 ms y el formato nombre + codigo + telefono del autocomplete movil.
+- El panel soporta flechas, Enter, Escape, seleccion por puntero, estados inicial/loading/vacio, roles combobox/listbox/option y resultado activo anunciado con `aria-activedescendant`.
+- `Ctrl+K` y `Cmd+K` abren la busqueda. Al cerrar o navegar se limpia el estado y el foco vuelve explicitamente al trigger.
+- El componente completo usa `hidden lg:block`; ademas, tanto el atajo global como el efecto que consulta verifican `matchMedia("(min-width: 1024px)")`. No se emiten consultas ocultas en movil o tableta.
+- No se modifico `PatientAutocomplete`, su aislamiento movil, las queries, el ranking ni las rutas.
+
+Decisiones:
+
+- Se reutilizo el Popover Radix ya instalado en lugar de agregar un command palette completo: los resultados vienen del servidor y no requieren filtrado local ni una coleccion adicional.
+- La busqueda cubre solo pacientes, como pide el alcance. Otras entidades requeririan permisos, ranking y destinos propios.
+- El texto visible del atajo usa `Ctrl K` por estabilidad de layout; el handler acepta tambien `Cmd+K` en macOS.
+
+Validacion focal: ESLint sobre `DesktopPatientSearch` e `InternalShell`, `git diff --check` y auditoria estatica del aislamiento responsive, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): add desktop patient command search`
+
 ## Siguiente Paso
 
-Ejecutar la Tarea 2: busqueda global de pacientes en el header desktop, reutilizando la server action y el formato de resultados existentes sin consultar bajo 1024 px.
+Ejecutar la Tarea 3: toolbar comun para busqueda, vistas, filtros y acciones de las bandejas desktop.

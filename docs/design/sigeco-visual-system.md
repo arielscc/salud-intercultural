@@ -67,7 +67,7 @@ Regla central del rediseno: **el shell ocupa toda la pantalla y solo el area de 
 - Usuario y rol al pie de la sidebar, con logout.
 - En movil (`< lg`): la sidebar se oculta y se abre como drawer desde un boton hamburguesa en el header. Reemplaza a la tab bar inferior anterior.
 - Los contadores de pendientes junto a los items de navegacion (visibles en el mockup de la propuesta) requieren queries nuevas: quedan fuera del rediseno visual y se listan como pendiente funcional.
-- La busqueda global del header (visible en el mockup) tambien requiere logica nueva: fuera del alcance del rediseno.
+- El header desktop incluye busqueda global de pacientes desde `lg`, con command/autocomplete, atajo `Ctrl/Cmd+K` y resultados por nombre, codigo y telefono. Bajo 1024 px no se muestra ni ejecuta consultas.
 
 ## Componentes Base
 
