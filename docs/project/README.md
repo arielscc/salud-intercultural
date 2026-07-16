@@ -21,6 +21,7 @@ Usar este directorio para:
 8. [Simplificacion Sigeco V3.7](./sigeco-simplificacion/tareas-de-simplificacion.md): plan cerrado de 10 tareas, progreso y backlog operativo/clinico posterior.
 9. [Plan de GitHub Actions](./github-actions-implementation-plan.md): CI, pruebas con PostgreSQL y proteccion de ramas a implementar despues del cierre de V3.7.
 10. [Sigeco desktop complementario](./sigeco-desktop/tareas-de-desktop.md): iniciativa cerrada de arquitectura de informacion y 10 tareas desktop, con preservacion movil y QA integral documentado.
+11. [Mejoras futuras de Sigeco](./sigeco-mejoras-futuras/tareas-de-mejoras.md): backlog priorizado de seguridad clinica, calidad de datos, operacion y nuevas funcionalidades, con [investigacion](./sigeco-mejoras-futuras/investigacion-y-priorizacion.md) y [progreso](./sigeco-mejoras-futuras/progreso-de-mejoras.md).
 
 ## Documentacion relacionada
 
