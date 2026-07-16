@@ -16,7 +16,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | 6. Detalles persistentes | Completada | Contexto y acciones en rail `xl` |
 | 7. Historiales y secciones | Completada | Tabs/hash en ficha y metadata collapsible |
 | 8. Formularios por flujo | Completada | Grillas relacionadas y acciones sticky |
-| 9. Confirmacion y feedback | Pendiente | Complemento desktop del patron movil |
+| 9. Confirmacion y feedback | Completada | Alert Dialog y Toaster desktop |
 | 10. QA y cierre | Pendiente | Validacion integral final |
 
 ## Baseline Congelado
@@ -204,6 +204,28 @@ Validacion focal: ESLint sobre el componente, funnel, edicion y tres detalles la
 
 Commit sugerido: `feat(sigeco): structure desktop forms by workflow`
 
+## Tarea 9 - Confirmacion Y Feedback Desktop (2026-07-16)
+
+Que se hizo:
+
+- Nuevo wrapper shadcn-style `ui/alert-dialog` sobre Radix ya instalado: overlay, contenido centrado, header, descripcion, footer, cancel y action adaptados a tokens/radios Marea.
+- `ConfirmForm` conserva el bottom sheet cuando `matchMedia("(max-width: 639px)")` y agrega Alert Dialog cuando `matchMedia("(min-width: 1024px)")`. El rango 640-1023 conserva el submit directo previo, cumpliendo el baseline de tableta.
+- Las seis instancias actuales (retiro en Recepcion, cierre/retiro de visita, salida de Consulta y cierre/retiro de Caja) pasan por el mismo flujo; ninguna irreversible desktop envia con el primer click.
+- El dialog muestra titulo, consecuencia y label verbo + sustantivo existentes. Cancelar recibe foco inicial para prevenir confirmacion accidental; al cerrar se restaura foco al control que inicio el submit.
+- `confirmingRef` bloquea confirmaciones repetidas antes de `requestSubmit`; `confirmedRef` permite exactamente el submit confirmado y se consume en el siguiente `onSubmit`.
+- El layout mantiene el Toaster movil inferior en `sm:hidden` y agrega un Toaster desktop `hidden lg:block` en `top-right`. Ambos consumen los avisos existentes de `NoticeForm`, `ConfirmForm` y `ActionNotice`; no se duplicaron codigos ni server actions.
+
+Decisiones:
+
+- No se reemplazo el Drawer movil por Alert Dialog ni se cambio la posicion de sus toasts.
+- Tableta queda sin Toaster y con submit directo, igual al baseline congelado; esta iniciativa solo interviene desde `lg`.
+- Se reutilizo `radix-ui` y `sonner` instalados. No se agregaron dependencias ni una segunda capa de estado global.
+- El foco inicial va a Cancelar, no a la accion destructiva. Escape y click de cancelacion cierran mediante las primitivas de Radix.
+
+Validacion focal: ESLint sobre Alert Dialog, ConfirmForm y layout, `git diff --check`, auditoria de breakpoints, Toasters e instancias irreversibles, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): add desktop confirmations and action feedback`
+
 ## Siguiente Paso
 
-Ejecutar la Tarea 9: confirmacion y feedback de acciones en desktop.
+Ejecutar la Tarea 10: QA integral responsive y cierre documental de la iniciativa desktop.

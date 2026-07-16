@@ -17,9 +17,12 @@ export default async function SigecoAppLayout({
     <InternalShell user={user}>
       <DesktopBreadcrumb />
       {children}
-      {/* Toasts solo movil: en >= sm el contenedor se oculta y desktop queda como hoy. */}
+      {/* Posiciones separadas: movil conserva abajo; desktop usa esquina superior derecha. */}
       <div className="sm:hidden">
         <Toaster />
+      </div>
+      <div className="hidden lg:block">
+        <Toaster position="top-right" />
       </div>
       <Suspense fallback={null}>
         <ActionNotice />

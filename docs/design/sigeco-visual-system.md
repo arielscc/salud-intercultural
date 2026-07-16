@@ -73,6 +73,7 @@ Regla central del rediseno: **el shell ocupa toda la pantalla y solo el area de 
 - Los detalles con dos columnas usan desde `xl` un rail lateral pegajoso con scroll propio. Su encabezado de contexto mantiene identidad y estado visibles sobre las acciones existentes; la columna principal, el orden movil y los back links no cambian.
 - La ficha de paciente organiza desde `xl` sus historiales pares en tabs con contador y hash recuperable; bajo `xl` todas las secciones permanecen visibles y en el orden original. Metadatos permanentes secundarios usan collapsible desktop, nunca alertas ni trabajo activo.
 - Los formularios desktop usan grillas solo para campos relacionados y un footer de acciones pegajoso desde `lg`. El funnel y la edicion amplian su ancho unicamente en desktop; movil conserva una columna, orden de tab y acciones actuales.
+- Las acciones irreversibles usan confirmacion segun superficie: bottom sheet bajo 640 px, flujo historico directo en tableta y Alert Dialog centrado desde `lg`. Los toasts aparecen abajo en movil y arriba a la derecha en desktop.
 
 ## Componentes Base
 
