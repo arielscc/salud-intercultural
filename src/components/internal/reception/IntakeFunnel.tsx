@@ -1,31 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Search, UserRoundPlus } from "lucide-react";
+import { Field, internalInputClassName } from "@/components/internal/Field";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import {
   PatientAutocomplete,
   type PatientSearchResult
 } from "@/components/internal/reception/PatientAutocomplete";
 import { PhoneInput } from "@/components/internal/reception/PhoneInput";
-import { Button } from "@/components/internal/ui/Button";
-import { Card } from "@/components/internal/ui/Card";
-import { FormActions } from "@/components/internal/ui/FormActions";
-import { DatePickerField } from "@/components/internal/ui/DatePickerField";
-import { Field, internalInputClassName } from "@/components/internal/Field";
-import {
-  patientCaptureSourceLabels,
-  patientGenderLabels
-} from "@/features/patients/labels";
-import {
-  followUpContactPreferenceLabels,
-  symptomDurationUnitLabels,
-  visitIntakeTypeLabels
-} from "@/features/reception/labels";
-import {
-  searchReceptionPatientsAction,
-  submitReceptionIntakeAction
-} from "@/features/reception/actions";
 import {
   calculateAge,
   ChipOption,
@@ -35,7 +16,26 @@ import {
   normalizePhone,
   type CityChoice
 } from "@/components/internal/reception/funnel-fields";
+import { Button } from "@/components/internal/ui/Button";
+import { Card } from "@/components/internal/ui/Card";
+import { DatePickerField } from "@/components/internal/ui/DatePickerField";
+import { FormActions } from "@/components/internal/ui/FormActions";
+import {
+  patientCaptureSourceLabels,
+  patientGenderLabels
+} from "@/features/patients/labels";
+import {
+  searchReceptionPatientsAction,
+  submitReceptionIntakeAction
+} from "@/features/reception/actions";
+import {
+  followUpContactPreferenceLabels,
+  symptomDurationUnitLabels,
+  visitIntakeTypeLabels
+} from "@/features/reception/labels";
 import { cn } from "@/lib/cn";
+import { Search, UserRoundPlus } from "lucide-react";
+import { useState, useTransition } from "react";
 
 type PatientMatch = PatientSearchResult;
 
@@ -492,7 +492,7 @@ export function IntakeFunnel({
           </div>
         </div>
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
-          <span>¿Ya se atendió antes por esto?</span>
+          <span>¿Ya se atendió antes por esto?(En otro lugar)</span>
           <div className="flex flex-wrap gap-2">
             <ChipOption
               selected={previouslyTreated === "yes"}
