@@ -10,7 +10,13 @@ export function DesktopPreviewDismiss({ href }: { href: string }) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape" || !window.matchMedia("(min-width: 1280px)").matches) return;
+      if (
+        event.defaultPrevented ||
+        event.key !== "Escape" ||
+        !window.matchMedia("(min-width: 1280px)").matches
+      ) {
+        return;
+      }
       event.preventDefault();
       router.replace(href, { scroll: false });
     }
@@ -31,4 +37,3 @@ export function DesktopPreviewDismiss({ href }: { href: string }) {
     </Link>
   );
 }
-

@@ -134,9 +134,7 @@ export function ConfirmForm({
         <AlertDialogContent
           onOpenAutoFocus={(event) => {
             event.preventDefault();
-            event.currentTarget
-              .querySelector<HTMLButtonElement>("[data-confirm-cancel]")
-              ?.focus();
+            document.querySelector<HTMLButtonElement>("[data-confirm-cancel]")?.focus();
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();

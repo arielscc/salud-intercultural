@@ -2,6 +2,8 @@
 
 Proposito: aprovechar escritorio para comparacion, contexto persistente y trabajo repetitivo, sin alterar la experiencia movil primero ya cerrada.
 
+Estado: lista cerrada el 2026-07-16. Tareas 1-10 completadas; evidencia en `progreso-de-desktop.md`.
+
 Docs relacionados:
 
 - Investigacion: `docs/project/sigeco-desktop/investigacion-arquitectura-informacion.md`
@@ -179,6 +181,8 @@ Docs relacionados:
 
 ## Tarea 10 - QA Integral Y Cierre Documental
 
+**Estado:** completada el 2026-07-16.
+
 **Objetivo:** demostrar que desktop mejoro y que movil/tableta no sufrieron regresiones.
 
 **Alcance:**
@@ -192,4 +196,3 @@ Docs relacionados:
 **Criterios:** checks en verde, cero overflow incoherente, cero controles desktop bajo 1024 px y evidencia documental completa.
 
 **Commit sugerido:** `docs(sigeco): close desktop information architecture initiative`
-

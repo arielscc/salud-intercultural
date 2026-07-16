@@ -1,10 +1,10 @@
 # Progreso De Sigeco Desktop Complementario
 
-Ultima actualizacion: 2026-07-15.
+Ultima actualizacion: 2026-07-16.
 
 ## Estado General
 
-Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resueltos sin cambiar la rama movil/tableta.
+Iniciativa cerrada. Las 10 tareas desktop quedaron implementadas, verificadas y documentadas sin regresiones visibles bajo 1024 px.
 
 | Tarea | Estado | Nota |
 | --- | --- | --- |
@@ -17,7 +17,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | 7. Historiales y secciones | Completada | Tabs/hash en ficha y metadata collapsible |
 | 8. Formularios por flujo | Completada | Grillas relacionadas y acciones sticky |
 | 9. Confirmacion y feedback | Completada | Alert Dialog y Toaster desktop |
-| 10. QA y cierre | Pendiente | Validacion integral final |
+| 10. QA y cierre | Completada | Checks y QA responsive en verde |
 
 ## Baseline Congelado
 
@@ -226,6 +226,82 @@ Validacion focal: ESLint sobre Alert Dialog, ConfirmForm y layout, `git diff --c
 
 Commit sugerido: `feat(sigeco): add desktop confirmations and action feedback`
 
-## Siguiente Paso
+## Tarea 10 - QA Integral Y Cierre Documental (2026-07-16)
 
-Ejecutar la Tarea 10: QA integral responsive y cierre documental de la iniciativa desktop.
+### Checks Automatizados
+
+- Formato/whitespace: `git diff --check` OK. El proyecto no declara script de format ni dependencia directa de Prettier; no se invento un formatter fuera del toolchain.
+- `pnpm lint`: OK, cero warnings.
+- `pnpm typecheck`: OK; Prisma Client, tipos Payload, rutas Next y TypeScript completados.
+- `pnpm test:unit`: 20 archivos, 70 tests OK.
+- `pnpm test:integration`: reset completo de PostgreSQL de pruebas, 10 archivos, 21 tests OK.
+- `pnpm run build`: OK con Next.js 16.2.6; 18 paginas estaticas generadas y todas las rutas Sigeco compiladas.
+
+La matriz completa se repitio despues de la unica correccion hallada durante QA.
+
+### QA Responsive
+
+Viewports recorridos con navegador autenticado:
+
+| Viewport | Resultado |
+| --- | --- |
+| 390x844 | Cards moviles, drawer, tabs tactiles y retorno visibles; sin toolbar/sidebar/busqueda/preview desktop; sin overflow |
+| 768x1024 | Drawer y tabla tablet existentes; sin controles desktop; columnas completas y sin overflow |
+| 1024x768 | Sidebar agrupada, command search, toolbar y tabla compacta; sin master-detail; sin overflow |
+| 1280x800 | Master-detail de Recepcion activo, toolbar estable y preview persistente; sin overflow |
+| 1440x900 | Composicion completa desktop, detalles con rail, tabs e interfaces de formulario estables; sin overflow |
+
+Capturas guardadas durante la sesion en `/tmp`:
+
+- `sigeco-desktop-qa-recepcion-390x844.png`
+- `sigeco-desktop-qa-recepcion-768x1024.png`
+- `sigeco-desktop-qa-recepcion-1024x768.png`
+- `sigeco-desktop-qa-recepcion-1280.png`
+- `sigeco-desktop-qa-recepcion-1440.png`
+- `sigeco-desktop-qa-patient-390.png`
+- `sigeco-desktop-qa-patient-1440.png`
+- `sigeco-desktop-qa-edit-1440.png`
+
+### Flujos Verificados
+
+- Sidebar desktop agrupada en Atencion, Operacion y Control; drawer movil conserva lista plana.
+- Busqueda global: `Ctrl+K`, apertura, Escape, cierre y retorno de foco al trigger.
+- Recepcion: toolbar, filtro, seleccion `?visita=`, preview, preservacion de scroll y cero overflow.
+- Bandejas de Consulta, Enfermeria, Caja, Seguimiento e Inventario: toolbar y tabla visibles en desktop, sin overflow.
+- Ficha: breadcrumb, contexto sticky, Ficha permanente collapsible y cinco tabs; hash, panel activo y back del navegador verificados.
+- Movil de ficha: tabs desktop ocultos y los cinco historiales visibles en orden; retorno visible en captura.
+- Edicion: grid 1.1/0.9, dos columnas internas relacionadas y acciones sticky a 1440; sin solapamientos.
+- Alert Dialog: primer click no ejecuta, Cancelar recibe foco, Escape cierra y el foco vuelve a `Cerrar visita`; no se confirmo ninguna accion destructiva durante QA.
+- Consola del navegador: sin errores en los recorridos finales.
+
+### Matriz De Roles
+
+Se creo `qa-desktop@test.si` solo en la base local, con password efimero no versionado. Cada rol se verifico con cierre y nueva sesion para evitar cache de permisos:
+
+- Recepcion: Inicio, Recepcion, Seguimiento.
+- Medico: Inicio, Recepcion, Consulta, Enfermeria, Seguimiento.
+- Enfermeria: Inicio, Recepcion, Enfermeria.
+- Administracion: Inicio, Recepcion, Caja, Seguimiento, Inventario.
+- Seguimiento: Inicio, Seguimiento.
+- Direccion: todos los modulos de lectura.
+- Super admin: todos los modulos.
+
+El usuario QA temporal y sus sesiones se eliminaron al terminar. `test@test.si` no se modifico.
+
+### Hallazgo Y Correccion
+
+QA encontro una propagacion de Escape: al cerrar la busqueda global tambien podia cerrarse de forma diferida el preview de Recepcion. `DesktopPreviewDismiss` ahora ignora eventos con `defaultPrevented`; se verifico que Escape cierre la busqueda, preserve `?visita=`, mantenga el preview visible y restaure foco en Buscar paciente.
+
+### Resultado
+
+- Tareas 1-10 completadas.
+- Cero fallos automatizados.
+- Cero overflow horizontal en la matriz responsive.
+- Cero controles desktop visibles bajo 1024 px.
+- Sin cambios pendientes de alcance funcional; paginacion nueva y personalizacion de columnas siguen fuera de esta iniciativa.
+
+Commit sugerido: `docs(sigeco): close desktop information architecture initiative`
+
+## Estado Final
+
+Sigeco desktop complementario queda cerrado. El siguiente trabajo debe partir de uso real o un nuevo backlog, no extender automaticamente el piloto master-detail ni agregar tabs por uniformidad.

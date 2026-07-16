@@ -20,7 +20,7 @@ Usar este directorio para:
 7. [Rediseno Sigeco (Marea)](./sigeco-redesign/tareas-de-rediseno.md): plan de tareas del rediseno del panel interno y su [progreso](./sigeco-redesign/progreso-de-diseno.md).
 8. [Simplificacion Sigeco V3.7](./sigeco-simplificacion/tareas-de-simplificacion.md): plan cerrado de 10 tareas, progreso y backlog operativo/clinico posterior.
 9. [Plan de GitHub Actions](./github-actions-implementation-plan.md): CI, pruebas con PostgreSQL y proteccion de ramas a implementar despues del cierre de V3.7.
-10. [Sigeco desktop complementario](./sigeco-desktop/tareas-de-desktop.md): investigacion de arquitectura de informacion, reglas de preservacion movil y plan de 10 tareas para escritorio.
+10. [Sigeco desktop complementario](./sigeco-desktop/tareas-de-desktop.md): iniciativa cerrada de arquitectura de informacion y 10 tareas desktop, con preservacion movil y QA integral documentado.
 
 ## Documentacion relacionada
 

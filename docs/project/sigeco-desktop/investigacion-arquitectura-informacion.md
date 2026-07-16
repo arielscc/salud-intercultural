@@ -2,6 +2,8 @@
 
 Fecha: 2026-07-15.
 
+Estado: investigacion aplicada; iniciativa desktop cerrada el 2026-07-16 tras QA integral.
+
 ## Proposito
 
 Definir como debe evolucionar Sigeco en escritorio como complemento de la iniciativa movil primero. El objetivo no es hacer una version mas grande de movil, sino aprovechar el espacio, el puntero y el teclado para reducir cambios de contexto, facilitar la comparacion y acelerar el trabajo repetitivo.
@@ -112,4 +114,3 @@ Los componentes se toman como patrones, no como un tema visual nuevo. Deben adap
 - No se agrega personalizacion persistente de columnas ni densidad en la primera tanda; requiere definir almacenamiento, defaults por rol y soporte.
 - No se implementa paginacion nueva: la iniciativa movil la dejo pospuesta y cambiar el conjunto servido afecta todos los viewports.
 - Card sorting y tree testing quedan como investigacion con usuarios antes de renombrar o reordenar modulos. La primera tarea solo agrega agrupacion visual desktop, sin cambiar rutas ni permisos.
-
