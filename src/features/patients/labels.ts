@@ -21,8 +21,7 @@ export const patientStatusLabels: Record<PatientStatus, string> = {
 };
 
 export const patientCaptureSourceLabels: Record<PatientCaptureSource, string> = {
-  facebook_ads: "Facebook Ads",
-  facebook_organic: "Facebook orgánico",
+  facebook: "Facebook",
   tiktok: "TikTok",
   whatsapp: "WhatsApp",
   referral: "Referido",
