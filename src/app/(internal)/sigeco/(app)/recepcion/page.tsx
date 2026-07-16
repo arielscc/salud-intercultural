@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
 import { DesktopPreviewDismiss } from "@/components/internal/reception/DesktopPreviewDismiss";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
-import { Card } from "@/components/internal/ui/Card";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopRowActions } from "@/components/internal/ui/DesktopRowActions";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
@@ -326,6 +326,11 @@ export default async function ReceptionPage({
           </Card>
 
           <Card className="min-w-0 p-0 xl:hidden">
+            <CardHeader
+              className="mb-0 p-[18px] pb-3"
+              title="Visitas registradas hoy"
+              description="Pacientes que llegaron a recepción y su ubicación actual dentro del flujo."
+            />
             <RecordList>
               {visits.map((visit) => (
                 <RecordItem
@@ -450,8 +455,11 @@ export default async function ReceptionPage({
               className="min-w-0 overflow-hidden rounded-[9px] border border-border bg-surface"
               aria-label="Visitas de recepción"
             >
-              <div className="flex min-h-11 items-center justify-between border-b border-border px-4">
-                <h3 className="text-sm font-semibold text-text">Visitas</h3>
+              <div className="flex min-h-14 items-center justify-between gap-4 border-b border-border px-4 py-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-text">Visitas registradas hoy</h3>
+                  <p className="text-xs text-muted">Pacientes activos y área actual de atención.</p>
+                </div>
                 <span className="text-xs tabular-nums text-muted">{visits.length}</span>
               </div>
               <div className="max-h-[calc(100dvh-15rem)] overflow-y-auto">
@@ -600,6 +608,11 @@ export default async function ReceptionPage({
           </Card>
 
           <Card className="min-w-0 p-0">
+            <CardHeader
+              className="mb-0 p-[18px] pb-3"
+              title="Padrón de pacientes"
+              description="Personas registradas en el sistema y cantidad de visitas acumuladas."
+            />
             <RecordList>
               {patients.map((patient) => (
                 <RecordItem

@@ -78,7 +78,11 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
         </Card>
 
         <Card className="max-sm:order-4 p-0">
-          <CardHeader className="mb-0 p-[18px] pb-3" title="Movimientos" />
+          <CardHeader
+            className="mb-0 p-[18px] pb-3"
+            title="Movimientos de inventario"
+            description="Entradas, salidas y ajustes que modificaron la existencia del producto."
+          />
           <RecordList>
             {item.movements.map((movement) => (
               <RecordItem
@@ -109,7 +113,7 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
             ) : null}
           </RecordList>
           <RecordTable>
-            <Table>
+            <Table caption="Movimientos registrados para este producto">
               <thead>
                 <tr>
                   <Th>Tipo</Th>
@@ -170,7 +174,10 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
           }
         />
         <Card className="max-sm:order-2">
-          <CardHeader title="Entrada de stock" />
+          <CardHeader
+            title="Entrada de stock"
+            description="Suma unidades recibidas y documenta el origen del ingreso."
+          />
           <NoticeForm action={addInventoryEntryAction} notice="Entrada registrada" className="grid gap-3">
             <input type="hidden" name="itemId" value={item.id} />
             <Field label="Cantidad">
@@ -189,7 +196,10 @@ export default async function InventoryItemPage({ params }: InventoryItemPagePro
         </Card>
 
         <Card className="max-sm:order-3">
-          <CardHeader title="Ajuste autorizado" />
+          <CardHeader
+            title="Ajuste autorizado"
+            description="Corrige la existencia dejando un motivo trazable."
+          />
           <NoticeForm action={createInventoryAdjustmentAction} notice="Ajuste registrado" className="grid gap-3">
             <input type="hidden" name="itemId" value={item.id} />
             <Field label="Diferencia">

@@ -98,7 +98,10 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
         </Card>
 
         <Card className="max-sm:order-3">
-          <CardHeader title="Historial" />
+          <CardHeader
+            title="Historial de intentos"
+            description="Contactos realizados y resultados registrados para esta tarea."
+          />
           <div className="grid gap-0">
             {task.attempts.map((attempt) => (
               <TimelineItem
@@ -123,7 +126,10 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
           status={<Chip dot>{followUpStatusLabels[task.status]}</Chip>}
         />
         <Card className="max-sm:order-2">
-          <CardHeader title="Registrar contacto" />
+          <CardHeader
+            title="Registrar contacto"
+            description="Documenta el canal utilizado, resultado y próximo paso del seguimiento."
+          />
           <NoticeForm action={createFollowUpAttemptAction} notice="Contacto registrado" className="grid gap-3">
             <input type="hidden" name="taskId" value={task.id} />
             <Field label="Método">

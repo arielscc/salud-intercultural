@@ -122,7 +122,10 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
         </Card>
 
         <Card className="max-sm:order-4">
-          <CardHeader title="Tareas de visita" />
+          <CardHeader
+            title="Tareas de esta visita"
+            description="Acciones creadas para las áreas que intervienen en la atención."
+          />
           <div className="grid gap-0">
             {visit.workItems.map((item) => (
               <TimelineItem
@@ -140,7 +143,10 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
         </Card>
 
         <Card className="max-sm:order-5">
-          <CardHeader title="Ruta del paciente" />
+          <CardHeader
+            title="Ruta del paciente"
+            description="Recorrido cronológico de la visita entre las áreas de atención."
+          />
           <div className="grid gap-0">
             {visit.route?.steps.map((step) => (
               <TimelineItem
@@ -167,7 +173,10 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
         />
         {isActive ? (
           <Card className="max-sm:order-3">
-            <CardHeader title="Derivar paciente" />
+            <CardHeader
+              title="Derivar paciente"
+              description="Actualiza el estado y el área responsable de la atención."
+            />
             <NoticeForm action={updateVisitStatusAction} notice="Ruta actualizada" className="grid gap-3">
               <input type="hidden" name="visitId" value={visit.id} />
               <Field label="Estado">

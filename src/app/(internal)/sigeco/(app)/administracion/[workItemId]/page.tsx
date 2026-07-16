@@ -113,7 +113,10 @@ export default async function AdministrationWorkItemPage({
 
         {isPaidStudyOrder && generatedSale ? (
           <Card className="max-sm:order-2">
-            <CardHeader title="Cobrar estudios" description={`Total: ${formatMoney(generatedSale.totalCents)} · Saldo: ${formatMoney(generatedSale.balanceCents)}`} />
+            <CardHeader
+              title="Cobro de estudios solicitados"
+              description={`Cuenta generada desde Consulta · Total: ${formatMoney(generatedSale.totalCents)} · Saldo: ${formatMoney(generatedSale.balanceCents)}`}
+            />
             {generatedSale.balanceCents > 0 ? (
               <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
                 <input type="hidden" name="saleId" value={generatedSale.id} />
@@ -140,7 +143,10 @@ export default async function AdministrationWorkItemPage({
           </Card>
         ) : (
         <Card className="max-sm:order-2">
-          <CardHeader title="Registrar venta" />
+          <CardHeader
+            title="Registrar venta o servicio"
+            description="Detalla el concepto, calcula el importe y registra el cobro inicial."
+          />
           <form action={createSaleAction} className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
@@ -288,7 +294,10 @@ export default async function AdministrationWorkItemPage({
         ) : null}
 
         <Card className="max-sm:order-4">
-          <CardHeader title="Ventas de esta tarea" />
+          <CardHeader
+            title="Ventas asociadas a la tarea"
+            description="Comprobantes, estado de pago y saldo pendiente de esta atención."
+          />
           <div className="grid gap-0">
             {item.sales.map((sale) => (
               <TimelineItem

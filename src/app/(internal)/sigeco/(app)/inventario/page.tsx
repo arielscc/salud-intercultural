@@ -71,7 +71,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
 
       <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
         <Card className="p-0">
-          <CardHeader className="mb-0 p-[18px] pb-3" title="Productos" />
+          <CardHeader
+            className="mb-0 p-[18px] pb-3"
+            title="Productos en inventario"
+            description="Existencias actuales, niveles mínimos y estado de reposición."
+          />
           <RecordList>
             {items.map((item) => {
               const lowStock = item.currentStock <= item.minimumStock;
@@ -188,7 +192,10 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         </Card>
 
         <Card>
-          <CardHeader title="Nuevo producto" />
+          <CardHeader
+            title="Nuevo producto"
+            description="Registra un artículo y define su unidad y nivel mínimo de stock."
+          />
           <form action={createInventoryItemAction} className="grid gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Código interno">

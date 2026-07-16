@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BellRing, CalendarClock, PhoneCall } from "lucide-react";
-import { Card } from "@/components/internal/ui/Card";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { MobileTabs } from "@/components/internal/MobileTabs";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
@@ -107,6 +107,11 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
       />
 
       <Card className="p-0">
+        <CardHeader
+          className="mb-0 p-[18px] pb-3"
+          title="Seguimientos programados"
+          description="Contactos pendientes correspondientes al filtro y fecha seleccionados."
+        />
         <RecordList>
           {tasks.map((task) => {
             const phone = task.patient?.phone ?? task.lead?.phone;

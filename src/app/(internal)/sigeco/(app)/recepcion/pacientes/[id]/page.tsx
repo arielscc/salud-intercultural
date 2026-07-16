@@ -129,7 +129,10 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
         </Card>
 
         <Card className="max-sm:order-4 xl:hidden">
-          <CardHeader title="Ficha permanente" />
+          <CardHeader
+            title="Ficha permanente"
+            description="Antecedentes y datos clínicos que se conservan entre visitas."
+          />
           <dl className="grid gap-y-3 text-sm">
             <InfoRow label="Alergias" value={patient.allergies} wide />
             <InfoRow label="Antecedentes" value={patient.relevantHistory} wide />
@@ -168,7 +171,11 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           <DesktopSectionPanel id="historial-visitas">
 
         <Card className="max-sm:order-5 p-0">
-          <CardHeader className="mb-0 p-[18px] pb-3" title="Visitas" />
+          <CardHeader
+            className="mb-0 p-[18px] pb-3"
+            title="Historial de visitas"
+            description="Atenciones registradas para este paciente, de la más reciente a la más antigua."
+          />
           <RecordList>
             {patient.visits.map((visit) => (
               <RecordItem
@@ -189,7 +196,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             ) : null}
           </RecordList>
           <RecordTable>
-            <Table>
+            <Table caption="Historial de visitas del paciente">
               <thead>
                 <tr>
                   <Th>Llegada</Th>
@@ -230,7 +237,10 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           <DesktopSectionPanel id="historial-enfermeria">
 
         <Card className="max-sm:order-6">
-          <CardHeader title="Timeline de enfermería" />
+          <CardHeader
+            title="Historial de enfermería"
+            description="Signos vitales, aplicaciones y notas registradas por Enfermería."
+          />
           <div className="grid gap-0">
             {patient.vitalSigns.map((item) => (
               <TimelineItem
@@ -280,7 +290,10 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           <DesktopSectionPanel id="historial-estudios">
 
         <Card className="max-sm:order-7">
-          <CardHeader title="Estudios" />
+          <CardHeader
+            title="Estudios y resultados"
+            description="Análisis solicitados, realizados y documentados para el paciente."
+          />
           <div className="grid gap-0">
             {patient.studies.map((study) => (
               <TimelineItem
@@ -307,7 +320,11 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           <DesktopSectionPanel id="historial-administracion">
 
         <Card className="max-sm:order-8 p-0">
-          <CardHeader className="mb-0 p-[18px] pb-3" title="Cronología administrativa" />
+          <CardHeader
+            className="mb-0 p-[18px] pb-3"
+            title="Historial de ventas y pagos"
+            description="Movimientos administrativos asociados a las atenciones del paciente."
+          />
           <RecordList>
             {patient.sales.map((sale) => (
               <RecordItem
@@ -328,7 +345,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             ) : null}
           </RecordList>
           <RecordTable>
-            <Table>
+            <Table caption="Historial de ventas y pagos del paciente">
               <thead>
                 <tr>
                   <Th>Total</Th>
@@ -369,7 +386,10 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           <DesktopSectionPanel id="historial-seguimiento">
 
         <Card className="max-sm:order-9">
-          <CardHeader title="Historial de seguimiento" />
+          <CardHeader
+            title="Historial de seguimiento"
+            description="Contactos programados, intentos realizados y resultados obtenidos."
+          />
           <div className="grid gap-0">
             {patient.followUpTasks.map((task) => (
               <TimelineItem
@@ -404,7 +424,10 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
         />
         {roleHasPermission(user.role, "visits_create") ? (
           <Card className="max-sm:order-2">
-            <CardHeader title="Registrar llegada" />
+            <CardHeader
+              title="Registrar nueva llegada"
+              description="Inicia una visita activa para este paciente."
+            />
             <p className="mb-3 text-sm text-muted">
               Abre una visita con las preguntas de recepción; la ficha llega prellenada.
             </p>
@@ -420,7 +443,10 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
         {roleHasPermission(user.role, "followups_write") ? (
           <Card className="max-sm:order-3">
-            <CardHeader title="Crear seguimiento" />
+            <CardHeader
+              title="Crear seguimiento"
+              description="Programa una tarea de contacto posterior con el paciente."
+            />
             {patient.followUpPreference === "no_contact" ? (
               <div className="mb-3 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
                 <p className="flex items-center gap-1.5 font-semibold text-warning">

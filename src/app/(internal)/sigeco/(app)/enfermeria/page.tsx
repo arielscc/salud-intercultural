@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card } from "@/components/internal/ui/Card";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
@@ -37,6 +37,11 @@ export default async function NursingWorkQueuePage() {
       <DesktopTableToolbar count={`${workItems.length} indicaciones activas`} />
 
       <Card className="p-0">
+        <CardHeader
+          className="mb-0 p-[18px] pb-3"
+          title="Indicaciones activas"
+          description="Tareas clínicas derivadas a Enfermería y pendientes de ejecución."
+        />
         <RecordList>
           {workItems.map((item) => {
             const order = item.clinicalOrders[0];

@@ -221,7 +221,7 @@ export default async function SigecoDashboardPage() {
               ) : null}
             </RecordList>
             <RecordTable>
-              <Table>
+              <Table caption="Pacientes registrados hoy en recepción">
                 <thead>
                   <tr>
                     <Th>Paciente</Th>

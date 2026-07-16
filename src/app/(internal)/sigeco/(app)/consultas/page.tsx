@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { Card } from "@/components/internal/ui/Card";
+import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
@@ -36,6 +36,11 @@ export default async function ConsultationsPage() {
       <DesktopTableToolbar count={`${visits.length} pacientes en atención`} />
 
       <Card className="p-0">
+        <CardHeader
+          className="mb-0 p-[18px] pb-3"
+          title="Pacientes en atención médica"
+          description="Visitas derivadas a consulta que permanecen dentro del flujo clínico."
+        />
         <RecordList>
           {visits.map((visit) => (
             <RecordItem

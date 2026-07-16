@@ -91,7 +91,11 @@ export default async function AdministrationPage() {
       <DesktopTableToolbar count={`${workItems.length} pendientes derivados`} />
 
       <Card className="p-0">
-        <CardHeader className="mb-0 p-[18px] pb-3" title="Pendientes derivados" />
+        <CardHeader
+          className="mb-0 p-[18px] pb-3"
+          title="Cobros y entregas pendientes"
+          description="Órdenes derivadas a Administración que todavía requieren una acción."
+        />
         <RecordList>
           {workItems.map((item) => {
             const order = item.clinicalOrders[0];

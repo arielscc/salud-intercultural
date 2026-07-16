@@ -62,7 +62,11 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
         </Card>
 
         <Card className="max-sm:order-3 p-0">
-          <CardHeader className="mb-0 p-[18px] pb-3" title="Detalle" />
+          <CardHeader
+            className="mb-0 p-[18px] pb-3"
+            title="Conceptos cobrados"
+            description="Productos, servicios o estudios incluidos en este comprobante."
+          />
           <RecordList>
             {sale.items.map((item) => (
               <RecordItem
@@ -84,7 +88,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
             ))}
           </RecordList>
           <RecordTable>
-            <Table>
+            <Table caption="Conceptos incluidos en la venta">
               <thead>
                 <tr>
                   <Th>Descripción</Th>
@@ -124,7 +128,11 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
         </Card>
 
         <Card className="max-sm:order-4 p-0">
-          <CardHeader className="mb-0 p-[18px] pb-3" title="Pagos" />
+          <CardHeader
+            className="mb-0 p-[18px] pb-3"
+            title="Pagos registrados"
+            description="Importes recibidos, método de pago, fecha y referencia."
+          />
           <RecordList>
             {sale.payments.map((payment) => (
               <RecordItem
@@ -143,7 +151,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
             ) : null}
           </RecordList>
           <RecordTable>
-            <Table>
+            <Table caption="Pagos registrados para la venta">
               <thead>
                 <tr>
                   <Th>Monto</Th>
@@ -189,7 +197,10 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
             }
           />
           <Card className="max-sm:order-2">
-            <CardHeader title="Registrar cobro" />
+            <CardHeader
+              title="Registrar nuevo cobro"
+              description="Aplica un pago al saldo pendiente de este comprobante."
+            />
             <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
               <input type="hidden" name="saleId" value={sale.id} />
               <div className="grid gap-3 sm:grid-cols-2">

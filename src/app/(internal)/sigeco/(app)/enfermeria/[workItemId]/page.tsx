@@ -256,7 +256,10 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
               <SubmitButton className="w-full" disabled={!studiesCompleted}>Finalizar análisis y devolver al médico</SubmitButton>
             </NoticeForm>
           ) : null}
-          <CardHeader title="Estado de tarea" />
+          <CardHeader
+            title="Estado de la tarea"
+            description="Registra el avance operativo o devuelve los estudios finalizados al médico."
+          />
           <NoticeForm action={updateNursingWorkItemAction} notice="Tarea actualizada" className="grid gap-3">
             <input type="hidden" name="workItemId" value={item.id} />
             <Field label="Estado">
@@ -280,7 +283,10 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
         </Card>
 
         <Card className="max-sm:order-6">
-          <CardHeader title="Nota de enfermería" />
+          <CardHeader
+            title="Nota de enfermería"
+            description="Añade una observación clínica al historial permanente del paciente."
+          />
           <NoticeForm action={createNursingNoteAction} notice="Nota guardada" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />

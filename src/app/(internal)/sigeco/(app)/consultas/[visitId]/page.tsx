@@ -299,7 +299,10 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
         </Card>
 
         <Card className="max-sm:order-5">
-          <CardHeader title="Órdenes clínicas" />
+          <CardHeader
+            title="Órdenes clínicas emitidas"
+            description="Indicaciones enviadas a otras áreas durante esta visita."
+          />
           <div className="grid gap-0">
             {visit.clinicalOrders.map((order) => (
               <TimelineItem
@@ -317,7 +320,10 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
         </Card>
 
         <Card className="max-sm:order-6">
-          <CardHeader title="Estudios y enfermería" />
+          <CardHeader
+            title="Resultados de estudios y enfermería"
+            description="Resultados y actuaciones recibidos desde las áreas de apoyo clínico."
+          />
           <div className="grid gap-0">
             {visit.studies.map((study) => (
               <TimelineItem
