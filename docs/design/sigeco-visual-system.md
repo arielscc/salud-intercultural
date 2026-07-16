@@ -71,6 +71,7 @@ Regla central del rediseno: **el shell ocupa toda la pantalla y solo el area de 
 - Las bandejas desktop usan una toolbar comun desde `lg`: vistas y filtros a la izquierda, contador y accion primaria a la derecha. Es una banda operativa con bordes horizontales, no una card; movil y tableta conservan sus controles actuales.
 - Recepcion/Hoy usa desde `xl` el piloto master-detail: lista compacta a la izquierda y preview pegajoso a la derecha. La seleccion vive en `?visita=`, conserva el filtro y no reemplaza las paginas completas de ficha o visita.
 - Los detalles con dos columnas usan desde `xl` un rail lateral pegajoso con scroll propio. Su encabezado de contexto mantiene identidad y estado visibles sobre las acciones existentes; la columna principal, el orden movil y los back links no cambian.
+- La ficha de paciente organiza desde `xl` sus historiales pares en tabs con contador y hash recuperable; bajo `xl` todas las secciones permanecen visibles y en el orden original. Metadatos permanentes secundarios usan collapsible desktop, nunca alertas ni trabajo activo.
 
 ## Componentes Base
 

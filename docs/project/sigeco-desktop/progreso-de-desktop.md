@@ -14,7 +14,7 @@ Iniciativa en implementacion. La navegacion y el contexto desktop quedaron resue
 | 4. Tabla operativa | Completada | Semantica, foco y columnas prioritarias |
 | 5. Lista + preview | Completada | Piloto en Recepcion/Hoy desde `xl` |
 | 6. Detalles persistentes | Completada | Contexto y acciones en rail `xl` |
-| 7. Historiales y secciones | Pendiente | Tabs solo donde no haya comparacion |
+| 7. Historiales y secciones | Completada | Tabs/hash en ficha y metadata collapsible |
 | 8. Formularios por flujo | Pendiente | Grillas solo desde `lg` |
 | 9. Confirmacion y feedback | Pendiente | Complemento desktop del patron movil |
 | 10. QA y cierre | Pendiente | Validacion integral final |
@@ -153,6 +153,34 @@ Validacion focal: ESLint sobre el componente y los ocho detalles, `git diff --ch
 
 Commit sugerido: `feat(sigeco): add persistent desktop detail context`
 
+## Tarea 7 - Historiales Y Secciones Escaneables (2026-07-16)
+
+Que se hizo:
+
+- Nuevo `DesktopSectionTabs`: tablist accesible desde `xl`, tabs con contador, paneles enlazados por `aria-controls`/`aria-labelledby` y navegacion ArrowLeft, ArrowRight, Home y End.
+- La seleccion vive en el hash (`#historial-visitas`, `#historial-enfermeria`, `#historial-estudios`, `#historial-administracion`, `#historial-seguimiento`). `pushState`, popstate y hashchange conservan back/forward y enlaces directos.
+- Nuevo `DesktopSectionPanel`: bajo `xl` usa `display: contents` y muestra todos los hijos en su orden original; desde `xl` solo muestra el panel activo. No se duplicaron cards ni datos.
+- La ficha de paciente agrupa sus cinco historiales pares: Visitas, Enfermeria, Estudios, Administracion y Seguimiento. Cada panel conserva su heading, contenido, links y estado vacio existente.
+- `Ficha permanente` conserva su card actual bajo `xl` y usa un `CollapsibleSection` exclusivo desktop para alergias, antecedentes y observaciones.
+
+Clasificacion aplicada:
+
+- Siempre visible: identidad, resumen, alertas, estado, trabajo actual y acciones.
+- Tabs: historiales independientes de la ficha que no necesitan comparacion simultanea.
+- Visibles juntos: tareas + ruta de visita, ordenes + estudios clinicos y detalle + pagos de venta, porque existe relacion operativa o necesidad de contraste.
+- Sin tabs: historial de seguimiento y movimientos de inventario en sus detalles, porque cada pantalla tiene una sola serie historica.
+- Collapsible: metadata permanente secundaria; nunca consecuencias, alertas o formularios activos.
+
+Decisiones:
+
+- No se extendieron tabs por uniformidad visual. GOV.UK advierte que ocultar contenido perjudica comparacion y descubrimiento; se aplicaron solo donde reduce longitud sin aumentar memoria.
+- Los tabs usan anchors con hash en vez de estado efimero para que enlaces, refresh y back/forward sean recuperables.
+- No se agregaron queries, carga diferida ni cambios de negocio: cambiar tab solo controla presentacion desktop de datos ya renderizados.
+
+Validacion focal: ESLint sobre `DesktopSectionTabs` y la ficha de paciente, `git diff --check`, auditoria de roles/relaciones, hashes y cardinalidad de cards, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): organize desktop detail histories`
+
 ## Siguiente Paso
 
-Ejecutar la Tarea 7: historiales y secciones escaneables en desktop.
+Ejecutar la Tarea 8: formularios desktop estructurados por flujo.

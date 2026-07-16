@@ -7,8 +7,13 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
+import {
+  DesktopSectionPanel,
+  DesktopSectionTabs
+} from "@/components/internal/ui/DesktopSectionTabs";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import {
   RecordItem,
@@ -123,7 +128,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           </dl>
         </Card>
 
-        <Card className="max-sm:order-4">
+        <Card className="max-sm:order-4 xl:hidden">
           <CardHeader title="Ficha permanente" />
           <dl className="grid gap-y-3 text-sm">
             <InfoRow label="Alergias" value={patient.allergies} wide />
@@ -131,6 +136,36 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             <InfoRow label="Observaciones" value={patient.generalObservations} wide />
           </dl>
         </Card>
+
+        <div className="hidden xl:block">
+          <CollapsibleSection
+            title="Ficha permanente"
+            description="Alergias, antecedentes y observaciones"
+            className="bg-surface"
+          >
+            <dl className="grid gap-y-3 text-sm">
+              <InfoRow label="Alergias" value={patient.allergies} wide />
+              <InfoRow label="Antecedentes" value={patient.relevantHistory} wide />
+              <InfoRow label="Observaciones" value={patient.generalObservations} wide />
+            </dl>
+          </CollapsibleSection>
+        </div>
+
+        <DesktopSectionTabs
+          label="Historiales del paciente"
+          items={[
+            { id: "historial-visitas", label: "Visitas", count: patient.visits.length },
+            { id: "historial-enfermeria", label: "Enfermería", count: nursingCount },
+            { id: "historial-estudios", label: "Estudios", count: patient.studies.length },
+            { id: "historial-administracion", label: "Administración", count: patient.sales.length },
+            {
+              id: "historial-seguimiento",
+              label: "Seguimiento",
+              count: patient.followUpTasks.length
+            }
+          ]}
+        >
+          <DesktopSectionPanel id="historial-visitas">
 
         <Card className="max-sm:order-5 p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Visitas" />
@@ -190,6 +225,9 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             </Table>
           </RecordTable>
         </Card>
+          </DesktopSectionPanel>
+
+          <DesktopSectionPanel id="historial-enfermeria">
 
         <Card className="max-sm:order-6">
           <CardHeader title="Timeline de enfermería" />
@@ -237,6 +275,9 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             ) : null}
           </div>
         </Card>
+          </DesktopSectionPanel>
+
+          <DesktopSectionPanel id="historial-estudios">
 
         <Card className="max-sm:order-7">
           <CardHeader title="Estudios" />
@@ -261,6 +302,9 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             ) : null}
           </div>
         </Card>
+          </DesktopSectionPanel>
+
+          <DesktopSectionPanel id="historial-administracion">
 
         <Card className="max-sm:order-8 p-0">
           <CardHeader className="mb-0 p-[18px] pb-3" title="Cronología administrativa" />
@@ -320,6 +364,9 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             </Table>
           </RecordTable>
         </Card>
+          </DesktopSectionPanel>
+
+          <DesktopSectionPanel id="historial-seguimiento">
 
         <Card className="max-sm:order-9">
           <CardHeader title="Historial de seguimiento" />
@@ -345,6 +392,8 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             ) : null}
           </div>
         </Card>
+          </DesktopSectionPanel>
+        </DesktopSectionTabs>
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
