@@ -40,7 +40,13 @@ async function moveVisit(
   }
 }
 
-export async function createPaidStudyOrder(input: PaidStudyOrderInput & { doctorId?: string }) {
+export async function createPaidStudyOrder(
+  input: PaidStudyOrderInput & {
+    doctorId?: string;
+    requestedById?: string;
+    source?: "consultation" | "reception";
+  }
+) {
   return withDatabaseError("createPaidStudyOrder", () =>
     prisma.$transaction(async (tx) => {
       const visit = await tx.visit.findUniqueOrThrow({ where: { id: input.visitId }, include: { patient: true } });
@@ -56,7 +62,13 @@ export async function createPaidStudyOrder(input: PaidStudyOrderInput & { doctor
       const description = studies.map((study) => study.title).join(", ");
 
       const workItem = await tx.visitWorkItem.create({
-        data: { visitId: visit.id, createdById: input.doctorId, area: "administracion", title: "Cobro de estudios", description }
+        data: {
+          visitId: visit.id,
+          createdById: input.requestedById ?? input.doctorId,
+          area: "administracion",
+          title: "Cobro de estudios",
+          description
+        }
       });
       await tx.clinicalOrder.createMany({
         data: studies.map((study) => ({
@@ -80,11 +92,20 @@ export async function createPaidStudyOrder(input: PaidStudyOrderInput & { doctor
           discountCents,
           totalCents,
           balanceCents: totalCents,
-          notes: "Orden de cobro generada desde consulta médica",
+          notes:
+            input.source === "reception"
+              ? "Orden de cobro por estudios generada desde recepción"
+              : "Orden de cobro generada desde consulta médica",
           items: { create: studies.map((study) => ({ type: "study", description: study.title, quantity: 1, unitPriceCents: study.unitPriceCents, totalCents: study.unitPriceCents })) }
         }
       });
-      await moveVisit(tx, { visitId: visit.id, userId: input.doctorId, status: "in_administration", area: "administracion", note: `Pendiente de pago: ${description}` });
+      await moveVisit(tx, {
+        visitId: visit.id,
+        userId: input.requestedById ?? input.doctorId,
+        status: "in_administration",
+        area: "administracion",
+        note: `Pendiente de pago: ${description}`
+      });
       return { sale, workItem };
     })
   );

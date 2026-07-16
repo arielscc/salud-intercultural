@@ -18,10 +18,14 @@ type StudyKey = (typeof studies)[number]["key"];
 
 export function PaidStudyOrderDialog({
   visitId,
-  action
+  action,
+  compactTrigger = false,
+  triggerLabel = "Derivar a enfermería"
 }: {
   visitId: string;
   action: (formData: FormData) => Promise<void>;
+  compactTrigger?: boolean;
+  triggerLabel?: string;
 }) {
   const [selected, setSelected] = useState<Record<StudyKey, boolean>>({
     hemogram: false,
@@ -52,8 +56,13 @@ export function PaidStudyOrderDialog({
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
-        <Button type="button" variant="outline" className="w-full">
-          Derivar a enfermería
+        <Button
+          type="button"
+          variant={compactTrigger ? "primary" : "outline"}
+          size={compactTrigger ? "sm" : "md"}
+          className={compactTrigger ? undefined : "w-full"}
+        >
+          {triggerLabel}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -158,4 +167,3 @@ export function PaidStudyOrderDialog({
     </Dialog.Root>
   );
 }
-

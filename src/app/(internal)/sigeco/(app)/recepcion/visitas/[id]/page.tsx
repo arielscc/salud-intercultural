@@ -1,14 +1,13 @@
-import { notFound } from "next/navigation";
-import { Clock3, MapPin, Phone } from "lucide-react";
-import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
-import { NoticeForm } from "@/components/internal/NoticeForm";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
+import { NoticeForm } from "@/components/internal/NoticeForm";
+import { PaidStudyOrderDialog } from "@/components/internal/PaidStudyOrderDialog";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
+import { createReceptionPaidStudyOrderAction } from "@/features/clinical-care/actions";
 import {
   routeAreaLabels,
   visitStatusLabels,
@@ -16,9 +15,12 @@ import {
 } from "@/features/patients/labels";
 import { applyVisitFlowAction, updateVisitStatusAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
+import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { formatDateTime } from "@/lib/dates";
 import { getVisitById } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
+import { Clock3, MapPin, Phone } from "lucide-react";
+import { notFound } from "next/navigation";
 
 const statusOptions = Object.entries(visitStatusLabels) as Array<[VisitStatus, string]>;
 const areaOptions = Object.entries(routeAreaLabels) as Array<[PatientRouteArea, string]>;
@@ -29,7 +31,7 @@ type VisitDetailPageProps = {
 };
 
 export default async function VisitDetailPage({ params, searchParams }: VisitDetailPageProps) {
-  await requirePermission("visits_read");
+  const user = await requirePermission("visits_read");
   const [{ id }, { error }] = await Promise.all([params, searchParams]);
   const visit = await getVisitById(id);
 
@@ -102,11 +104,34 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
 
           {isActive ? (
             <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+              {["recepcion", "super_admin"].includes(user.role) ? (
+                <PaidStudyOrderDialog
+                  visitId={visit.id}
+                  action={createReceptionPaidStudyOrderAction}
+                  compactTrigger
+                  triggerLabel="Enviar a analisis"
+                />
+              ) : null}
               {visit.status !== "in_consultation" ? (
                 <NoticeForm action={applyVisitFlowAction} notice="Paciente enviado a consulta">
                   <input type="hidden" name="visitId" value={visit.id} />
                   <input type="hidden" name="flow" value="to_consultation" />
                   <SubmitButton size="sm">Enviar a consulta</SubmitButton>
+                </NoticeForm>
+              ) : null}
+              {visit.status !== "in_administration" ? (
+                <NoticeForm
+                  action={applyVisitFlowAction}
+                  notice="Paciente enviado a administración"
+                >
+                  <input type="hidden" name="visitId" value={visit.id} />
+                  <input type="hidden" name="flow" value="to_administration" />
+                  <input
+                    type="hidden"
+                    name="note"
+                    value="Pasa a administración para realizar una compra"
+                  />
+                  <SubmitButton size="sm">Enviar a administración</SubmitButton>
                 </NoticeForm>
               ) : null}
               <ConfirmForm
@@ -119,7 +144,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 <input type="hidden" name="visitId" value={visit.id} />
                 <input type="hidden" name="flow" value="complete" />
                 <SubmitButton size="sm" variant="outline">
-                  Cerrar visita
+                  Cerrar atención completada
                 </SubmitButton>
               </ConfirmForm>
               <ConfirmForm
@@ -136,7 +161,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                   variant="outline"
                   className="border-error/30 text-error hover:border-error/50 hover:text-error"
                 >
-                  Se retiró sin completar
+                  Registrar abandono
                 </SubmitButton>
               </ConfirmForm>
             </div>
