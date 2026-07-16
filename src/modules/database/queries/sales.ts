@@ -69,6 +69,31 @@ export async function getAdministrationWorkItems(input: PaginationInput = {}) {
   });
 }
 
+export async function getLatestPendingAdministrationWorkItem() {
+  return withDatabaseError("getLatestPendingAdministrationWorkItem", async () => {
+    return prisma.visitWorkItem.findFirst({
+      where: {
+        area: "administracion",
+        status: { in: ["pending", "acknowledged", "in_progress", "blocked"] },
+        OR: [{ sales: { none: {} } }, { sales: { some: { balanceCents: { gt: 0 } } } }]
+      },
+      include: {
+        createdBy: true,
+        clinicalOrders: {
+          include: { doctor: true },
+          orderBy: { createdAt: "desc" }
+        },
+        visit: { include: { patient: true, route: true } },
+        sales: {
+          include: { items: true, payments: true },
+          orderBy: { createdAt: "desc" }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+  });
+}
+
 export async function getAdministrationWorkItemById(id: string) {
   return withDatabaseError("getAdministrationWorkItemById", async () => {
     return prisma.visitWorkItem.findUnique({

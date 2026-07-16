@@ -19,6 +19,7 @@ export function PriorityCollectionDialog({
   orderTitle,
   orderDescription,
   requestedBy,
+  requestedAt,
   amount,
   balance
 }: {
@@ -28,6 +29,7 @@ export function PriorityCollectionDialog({
   orderTitle: string;
   orderDescription?: string | null;
   requestedBy?: string | null;
+  requestedAt: string;
   amount?: string;
   balance?: string;
 }) {
@@ -41,7 +43,7 @@ export function PriorityCollectionDialog({
             </span>
             <div>
               <p className="text-xs font-semibold uppercase text-warning">Atención prioritaria</p>
-              <p className="font-sora text-lg font-bold text-text">Tienes un cobro pendiente</p>
+              <p className="font-sora text-lg font-bold text-text">Nueva orden de cobro</p>
             </div>
           </div>
         </div>
@@ -58,6 +60,7 @@ export function PriorityCollectionDialog({
             <div><dt className="text-xs font-medium text-muted">Orden</dt><dd className="mt-0.5 font-semibold text-text">{orderTitle}</dd></div>
             {orderDescription ? <div><dt className="text-xs font-medium text-muted">Detalle</dt><dd className="mt-0.5 text-text">{orderDescription}</dd></div> : null}
             {requestedBy ? <div><dt className="text-xs font-medium text-muted">Solicitado por</dt><dd className="mt-0.5 text-text">{requestedBy}</dd></div> : null}
+            <div><dt className="text-xs font-medium text-muted">Recibida</dt><dd className="mt-0.5 font-medium tabular-nums text-text">{requestedAt}</dd></div>
             {amount ? (
               <div className="grid grid-cols-2 gap-3 border-t border-border pt-3 tabular-nums">
                 <div><dt className="text-xs font-medium text-muted">Total</dt><dd className="mt-0.5 font-semibold text-text">{amount}</dd></div>

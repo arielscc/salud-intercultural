@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Banknote, CalendarDays, Clock } from "lucide-react";
+import { ArrowRight, Banknote, CalendarDays, Clock, ReceiptText } from "lucide-react";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
@@ -13,11 +13,15 @@ import {
   RecordTable
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
+import { buttonVariants } from "@/components/internal/ui/Button";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
+import { formatDateTime } from "@/lib/dates";
+import { cn } from "@/lib/cn";
 import {
   getAdministrationWorkItems,
+  getLatestPendingAdministrationWorkItem,
   getSalesSummary
 } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";
@@ -33,25 +37,79 @@ const emptyAdministrationMessage = (
 
 export default async function AdministrationPage() {
   const user = await requirePermission("sales_read");
-  const [workItems, summary] = await Promise.all([
+  const isPersonalAdministrationAccount = user.role === "administracion";
+  const [workItems, summary, priorityCollection] = await Promise.all([
     getAdministrationWorkItems({ pageSize: 40 }),
-    getSalesSummary()
+    getSalesSummary(),
+    getLatestPendingAdministrationWorkItem()
   ]);
 
   const pendingBalance = summary.pendingSales._sum.balanceCents ?? 0;
-  const isPersonalAdministrationAccount = user.role === "administracion";
-  const priorityCollection = isPersonalAdministrationAccount
-    ? workItems.find((item) => {
-        const sale = item.sales[0];
-        return !sale || sale.balanceCents > 0;
-      })
-    : undefined;
 
   return (
     <div className="grid gap-4">
       <PageHeader title="Ventas y cobros" description="Administración" />
 
       {priorityCollection ? (
+        <section
+          className="overflow-hidden rounded-[8px] border border-primary/25 bg-surface shadow-lg"
+          aria-label="Orden de cobro prioritaria"
+        >
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+            <div className="premium-grid relative grid gap-4 p-4 pr-20 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5 sm:pr-20">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[11px] font-semibold uppercase text-primary-dark">
+                    Solicitud de cobro
+                  </p>
+                  <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[11px] font-semibold text-primary-dark">
+                    Requiere atención
+                  </span>
+                </div>
+                <p className="mt-1 truncate font-sora text-lg font-bold text-text">
+                  {priorityCollection.visit.patient.fullName}
+                </p>
+                <p className="truncate text-sm text-muted">
+                  {priorityCollection.title}
+                  <span className="px-1.5" aria-hidden="true">·</span>
+                  {priorityCollection.visit.patient.internalCode}
+                </p>
+                <p className="mt-1 text-xs tabular-nums text-muted">
+                  Recibida {formatDateTime(priorityCollection.createdAt)}
+                </p>
+              </div>
+
+              <div className="border-t border-border pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0 sm:text-right">
+                <p className="text-[11px] font-semibold uppercase text-muted">Saldo pendiente</p>
+                <p className="mt-0.5 font-sora text-2xl font-bold tabular-nums text-primary-dark">
+                  {priorityCollection.sales[0]
+                    ? formatMoney(priorityCollection.sales[0].balanceCents)
+                    : "Por registrar"}
+                </p>
+                <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
+                  Orden #{priorityCollection.id.slice(-8).toUpperCase()}
+                </p>
+              </div>
+
+              <span className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-[8px] bg-primary-dark text-white shadow-sm sm:right-5 sm:top-5">
+                <ReceiptText className="h-6 w-6" aria-hidden="true" />
+              </span>
+            </div>
+
+            <div className="flex items-center border-t border-border bg-surface-soft p-4 lg:border-l lg:border-t-0">
+              <Link
+                href={`/sigeco/administracion/${priorityCollection.id}`}
+                className={cn(buttonVariants(), "w-full lg:w-auto")}
+              >
+                Atender cobro
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {priorityCollection && isPersonalAdministrationAccount ? (
         <PriorityCollectionDialog
           workItemId={priorityCollection.id}
           patientName={priorityCollection.visit.patient.fullName}
@@ -60,8 +118,11 @@ export default async function AdministrationPage() {
           orderDescription={priorityCollection.description}
           requestedBy={
             priorityCollection.clinicalOrders[0]?.doctor?.name ??
-            priorityCollection.clinicalOrders[0]?.doctor?.email
+            priorityCollection.clinicalOrders[0]?.doctor?.email ??
+            priorityCollection.createdBy?.name ??
+            priorityCollection.createdBy?.email
           }
+          requestedAt={formatDateTime(priorityCollection.createdAt)}
           amount={priorityCollection.sales[0] ? formatMoney(priorityCollection.sales[0].totalCents) : undefined}
           balance={priorityCollection.sales[0] ? formatMoney(priorityCollection.sales[0].balanceCents) : undefined}
         />
