@@ -3,6 +3,7 @@ import type { SaleItemType } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
+import { PaymentMethodChips } from "@/components/internal/PaymentMethodChips";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
@@ -17,7 +18,6 @@ import {
 } from "@/features/sales/actions";
 import {
   formatMoney,
-  paymentMethodLabels,
   saleItemTypeLabels,
   saleStatusLabels
 } from "@/features/sales/labels";
@@ -28,7 +28,6 @@ import { getAdministrationWorkItemById } from "@/modules/database/queries/sales"
 import { requirePermission } from "@/modules/permissions";
 
 const saleItemTypeOptions = Object.entries(saleItemTypeLabels) as Array<[SaleItemType, string]>;
-const paymentMethodOptions = Object.entries(paymentMethodLabels);
 
 type AdministrationWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
@@ -125,11 +124,7 @@ export default async function AdministrationWorkItemPage({
                   <Field label="Monto Bs">
                     <input className={internalInputClassName} name="amount" inputMode="decimal" defaultValue={(generatedSale.balanceCents / 100).toFixed(2)} required />
                   </Field>
-                  <Field label="Forma de pago">
-                    <select className={internalInputClassName} name="paymentMethodCode" defaultValue="cash">
-                      {paymentMethodOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                    </select>
-                  </Field>
+                  <PaymentMethodChips />
                 </div>
                 <Field label="Referencia"><input className={internalInputClassName} name="reference" /></Field>
                 <SubmitButton>Registrar pago completo</SubmitButton>
@@ -221,15 +216,7 @@ export default async function AdministrationWorkItemPage({
                   placeholder="0.00"
                 />
               </Field>
-              <Field label="Forma de pago">
-                <select className={internalInputClassName} name="paymentMethodCode" defaultValue="cash">
-                  {paymentMethodOptions.map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <PaymentMethodChips />
             </div>
             <Field label="Referencia">
               <input className={internalInputClassName} name="paymentReference" />

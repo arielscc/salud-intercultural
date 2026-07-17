@@ -1,11 +1,10 @@
-import Link from "next/link";
-import { ArrowRight, Banknote, CalendarDays, Clock, ReceiptText } from "lucide-react";
+import { PriorityCollectionDialog } from "@/components/internal/PriorityCollectionDialog";
+import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
-import { PriorityCollectionDialog } from "@/components/internal/PriorityCollectionDialog";
 import {
   RecordItem,
   RecordList,
@@ -13,18 +12,19 @@ import {
   RecordTable
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
-import { buttonVariants } from "@/components/internal/ui/Button";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
-import { formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/cn";
+import { formatDateTime } from "@/lib/dates";
 import {
   getAdministrationWorkItems,
   getLatestPendingAdministrationWorkItem,
   getSalesSummary
 } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";
+import { ArrowRight, Banknote, CalendarDays, Clock } from "lucide-react";
+import Link from "next/link";
 
 const emptyAdministrationMessage = (
   <>
@@ -52,12 +52,11 @@ export default async function AdministrationPage() {
 
       {priorityCollection ? (
         <section
-          className="overflow-hidden rounded-[8px] border border-primary/25 bg-surface shadow-lg"
+          className="payment-weave overflow-hidden rounded-[8px] border border-primary/25 bg-surface-soft shadow-lg"
           aria-label="Orden de cobro prioritaria"
         >
-          <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
-            <div className="premium-grid relative grid gap-4 p-4 pr-20 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5 sm:pr-20">
-              <div className="min-w-0">
+          <div className="relative grid w-full gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(19rem,auto)] sm:items-center sm:p-5">
+            <div className="relative min-w-0 pr-14">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-[11px] font-semibold uppercase text-primary-dark">
                     Solicitud de cobro
@@ -79,31 +78,25 @@ export default async function AdministrationPage() {
                 </p>
               </div>
 
-              <div className="border-t border-border pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0 sm:text-right">
-                <p className="text-[11px] font-semibold uppercase text-muted">Saldo pendiente</p>
-                <p className="mt-0.5 font-sora text-2xl font-bold tabular-nums text-primary-dark">
-                  {priorityCollection.sales[0]
-                    ? formatMoney(priorityCollection.sales[0].balanceCents)
-                    : "Por registrar"}
-                </p>
-                <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
-                  Orden #{priorityCollection.id.slice(-8).toUpperCase()}
-                </p>
-              </div>
-
-              <span className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-[8px] bg-primary-dark text-white shadow-sm sm:right-5 sm:top-5">
-                <ReceiptText className="h-6 w-6" aria-hidden="true" />
-              </span>
-            </div>
-
-            <div className="flex items-center border-t border-border bg-surface-soft p-4 lg:border-l lg:border-t-0">
-              <Link
-                href={`/sigeco/administracion/${priorityCollection.id}`}
-                className={cn(buttonVariants(), "w-full lg:w-auto")}
-              >
-                Atender cobro
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
+            <div className="flex flex-wrap justify-between w-full items-center gap-3 border-t border-border pt-3 sm:flex-nowrap sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+                <div className="sm:text-right">
+                  <p className="text-[11px] font-semibold uppercase text-muted">Saldo pendiente</p>
+                  <p className="mt-0.5 font-sora text-2xl font-bold tabular-nums text-primary-dark">
+                    {priorityCollection.sales[0]
+                      ? formatMoney(priorityCollection.sales[0].balanceCents)
+                      : "Por registrar"}
+                  </p>
+                  <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
+                    Orden #{priorityCollection.id.slice(-8).toUpperCase()}
+                  </p>
+                </div>
+                <Link
+                  href={`/sigeco/administracion/${priorityCollection.id}`}
+                  className={cn(buttonVariants({ size: "sm" }), "ml-auto shrink-0")}
+                >
+                  Atender cobro
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </Link>
             </div>
           </div>
         </section>
@@ -128,17 +121,21 @@ export default async function AdministrationPage() {
         />
       ) : null}
 
-      <section className={`grid gap-3 ${isPersonalAdministrationAccount ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+      <section
+        className={`grid gap-2 sm:gap-3 ${isPersonalAdministrationAccount ? "grid-cols-2" : "grid-cols-3"}`}
+      >
         <KpiCard
           icon={Banknote}
           label="Cobrado hoy"
           value={formatMoney(summary.todaySales._sum.paidCents ?? 0)}
+          compactMobile
         />
         {!isPersonalAdministrationAccount ? (
           <KpiCard
             icon={CalendarDays}
             label="Ventas del mes"
             value={formatMoney(summary.monthSales._sum.totalCents ?? 0)}
+            compactMobile
           />
         ) : null}
         <KpiCard
@@ -146,6 +143,7 @@ export default async function AdministrationPage() {
           label="Saldo pendiente"
           value={formatMoney(pendingBalance)}
           flag={pendingBalance > 0 ? { tone: "warn", label: "Por cobrar" } : undefined}
+          compactMobile
         />
       </section>
 

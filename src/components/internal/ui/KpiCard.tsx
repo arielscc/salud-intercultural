@@ -1,5 +1,5 @@
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import type { LucideIcon } from "lucide-react";
 
 const flagToneClassName = {
   warn: "bg-warning/10 text-warning",
@@ -29,7 +29,8 @@ export function KpiCard({
   flag,
   icon: Icon,
   tone = "primary",
-  className
+  className,
+  compactMobile = false
 }: {
   label: string;
   value: number | string;
@@ -38,11 +39,13 @@ export function KpiCard({
   icon?: LucideIcon;
   tone?: KpiTone;
   className?: string;
+  compactMobile?: boolean;
 }) {
   return (
     <div
       className={cn(
         "flex flex-col gap-1.5 rounded-[9px] border border-border bg-surface p-2.5 sm:gap-2 sm:p-[18px]",
+        compactMobile && "gap-1 p-2",
         className
       )}
     >
@@ -50,10 +53,17 @@ export function KpiCard({
         <span
           className={cn(
             "relative flex h-7 w-7 items-center justify-center rounded-[7px] sm:h-9 sm:w-9 sm:rounded-[9px]",
+            compactMobile && "h-6 w-6",
             iconToneClassName[tone]
           )}
         >
-          <Icon className="h-3.5 w-3.5 sm:h-[18px] sm:w-[18px]" aria-hidden="true" />
+          <Icon
+            className={cn(
+              "h-3.5 w-3.5 sm:h-[18px] sm:w-[18px]",
+              compactMobile && "h-3 w-3"
+            )}
+            aria-hidden="true"
+          />
           {flag ? (
             <span
               className={cn(
@@ -66,10 +76,20 @@ export function KpiCard({
         </span>
       ) : null}
       <div>
-        <span className="block font-sora text-lg font-bold leading-tight tabular-nums text-text sm:text-[26px]">
+        <span
+          className={cn(
+            "block font-sora text-lg font-bold leading-tight tabular-nums text-text sm:text-[26px]",
+            compactMobile && "break-words text-[13px]"
+          )}
+        >
           {value}
         </span>
-        <span className="mt-0.5 block text-[10.5px] font-medium leading-tight text-muted sm:text-xs">
+        <span
+          className={cn(
+            "mt-0.5 block text-[10.5px] font-medium leading-tight text-muted sm:text-xs",
+            compactMobile && "text-[9px]"
+          )}
+        >
           {label}
         </span>
       </div>

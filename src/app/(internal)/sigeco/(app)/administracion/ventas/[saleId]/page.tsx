@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { NoticeForm } from "@/components/internal/NoticeForm";
+import { PaymentMethodChips } from "@/components/internal/PaymentMethodChips";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -16,7 +17,6 @@ import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { createPaymentAction } from "@/features/sales/actions";
 import {
   formatMoney,
-  paymentMethodLabels,
   saleItemTypeLabels,
   saleStatusLabels
 } from "@/features/sales/labels";
@@ -24,8 +24,6 @@ import { formatDateTime } from "@/lib/dates";
 import { getSaleById } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
-
-const paymentMethodOptions = Object.entries(paymentMethodLabels);
 
 type SaleDetailPageProps = {
   params: Promise<{ saleId: string }>;
@@ -213,15 +211,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Forma de pago">
-                  <select className={internalInputClassName} name="paymentMethodCode" defaultValue="cash">
-                    {paymentMethodOptions.map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                <PaymentMethodChips />
               </div>
               <Field label="Referencia">
                 <input className={internalInputClassName} name="reference" />
