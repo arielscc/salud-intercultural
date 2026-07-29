@@ -1,9 +1,12 @@
 import Script from "next/script";
+import { isStagingEnvironment } from "@/lib/deployment-environment";
 
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
 const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
 export function AnalyticsScripts() {
+  if (isStagingEnvironment()) return null;
+
   return (
     <>
       {gaId ? (

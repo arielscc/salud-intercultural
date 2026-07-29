@@ -17,6 +17,12 @@ const pageMessages: Record<string, string> = {
   "/testimonios": "Hola, quiero consultar por la atención de Salud Intercultural."
 };
 
+export const blockedStagingContactHref = "#staging-contact-blocked";
+
+function contactsAreBlocked() {
+  return process.env.NEXT_PUBLIC_APP_ENV === "staging";
+}
+
 function normalizePhoneNumber(phone: string) {
   return phone.replace(/[^\d]/g, "");
 }
@@ -41,6 +47,8 @@ export function createWhatsAppLink(
   message: string = defaultWhatsAppMessage,
   phoneNumber: string = siteConfig.conversion.whatsappPhone
 ) {
+  if (contactsAreBlocked()) return blockedStagingContactHref;
+
   const phone = normalizePhoneNumber(phoneNumber);
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
@@ -53,6 +61,7 @@ export function createContextualWhatsAppLink(
 }
 
 export function createCallLink(phone: string = siteConfig.conversion.callPhone) {
+  if (contactsAreBlocked()) return blockedStagingContactHref;
   return `tel:${phone.replace(/\s+/g, "")}`;
 }
 

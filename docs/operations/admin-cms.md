@@ -82,10 +82,16 @@ La collection `media` acepta:
 - `image/*`
 - `video/*`
 
-En produccion/staging, Vercel Blob se activa con:
+En produccion, Vercel Blob se activa con:
 
 ```env
 BLOB_READ_WRITE_TOKEN=""
+```
+
+En staging se usa un store separado:
+
+```env
+STAGING_BLOB_READ_WRITE_TOKEN=""
 ```
 
 Las imagenes pueden usarse en campos CMS y se sirven desde Blob. Los videos se administran como media, pero no se renderizan con `next/image`.

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
 import "@/app/globals.css";
 import { PublicLayout } from "@/components/public/PublicLayout";
+import { StagingEnvironmentChrome } from "@/components/environment/StagingEnvironmentChrome";
+import { isStagingEnvironment } from "@/lib/deployment-environment";
 import { createPageMetadata, seo, siteUrl } from "@/lib/seo";
 
 const inter = Inter({
@@ -51,6 +53,7 @@ export default function PublicRouteLayout({
         />
       </head>
       <body>
+        <StagingEnvironmentChrome enabled={isStagingEnvironment()} />
         <PublicLayout>{children}</PublicLayout>
       </body>
     </html>

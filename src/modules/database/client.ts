@@ -1,11 +1,13 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { assertEnvironmentIsolation } from "@/lib/deployment-environment";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   __saludInterculturalPrisma?: PrismaClient;
 };
 
 function createPrismaClient() {
+  assertEnvironmentIsolation();
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {

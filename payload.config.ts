@@ -6,9 +6,21 @@ import { vercelBlobStorage } from "@payloadcms/storage-vercel-blob";
 import sharp from "sharp";
 import { collections } from "./src/payload/collections/index.ts";
 import { globals } from "./src/payload/globals/index.ts";
+import {
+  assertEnvironmentIsolation,
+  resolveBlobReadWriteToken
+} from "./src/lib/deployment-environment.ts";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
+const environment = assertEnvironmentIsolation();
+const blobReadWriteToken = resolveBlobReadWriteToken();
+const storagePrefix =
+  environment.storageEnvironment === "staging"
+    ? "staging"
+    : environment.storageEnvironment === "production"
+      ? "production"
+      : undefined;
 
 export default buildConfig({
   admin: {
@@ -62,11 +74,11 @@ export default buildConfig({
   globals,
   plugins: [
     vercelBlobStorage({
-      enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      enabled: Boolean(blobReadWriteToken),
       collections: {
-        media: true
+        media: storagePrefix ? { prefix: storagePrefix } : true
       },
-      token: process.env.BLOB_READ_WRITE_TOKEN
+      token: blobReadWriteToken
     })
   ],
   secret: process.env.PAYLOAD_SECRET || "development-payload-secret",

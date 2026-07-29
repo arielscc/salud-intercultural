@@ -4,11 +4,13 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { loginInternalUser } from "@/features/internal-auth/actions";
 import { cn } from "@/lib/cn";
+import { createWhatsAppLink } from "@/lib/whatsapp";
 import { LockKeyhole } from "lucide-react";
 
-const supportWhatsappHref = `https://wa.me/59177557034?text=${encodeURIComponent(
+const supportWhatsappHref = createWhatsAppLink(
   "Hola, necesito ayuda con el acceso a Sigeco.",
-)}`;
+  "+59177557034"
+);
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string; email?: string }>;

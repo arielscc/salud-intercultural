@@ -26,6 +26,7 @@ async function readJson(response: Response) {
 }
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   createLeadRecordMock.mockReset();
   delete (globalThis as typeof globalThis & {
     __saludInterculturalLeadRateLimit?: unknown;
@@ -124,5 +125,36 @@ describe("POST /api/leads", () => {
       ok: false,
       message: "No pudimos registrar la consulta. Inténtalo nuevamente."
     });
+  });
+
+  it("rejects real-looking contact data in staging", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+
+    const response = await POST(createJsonRequest(validLeadInput));
+
+    expect(response.status).toBe(422);
+    expect(await readJson(response)).toMatchObject({
+      ok: false,
+      message: "Staging acepta únicamente datos sintéticos de prueba."
+    });
+    expect(createLeadRecordMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts reserved synthetic contact data in staging", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    createLeadRecordMock.mockResolvedValue(persistedLead);
+
+    const response = await POST(
+      createJsonRequest({
+        ...validLeadInput,
+        email: "paciente@staging.invalid",
+        phone: "+59100000009"
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(createLeadRecordMock).toHaveBeenCalledOnce();
   });
 });

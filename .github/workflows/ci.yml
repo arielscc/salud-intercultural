@@ -21,6 +21,11 @@ concurrency:
 env:
   CI: "true"
   NEXT_TELEMETRY_DISABLED: "1"
+  APP_ENV: test
+  NEXT_PUBLIC_APP_ENV: test
+  DATABASE_ENVIRONMENT: test
+  STORAGE_ENVIRONMENT: test
+  EXTERNAL_COMMUNICATIONS_MODE: blocked
   DATABASE_URL: postgresql://salud_intercultural:salud_intercultural@127.0.0.1:5432/salud_intercultural_test?schema=public
   PAYLOAD_SECRET: ci-only-non-production-secret
   PAYLOAD_PUBLIC_SERVER_URL: http://localhost:3000

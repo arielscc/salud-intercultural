@@ -17,6 +17,7 @@ import { applyVisitFlowAction, updateVisitStatusAction } from "@/features/visits
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { formatDateTime } from "@/lib/dates";
+import { createCallLink } from "@/lib/whatsapp";
 import { getVisitById } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
 import { Clock3, MapPin, Phone } from "lucide-react";
@@ -68,7 +69,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 </a>
               </h2>
               <a
-                href={`tel:${visit.patient.phone}`}
+                href={createCallLink(visit.patient.phone)}
                 className="focus-ring mt-1 inline-flex items-center gap-1.5 rounded-[7px] text-sm tabular-nums text-muted hover:text-primary-dark"
               >
                 <Phone className="h-3.5 w-3.5" aria-hidden="true" />

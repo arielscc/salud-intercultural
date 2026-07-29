@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, Inter, Sora } from "next/font/google";
 import "@/app/globals.css";
 import "./sigeco.css";
+import { StagingEnvironmentChrome } from "@/components/environment/StagingEnvironmentChrome";
+import { isStagingEnvironment } from "@/lib/deployment-environment";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -39,7 +41,10 @@ export default function SigecoRootLayout({
       data-theme="light"
       data-scroll-behavior="smooth"
     >
-      <body>{children}</body>
+      <body>
+        <StagingEnvironmentChrome enabled={isStagingEnvironment()} />
+        {children}
+      </body>
     </html>
   );
 }

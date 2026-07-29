@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createCallLink,
   createContextualWhatsAppLink,
@@ -7,6 +7,10 @@ import {
 } from "@/lib/whatsapp";
 
 describe("whatsapp helpers", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("builds contextual messages from service, topic or page", () => {
     expect(createWhatsAppMessage({ service: "sueroterapia" })).toBe(
       "Hola, quiero consultar por sueroterapia."
@@ -25,5 +29,14 @@ describe("whatsapp helpers", () => {
       "https://wa.me/59170000000?text="
     );
     expect(createCallLink("+591 700 000 00")).toBe("tel:+59170000000");
+  });
+
+  it("neutralizes WhatsApp and call links in staging", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+
+    expect(createWhatsAppLink("Mensaje", "+59170000000")).toBe(
+      "#staging-contact-blocked"
+    );
+    expect(createCallLink("+59170000000")).toBe("#staging-contact-blocked");
   });
 });

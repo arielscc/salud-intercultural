@@ -19,6 +19,7 @@ Estas variables pueden estar disponibles en el cliente.
 
 | Variable | Requerida operativamente | Ejemplo | Uso |
 | --- | --- | --- | --- |
+| `NEXT_PUBLIC_APP_ENV` | Si | `local`, `test`, `staging` o `production` | Identificacion visible y verificable del ambiente. |
 | `NEXT_PUBLIC_SITE_URL` | Si | `http://localhost:3000` | URL canonica para SEO, sitemap, Open Graph y enlaces absolutos. |
 | `NEXT_PUBLIC_SITE_NAME` | Si | `Salud Intercultural` | Nombre publico del sitio. |
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | Si | `+59164175822` | CTA de WhatsApp principal. |
@@ -34,11 +35,16 @@ Estas variables no deben exponerse al navegador.
 
 | Variable | Requerida operativamente | Ejemplo | Uso |
 | --- | --- | --- | --- |
+| `APP_ENV` | Si | `local`, `test`, `staging` o `production` | Identificacion privada; debe coincidir con la variable publica. |
+| `DATABASE_ENVIRONMENT` | Si | `staging` | Etiqueta de ownership de la base. |
+| `STORAGE_ENVIRONMENT` | Si | `staging` | Etiqueta de ownership del Blob Store. |
+| `EXTERNAL_COMMUNICATIONS_MODE` | Si | `blocked` | Bloquea contacto real fuera de produccion. |
 | `DATABASE_URL` | Si | `postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require` | Conexion de Prisma y Payload a Postgres. |
 | `PAYLOAD_SECRET` | Si | valor aleatorio de 32+ caracteres | Firma de tokens y sesiones de Payload. |
 | `PAYLOAD_PUBLIC_SERVER_URL` | Si | `http://localhost:3000` | URL base que Payload usa para resolver servidor/admin. |
 | `PAYLOAD_DB_SCHEMA` | Si | `payload` | Schema de Postgres usado por Payload. |
-| `BLOB_READ_WRITE_TOKEN` | Si en produccion/staging con media persistente | token generado por Vercel Blob | Almacenamiento persistente de media administrable de Payload. |
+| `BLOB_READ_WRITE_TOKEN` | Produccion; opcional en local | token generado por Vercel Blob | Store productivo o storage Blob opcional de desarrollo. Staging no lo utiliza. |
+| `STAGING_BLOB_READ_WRITE_TOKEN` | Solo staging | token generado con el prefijo `STAGING_BLOB` | Store exclusivo para media QA de staging. |
 | `ADMIN_EMAIL` | No | `admin@example.com` | Email para crear el primer admin con seed. |
 | `ADMIN_PASSWORD` | No | clave temporal de seed | Password para crear o resetear el primer admin con seed. |
 | `ADMIN_RESET_PASSWORD_ON_SEED` | No | `false` | Permite resetear el password de un admin existente durante seed cuando vale `true`. |
@@ -48,6 +54,8 @@ Estas variables no deben exponerse al navegador.
 | `INTERNAL_LOCK_MINUTES` | No | `10` | Bloqueo temporal tras intentos fallidos en Sigeco. |
 | `INTERNAL_ADMIN_EMAIL` | No | `sigeco-admin@example.com` | Email para crear el primer super administrador interno con `pnpm internal:seed`. |
 | `INTERNAL_ADMIN_PASSWORD` | No | clave temporal de seed | Password para crear el primer super administrador interno con `pnpm internal:seed`. |
+| `STAGING_QA_EMAIL_DOMAIN` | Solo staging | `staging.invalid` | Dominio reservado usado por cuentas QA. |
+| `STAGING_QA_PASSWORD` | Solo staging | secreto de 20+ caracteres | Base privada para contraseñas QA diferentes por rol. |
 | `GOOGLE_SITE_VERIFICATION` | No | token de Search Console | Verificacion de propiedad en Google. |
 | `RATE_LIMIT_MAX` | No | `10` | Limite de envios por ventana para leads. |
 | `RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Ventana de rate limit para leads. |
@@ -77,13 +85,18 @@ openssl rand -base64 32
 5. Configurar como minimo:
 
 ```env
+APP_ENV="local"
+NEXT_PUBLIC_APP_ENV="local"
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 NEXT_PUBLIC_SITE_NAME="Salud Intercultural"
+DATABASE_ENVIRONMENT="local"
 DATABASE_URL="postgresql://salud_intercultural:salud_intercultural@localhost:5432/salud_intercultural_dev?schema=public"
 PAYLOAD_SECRET="local-development-secret-change-me"
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
 PAYLOAD_DB_SCHEMA="payload"
+STORAGE_ENVIRONMENT="local"
 BLOB_READ_WRITE_TOKEN=""
+EXTERNAL_COMMUNICATIONS_MODE="blocked"
 CMS_READS_DURING_BUILD="false"
 ```
 
@@ -141,17 +154,28 @@ Staging corre como Preview Deployment desde rama `staging`.
 Valores esperados:
 
 ```env
+APP_ENV="staging"
+NEXT_PUBLIC_APP_ENV="staging"
 NEXT_PUBLIC_SITE_URL="https://staging.saludintercultural.com"
 PAYLOAD_PUBLIC_SERVER_URL="https://staging.saludintercultural.com"
-DATABASE_URL="postgresql://STAGING_USER:STAGING_PASSWORD@STAGING_HOST/STAGING_DB?sslmode=require"
-PAYLOAD_DB_SCHEMA="payload"
+DATABASE_ENVIRONMENT="staging"
+DATABASE_URL="postgresql://STAGING_USER:STAGING_PASSWORD@STAGING_HOST/salud_intercultural_staging?sslmode=require"
+PAYLOAD_DB_SCHEMA="payload_staging"
+STORAGE_ENVIRONMENT="staging"
+STAGING_BLOB_READ_WRITE_TOKEN="TOKEN_EXCLUSIVO_DE_STAGING"
+EXTERNAL_COMMUNICATIONS_MODE="blocked"
+NEXT_PUBLIC_GA_ID=""
+NEXT_PUBLIC_META_PIXEL_ID=""
 CMS_READS_DURING_BUILD="false"
 ```
 
 Recomendaciones:
 
-- Usar una base de datos separada para staging si se probaran cambios destructivos o seeds.
-- Usar un Blob Store/token separado del de produccion para no mezclar media de prueba con media real.
+- Usar siempre una base separada; no es opcional.
+- Usar siempre un Blob Store y token separados.
+- Aplicar variables Preview unicamente a la rama `staging`.
+- Ejecutar `pnpm staging:check`, `pnpm staging:seed` y `pnpm staging:verify`.
+- Seguir [staging aislado](./staging.md).
 
 ## Produccion En Vercel
 
@@ -160,29 +184,35 @@ Produccion corre desde `main`.
 Valores esperados:
 
 ```env
+APP_ENV="production"
+NEXT_PUBLIC_APP_ENV="production"
 NEXT_PUBLIC_SITE_URL="https://saludintercultural.com"
 PAYLOAD_PUBLIC_SERVER_URL="https://saludintercultural.com"
+DATABASE_ENVIRONMENT="production"
 DATABASE_URL="postgresql://PROD_USER:PROD_PASSWORD@PROD_HOST/PROD_DB?sslmode=require"
 PAYLOAD_DB_SCHEMA="payload"
+STORAGE_ENVIRONMENT="production"
+EXTERNAL_COMMUNICATIONS_MODE="enabled"
 CMS_READS_DURING_BUILD="false"
 ```
 
-La URL estable de Vercel queda solo como fallback tecnico para diagnostico o rollback:
+La URL estable de Vercel puede seguir respondiendo como alias tecnico, pero no debe configurarse como URL canonica. El control de entorno productivo exige:
 
 ```env
-NEXT_PUBLIC_SITE_URL="https://salud-intercultural.vercel.app"
-PAYLOAD_PUBLIC_SERVER_URL="https://salud-intercultural.vercel.app"
+NEXT_PUBLIC_SITE_URL="https://saludintercultural.com"
+PAYLOAD_PUBLIC_SERVER_URL="https://saludintercultural.com"
 ```
 
 Despues de cambiar dominio en Vercel, revisar `robots.ts`, `sitemap.ts`, Search Console, Analytics y Meta Pixel.
 
 ## Media
 
-`BLOB_READ_WRITE_TOKEN` activa Vercel Blob para Payload `media`.
+Payload selecciona el token Blob según el ambiente:
 
-- Si existe, Payload guarda imagenes y videos en Vercel Blob.
-- Si no existe, local usa `public/media`.
-- En produccion y staging debe estar configurado si se subiran imagenes o videos desde Payload.
+- Produccion usa `BLOB_READ_WRITE_TOKEN`.
+- Staging usa `STAGING_BLOB_READ_WRITE_TOKEN`.
+- Local puede usar `BLOB_READ_WRITE_TOKEN`; si esta vacio usa `public/media`.
+- Los tokens de produccion y staging nunca deben compartir alcance.
 - La collection `media` acepta `image/*` y `video/*`.
 - Las imagenes servidas desde `*.public.blob.vercel-storage.com` estan permitidas en `next/image`.
 - Los videos deben insertarse como archivo/media o URL de video, no mediante `next/image`.
@@ -201,14 +231,16 @@ Preview/Staging branch: staging
 
 ## Checklist De Deploy
 
-1. Verificar `NEXT_PUBLIC_SITE_URL` y `PAYLOAD_PUBLIC_SERVER_URL` con el dominio del ambiente.
-2. Verificar `PAYLOAD_SECRET`; usar 32+ caracteres en produccion.
-3. Verificar `DATABASE_URL`, `PAYLOAD_DB_SCHEMA` y migraciones.
-4. Verificar `BLOB_READ_WRITE_TOKEN` para media persistente en staging y produccion.
-5. Verificar `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CALL_PHONE`, email y Maps.
-6. Verificar `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID` y `GOOGLE_SITE_VERIFICATION` si aplican.
-7. Ejecutar `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build`.
-8. Revisar logs de Vercel: Build Logs, Runtime Logs y Function Logs de `/api/leads` y Payload.
+1. Ejecutar `pnpm env:check`.
+2. Verificar `APP_ENV`, `NEXT_PUBLIC_APP_ENV`, base, storage y comunicaciones.
+3. Verificar `NEXT_PUBLIC_SITE_URL` y `PAYLOAD_PUBLIC_SERVER_URL` con el dominio del ambiente.
+4. Verificar `PAYLOAD_SECRET`; usar 32+ caracteres en produccion.
+5. Verificar `DATABASE_URL`, `PAYLOAD_DB_SCHEMA` y migraciones.
+6. Verificar `BLOB_READ_WRITE_TOKEN` en produccion y `STAGING_BLOB_READ_WRITE_TOKEN` en staging.
+7. Verificar `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CALL_PHONE`, email y Maps.
+8. Verificar `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID` y `GOOGLE_SITE_VERIFICATION` si aplican.
+9. Ejecutar `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build`.
+10. Revisar logs de Vercel: Build Logs, Runtime Logs y Function Logs de `/api/leads` y Payload.
 
 ## Validacion Con Zod
 

@@ -12,7 +12,7 @@ El proyecto esta preparado para operar con:
 - Hosting: Vercel
 - Base de datos: PostgreSQL, documentada para Neon o proveedor compatible
 - CMS: Payload dentro de Next.js
-- Media persistente: Vercel Blob cuando `BLOB_READ_WRITE_TOKEN` existe
+- Media persistente: Vercel Blob con tokens distintos para produccion y staging
 - Analytics: GA4 con `NEXT_PUBLIC_GA_ID`
 - Meta Pixel: `NEXT_PUBLIC_META_PIXEL_ID`
 - Search Console: `GOOGLE_SITE_VERIFICATION`
@@ -64,6 +64,11 @@ Configuracion esperada:
 
 Variables requeridas en Vercel:
 
+- `APP_ENV`
+- `NEXT_PUBLIC_APP_ENV`
+- `DATABASE_ENVIRONMENT`
+- `STORAGE_ENVIRONMENT`
+- `EXTERNAL_COMMUNICATIONS_MODE`
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_SITE_NAME`
 - `NEXT_PUBLIC_WHATSAPP_NUMBER`
@@ -74,7 +79,8 @@ Variables requeridas en Vercel:
 - `PAYLOAD_SECRET`
 - `PAYLOAD_PUBLIC_SERVER_URL`
 - `PAYLOAD_DB_SCHEMA`
-- `BLOB_READ_WRITE_TOKEN` si se usara media persistente
+- `BLOB_READ_WRITE_TOKEN` para media productiva
+- `STAGING_BLOB_READ_WRITE_TOKEN` para media QA
 
 Variables opcionales:
 
@@ -128,14 +134,18 @@ Detalle completo: [admin y CMS](./admin-cms.md).
 Checklist:
 
 1. [x] Storage local disponible en desarrollo cuando `BLOB_READ_WRITE_TOKEN` esta vacio.
-2. [x] Vercel Blob se activa cuando existe `BLOB_READ_WRITE_TOKEN`.
-3. [x] Media de Blob permitida en `next/image`.
-4. [x] Collection `media` acepta imagenes y videos.
+2. [x] Produccion usa `BLOB_READ_WRITE_TOKEN`.
+3. [x] Staging usa `STAGING_BLOB_READ_WRITE_TOKEN`.
+4. [x] Media de Blob permitida en `next/image`.
+5. [x] Collection `media` acepta imagenes y videos.
 
 Recomendacion:
 
 - Usar tokens separados para staging y produccion.
+- Crear el store QA con el prefijo `STAGING_BLOB`.
+- Limitar el token productivo a Production y el token QA a Preview de la rama `staging`.
 - No mezclar media de prueba con media real.
+- Staging exige `STORAGE_ENVIRONMENT=staging`, un token propio y usa el prefijo remoto `staging/`.
 - Revisar peso, alt text y aspect ratio antes de publicar.
 
 Detalle completo: [media](./media.md).
@@ -178,6 +188,8 @@ Checklist:
 3. [x] Email publico documentado.
 4. [x] Google Maps soportado por URL publica.
 5. [x] CTAs trackeados por analytics.
+
+En staging, `EXTERNAL_COMMUNICATIONS_MODE=blocked` impide abrir WhatsApp, llamadas, SMS o correo. GA4, Meta Pixel y Search Console permanecen vacios. Ver [staging aislado](./staging.md).
 
 ## Revision De Lanzamiento
 

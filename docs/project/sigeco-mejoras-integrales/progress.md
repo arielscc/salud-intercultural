@@ -8,14 +8,17 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-La Tarea 1 está en progreso. El workflow, la actualización de dependencias y la documentación operativa están implementados localmente. Falta una ejecución remota completa y activar las protecciones de ramas antes de cerrarla.
+Las Tareas 1 y 2 están en progreso. CI, las barreras de aislamiento, la base y
+el Blob Store QA están preparados. Las doce migraciones ya se aplicaron en
+staging. Falta verificar los jobs remotos, ejecutar seed, validar las cuentas y
+probar el deployment antes de cerrar ambas tareas.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 28 |
-| En progreso | 1 |
+| Pendiente | 27 |
+| En progreso | 2 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -35,7 +38,7 @@ La Tarea 1 está en progreso. El workflow, la actualización de dependencias y l
 | # | Tarea | Prioridad | Estado | Dependencias |
 | --- | --- | --- | --- | --- |
 | 1 | CI y control de dependencias | P0 | En progreso | Ninguna |
-| 2 | Staging aislado | P0 | Pendiente | 1 |
+| 2 | Staging aislado | P0 | En progreso | 1 |
 | 3 | Auditoría append-only | P0 | Pendiente | 1-2 |
 | 4 | Usuarios, roles y sesiones | P0 | Pendiente | 3 |
 | 5 | Permisos, privacidad, logs y secretos | P0 | Pendiente | 3-4 |
@@ -66,11 +69,12 @@ La Tarea 1 está en progreso. El workflow, la actualización de dependencias y l
 
 ## Próximo Trabajo
 
-La tarea activa es la **Tarea 1 — CI y control de dependencias**.
+Las tareas activas son:
 
-Documento aplicable: [tasks.md](./tasks.md), sección “Tarea 1 — CI y control de dependencias”.
+- **Tarea 1 — CI y control de dependencias:** pendiente de ejecución remota y protecciones.
+- **Tarea 2 — Staging completamente aislado:** pendiente de seed, deployment y validación de cuentas.
 
-Para terminarla:
+Para terminar la Tarea 1:
 
 - Publicar los cambios en una rama.
 - Observar los cinco jobs en GitHub Actions.
@@ -78,7 +82,13 @@ Para terminarla:
 - Configurar los checks obligatorios en `staging` y `main`.
 - Registrar nombres y resultados de los checks.
 
-No comenzar la Tarea 2 hasta cerrar estos puntos.
+Para terminar la Tarea 2:
+
+- Configurar secretos Preview únicamente para la rama `staging`.
+- Ejecutar `pnpm staging:seed` y `pnpm staging:verify`.
+- Verificar los siete roles, media y bloqueo de comunicaciones en el deployment.
+
+No comenzar la Tarea 3 hasta cerrar las Tareas 1 y 2.
 
 ## Decisiones Vigentes
 
@@ -216,6 +226,77 @@ No comenzar la Tarea 2 hasta cerrar estos puntos.
 **Validación:** esquema Prisma válido, lint y typecheck aprobados, 22 archivos y 77 pruebas unitarias aprobadas. La migración no pudo probarse localmente porque Docker no está disponible en este WSL; debe validarse en el job de integración de CI.
 
 **Commit sugerido:** `fix(sigeco): simplify Facebook capture source`
+
+### 2026-07-29 — Tarea 2 — Staging Completamente Aislado
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsable:** equipo técnico.
+
+#### Resultado Implementado Localmente
+
+- Validación central de `APP_ENV`, URLs, base, schema Payload, storage, comunicaciones y analytics.
+- El build, Prisma y Payload se niegan a usar una configuración de staging incompleta o mezclada con producción.
+- `.env.staging.example` documenta únicamente placeholders y recursos exclusivos.
+- Vercel Blob usa `STAGING_BLOB_READ_WRITE_TOKEN` y el prefijo remoto `staging/`;
+  producción conserva `BLOB_READ_WRITE_TOKEN`.
+- La marca persistente `STAGING · DATOS SINTÉTICOS · CONTACTOS BLOQUEADOS` aparece en sitio público, SIGECO y Payload.
+- WhatsApp, llamadas, SMS y correo quedan neutralizados; no basta con ocultar la marca.
+- `/api/leads` rechaza datos de contacto que no sean sintéticos cuando corre en staging.
+- Analytics y verificación productiva se rechazan en staging.
+- El seed crea cuentas QA para los siete roles vigentes, cinco pacientes sintéticos, bandejas operativas, seguimiento e inventario.
+- Los correos usan el dominio reservado `.invalid`; el rol deprecado `captacion` no recibe cuenta.
+- El reset requiere `CONFIRM_STAGING_RESET=RESET-SIGECO-STAGING` y restaura el estado sintético.
+- Creada la guía [staging.md](../../operations/staging.md) con preparación, migración, seed, verificación, reinicio y prohibiciones.
+
+#### Validación Ejecutada
+
+- `pnpm env:check`: pasó para local.
+- Configuración sintética completa de staging con `STAGING_BLOB_READ_WRITE_TOKEN`: pasó.
+- El `.env.staging` privado ya supera ambiente, URL, base, schema y aislamiento;
+  todavía espera el token real del store QA bajo el nuevo nombre.
+- `pnpm lint`: pasó.
+- `pnpm typecheck`: pasó.
+- `pnpm test:unit`: pasó, 26 archivos y 97 pruebas.
+- `pnpm run build`: pasó con 18 páginas estáticas.
+- QA de navegador en `/sigeco/login`: marca visible a 390x844 y 1280x800, sin overflow horizontal.
+- Al pulsar `Contactar soporte`, la URL no cambió y la marca mostró `CONTACTO REAL BLOQUEADO`.
+
+#### Pendientes Para Cerrar
+
+- Configurar variables y secretos por rama en Vercel.
+- Activar control de acceso al deployment de staging.
+- Ejecutar `pnpm staging:seed` y `pnpm staging:verify` contra los recursos reales.
+- Entrar con las siete cuentas y verificar permisos.
+- Subir media QA y confirmar que no aparece en el store productivo.
+- El reset remoto no se ejecutó porque la migración pudo recuperarse sin borrar la base.
+
+#### Ajuste Durante El Aprovisionamiento De Blob
+
+- Vercel detectó que `BLOB_READ_WRITE_TOKEN` ya pertenece al store productivo.
+- El store QA se crea con el prefijo personalizado `STAGING_BLOB`.
+- SIGECO selecciona `STAGING_BLOB_READ_WRITE_TOKEN` únicamente en staging.
+- Ya no es necesario copiar el token QA bajo el nombre productivo.
+- Falta limitar el token QA a Preview de la rama `staging` y retirar el token
+  productivo de cualquier alcance Preview general.
+
+#### Recuperación De La Primera Migración Remota
+
+- La primera ejecución de `pnpm staging:migrate` aplicó once migraciones y
+  detectó correctamente un error en
+  `20260729000000_general_facebook_capture_source`.
+- La causa fue un nombre de tabla incorrecto: el SQL usaba `InternalLead`,
+  pero el modelo y el historial crean la tabla `Lead`.
+- Se corrigió la migración y se agregó
+  `scripts/migration-files.test.ts` como prueba de regresión.
+- Prisma marcó únicamente esa migración como revertida; no se reinició ni se
+  borró la base de staging.
+- La segunda ejecución aplicó la migración corregida y confirmó las doce
+  migraciones instaladas.
+
+**Commit sugerido:** `chore(sigeco): isolate staging environment`
 
 ## Cómo Actualizar El Progreso
 

@@ -26,11 +26,17 @@ Ver detalle en [variables de entorno](./environment-variables.md).
 Claves para deploy:
 
 ```env
+APP_ENV=""
+NEXT_PUBLIC_APP_ENV=""
+DATABASE_ENVIRONMENT=""
 DATABASE_URL=""
 PAYLOAD_SECRET=""
 PAYLOAD_PUBLIC_SERVER_URL=""
 PAYLOAD_DB_SCHEMA="payload"
+STORAGE_ENVIRONMENT=""
 BLOB_READ_WRITE_TOKEN=""
+STAGING_BLOB_READ_WRITE_TOKEN=""
+EXTERNAL_COMMUNICATIONS_MODE=""
 NEXT_PUBLIC_SITE_URL=""
 NEXT_PUBLIC_SITE_NAME="Salud Intercultural"
 CMS_READS_DURING_BUILD="false"
@@ -63,11 +69,15 @@ Ejecutar contra la base del ambiente correspondiente.
 
 ## Staging
 
-1. Merge de `develop` a `staging`.
-2. Push a remoto.
-3. Vercel genera Preview Deployment.
-4. Validar sitio publico, `/admin`, CMS, media, formulario publico, sitemap y robots.
-5. Ejecutar la [prueba completa de Sigeco V3.7](./sigeco-v3-full-flow-testing.md) con usuarios y base exclusivos de staging.
+1. Confirmar recursos y variables con [staging aislado](./staging.md).
+2. Ejecutar `pnpm staging:check`.
+3. Merge de `develop` a `staging`.
+4. Push a remoto.
+5. Vercel genera Preview Deployment.
+6. Ejecutar `pnpm staging:migrate`, `pnpm staging:seed` y `pnpm staging:verify` desde un entorno autorizado.
+7. Validar sitio publico, `/admin`, CMS, media, formulario publico, sitemap y robots.
+8. Confirmar la marca persistente `STAGING` y el bloqueo de contacto real.
+9. Ejecutar la [prueba completa de Sigeco V3.7](./sigeco-v3-full-flow-testing.md) con cuentas y datos sinteticos.
 
 ## Produccion
 

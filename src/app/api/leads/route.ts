@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createLeadSchema, sanitizeLeadInput } from "@/features/leads/schemas/lead.schema";
 import { env } from "@/lib/env";
+import { isStagingEnvironment } from "@/lib/deployment-environment";
 import { createLeadRecord } from "@/modules/database/queries/leads";
 
 type RateLimitEntry = {
@@ -29,6 +30,11 @@ function getClientIp(request: Request) {
 
 function normalizePhone(phone: string) {
   return phone.replace(/[^\d+]/g, "");
+}
+
+function isSyntheticStagingLead(input: { email?: string; phone: string }) {
+  const phone = input.phone.replace(/\D/g, "");
+  return phone.startsWith("591000") && (!input.email || input.email.endsWith(".invalid"));
 }
 
 function checkRateLimit(key: string) {
@@ -78,6 +84,17 @@ export async function POST(request: Request) {
   }
 
   const input = sanitizeLeadInput(parsed.data);
+
+  if (isStagingEnvironment() && !isSyntheticStagingLead(input)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Staging acepta únicamente datos sintéticos de prueba."
+      },
+      { status: 422 }
+    );
+  }
+
   const clientIp = getClientIp(request);
   const rateLimitKey = `${clientIp}:${normalizePhone(input.phone)}`;
 

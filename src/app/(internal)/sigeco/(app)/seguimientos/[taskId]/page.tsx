@@ -17,6 +17,7 @@ import { formatDateTime } from "@/lib/dates";
 import { getFollowUpTaskById } from "@/modules/database/queries/follow-ups";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
+import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
 
 const methodOptions = Object.entries(followUpAttemptMethodLabels) as Array<[FollowUpAttemptMethod, string]>;
 const resultOptions = ([
@@ -43,7 +44,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
 
   const phone = task.patient?.phone ?? task.lead?.phone;
   const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
-  const whatsappHref = phone ? `https://wa.me/${phone.replace(/\D/g, "")}` : undefined;
+  const whatsappHref = phone ? createWhatsAppLink("", phone) : undefined;
   const patientDeclinedContact = task.patient?.followUpPreference === "no_contact";
 
   return (
@@ -78,7 +79,7 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
           ) : null}
           {phone ? (
             <div className="mt-4 flex gap-2">
-              <a href={`tel:${phone}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+              <a href={createCallLink(phone)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
                 <Phone className="h-4 w-4" aria-hidden="true" />
                 Llamar
               </a>

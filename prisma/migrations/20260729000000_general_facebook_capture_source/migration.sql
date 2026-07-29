@@ -4,7 +4,7 @@
 ALTER TYPE "InternalLeadSource" ADD VALUE IF NOT EXISTS 'facebook';
 ALTER TYPE "PatientCaptureSource" ADD VALUE IF NOT EXISTS 'facebook';
 
-UPDATE "InternalLead"
+UPDATE "Lead"
 SET "source" = 'facebook'
 WHERE "source"::text IN ('facebook_ads', 'facebook_organic');
 

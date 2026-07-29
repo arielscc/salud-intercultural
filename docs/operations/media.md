@@ -9,7 +9,8 @@ Guia operativa para cargar, revisar y usar imagenes o videos administrables.
 - Las imagenes publicas usan `next/image` para optimizacion, lazy loading y formatos modernos.
 - Los dominios remotos habilitados son `images.unsplash.com` para fallbacks visuales y `*.public.blob.vercel-storage.com` para Vercel Blob.
 - En local, si `BLOB_READ_WRITE_TOKEN` esta vacio, Payload usa `public/media`.
-- En staging y produccion, Vercel Blob debe estar configurado si se subiran imagenes o videos desde Payload.
+- En produccion, Payload usa `BLOB_READ_WRITE_TOKEN`.
+- En staging, Payload usa exclusivamente `STAGING_BLOB_READ_WRITE_TOKEN`.
 
 ## Variantes CMS
 
@@ -64,7 +65,7 @@ Los valores compartidos viven en `src/lib/images.ts`.
 1. Confirmar que nuevas imagenes tengan `alt` o `imageAlt`.
 2. Confirmar que el encuadre respete el aspect ratio del componente donde se renderiza.
 3. Confirmar que las imagenes CMS reales no sean archivos excesivamente pesados.
-4. Confirmar que `BLOB_READ_WRITE_TOKEN` exista en staging/produccion si se requiere media persistente.
+4. Confirmar `BLOB_READ_WRITE_TOKEN` en produccion y `STAGING_BLOB_READ_WRITE_TOKEN` en staging.
 5. Revisar que URLs externas pertenezcan a dominios permitidos por `next.config.mjs`.
 
 ## Archivos Relevantes
