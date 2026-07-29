@@ -38,11 +38,14 @@ CMS_READS_DURING_BUILD="false"
 
 ## Antes De Deploy
 
+Confirmar que el workflow [CI](../../.github/workflows/ci.yml) termino correctamente para el commit que se promovera.
+
 ```bash
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:integration
+pnpm deps:check
 pnpm run build
 ```
 

@@ -12,6 +12,7 @@ El proyecto separa la suite rapida de los tests que usan PostgreSQL real.
 | Unitarios explicitos | `pnpm test:unit` | No | Alias de la suite rapida. |
 | Watch local | `pnpm test:watch` | No | Desarrollo iterativo. |
 | Integracion DB | `pnpm test:integration` | Si | Flujos criticos contra `salud_intercultural_test`. |
+| Dependencias | `pnpm deps:check` | No | Peers y vulnerabilidades altas/criticas. |
 
 `pnpm test` excluye archivos `*.integration.test.ts` y `*.integration.test.tsx`.
 
@@ -107,3 +108,35 @@ pnpm run build
 ```
 
 Detener `next dev` antes del build; ambos procesos usan `.next`.
+
+## CI En GitHub
+
+`.github/workflows/ci.yml` ejecuta en jobs separados:
+
+- `quality`: lint y typecheck.
+- `unit-tests`: suite rapida.
+- `integration-tests`: PostgreSQL 16 efimero, migraciones desde cero e integracion.
+- `build`: build de produccion sin lecturas CMS.
+- `dependency-audit`: peers y auditoria de dependencias.
+
+El workflow usa Node.js 22, la version de pnpm fijada en `package.json`, permisos `contents: read` y variables sinteticas. No usa secretos, bases o archivos de staging/produccion.
+
+## Control De Dependencias
+
+Comandos:
+
+```bash
+pnpm peers check
+pnpm audit:prod
+pnpm audit:high
+```
+
+`audit:prod` bloquea vulnerabilidades altas o criticas de produccion. `audit:high` hace lo mismo sobre todo el arbol con una excepcion temporal:
+
+- `GHSA-mh99-v99m-4gvg` afecta `brace-expansion` a traves de ESLint/minimatch.
+- Es una ruta exclusiva de desarrollo que procesa patrones del repositorio.
+- Forzar `brace-expansion` 5 sobre `minimatch` 3 rompe lint.
+- ESLint 10 fue evaluado, pero los plugins actuales todavia no son compatibles.
+- La excepcion debe retirarse cuando la cadena de plugins admita ESLint 10 o publique una solucion compatible.
+
+Los overrides de `postcss` y `sharp` viven en `pnpm-workspace.yaml`. No agregar overrides amplios sin ejecutar lint, tipos, tests y build.

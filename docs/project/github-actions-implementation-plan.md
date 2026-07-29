@@ -2,7 +2,7 @@
 
 Plan posterior al cierre de las 10 tareas de simplificacion V3.7. Su objetivo es convertir las validaciones locales actuales en controles automaticos y obligatorios antes de promover cambios a `staging` y `main`.
 
-Este documento define trabajo futuro. Mientras V3.7 siga abierta no se crean workflows ni se cambian reglas de ramas.
+Estado al 2026-07-28: `.github/workflows/ci.yml` esta implementado localmente como parte de la Tarea 1 de mejoras integrales. Falta publicarlo, observar una ejecucion remota completa y configurar las reglas de proteccion; hasta entonces la Tarea 1 permanece en progreso.
 
 ## Objetivos
 
@@ -16,7 +16,7 @@ Este documento define trabajo futuro. Mientras V3.7 siga abierta no se crean wor
 
 ### 1. CI De Pull Requests
 
-Archivo futuro: `.github/workflows/ci.yml`.
+Archivo implementado: `.github/workflows/ci.yml`.
 
 Triggers:
 
@@ -39,7 +39,7 @@ Jobs:
 | `unit-tests` | `pnpm test` | Node.js 22 |
 | `integration-tests` | `pnpm test:integration` | PostgreSQL 16 como service container |
 | `build` | `pnpm run build` | Variables no secretas y `CMS_READS_DURING_BUILD=false` |
-| `dependency-audit` | `pnpm audit --audit-level high` | Acceso al registry; inicialmente informativo hasta limpiar el baseline |
+| `dependency-audit` | `pnpm peers check`, `pnpm audit:prod`, `pnpm audit:high` | Acceso al registry; bloquea altas/criticas salvo una excepcion de desarrollo documentada |
 
 Los jobs pueden ejecutarse en paralelo. `build` no debe compartir `.next` con otro job y cada job debe partir de un checkout limpio.
 
@@ -70,7 +70,8 @@ GitHub Actions valida el cambio; Vercel conserva el despliegue.
 Usar:
 
 - `actions/checkout` con una version mayor fijada y mantenida.
-- `pnpm/action-setup` leyendo `pnpm@11.1.2` del proyecto.
+- `pnpm/action-setup@v6` leyendo `pnpm@11.17.0` del proyecto.
+- `actions/checkout@v6` y `actions/setup-node@v6`.
 - `actions/setup-node` con Node.js 22 y cache de pnpm.
 - `pnpm install --frozen-lockfile`.
 - Timeouts explicitos por job.
@@ -106,15 +107,15 @@ El audit de dependencias solo se vuelve obligatorio cuando las vulnerabilidades 
 
 ## Orden De Implementacion
 
-1. Cerrar y documentar V3.7.
-2. Corregir el build local y establecer un baseline reproducible.
-3. Resolver las vulnerabilidades altas de dependencias.
-4. Crear `ci.yml` con quality, unit tests y build.
-5. Agregar PostgreSQL e integration tests.
-6. Probar el workflow en una rama y medir tiempos.
-7. Activar checks obligatorios en `staging`.
-8. Activar proteccion de `main` despues de una promocion exitosa completa.
-9. Actualizar `docs/operations/testing.md`, `branch-flow.md` y `deploy.md` con el procedimiento real.
+1. [Completado] Cerrar y documentar V3.7.
+2. [Completado local] Corregir el build y establecer baseline reproducible.
+3. [Completado con excepcion documentada] Eliminar altas de produccion y bloquear nuevas vulnerabilidades altas/criticas.
+4. [Completado local] Crear `ci.yml` con quality, unit tests y build.
+5. [Completado local] Agregar PostgreSQL e integration tests.
+6. [Pendiente remoto] Probar el workflow en una rama y medir tiempos.
+7. [Pendiente remoto] Activar checks obligatorios en `staging`.
+8. [Pendiente remoto] Activar proteccion de `main` despues de una promocion exitosa completa.
+9. [Completado local] Actualizar `testing.md`, `branch-flow.md` y `deploy.md`.
 
 ## Criterios De Aceptacion
 
@@ -124,4 +125,3 @@ El audit de dependencias solo se vuelve obligatorio cuando las vulnerabilidades 
 - Los workflows tienen permisos minimos y no imprimen secretos.
 - `staging` y `main` tienen reglas de proteccion verificadas.
 - La documentacion operativa coincide con los workflows realmente instalados.
-

@@ -108,7 +108,7 @@ Se debe ampliar esta base. No se reconstruyen ventas o inventario desde cero.
 - Los logs no contienen secretos ni datos clínicos.
 - Se demuestra el bloqueo con un fallo intencional y su posterior corrección.
 
-**Commit sugerido:** `ci: add sigeco quality gates`
+**Commit sugerido:** `ci(sigeco): add quality gates and dependency controls`
 
 ## Tarea 2 — Staging Completamente Aislado
 
@@ -1009,4 +1009,3 @@ Permanece fuera del plan hasta existir una integración clínica concreta y esta
 - Facturación tributaria avanzada sin requisitos confirmados.
 - Telemedicina, portal de pacientes e inteligencia artificial clínica.
 - Contabilidad completa o reemplazo de un sistema contable.
-

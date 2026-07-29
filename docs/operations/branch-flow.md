@@ -35,9 +35,11 @@ pnpm test:integration
 pnpm run build
 ```
 
-Hasta implementar [GitHub Actions](../project/github-actions-implementation-plan.md), estos controles son manuales y deben registrarse en el reporte de la entrega. Despues, los mismos checks seran obligatorios en PRs.
+El workflow [CI](../../.github/workflows/ci.yml) ejecuta estos controles en PRs hacia `develop`, `staging` y `main`, y en pushes a `develop`. Hasta publicarlo y configurar reglas de proteccion en GitHub, los controles tambien deben ejecutarse localmente y registrarse en el reporte.
 
 ## Promover A Staging
+
+Requisito previo: los jobs `Quality`, `Unit tests`, `Integration tests and migrations`, `Build` y `Dependency audit` deben estar en verde.
 
 Cuando local este validado:
 
@@ -51,6 +53,8 @@ git push origin staging
 Despues revisar el deployment de staging en Vercel. Aunque Vercel lo muestre como Preview, internamente se trata como staging. Para V3.7 ejecutar tambien la [prueba completa de Sigeco](./sigeco-v3-full-flow-testing.md).
 
 ## Promover A Produccion
+
+Requisito previo: los mismos checks deben estar en verde y la aprobacion humana requerida por la proteccion de `main` debe estar registrada.
 
 Cuando staging este aprobado:
 
