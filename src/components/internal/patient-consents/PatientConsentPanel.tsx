@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import type {
   InternalRole,
   PatientConsent,
@@ -7,10 +11,23 @@ import type {
   PatientConsentPurpose,
   PatientContactChannel
 } from "@/generated/prisma/client";
-import { Field, internalInputClassName } from "@/components/internal/Field";
+import { Field } from "@/components/internal/Field";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { recordPatientConsentAction } from "@/features/patient-consents/actions";
 import {
   isContactConsentPurpose,
@@ -50,6 +67,131 @@ function channelsLabel(channels: PatientContactChannel[]) {
   return channels.map((channel) => patientContactChannelLabels[channel]).join(" y ");
 }
 
+function ConsentDecisionForm({
+  patientId,
+  purpose,
+  current
+}: {
+  patientId: string;
+  purpose: PatientConsentPurpose;
+  current?: ConsentWithActor;
+}) {
+  const [decision, setDecision] = useState<PatientConsentDecision | "">("");
+  const contactPurpose = isContactConsentPurpose(purpose);
+  const [channels, setChannels] = useState<PatientContactChannel[]>(
+    current?.decision === "granted" ? current.contactChannels : []
+  );
+  const requiresChannel = decision === "granted" && contactPurpose;
+  const canSubmit = decision !== "" && (!requiresChannel || channels.length > 0);
+
+  function toggleChannel(channel: PatientContactChannel, checked: boolean) {
+    setChannels((currentChannels) =>
+      checked
+        ? Array.from(new Set([...currentChannels, channel]))
+        : currentChannels.filter((currentChannel) => currentChannel !== channel)
+    );
+  }
+
+  return (
+    <form action={recordPatientConsentAction} className="mt-3 grid gap-3">
+      <input type="hidden" name="patientId" value={patientId} />
+      <input type="hidden" name="purpose" value={purpose} />
+      <input
+        type="hidden"
+        name="textVersion"
+        value={PATIENT_CONSENT_TEXT_VERSION}
+      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Decisión del paciente">
+          <Select
+            name="decision"
+            value={decision}
+            onValueChange={(value) =>
+              setDecision(value as PatientConsentDecision)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona una decisión" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="granted">Sí autoriza</SelectItem>
+              <SelectItem value="denied">No autoriza</SelectItem>
+              {current?.decision === "granted" ? (
+                <SelectItem value="withdrawn">
+                  Retira su autorización
+                </SelectItem>
+              ) : null}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Cómo se confirmó">
+          <Select name="captureMethod" defaultValue="in_person_verbal">
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona el medio" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="in_person_verbal">
+                Verbalmente en clínica
+              </SelectItem>
+              <SelectItem value="written_form">Formulario escrito</SelectItem>
+              <SelectItem value="phone_call">Por llamada</SelectItem>
+              <SelectItem value="whatsapp">Por WhatsApp</SelectItem>
+              <SelectItem value="digital_form">Formulario digital</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+      {requiresChannel ? (
+        <fieldset className="grid gap-1.5">
+          <legend className="text-[13px] font-medium text-text">
+            Canales autorizados
+          </legend>
+          <div className="flex flex-wrap gap-4 text-sm text-text">
+            <label
+              htmlFor={`${purpose}-whatsapp`}
+              className="flex min-h-10 cursor-pointer items-center gap-2"
+            >
+              <Checkbox
+                id={`${purpose}-whatsapp`}
+                name="contactChannels"
+                value="whatsapp"
+                checked={channels.includes("whatsapp")}
+                onCheckedChange={(checked) =>
+                  toggleChannel("whatsapp", checked === true)
+                }
+              />
+              WhatsApp
+            </label>
+            <label
+              htmlFor={`${purpose}-call`}
+              className="flex min-h-10 cursor-pointer items-center gap-2"
+            >
+              <Checkbox
+                id={`${purpose}-call`}
+                name="contactChannels"
+                value="call"
+                checked={channels.includes("call")}
+                onCheckedChange={(checked) =>
+                  toggleChannel("call", checked === true)
+                }
+              />
+              Llamada
+            </label>
+          </div>
+        </fieldset>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-3">
+        <SubmitButton size="sm" disabled={!canSubmit}>
+          Guardar decisión
+        </SubmitButton>
+        <span className="text-xs text-muted">
+          Al guardar, esta sección se cerrará. El registro anterior no se edita.
+        </span>
+      </div>
+    </form>
+  );
+}
+
 export function PatientConsentPanel({
   patientId,
   consents,
@@ -64,6 +206,9 @@ export function PatientConsentPanel({
   decisionFilter?: PatientConsentDecision;
 }) {
   const canWrite = roleHasPermission(role, "patient_consents_write");
+  const [openPurpose, setOpenPurpose] = useState<PatientConsentPurpose | null>(
+    null
+  );
   const currentByPurpose = new Map<PatientConsentPurpose, ConsentWithActor>();
 
   for (const consent of consents) {
@@ -89,116 +234,76 @@ export function PatientConsentPanel({
       <div className="grid gap-3">
         {purposes.map((purpose) => {
           const current = currentByPurpose.get(purpose);
-          const contactPurpose = isContactConsentPurpose(purpose);
 
           return (
-            <section
+            <Collapsible
               key={purpose}
-              className="rounded-[10px] border border-border bg-surface-soft/45 p-3.5"
+              open={openPurpose === purpose}
+              onOpenChange={(open) => setOpenPurpose(open ? purpose : null)}
+              className="rounded-[10px] border border-border bg-surface-soft/45"
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-text">
-                    {patientConsentPurposeLabels[purpose]}
-                  </h3>
-                  <p className="mt-1 text-xs leading-relaxed text-muted">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="focus-ring flex w-full items-start justify-between gap-3 rounded-[10px] p-3.5 text-left"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-text">
+                      {patientConsentPurposeLabels[purpose]}
+                    </span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted">
+                      {current
+                        ? `${formatDateTime(current.decidedAt)}${
+                            current.contactChannels.length > 0
+                              ? ` · ${channelsLabel(current.contactChannels)}`
+                              : ""
+                          } · ${captureMethodLabels[current.captureMethod]}`
+                        : "Abre para registrar la decisión del paciente."}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <Chip
+                      tone={
+                        current?.decision === "granted"
+                          ? "success"
+                          : current
+                            ? "warning"
+                            : "neutral"
+                      }
+                    >
+                      {current ? decisionLabels[current.decision] : "Sin decisión"}
+                    </Chip>
+                    <ChevronDown
+                      className={cn(
+                        "size-4 text-muted transition-transform",
+                        openPurpose === purpose && "rotate-180"
+                      )}
+                      aria-hidden="true"
+                    />
+                  </span>
+                </button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent>
+                <div className="border-t border-border px-3.5 py-4">
+                  <p className="text-xs leading-relaxed text-muted">
                     {patientConsentTexts[purpose]}
                   </p>
+
+                  {canWrite ? (
+                    <ConsentDecisionForm
+                      patientId={patientId}
+                      purpose={purpose}
+                      current={current}
+                    />
+                  ) : (
+                    <p className="mt-3 text-xs text-muted">
+                      Tu rol puede consultar esta decisión, pero no modificarla.
+                    </p>
+                  )}
                 </div>
-                <Chip
-                  tone={
-                    current?.decision === "granted"
-                      ? "success"
-                      : current
-                        ? "warning"
-                        : "neutral"
-                  }
-                >
-                  {current ? decisionLabels[current.decision] : "Sin decisión"}
-                </Chip>
-              </div>
-
-              {current ? (
-                <p className="mt-2 text-xs text-muted">
-                  {formatDateTime(current.decidedAt)}
-                  {current.contactChannels.length > 0
-                    ? ` · ${channelsLabel(current.contactChannels)}`
-                    : ""}
-                  {` · ${captureMethodLabels[current.captureMethod]}`}
-                </p>
-              ) : null}
-
-              {canWrite ? (
-                <form
-                  action={recordPatientConsentAction}
-                  className="mt-3 grid gap-3 border-t border-border pt-3"
-                >
-                  <input type="hidden" name="patientId" value={patientId} />
-                  <input type="hidden" name="purpose" value={purpose} />
-                  <input
-                    type="hidden"
-                    name="textVersion"
-                    value={PATIENT_CONSENT_TEXT_VERSION}
-                  />
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Decisión del paciente">
-                      <select
-                        className={internalInputClassName}
-                        name="decision"
-                        defaultValue="granted"
-                      >
-                        <option value="granted">Sí autoriza</option>
-                        <option value="denied">No autoriza</option>
-                        {current?.decision === "granted" ? (
-                          <option value="withdrawn">Retira su autorización</option>
-                        ) : null}
-                      </select>
-                    </Field>
-                    <Field label="Cómo se confirmó">
-                      <select
-                        className={internalInputClassName}
-                        name="captureMethod"
-                        defaultValue="in_person_verbal"
-                      >
-                        <option value="in_person_verbal">Verbalmente en clínica</option>
-                        <option value="written_form">Formulario escrito</option>
-                        <option value="phone_call">Por llamada</option>
-                        <option value="whatsapp">Por WhatsApp</option>
-                        <option value="digital_form">Formulario digital</option>
-                      </select>
-                    </Field>
-                  </div>
-                  {contactPurpose ? (
-                    <fieldset className="grid gap-1.5">
-                      <legend className="text-[13px] font-medium text-text">
-                        Canales que autoriza al responder “Sí”
-                      </legend>
-                      <div className="flex flex-wrap gap-4 text-sm text-text">
-                        <label className="flex min-h-10 items-center gap-2">
-                          <input
-                            type="checkbox"
-                            name="contactChannels"
-                            value="whatsapp"
-                          />
-                          WhatsApp
-                        </label>
-                        <label className="flex min-h-10 items-center gap-2">
-                          <input
-                            type="checkbox"
-                            name="contactChannels"
-                            value="call"
-                          />
-                          Llamada
-                        </label>
-                      </div>
-                    </fieldset>
-                  ) : null}
-                  <SubmitButton size="sm" className="justify-self-start">
-                    Guardar decisión
-                  </SubmitButton>
-                </form>
-              ) : null}
-            </section>
+              </CollapsibleContent>
+            </Collapsible>
           );
         })}
       </div>

@@ -20,6 +20,15 @@ y bloquear nuevos contactos remotos cuando no exista autorización vigente.
   roles autorizados consultan sin escribir.
 - La ficha muestra estado actual, explicación breve, retiro y un historial
   filtrable con el texto exacto.
+- Las cinco finalidades se muestran como secciones cerradas y se abre solo una
+  a la vez. Después de guardar correctamente, la sección vuelve a cerrarse y
+  deja visible el resumen de la decisión.
+- Decisiones, medios y canales usan componentes compartidos estilo shadcn/ui:
+  `Select`, `Checkbox` y `Collapsible`. Los canales solo aparecen para una
+  autorización de contacto y el botón permanece deshabilitado mientras falte
+  una decisión o un canal obligatorio.
+- Reabrir una finalidad registra un evento nuevo; nunca convierte el historial
+  append-only en un formulario de edición.
 - La antigua preferencia genérica dejó de preguntarse y editarse. Sus valores
   positivos no se interpretan como consentimiento.
 - Una antigua negativa `no_contact` se migra como negativa segura de seguimiento.
@@ -59,9 +68,14 @@ la misma condición.
 - `prisma migrate deploy`: 16 migraciones aplicadas en desarrollo local.
 - `pnpm test:integration`: preparado pero no ejecutado, porque reinicia
   `salud_intercultural_test` y requiere una autorización textual nueva.
-- QA autenticado local con rol Recepción:
+- QA autenticado local con los roles Recepción y Super administrador:
   - autorización de seguimiento únicamente por WhatsApp;
   - retiro posterior conservando ambos eventos y el texto exacto;
+  - nueva negativa de recordatorios guardada con cierre automático de la
+    sección y resumen `No autorizado`;
+  - `Select`, `Checkbox` y apertura exclusiva de una sola finalidad comprobados
+    en navegador;
+  - canales visibles solo al autorizar y ocultos al negar;
   - cambio visible del estado a `Retirado`;
   - tarea posterior con solo el método `Presencial`;
   - llamada y WhatsApp ausentes después del retiro;

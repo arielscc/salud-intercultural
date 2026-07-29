@@ -41,6 +41,15 @@ permiso.
    llamada, WhatsApp o formulario digital.
 7. Guardar la decisión.
 
+Cada finalidad aparece cerrada y solo se abre la que se está atendiendo. Los
+campos de selección y canales usan los componentes visuales compartidos de
+SIGECO. Los canales aparecen únicamente cuando la persona autoriza una
+finalidad de contacto. Después de guardar correctamente, la ficha vuelve a
+cargar con la sección cerrada y el estado resumido en su encabezado.
+
+Volver a abrir una finalidad no modifica el registro anterior: permite anotar
+una decisión nueva, por ejemplo el retiro posterior de una autorización.
+
 El sistema guarda fecha, finalidad, estado, canales, medio de confirmación,
 versión, texto exacto y persona que registró la respuesta.
 
