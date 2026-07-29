@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import { createStudyRecord } from "@/modules/database/queries/studies";
-import { requirePermission } from "@/modules/permissions";
 import { createStudySchema } from "@/features/studies/schemas/study.schema";
 
 function parseFormData(formData: FormData) {
@@ -11,20 +11,34 @@ function parseFormData(formData: FormData) {
 }
 
 export async function createStudyAction(formData: FormData) {
-  const user = await requirePermission("studies_write");
-  const parsed = createStudySchema.safeParse(parseFormData(formData));
+  const patientId = String(formData.get("patientId") ?? "");
+  const { workItemId, visitId } = await runAuditedAction(
+    {
+      permission: "studies_write",
+      action: "study.create",
+      entityType: "study",
+      context: { patientId: patientId || undefined }
+    },
+    async (user) => {
+      const parsed = createStudySchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success) {
-    redirect("/sigeco/enfermeria?error=invalid-study");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/enfermeria?error=invalid-study");
+      }
 
-  await createStudyRecord({
-    ...parsed.data,
-    recordedById: user.id
-  });
+      const study = await createStudyRecord({
+        ...parsed.data,
+        recordedById: user.id
+      });
+      return auditedResult(
+        { workItemId: parsed.data.workItemId, visitId: parsed.data.visitId },
+        { entityId: study.id, context: { patientId: parsed.data.patientId } }
+      );
+    }
+  );
 
   revalidatePath("/sigeco/enfermeria");
-  if (parsed.data.workItemId) revalidatePath(`/sigeco/enfermeria/${parsed.data.workItemId}`);
-  if (parsed.data.visitId) revalidatePath(`/sigeco/consultas/${parsed.data.visitId}`);
-  revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
+  if (workItemId) revalidatePath(`/sigeco/enfermeria/${workItemId}`);
+  if (visitId) revalidatePath(`/sigeco/consultas/${visitId}`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${patientId}`);
 }

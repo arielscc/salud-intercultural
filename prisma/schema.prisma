@@ -48,6 +48,13 @@ enum InternalPermission {
   inventory_write
   inventory_adjust
   reports_read
+  audit_read
+}
+
+enum AuditResult {
+  success
+  failure
+  denied
 }
 
 enum InternalLeadSource {
@@ -312,6 +319,7 @@ model InternalUser {
   followUpStatusChanges  FollowUpStatusHistory[]
   inventoryMovements     InventoryMovement[]
   inventoryAdjustments   InventoryAdjustment[]
+  auditEvents            AuditEvent[]
 
   @@index([role])
   @@index([active])
@@ -327,6 +335,29 @@ model InternalSession {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+/// Historial técnico inmutable de acciones críticas dentro de SIGECO.
+/// La aplicación solo puede insertar y consultar. Una protección adicional
+/// en PostgreSQL rechaza UPDATE y DELETE incluso si se intentan con SQL directo.
+model AuditEvent {
+  id         String        @id @default(cuid())
+  actorId    String?
+  actorRole  InternalRole?
+  action     String
+  entityType String
+  entityId   String?
+  result     AuditResult
+  requestId  String
+  context    Json?
+  occurredAt DateTime      @default(now())
+  actor      InternalUser? @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([occurredAt])
+  @@index([actorId, occurredAt])
+  @@index([action, occurredAt])
+  @@index([entityType, occurredAt])
+  @@index([result, occurredAt])
 }
 
 model Lead {

@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { appendAuditEvent } from "@/modules/audit/service";
 import { prisma } from "@/modules/database";
+import { getCurrentInternalUser } from "@/modules/permissions";
 import { verifyPassword } from "@/features/internal-auth/password";
 import {
   clearInternalSessionCookie,
@@ -29,6 +31,12 @@ export async function loginInternalUser(formData: FormData) {
   const password = String(formData.get("password") ?? "");
 
   if (!email || !password) {
+    await appendAuditEvent({
+      action: "session.login",
+      entityType: "session",
+      result: "failure",
+      context: { reason: "invalid_credentials" }
+    });
     redirect(getLoginErrorRedirect(email));
   }
 
@@ -37,10 +45,24 @@ export async function loginInternalUser(formData: FormData) {
   });
 
   if (!user || !user.active) {
+    await appendAuditEvent({
+      action: "session.login",
+      entityType: "session",
+      result: "failure",
+      context: { reason: "invalid_credentials" }
+    });
     redirect(getLoginErrorRedirect(email));
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
+    await appendAuditEvent({
+      actor: { id: user.id, role: user.role },
+      action: "session.login",
+      entityType: "session",
+      entityId: user.id,
+      result: "denied",
+      context: { reason: "account_locked" }
+    });
     redirect(getLoginErrorRedirect(email, "locked"));
   }
 
@@ -59,6 +81,13 @@ export async function loginInternalUser(formData: FormData) {
       }
     });
 
+    await appendAuditEvent({
+      action: "session.login",
+      entityType: "session",
+      entityId: user.id,
+      result: "failure",
+      context: { reason: "invalid_credentials" }
+    });
     redirect(getLoginErrorRedirect(email));
   }
 
@@ -73,10 +102,18 @@ export async function loginInternalUser(formData: FormData) {
 
   const session = await createInternalSession(user.id);
   await setInternalSessionCookie(session.token, session.expiresAt);
+  await appendAuditEvent({
+    actor: { id: user.id, role: user.role },
+    action: "session.login",
+    entityType: "session",
+    entityId: user.id,
+    result: "success"
+  });
   redirect("/sigeco");
 }
 
 export async function logoutInternalUser() {
+  const user = await getCurrentInternalUser();
   const token = await getInternalSessionToken();
 
   if (token) {
@@ -84,5 +121,13 @@ export async function logoutInternalUser() {
   }
 
   await clearInternalSessionCookie();
+  await appendAuditEvent({
+    actor: user ? { id: user.id, role: user.role } : null,
+    action: "session.logout",
+    entityType: "session",
+    entityId: user?.id,
+    result: user ? "success" : "failure",
+    context: user ? undefined : { reason: "missing_session" }
+  });
   redirect("/sigeco/login");
 }

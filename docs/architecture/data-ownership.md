@@ -6,7 +6,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 
 1. Una entidad editable o transaccional debe tener una sola fuente de verdad.
 2. Payload es la fuente de verdad para contenido editable, CMS y backoffice editorial.
-3. Prisma queda reservado para dominios operativos transaccionales futuros.
+3. Prisma es la fuente de verdad de los dominios operativos transaccionales de SIGECO.
 4. `src/data` es fallback tecnico y fuente inicial para seeds, no fuente de verdad editable.
 5. Si un dato necesita aparecer en otro sistema, debe consumirse o derivarse; no mantenerse como copia editable independiente.
 
@@ -28,9 +28,9 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Pagina Nosotros | Payload | Payload Admin | Activo | `src/data/about.ts` queda como fallback/seed. |
 | Pagina Tratamientos | Payload | Payload Admin | Activo | `pages/tratamientos` y `treatment-topics`; `src/data/problems.ts` y `src/data/treatments.ts` quedan como fallback/seed. |
 | Citas futuras | Prisma | UI custom futura | Futuro | Reglas de disponibilidad, solapamientos y estados. |
-| Pagos/facturacion futura | Prisma | UI custom futura | Futuro | Requiere consistencia transaccional y auditoria. |
-| Inventario futuro | Prisma | UI custom futura | Futuro | Stock, movimientos y constraints. |
-| Auditoria/eventos futura | Prisma | Lectura interna | Futuro | Idealmente append-only. |
+| Pagos y Caja | Prisma | SIGECO | Activo | Ventas, pagos y movimientos financieros auditados. |
+| Inventario | Prisma | SIGECO | Activo | Productos, stock, movimientos y ajustes. |
+| Auditoría de SIGECO | Prisma | SIGECO, solo Dirección y super administrador | Activo | `AuditEvent` append-only; PostgreSQL bloquea update y delete. |
 | Reportes analiticos internos futuros | Prisma | UI/reportes custom | Futuro | Consultas agregadas y metricas operativas. |
 | Integraciones transaccionales futuras | Prisma | Jobs/UI custom | Futuro | Idempotencia, retries y estados tecnicos. |
 | Workflows futuros | Prisma | UI custom futura | Futuro | Estados complejos, relaciones fuertes y transiciones. |
@@ -80,7 +80,7 @@ No usar Prisma cuando el dato:
 
 Si un dominio operativo necesita aparecer en Payload, Payload debe mostrar una vista derivada o enlace operacional. No debe mantener una segunda copia editable del mismo registro.
 
-Ejemplos futuros:
+Ejemplos transaccionales:
 
 | Modelo futuro | Dominio | Motivo para Prisma | Nota de ownership |
 | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ Ejemplos futuros:
 | `Payment` | Pagos | Conciliacion, estados externos, idempotencia y registros financieros. | Payload puede enlazar o mostrar resumen derivado. |
 | `Invoice` | Facturacion | Numeracion, relaciones fuertes y constraints fiscales/operativas. | Mantener emision y estado en Prisma. |
 | `InventoryItem` | Inventario | Stock actual, SKU y constraints de unicidad. | El contenido descriptivo publico, si existe, va en Payload separado y derivado. |
-| `StockMovement` | Inventario | Movimientos append-only, auditoria y calculo de stock. | No editar movimientos como contenido CMS. |
+| `InventoryMovement` | Inventario | Movimientos, auditoría y cálculo de stock. | No editar movimientos como contenido CMS. |
 | `AuditEvent` | Auditoria | Eventos append-only, trazabilidad y consultas internas. | No exponer como collection editable. |
 | `IntegrationJob` | Integraciones | Retries, errores, idempotency keys y estados tecnicos. | Payload no debe ser cola de jobs. |
 | `WorkflowInstance` | Workflows | Transiciones, estados complejos y relaciones operativas. | La UI futura debe operar sobre Prisma. |

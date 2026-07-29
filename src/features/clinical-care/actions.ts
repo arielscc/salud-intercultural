@@ -6,7 +6,11 @@ import {
   createClinicalOrderRecord,
   upsertClinicalConsultationRecord
 } from "@/modules/database/queries/clinical-care";
-import { requirePermission } from "@/modules/permissions";
+import {
+  auditedResult,
+  denyAuditedAction,
+  runAuditedAction
+} from "@/modules/audit/service";
 import {
   createClinicalOrderSchema,
   sanitizeClinicalConsultationInput,
@@ -20,76 +24,135 @@ function parseFormData(formData: FormData) {
 }
 
 export async function saveClinicalConsultationAction(formData: FormData) {
-  const user = await requirePermission("clinical_write");
-  const parsed = upsertClinicalConsultationSchema.safeParse(parseFormData(formData));
+  const visitId = String(formData.get("visitId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "clinical_write",
+      action: "clinical.consultation.save",
+      entityType: "visit",
+      entityId: visitId || undefined
+    },
+    async (user) => {
+      const parsed = upsertClinicalConsultationSchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success) {
-    redirect("/sigeco/consultas?error=invalid");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/consultas?error=invalid");
+      }
 
-  const input = sanitizeClinicalConsultationInput(parsed.data);
+      const input = sanitizeClinicalConsultationInput(parsed.data);
 
-  await upsertClinicalConsultationRecord({
-    ...input,
-    doctorId: user.id
-  });
+      const consultation = await upsertClinicalConsultationRecord({
+        ...input,
+        doctorId: user.id
+      });
+      return auditedResult(consultation, {
+        entityId: input.visitId,
+        context: { consultationId: consultation.id }
+      });
+    }
+  );
 
   revalidatePath("/sigeco/consultas");
-  revalidatePath(`/sigeco/consultas/${input.visitId}`);
+  revalidatePath(`/sigeco/consultas/${visitId}`);
 }
 
 export async function createClinicalOrderAction(formData: FormData) {
-  const user = await requirePermission("clinical_write");
-  const parsed = createClinicalOrderSchema.safeParse(parseFormData(formData));
+  const visitId = String(formData.get("visitId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "clinical_write",
+      action: "clinical.order.create",
+      entityType: "clinical_order",
+      context: { visitId: visitId || undefined }
+    },
+    async (user) => {
+      const parsed = createClinicalOrderSchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success) {
-    redirect("/sigeco/consultas?error=invalid-order");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/consultas?error=invalid-order");
+      }
 
-  await createClinicalOrderRecord({
-    ...parsed.data,
-    doctorId: user.id
-  });
+      const order = await createClinicalOrderRecord({
+        ...parsed.data,
+        doctorId: user.id
+      });
+      return auditedResult(order, {
+        entityId: order.id,
+        context: { visitId: parsed.data.visitId, orderType: parsed.data.type }
+      });
+    }
+  );
 
   revalidatePath("/sigeco/consultas");
-  revalidatePath(`/sigeco/consultas/${parsed.data.visitId}`);
-  revalidatePath(`/sigeco/recepcion/visitas/${parsed.data.visitId}`);
+  revalidatePath(`/sigeco/consultas/${visitId}`);
+  revalidatePath(`/sigeco/recepcion/visitas/${visitId}`);
 }
 
 export async function createPaidStudyOrderAction(formData: FormData) {
-  const user = await requirePermission("clinical_write");
-  const parsed = paidStudyOrderSchema.safeParse(parseFormData(formData));
-  if (!parsed.success) redirect("/sigeco/consultas?error=invalid-study-order");
+  const visitId = String(formData.get("visitId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "clinical_write",
+      action: "clinical.paid_study_order.create",
+      entityType: "visit",
+      entityId: visitId || undefined
+    },
+    async (user) => {
+      const parsed = paidStudyOrderSchema.safeParse(parseFormData(formData));
+      if (!parsed.success) redirect("/sigeco/consultas?error=invalid-study-order");
 
-  await createPaidStudyOrder({
-    ...parsed.data,
-    doctorId: user.id,
-    requestedById: user.id,
-    source: "consultation"
-  });
+      await createPaidStudyOrder({
+        ...parsed.data,
+        doctorId: user.id,
+        requestedById: user.id,
+        source: "consultation"
+      });
+      return auditedResult(undefined, {
+        entityId: parsed.data.visitId,
+        context: { source: "consultation" }
+      });
+    }
+  );
   revalidatePath("/sigeco/consultas");
   revalidatePath("/sigeco/administracion");
-  revalidatePath(`/sigeco/consultas/${parsed.data.visitId}`);
+  revalidatePath(`/sigeco/consultas/${visitId}`);
   redirect("/sigeco/consultas?aviso=orden-estudios-enviada");
 }
 
 export async function createReceptionPaidStudyOrderAction(formData: FormData) {
-  const user = await requirePermission("visits_update");
-  const parsed = paidStudyOrderSchema.safeParse(parseFormData(formData));
+  const visitId = String(formData.get("visitId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "visits_update",
+      action: "reception.paid_study_order.create",
+      entityType: "visit",
+      entityId: visitId || undefined
+    },
+    async (user) => {
+      const parsed = paidStudyOrderSchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success || !["recepcion", "super_admin"].includes(user.role)) {
-    redirect("/sigeco/recepcion?error=invalid-study-order");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/recepcion?error=invalid-study-order");
+      }
+      if (!["recepcion", "super_admin"].includes(user.role)) {
+        denyAuditedAction("role_policy_denied");
+      }
 
-  await createPaidStudyOrder({
-    ...parsed.data,
-    requestedById: user.id,
-    source: "reception"
-  });
+      await createPaidStudyOrder({
+        ...parsed.data,
+        requestedById: user.id,
+        source: "reception"
+      });
+      return auditedResult(undefined, {
+        entityId: parsed.data.visitId,
+        context: { source: "reception" }
+      });
+    }
+  );
   revalidatePath("/sigeco/recepcion");
   revalidatePath("/sigeco/administracion");
-  revalidatePath(`/sigeco/recepcion/visitas/${parsed.data.visitId}`);
+  revalidatePath(`/sigeco/recepcion/visitas/${visitId}`);
   redirect(
-    `/sigeco/recepcion/visitas/${parsed.data.visitId}?aviso=orden-estudios-enviada`
+    `/sigeco/recepcion/visitas/${visitId}?aviso=orden-estudios-enviada`
   );
 }

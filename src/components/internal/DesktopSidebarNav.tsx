@@ -17,7 +17,7 @@ const navGroups: Array<{ label?: string; hrefs: string[] }> = [
     label: "Operación",
     hrefs: ["/sigeco/administracion", "/sigeco/seguimientos"]
   },
-  { label: "Control", hrefs: ["/sigeco/inventario"] }
+  { label: "Control", hrefs: ["/sigeco/inventario", "/sigeco/auditoria"] }
 ];
 
 function DesktopNavLink({ item }: { item: SigecoNavItem }) {
@@ -79,4 +79,3 @@ export function DesktopSidebarNav({ role }: { role: InternalRole }) {
     </nav>
   );
 }
-

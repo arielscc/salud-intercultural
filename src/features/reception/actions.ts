@@ -9,6 +9,11 @@ import {
 } from "@/modules/database/queries/reception";
 import { toDateOnlyString } from "@/lib/dates";
 import { findPossibleDuplicatePatients } from "@/modules/database/queries/patients";
+import {
+  assertAuditedPermission,
+  auditedResult,
+  runAuditedAction
+} from "@/modules/audit/service";
 import { requirePermission } from "@/modules/permissions";
 import {
   patientEditSchema,
@@ -34,37 +39,52 @@ export async function searchReceptionPatientsAction(query: string) {
 }
 
 export async function submitReceptionIntakeAction(formData: FormData) {
-  const user = await requirePermission("visits_create");
+  const result = await runAuditedAction(
+    {
+      permission: "visits_create",
+      action: "reception.intake.create",
+      entityType: "visit"
+    },
+    async (user) => {
+      if (formData.get("funnelCompleted") !== "true") {
+        redirect("/sigeco/recepcion/nuevo?error=incomplete-funnel");
+      }
 
-  if (formData.get("funnelCompleted") !== "true") {
-    redirect("/sigeco/recepcion/nuevo?error=incomplete-funnel");
-  }
+      const parsed = receptionIntakeSchema.safeParse(Object.fromEntries(formData.entries()));
 
-  const parsed = receptionIntakeSchema.safeParse(Object.fromEntries(formData.entries()));
+      if (!parsed.success) {
+        redirect("/sigeco/recepcion/nuevo?error=invalid");
+      }
 
-  if (!parsed.success) {
-    redirect("/sigeco/recepcion/nuevo?error=invalid");
-  }
-
-  const record = toReceptionIntakeRecord(parsed.data);
-
-  if (record.patientId) {
-    await requirePermission("patients_update");
-  } else {
-    await requirePermission("patients_create");
-    const duplicates = await findPossibleDuplicatePatients(record.patient.phone);
-
-    if (duplicates.length > 0 && formData.get("allowDuplicate") !== "true") {
-      redirect(
-        `/sigeco/recepcion/nuevo?duplicatePhone=${encodeURIComponent(record.patient.phone)}`
+      const record = toReceptionIntakeRecord(parsed.data);
+      assertAuditedPermission(
+        user,
+        record.patientId ? "patients_update" : "patients_create"
       );
-    }
-  }
 
-  const result = await createReceptionIntake({
-    ...record,
-    userId: user.id
-  });
+      if (!record.patientId) {
+        const duplicates = await findPossibleDuplicatePatients(record.patient.phone);
+
+        if (duplicates.length > 0 && formData.get("allowDuplicate") !== "true") {
+          redirect(
+            `/sigeco/recepcion/nuevo?duplicatePhone=${encodeURIComponent(record.patient.phone)}`
+          );
+        }
+      }
+
+      const created = await createReceptionIntake({
+        ...record,
+        userId: user.id
+      });
+      return auditedResult(created, {
+        entityId: created.visit.id,
+        context: {
+          patientId: created.patientId,
+          patientRecord: record.patientId ? "existing" : "new"
+        }
+      });
+    }
+  );
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");
@@ -73,18 +93,30 @@ export async function submitReceptionIntakeAction(formData: FormData) {
 }
 
 export async function updateReceptionPatientAction(formData: FormData) {
-  await requirePermission("patients_update");
-  const parsed = patientEditSchema.safeParse(Object.fromEntries(formData.entries()));
+  const patientId = String(formData.get("patientId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "patients_update",
+      action: "patient.update",
+      entityType: "patient",
+      entityId: patientId || undefined
+    },
+    async () => {
+      const parsed = patientEditSchema.safeParse(Object.fromEntries(formData.entries()));
 
-  if (!parsed.success) {
-    const patientId = String(formData.get("patientId") ?? "");
-    redirect(`/sigeco/recepcion/pacientes/${encodeURIComponent(patientId)}/editar?error=invalid`);
-  }
+      if (!parsed.success) {
+        redirect(
+          `/sigeco/recepcion/pacientes/${encodeURIComponent(patientId)}/editar?error=invalid`
+        );
+      }
 
-  const record = toPatientEditRecord(parsed.data);
-  await updateReceptionPatient(record.patientId, record.data);
+      const record = toPatientEditRecord(parsed.data);
+      const patient = await updateReceptionPatient(record.patientId, record.data);
+      return auditedResult(patient, { entityId: record.patientId });
+    }
+  );
 
   revalidatePath("/sigeco/recepcion");
-  revalidatePath(`/sigeco/recepcion/pacientes/${record.patientId}`);
-  redirect(`/sigeco/recepcion/pacientes/${record.patientId}?aviso=ficha-actualizada`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${patientId}`);
+  redirect(`/sigeco/recepcion/pacientes/${patientId}?aviso=ficha-actualizada`);
 }

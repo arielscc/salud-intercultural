@@ -7,7 +7,7 @@ import {
   createInventoryAdjustmentRecord,
   createInventoryItemRecord
 } from "@/modules/database/queries/inventory";
-import { requirePermission } from "@/modules/permissions";
+import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import {
   createInventoryItemSchema,
   inventoryAdjustmentSchema,
@@ -19,17 +19,26 @@ function parseFormData(formData: FormData) {
 }
 
 export async function createInventoryItemAction(formData: FormData) {
-  const user = await requirePermission("inventory_write");
-  const parsed = createInventoryItemSchema.safeParse(parseFormData(formData));
+  const item = await runAuditedAction(
+    {
+      permission: "inventory_write",
+      action: "inventory.item.create",
+      entityType: "inventory_item"
+    },
+    async (user) => {
+      const parsed = createInventoryItemSchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success) {
-    redirect("/sigeco/inventario?error=invalid-item");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/inventario?error=invalid-item");
+      }
 
-  const item = await createInventoryItemRecord({
-    ...parsed.data,
-    userId: user.id
-  });
+      const created = await createInventoryItemRecord({
+        ...parsed.data,
+        userId: user.id
+      });
+      return auditedResult(created, { entityId: created.id });
+    }
+  );
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/inventario");
@@ -37,37 +46,65 @@ export async function createInventoryItemAction(formData: FormData) {
 }
 
 export async function addInventoryEntryAction(formData: FormData) {
-  const user = await requirePermission("inventory_write");
-  const parsed = inventoryEntrySchema.safeParse(parseFormData(formData));
+  const itemId = String(formData.get("itemId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "inventory_write",
+      action: "inventory.entry.create",
+      entityType: "inventory_item",
+      entityId: itemId || undefined
+    },
+    async (user) => {
+      const parsed = inventoryEntrySchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success) {
-    redirect("/sigeco/inventario?error=invalid-entry");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/inventario?error=invalid-entry");
+      }
 
-  await addInventoryEntryRecord({
-    ...parsed.data,
-    userId: user.id
-  });
+      const movement = await addInventoryEntryRecord({
+        ...parsed.data,
+        userId: user.id
+      });
+      return auditedResult(movement, {
+        entityId: parsed.data.itemId,
+        context: { movementId: movement.id, quantity: parsed.data.quantity }
+      });
+    }
+  );
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/inventario");
-  revalidatePath(`/sigeco/inventario/${parsed.data.itemId}`);
+  revalidatePath(`/sigeco/inventario/${itemId}`);
 }
 
 export async function createInventoryAdjustmentAction(formData: FormData) {
-  const user = await requirePermission("inventory_adjust");
-  const parsed = inventoryAdjustmentSchema.safeParse(parseFormData(formData));
+  const itemId = String(formData.get("itemId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "inventory_adjust",
+      action: "inventory.adjustment.create",
+      entityType: "inventory_item",
+      entityId: itemId || undefined
+    },
+    async (user) => {
+      const parsed = inventoryAdjustmentSchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success) {
-    redirect("/sigeco/inventario?error=invalid-adjustment");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/inventario?error=invalid-adjustment");
+      }
 
-  await createInventoryAdjustmentRecord({
-    ...parsed.data,
-    userId: user.id
-  });
+      const adjustment = await createInventoryAdjustmentRecord({
+        ...parsed.data,
+        userId: user.id
+      });
+      return auditedResult(adjustment, {
+        entityId: parsed.data.itemId,
+        context: { movementId: adjustment.id, quantityDelta: parsed.data.quantityDelta }
+      });
+    }
+  );
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/inventario");
-  revalidatePath(`/sigeco/inventario/${parsed.data.itemId}`);
+  revalidatePath(`/sigeco/inventario/${itemId}`);
 }

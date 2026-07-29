@@ -44,7 +44,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "inventory_read",
     "inventory_write",
     "inventory_adjust",
-    "reports_read"
+    "reports_read",
+    "audit_read"
   ],
   direccion: [
     "internal_access",
@@ -57,7 +58,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "sales_read",
     "followups_read",
     "inventory_read",
-    "reports_read"
+    "reports_read",
+    "audit_read"
   ],
   medico: [
     "internal_access",

@@ -8,17 +8,18 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1 y 2 están en progreso. CI, las barreras de aislamiento, la base y
-el Blob Store QA están preparados. Las doce migraciones ya se aplicaron en
-staging. Falta verificar los jobs remotos, ejecutar seed, validar las cuentas y
-probar el deployment antes de cerrar ambas tareas.
+Las Tareas 1, 2 y 3 están en progreso. CI, las barreras de aislamiento, la base
+y el Blob Store QA están preparados. Las doce migraciones anteriores ya se
+aplicaron en staging. La auditoría append-only está implementada localmente;
+falta validar su nueva migración en CI y staging, probar el visor con los roles
+autorizados y cerrar los pendientes remotos de las tareas base.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 27 |
-| En progreso | 2 |
+| Pendiente | 26 |
+| En progreso | 3 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -39,7 +40,7 @@ probar el deployment antes de cerrar ambas tareas.
 | --- | --- | --- | --- | --- |
 | 1 | CI y control de dependencias | P0 | En progreso | Ninguna |
 | 2 | Staging aislado | P0 | En progreso | 1 |
-| 3 | Auditoría append-only | P0 | Pendiente | 1-2 |
+| 3 | Auditoría append-only | P0 | En progreso | 1-2 |
 | 4 | Usuarios, roles y sesiones | P0 | Pendiente | 3 |
 | 5 | Permisos, privacidad, logs y secretos | P0 | Pendiente | 3-4 |
 | 6 | Adjuntos clínicos seguros | P0 | Pendiente | 2-5 |
@@ -73,6 +74,7 @@ Las tareas activas son:
 
 - **Tarea 1 — CI y control de dependencias:** pendiente de ejecución remota y protecciones.
 - **Tarea 2 — Staging completamente aislado:** pendiente de seed, deployment y validación de cuentas.
+- **Tarea 3 — Auditoría append-only:** implementación local terminada; pendiente de migración y QA remotos.
 
 Para terminar la Tarea 1:
 
@@ -88,7 +90,7 @@ Para terminar la Tarea 2:
 - Ejecutar `pnpm staging:seed` y `pnpm staging:verify`.
 - Verificar los siete roles, media y bloqueo de comunicaciones en el deployment.
 
-No comenzar la Tarea 3 hasta cerrar las Tareas 1 y 2.
+No comenzar la Tarea 4 hasta cerrar las validaciones remotas de las Tareas 1-3.
 
 ## Decisiones Vigentes
 
@@ -297,6 +299,70 @@ No comenzar la Tarea 3 hasta cerrar las Tareas 1 y 2.
   migraciones instaladas.
 
 **Commit sugerido:** `chore(sigeco): isolate staging environment`
+
+### 2026-07-29 — Tarea 3 — Auditoría Append-Only
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Creado el modelo Prisma `AuditEvent` con actor, rol, acción, entidad, resultado,
+  fecha, `requestId` y contexto operativo permitido.
+- La migración agrega un trigger de PostgreSQL que rechaza `UPDATE` y `DELETE`.
+- Creado un servicio común que registra exactamente un evento de éxito, fallo o
+  acceso denegado para cada acción crítica.
+- La limpieza defensiva elimina claves de contraseñas, tokens, sesiones, texto
+  clínico, notas y archivos, además de limitar tamaño y profundidad.
+- Cubiertos los flujos funcionales vigentes: sesiones, pacientes, visitas,
+  consulta, enfermería, estudios, Caja, ventas, pagos, seguimiento e inventario.
+- Por decisión operativa, solo se auditan acciones importantes. Búsquedas,
+  apertura de fichas, listados, filtros, paginación y consulta del visor no
+  generan eventos; conservan sus validaciones de permisos.
+- Creado `audit_read`, disponible únicamente para Dirección y super administrador.
+- Creado `/sigeco/auditoria` con filtros por fecha, persona, acción y entidad en
+  escritorio, y tarjetas simplificadas con paginación en móvil.
+- Documentada la forma obligatoria de incorporar auditoría en las siguientes tareas.
+
+#### Archivos Y Migraciones
+
+- Migración `20260729130000_append_only_audit_events`.
+- Módulos nuevos en `src/modules/audit`.
+- Visor nuevo en `src/app/(internal)/sigeco/(app)/auditoria`.
+- Guía técnica [audit-events.md](../../operations/audit-events.md).
+- Reporte [2026-07-29-tarea-3-auditoria-append-only.md](../task-reports/2026-07-29-tarea-3-auditoria-append-only.md).
+
+#### Validación Ejecutada
+
+- `pnpm test`: pasó, 29 archivos y 109 pruebas unitarias.
+- `pnpm lint`: pasó sin advertencias.
+- `pnpm typecheck`: pasó.
+- `pnpm run build`: pasó y generó `/sigeco/auditoria` como ruta dinámica.
+- Pruebas de exactamente un evento para éxito, fallo y denegación.
+- Prueba de cobertura que impide dejar una server action crítica sin auditoría
+  y exige autorización en las lecturas excluidas.
+- Pruebas de exclusión de secretos, texto clínico y archivos.
+- Prueba estática del trigger append-only.
+- Prueba de integración preparada para demostrar que PostgreSQL permite insertar,
+  pero rechaza actualizar y borrar.
+- La integración local quedó detenida por la protección de Prisma: el comando
+  necesita reiniciar irreversiblemente la base de pruebas
+  `salud_intercultural_test` en `localhost:5432` y requiere consentimiento
+  explícito. CI la ejecutará en PostgreSQL efímero.
+
+#### Pendientes Para Cerrar
+
+- Ejecutar `pnpm test:integration` en CI con PostgreSQL 16.
+- Aplicar la nueva migración en staging.
+- Probar el visor con Dirección y super administrador y confirmar la denegación al resto.
+- Completar QA responsive en 390, 768, 1024, 1280 y 1440 px.
+- Compras, usuarios, adjuntos, reportes y exportaciones se auditarán cuando se
+  implementen sus módulos en las tareas correspondientes.
+
+**Commit sugerido:** `feat(sigeco): add append-only audit events`
 
 ## Cómo Actualizar El Progreso
 

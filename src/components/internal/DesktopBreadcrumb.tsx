@@ -81,6 +81,10 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
     ];
   }
 
+  if (moduleSegment === "auditoria") {
+    return [{ label: "Auditoría" }];
+  }
+
   return null;
 }
 

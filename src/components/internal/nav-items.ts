@@ -5,6 +5,7 @@ import {
   Home,
   PhoneCall,
   Receipt,
+  ShieldCheck,
   Stethoscope,
   type LucideIcon
 } from "lucide-react";
@@ -29,5 +30,6 @@ export const sigecoNavItems: SigecoNavItem[] = [
     icon: PhoneCall,
     permission: "followups_read"
   },
-  { href: "/sigeco/inventario", label: "Inventario", icon: Boxes, permission: "inventory_read" }
+  { href: "/sigeco/inventario", label: "Inventario", icon: Boxes, permission: "inventory_read" },
+  { href: "/sigeco/auditoria", label: "Auditoría", icon: ShieldCheck, permission: "audit_read" }
 ];

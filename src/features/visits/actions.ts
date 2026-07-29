@@ -9,7 +9,7 @@ import {
   getVisitFlowState,
   updateVisitRouteStatus
 } from "@/modules/database/queries/visits";
-import { requirePermission } from "@/modules/permissions";
+import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import { routeAreaLabels } from "@/features/patients/labels";
 import {
   createVisitSchema,
@@ -23,21 +23,35 @@ function parseFormData(formData: FormData) {
 }
 
 export async function createVisitAction(formData: FormData) {
-  const user = await requirePermission("visits_create");
-  const parsed = createVisitSchema.safeParse(parseFormData(formData));
+  const patientId = String(formData.get("patientId") ?? "");
+  const visit = await runAuditedAction(
+    {
+      permission: "visits_create",
+      action: "visit.create",
+      entityType: "visit",
+      context: { patientId: patientId || undefined }
+    },
+    async (user) => {
+      const parsed = createVisitSchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success) {
-    redirect("/sigeco/recepcion?error=invalid");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/recepcion?error=invalid");
+      }
 
-  const visit = await createVisitRecord({
-    ...parsed.data,
-    userId: user.id
-  });
+      const created = await createVisitRecord({
+        ...parsed.data,
+        userId: user.id
+      });
+      return auditedResult(created, {
+        entityId: created.id,
+        context: { patientId: parsed.data.patientId }
+      });
+    }
+  );
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");
-  revalidatePath(`/sigeco/recepcion/pacientes/${parsed.data.patientId}`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${patientId}`);
   redirect(`/sigeco/recepcion/visitas/${visit.id}?aviso=llegada-registrada`);
 }
 
@@ -47,64 +61,84 @@ export async function createVisitAction(formData: FormData) {
  * En "left" el area se conserva para dejar rastro de donde abandono.
  */
 export async function applyVisitFlowAction(formData: FormData) {
-  const user = await requirePermission("visits_update");
-  const parsed = visitFlowSchema.safeParse(parseFormData(formData));
-
-  if (!parsed.success) {
-    redirect("/sigeco/recepcion?error=invalid-flow");
-  }
-
-  const { visitId, flow, note } = parsed.data;
-  const visit = await getVisitFlowState(visitId);
-
-  if (!visit) {
-    redirect("/sigeco/recepcion?error=invalid-flow");
-  }
-
-  if (!isActiveVisitStatus(visit.status)) {
-    redirect(`/sigeco/recepcion/visitas/${visitId}?error=cerrada`);
-  }
-
-  const currentArea = visit.route?.currentArea ?? "recepcion";
-  const transitions: Record<
-    typeof flow,
-    { status: VisitStatus; area: PatientRouteArea; note: string }
-  > = {
-    left: {
-      status: "left_without_care",
-      area: currentArea,
-      note: note ?? `Se retiró en ${routeAreaLabels[currentArea].toLowerCase()}`
+  const visitId = String(formData.get("visitId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "visits_update",
+      action: "visit.flow.update",
+      entityType: "visit",
+      entityId: visitId || undefined
     },
-    complete: { status: "completed", area: "cierre", note: note ?? "Visita cerrada" },
-    to_consultation: {
-      status: "in_consultation",
-      area: "medico",
-      note: note ?? "Derivado a consulta médica"
-    },
-    to_nursing: {
-      status: "in_nursing",
-      area: "enfermeria",
-      note: note ?? "Derivado a enfermería"
-    },
-    to_administration: {
-      status: "in_administration",
-      area: "administracion",
-      note: note ?? "Derivado a administración"
+    async (user) => {
+      const parsed = visitFlowSchema.safeParse(parseFormData(formData));
+
+      if (!parsed.success) {
+        redirect("/sigeco/recepcion?error=invalid-flow");
+      }
+
+      const { visitId: parsedVisitId, flow, note } = parsed.data;
+      const visit = await getVisitFlowState(parsedVisitId);
+
+      if (!visit) {
+        redirect("/sigeco/recepcion?error=invalid-flow");
+      }
+
+      if (!isActiveVisitStatus(visit.status)) {
+        redirect(`/sigeco/recepcion/visitas/${parsedVisitId}?error=cerrada`);
+      }
+
+      const currentArea = visit.route?.currentArea ?? "recepcion";
+      const transitions: Record<
+        typeof flow,
+        { status: VisitStatus; area: PatientRouteArea; note: string }
+      > = {
+        left: {
+          status: "left_without_care",
+          area: currentArea,
+          note: note ?? `Se retiró en ${routeAreaLabels[currentArea].toLowerCase()}`
+        },
+        complete: { status: "completed", area: "cierre", note: note ?? "Visita cerrada" },
+        to_consultation: {
+          status: "in_consultation",
+          area: "medico",
+          note: note ?? "Derivado a consulta médica"
+        },
+        to_nursing: {
+          status: "in_nursing",
+          area: "enfermeria",
+          note: note ?? "Derivado a enfermería"
+        },
+        to_administration: {
+          status: "in_administration",
+          area: "administracion",
+          note: note ?? "Derivado a administración"
+        }
+      };
+
+      try {
+        await updateVisitRouteStatus({
+          visitId: parsedVisitId,
+          userId: user.id,
+          ...transitions[flow]
+        });
+      } catch (error) {
+        if (findClosedVisitTransitionError(error)) {
+          redirect(`/sigeco/recepcion/visitas/${parsedVisitId}?error=cerrada`);
+        }
+        throw error;
+      }
+
+      return auditedResult(undefined, {
+        entityId: parsedVisitId,
+        context: {
+          previousStatus: visit.status,
+          nextStatus: transitions[flow].status,
+          previousArea: currentArea,
+          nextArea: transitions[flow].area
+        }
+      });
     }
-  };
-
-  try {
-    await updateVisitRouteStatus({
-      visitId,
-      userId: user.id,
-      ...transitions[flow]
-    });
-  } catch (error) {
-    if (findClosedVisitTransitionError(error)) {
-      redirect(`/sigeco/recepcion/visitas/${visitId}?error=cerrada`);
-    }
-    throw error;
-  }
+  );
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");
@@ -116,26 +150,40 @@ export async function applyVisitFlowAction(formData: FormData) {
 }
 
 export async function updateVisitStatusAction(formData: FormData) {
-  const user = await requirePermission("visits_update");
-  const parsed = updateVisitStatusSchema.safeParse(parseFormData(formData));
+  const visitId = String(formData.get("visitId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "visits_update",
+      action: "visit.status.update",
+      entityType: "visit",
+      entityId: visitId || undefined
+    },
+    async (user) => {
+      const parsed = updateVisitStatusSchema.safeParse(parseFormData(formData));
 
-  if (!parsed.success) {
-    redirect("/sigeco/recepcion?error=invalid-status");
-  }
+      if (!parsed.success) {
+        redirect("/sigeco/recepcion?error=invalid-status");
+      }
 
-  try {
-    await updateVisitRouteStatus({
-      ...parsed.data,
-      userId: user.id
-    });
-  } catch (error) {
-    if (findClosedVisitTransitionError(error)) {
-      redirect(`/sigeco/recepcion/visitas/${parsed.data.visitId}?error=cerrada`);
+      try {
+        await updateVisitRouteStatus({
+          ...parsed.data,
+          userId: user.id
+        });
+      } catch (error) {
+        if (findClosedVisitTransitionError(error)) {
+          redirect(`/sigeco/recepcion/visitas/${parsed.data.visitId}?error=cerrada`);
+        }
+        throw error;
+      }
+      return auditedResult(undefined, {
+        entityId: parsed.data.visitId,
+        context: { nextStatus: parsed.data.status }
+      });
     }
-    throw error;
-  }
+  );
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");
-  revalidatePath(`/sigeco/recepcion/visitas/${parsed.data.visitId}`);
+  revalidatePath(`/sigeco/recepcion/visitas/${visitId}`);
 }

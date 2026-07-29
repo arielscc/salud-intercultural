@@ -86,4 +86,11 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("direccion", "inventory_adjust")).toBe(false);
     expect(roleHasPermission("super_admin", "inventory_adjust")).toBe(true);
   });
+
+  it("restricts the audit history to direction and super administrators", () => {
+    expect(roleHasPermission("super_admin", "audit_read")).toBe(true);
+    expect(roleHasPermission("direccion", "audit_read")).toBe(true);
+    expect(roleHasPermission("administracion", "audit_read")).toBe(false);
+    expect(roleHasPermission("medico", "audit_read")).toBe(false);
+  });
 });
