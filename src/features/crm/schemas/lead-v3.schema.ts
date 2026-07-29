@@ -3,9 +3,10 @@ import { z } from "zod";
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 const cleanText = (value: string) => value.trim().replace(/\s+/g, " ");
 
-export const internalLeadSourceSchema = z.enum([
+const internalLeadSourceValueSchema = z.enum([
   "website",
   "whatsapp",
+  "facebook",
   "facebook_ads",
   "facebook_organic",
   "tiktok",
@@ -16,6 +17,9 @@ export const internalLeadSourceSchema = z.enum([
   "flyer",
   "other"
 ]);
+export const internalLeadSourceSchema = internalLeadSourceValueSchema.transform((source) =>
+  source === "facebook_ads" || source === "facebook_organic" ? "facebook" : source
+);
 
 export const internalLeadStatusSchema = z.enum([
   "new",

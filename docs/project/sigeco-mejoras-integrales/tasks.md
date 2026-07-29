@@ -346,7 +346,9 @@ Se debe ampliar esta base. No se reconstruyen ventas o inventario desde cero.
 
 **Alcance:**
 
-- Distinguir TikTok del Dr., TikTok de la Dra., Facebook, WhatsApp, anuncios, referidos, paciente anterior, volante, web y otro.
+- Preguntar al paciente con opciones simples: Facebook, TikTok, WhatsApp, referido, paciente anterior, volante, web y otro.
+- No pedir al paciente que diferencie publicidad pagada de contenido orgánico.
+- Distinguir internamente TikTok del Dr., TikTok de la Dra. y campañas pagadas solo cuando el enlace, formulario o campaña entregue ese dato automáticamente.
 - Guardar fuente principal y fuentes de apoyo.
 - Usar catálogo administrable de fuentes.
 - Mantener la atribución original de la llegada.
@@ -358,6 +360,8 @@ Se debe ampliar esta base. No se reconstruyen ventas o inventario desde cero.
 **Criterios de aceptación:**
 
 - Las cuentas sociales se miden por separado.
+- La recepción puede registrar “Facebook” sin adivinar si fue anuncio o contenido orgánico.
+- La atribución pagada u orgánica se guarda como detalle interno o “No identificado”.
 - WhatsApp puede ser canal sin borrar la fuente original.
 - Dirección puede comparar llegada e ingreso por fuente.
 

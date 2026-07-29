@@ -53,6 +53,7 @@ enum InternalPermission {
 enum InternalLeadSource {
   website
   whatsapp
+  facebook
   facebook_ads
   facebook_organic
   tiktok
@@ -113,6 +114,7 @@ enum PatientStatus {
 }
 
 enum PatientCaptureSource {
+  facebook
   facebook_ads
   facebook_organic
   tiktok

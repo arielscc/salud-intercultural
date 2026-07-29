@@ -170,7 +170,7 @@ describe("reception intake integration", () => {
       gender: "female",
       city: "El Alto",
       captureSource: "referral",
-      captureSources: ["referral", "facebook_ads"],
+      captureSources: ["referral", "facebook"],
       allergies: null,
       relevantHistory: "Hipertensión",
       currentMedication: null,
@@ -185,7 +185,7 @@ describe("reception intake integration", () => {
     expect(updated.fullName).toBe("Rosa Huanca");
     expect(updated.phone).toBe("76543210");
     expect(updated.city).toBe("El Alto");
-    expect(updated.captureSources).toEqual(["referral", "facebook_ads"]);
+    expect(updated.captureSources).toEqual(["referral", "facebook"]);
     expect(updated.allergies).toBeNull();
     expect(updated.relevantHistory).toBe("Hipertensión");
     expect(updated.followUpPreference).toBe("no_contact");

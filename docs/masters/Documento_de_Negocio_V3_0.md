@@ -121,8 +121,7 @@ La fuente se registra cuando el paciente llega físicamente a la clínica.
 
 **Opciones iniciales:**
 
-- Facebook Ads
-- Facebook Orgánico
+- Facebook
 - TikTok
 - WhatsApp
 - Referido

@@ -21,8 +21,9 @@ export const patientStatusLabels: Record<PatientStatus, string> = {
 };
 
 export const patientCaptureSourceLabels: Record<PatientCaptureSource, string> = {
-  facebook_ads: "Facebook Ads",
-  facebook_organic: "Facebook orgánico",
+  facebook: "Facebook",
+  facebook_ads: "Facebook",
+  facebook_organic: "Facebook",
   tiktok: "TikTok",
   whatsapp: "WhatsApp",
   referral: "Referido",
@@ -31,6 +32,27 @@ export const patientCaptureSourceLabels: Record<PatientCaptureSource, string> = 
   website: "Sitio web",
   other: "Otro"
 };
+
+export const patientCaptureSourceOptions = [
+  { value: "facebook", label: "Facebook" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "referral", label: "Referido" },
+  { value: "previous_patient", label: "Paciente anterior" },
+  { value: "flyer", label: "Volante" },
+  { value: "website", label: "Sitio web" },
+  { value: "other", label: "Otro" }
+] as const satisfies ReadonlyArray<{ value: PatientCaptureSource; label: string }>;
+
+export function normalizePatientCaptureSources(sources: readonly string[]) {
+  return Array.from(
+    new Set(
+      sources.map((source) =>
+        source === "facebook_ads" || source === "facebook_organic" ? "facebook" : source
+      )
+    )
+  );
+}
 
 export const visitStatusLabels: Record<VisitStatus, string> = {
   in_reception: "En recepción",

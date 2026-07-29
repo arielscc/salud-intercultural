@@ -41,4 +41,13 @@ describe("internal lead schemas", () => {
       })
     ).toThrow();
   });
+
+  it("normalizes legacy Facebook attribution to the general source", () => {
+    const parsed = createInternalLeadSchema.parse({
+      phone: "+591 70000000",
+      source: "facebook_organic"
+    });
+
+    expect(parsed.source).toBe("facebook");
+  });
 });

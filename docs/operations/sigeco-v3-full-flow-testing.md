@@ -60,7 +60,7 @@ Todo el recorrido usa a esta persona ficticia. Ten la tabla a mano: cada seccion
 | Alergias | chip `Ninguna conocida` | Funnel paso 3 |
 | Enfermedad de base | `Hipertension` | Funnel paso 3 |
 | Medicacion actual | `Enalapril 10 mg cada manana` | Funnel paso 3 |
-| Como nos conocio | chips `Referido` y `Facebook Ads` (multiple) | Funnel paso 4 |
+| Como nos conocio | chips `Referido` y `Facebook` (multiple) | Funnel paso 4 |
 | Contacto para seguimiento | chip `WhatsApp` | Funnel paso 4 |
 
 Segundo personaje, solo para la prueba de duplicados (seccion 2, error B):
@@ -130,14 +130,14 @@ Ruta: `/sigeco/recepcion/nuevo` (o el boton `Registrar llegada`).
 
 ### Paso 4 — Origen y seguimiento
 
-1. "Como nos conocio?": toca `Referido` y luego `Facebook Ads` — es seleccion multiple, tocar un chip lo agrega o lo quita (opciones: Facebook Ads, Facebook organico, TikTok, WhatsApp, Referido, Paciente anterior, Volante, Sitio web, Otro).
+1. "Como nos conocio?": toca `Referido` y luego `Facebook` — es seleccion multiple, tocar un chip lo agrega o lo quita (opciones: Facebook, TikTok, WhatsApp, Referido, Paciente anterior, Volante, Sitio web, Otro). No se pregunta al paciente si vio publicidad o contenido organico.
 2. "Podemos contactarlo para seguimiento?": chip `WhatsApp` (opciones: WhatsApp, Llamada, Ambos, Prefiere no recibir seguimiento).
 3. Pulsa `Registrar llegada`.
 
 ### Resultado esperado
 
 - Redirige al detalle de la visita nueva: Julia con codigo `SI-XXXXXX`, estado `En recepcion`, area `Recepcion`.
-- En la ficha de Julia, "Fuente" muestra `Referido · Facebook Ads` (las dos fuentes elegidas).
+- En la ficha de Julia, "Fuente" muestra `Referido · Facebook` (las dos fuentes elegidas).
 - "Ruta del paciente" muestra un paso: Recepcion, "Llegada registrada en recepcion".
 - En `/sigeco` los KPIs `Pacientes de hoy` y `Visitas activas` suben en 1 y Julia aparece en `Ultimas llegadas`.
 

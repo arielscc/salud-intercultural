@@ -62,7 +62,7 @@ describe("reception intake schema", () => {
       allergies: "Ninguna conocida",
       relevantHistory: "Diabetes tipo 2",
       currentMedication: "Metformina",
-      captureSources: "referral,facebook_ads",
+      captureSources: "referral,facebook",
       followUpPreference: "whatsapp"
     });
 
@@ -73,7 +73,7 @@ describe("reception intake schema", () => {
     expect(record.patientId).toBeUndefined();
     expect(record.patient.fullName).toBe("Maria Quispe");
     expect(record.patient.phone).toBe("+591 71234567");
-    expect(record.patient.captureSources).toEqual(["referral", "facebook_ads"]);
+    expect(record.patient.captureSources).toEqual(["referral", "facebook"]);
     expect(record.patient.captureSource).toBe("referral");
     expect(record.patient.followUpPreference).toBe("whatsapp");
     expect(record.visit.reason).toBe("Dolor de espalda");
@@ -98,6 +98,18 @@ describe("reception intake schema", () => {
     const record = toReceptionIntakeRecord(parsed.data);
     expect(record.visit.previouslyTreated).toBeUndefined();
     expect(record.visit.bringsStudies).toBeUndefined();
+  });
+
+  it("normalizes legacy Facebook sources without asking the patient to distinguish them", () => {
+    const parsed = receptionIntakeSchema.parse({
+      fullName: "Maria Quispe",
+      phone: "+591 71234567",
+      reason: "Control",
+      captureSources: "facebook_ads,facebook_organic"
+    });
+
+    expect(parsed.captureSources).toEqual(["facebook"]);
+    expect(toReceptionIntakeRecord(parsed).patient.captureSource).toBe("facebook");
   });
 });
 

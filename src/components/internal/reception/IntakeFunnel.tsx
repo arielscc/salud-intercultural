@@ -21,7 +21,8 @@ import { Card } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import {
-  patientCaptureSourceLabels,
+  normalizePatientCaptureSources,
+  patientCaptureSourceOptions,
   patientGenderLabels
 } from "@/features/patients/labels";
 import {
@@ -92,7 +93,7 @@ export function IntakeFunnel({
   );
 
   const [captureSources, setCaptureSources] = useState<string[]>(
-    initialPatient?.captureSources ?? []
+    normalizePatientCaptureSources(initialPatient?.captureSources ?? [])
   );
   const [followUpPreference, setFollowUpPreference] = useState(
     initialPatient && initialPatient.followUpPreference !== "unknown"
@@ -123,7 +124,7 @@ export function IntakeFunnel({
     setAllergies(patient.allergies === NO_KNOWN_ALLERGIES ? "" : (patient.allergies ?? ""));
     setRelevantHistory(patient.relevantHistory ?? "");
     setCurrentMedication(patient.currentMedication ?? "");
-    setCaptureSources(patient.captureSources);
+    setCaptureSources(normalizePatientCaptureSources(patient.captureSources));
     setFollowUpPreference(patient.followUpPreference === "unknown" ? "" : patient.followUpPreference);
     setPhoneMatches([]);
     setStepError(null);
@@ -569,7 +570,7 @@ export function IntakeFunnel({
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>¿Cómo nos conoció? (puede elegir varios)</span>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(patientCaptureSourceLabels).map(([value, label]) => (
+            {patientCaptureSourceOptions.map(({ value, label }) => (
               <ChipOption
                 key={value}
                 selected={captureSources.includes(value)}

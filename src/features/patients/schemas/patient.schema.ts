@@ -4,7 +4,8 @@ const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 const cleanText = (value: string) => value.trim().replace(/\s+/g, " ");
 
 export const patientGenderSchema = z.enum(["female", "male", "other", "unknown"]);
-export const patientCaptureSourceSchema = z.enum([
+const patientCaptureSourceValueSchema = z.enum([
+  "facebook",
   "facebook_ads",
   "facebook_organic",
   "tiktok",
@@ -15,6 +16,9 @@ export const patientCaptureSourceSchema = z.enum([
   "website",
   "other"
 ]);
+export const patientCaptureSourceSchema = patientCaptureSourceValueSchema.transform((source) =>
+  source === "facebook_ads" || source === "facebook_organic" ? "facebook" : source
+);
 
 export const createPatientSchema = z.object({
   fullName: z.string().trim().min(2, "Ingresa el nombre completo.").max(160),

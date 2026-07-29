@@ -29,7 +29,11 @@ const yesNoSchema = z.enum(["yes", "no"]);
 /* El form serializa las fuentes multiples como "a,b,c" en un input oculto. */
 const captureSourcesSchema = z.preprocess(
   (value) => (typeof value === "string" ? (value === "" ? [] : value.split(",")) : value),
-  z.array(patientCaptureSourceSchema).max(9).default([])
+  z
+    .array(patientCaptureSourceSchema)
+    .max(9)
+    .default([])
+    .transform((sources) => Array.from(new Set(sources)))
 );
 
 export const receptionIntakeSchema = z

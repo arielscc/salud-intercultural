@@ -1,6 +1,6 @@
 # Progress — Mejoras Integrales De SIGECO
 
-Última actualización: 2026-07-28.
+Última actualización: 2026-07-29.
 
 Plan de ejecución: [tasks.md](./tasks.md)
 
@@ -94,6 +94,8 @@ No comenzar la Tarea 2 hasta cerrar estos puntos.
 - Los registros históricos se corrigen, no se borran.
 - Web y móvil responsive usan las mismas reglas y permisos.
 - El Alto debe estabilizarse antes de activar Cochabamba.
+- Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
+- El detalle pagado u orgánico solo se atribuye internamente cuando una campaña o enlace entrega evidencia.
 - Agenda y citas quedan aplazadas hasta un piloto manual.
 - FHIR queda fuera del plan actual.
 
@@ -198,6 +200,22 @@ No comenzar la Tarea 2 hasta cerrar estos puntos.
 - Confirmar que el job de integración aplica todas las migraciones y pasa con PostgreSQL 16.
 - Configurar checks obligatorios y protección de `staging` y `main`.
 - Registrar evidencia de la primera ejecución remota.
+
+### 2026-07-29 — Ajuste De La Fuente Facebook
+
+**Motivo:** la mayoría de los pacientes son adultos mayores y no necesariamente puede distinguir entre una publicación normal y una publicidad pagada.
+
+**Resultado:**
+
+- Recepción muestra una sola opción: `Facebook`.
+- Los valores anteriores `facebook_ads` y `facebook_organic` se aceptan por compatibilidad, pero se normalizan a `facebook`.
+- La migración convierte registros históricos y elimina duplicados de Facebook en la lista de fuentes del paciente.
+- El detalle pagado u orgánico queda reservado para la atribución interna automática definida en la Tarea 11.
+- La Tarea 11 continúa pendiente porque todavía no se implementaron el catálogo administrable, los enlaces de campaña ni los reportes de atribución.
+
+**Validación:** esquema Prisma válido, lint y typecheck aprobados, 22 archivos y 77 pruebas unitarias aprobadas. La migración no pudo probarse localmente porque Docker no está disponible en este WSL; debe validarse en el job de integración de CI.
+
+**Commit sugerido:** `fix(sigeco): simplify Facebook capture source`
 
 ## Cómo Actualizar El Progreso
 

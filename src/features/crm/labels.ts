@@ -20,8 +20,9 @@ export const leadStatusLabels: Record<InternalLeadStatus, string> = {
 export const leadSourceLabels: Record<InternalLeadSource, string> = {
   website: "Sitio web",
   whatsapp: "WhatsApp",
-  facebook_ads: "Facebook Ads",
-  facebook_organic: "Facebook orgánico",
+  facebook: "Facebook",
+  facebook_ads: "Facebook",
+  facebook_organic: "Facebook",
   tiktok: "TikTok",
   google: "Google",
   call: "Llamada",

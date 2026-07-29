@@ -10,7 +10,8 @@ import { DatePickerField } from "@/components/internal/ui/DatePickerField";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import {
-  patientCaptureSourceLabels,
+  normalizePatientCaptureSources,
+  patientCaptureSourceOptions,
   patientGenderLabels
 } from "@/features/patients/labels";
 import { followUpContactPreferenceLabels } from "@/features/reception/labels";
@@ -57,7 +58,9 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
   const [relevantHistory, setRelevantHistory] = useState(patient.relevantHistory ?? "");
   const [currentMedication, setCurrentMedication] = useState(patient.currentMedication ?? "");
 
-  const [captureSources, setCaptureSources] = useState<string[]>(patient.captureSources);
+  const [captureSources, setCaptureSources] = useState<string[]>(
+    normalizePatientCaptureSources(patient.captureSources)
+  );
   const [followUpPreference, setFollowUpPreference] = useState(
     patient.followUpPreference === "unknown" ? "" : patient.followUpPreference
   );
@@ -236,7 +239,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>¿Cómo nos conoció? (puede elegir varios)</span>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(patientCaptureSourceLabels).map(([value, label]) => (
+            {patientCaptureSourceOptions.map(({ value, label }) => (
               <ChipOption
                 key={value}
                 selected={captureSources.includes(value)}

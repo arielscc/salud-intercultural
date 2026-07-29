@@ -490,8 +490,7 @@ Este diagrama muestra relaciones funcionales generales. La documentación no pro
 
 El paciente puede conocer Salud Intercultural mediante:
 
-- Facebook Ads.
-- Facebook orgánico.
+- Facebook.
 - TikTok.
 - WhatsApp.
 - Referido.
