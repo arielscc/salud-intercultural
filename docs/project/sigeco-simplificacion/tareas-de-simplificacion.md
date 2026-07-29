@@ -2,6 +2,8 @@
 
 Plan tecnico para simplificar el flujo del paciente en Sigeco: menos formularios, menos secciones y captura unica de datos en recepcion mediante un funnel clinico corto. El analisis que origino este plan esta en el artefacto "Analisis de flujo Sigeco" (2026-07-10) y las decisiones aprobadas por el usuario se registran en [Progreso de simplificacion](./progreso-de-simplificacion.md).
 
+> **Aclaración operativa vigente:** este plan conserva la especificación técnica aprobada en julio de 2026. El nombre técnico del rol `seguimiento` no describe las tareas actuales de Yazmin. Ella solo responde mensajes y llamadas de WhatsApp, responde llamadas al número de la clínica, llama a personas que requieren información, contacta a quienes no lograron llegar a su visita y realiza recojos coordinados. Marlen y Recepción realizan el seguimiento de pacientes que ya están en tratamiento.
+
 A diferencia del rediseno Marea, esta fase SI toca logica, modelos y permisos. El sistema visual sigue siendo Marea sin cambios ([spec](../../design/sigeco-visual-system.md)).
 
 ## Decisiones Aprobadas (2026-07-10)
@@ -9,7 +11,7 @@ A diferencia del rediseno Marea, esta fase SI toca logica, modelos y permisos. E
 1. Se elimina la UI y el termino "lead" de Sigeco. Los modelos Prisma y los datos existentes NO se borran. La captacion por WhatsApp/redes vivira en otro proyecto del usuario, sin integracion por ahora.
 2. Marlen (recepcion) captura toda la informacion del paciente al llegar mediante un funnel clinico corto, aunque el paciente no compre nada. El medico recibe la consulta con esos datos prellenados.
 3. Se fusionan los modulos Pacientes y Visitas en un solo modulo "Recepcion".
-4. El rol `captacion` se desactiva. Yazmin pasa a un rol nuevo `seguimiento`. Los seguimientos los trabajan recepcion y seguimiento (Marlen o Yazmin).
+4. El rol `captacion` se desactiva. Yazmin pasa técnicamente a un rol nuevo `seguimiento`. En la decisión original, los seguimientos podían trabajarlos Recepción o Seguimiento. La aclaración operativa vigente reemplaza ese reparto: Marlen realiza el seguimiento del tratamiento y Yazmin no.
 5. El flujo del paciente NO es lineal: puede abandonar en cualquier punto (incluso despues de la consulta), y despues de la consulta puede ir a enfermeria, a administracion a comprar un producto, o irse directamente.
 
 ## Reglas Transversales (aplican a todas las tareas)
@@ -196,7 +198,7 @@ seguimiento
 
 ## Tarea 5 — Rol Seguimiento Y Retiro De Captacion
 
-**Objetivo:** que Yazmin trabaje seguimientos con un rol dedicado y el rol captacion quede desactivado.
+**Objetivo técnico histórico:** crear un rol dedicado de seguimiento y desactivar el rol captacion. La asignación operativa posterior limita el seguimiento del tratamiento a Marlen; el nombre técnico del rol no amplía las tareas actuales de Yazmin.
 
 **Alcance:**
 
