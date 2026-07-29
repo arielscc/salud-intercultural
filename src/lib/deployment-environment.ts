@@ -15,6 +15,7 @@ export type EnvironmentIsolationSummary = {
 
 const productionHost = "saludintercultural.com";
 const stagingHost = "staging.saludintercultural.com";
+const localPayloadSecret = "development-payload-secret";
 
 function clean(value: string | undefined) {
   const normalized = value?.trim();
@@ -29,6 +30,38 @@ export function resolveBlobReadWriteToken(
   return environment === "staging"
     ? clean(values.STAGING_BLOB_READ_WRITE_TOKEN)
     : clean(values.BLOB_READ_WRITE_TOKEN);
+}
+
+function assertStrongPayloadSecret(values: EnvironmentVariables) {
+  const payloadSecret = clean(values.PAYLOAD_SECRET);
+
+  if (!payloadSecret || payloadSecret.length < 32) {
+    throw new Error(
+      "PAYLOAD_SECRET must contain at least 32 characters in staging and production."
+    );
+  }
+
+  if (
+    /development|local|example|change.?me|placeholder|ci-only|test-only/i.test(
+      payloadSecret
+    )
+  ) {
+    throw new Error(
+      "PAYLOAD_SECRET must not use a development, test or placeholder value in staging or production."
+    );
+  }
+}
+
+export function resolvePayloadSecret(
+  values: EnvironmentVariables = process.env
+) {
+  const environment = resolveDeploymentEnvironment(values);
+
+  if (environment === "staging" || environment === "production") {
+    assertStrongPayloadSecret(values);
+  }
+
+  return clean(values.PAYLOAD_SECRET) ?? localPayloadSecret;
 }
 
 function parseDeploymentEnvironment(
@@ -170,6 +203,7 @@ function assertStagingIsolation(values: EnvironmentVariables) {
     );
   }
 
+  assertStrongPayloadSecret(values);
   assertNoAnalytics(values);
 }
 
@@ -200,6 +234,8 @@ function assertProductionIsolation(values: EnvironmentVariables) {
   if (clean(values.PAYLOAD_DB_SCHEMA)?.toLowerCase().includes("staging")) {
     throw new Error("Production PAYLOAD_DB_SCHEMA must not reference staging.");
   }
+
+  assertStrongPayloadSecret(values);
 }
 
 export function resolveDeploymentEnvironment(

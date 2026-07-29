@@ -1,4 +1,7 @@
-import { getStructuredData } from "@/lib/structured-data";
+import {
+  getStructuredData,
+  serializeStructuredData
+} from "@/lib/structured-data";
 import type { FAQ, Service } from "@/types/landing";
 
 type SEOJsonLdProps = {
@@ -31,7 +34,7 @@ export function SEOJsonLd({
         <script
           key={index}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(item) }}
+          dangerouslySetInnerHTML={{ __html: serializeStructuredData(item) }}
         />
       ))}
     </>

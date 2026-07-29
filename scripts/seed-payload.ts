@@ -11,6 +11,7 @@ import { teamMembers } from "../src/data/team";
 import { testimonials } from "../src/data/testimonials";
 import { treatmentsContent } from "../src/data/treatments";
 import { seo } from "../src/lib/seo";
+import { reportScriptError } from "./safe-error";
 
 type PayloadClient = Awaited<ReturnType<typeof getPayload>>;
 type SeededServiceDoc = {
@@ -478,6 +479,6 @@ main()
     process.exit(0);
   })
   .catch((error) => {
-    console.error(error);
+    reportScriptError("Payload seed", error);
     process.exit(1);
   });

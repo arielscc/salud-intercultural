@@ -22,6 +22,9 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-03 | [Workflow de skills gstack](./2026-07-03-gstack-skills-workflow.md) | Instala y documenta skills para desarrollo, QA, seguridad y release. |
 | 2026-07-03 | [Organizacion de documentacion y estado V3](./2026-07-03-documentacion-estado-v3.md) | Crea el tablero central de estado V3 y mejora la navegacion documental. |
 | 2026-07-03 | [Guia de prueba flujo V3](./2026-07-03-guia-prueba-flujo-v3.md) | Documenta el QA manual end-to-end de Sigeco V3.1A a V3.6. |
+| 2026-07-29 | [Tarea 3: auditoría append-only](./2026-07-29-tarea-3-auditoria-append-only.md) | Registra acciones críticas sin permitir edición o borrado. |
+| 2026-07-29 | [Tarea 4: usuarios, roles y sesiones](./2026-07-29-tarea-4-usuarios-roles-sesiones.md) | Administra cuentas, accesos y sesiones internas. |
+| 2026-07-29 | [Tarea 5: permisos, privacidad, logs y secretos](./2026-07-29-tarea-5-permisos-privacidad-logs-secretos.md) | Prueba límites por rol y evita fugas en URLs, logs, caché y configuración. |
 
 ## Relacion Con Estado V3
 

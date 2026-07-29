@@ -14,17 +14,8 @@ import {
   setInternalSessionCookie
 } from "@/features/internal-auth/session";
 
-function getLoginErrorRedirect(email: string, error: "invalid" | "locked" = "invalid") {
-  // Se conserva el email para no obligar a reescribirlo; la contraseña nunca
-  // viaja ni se repone. El mensaje y el comportamiento son identicos exista o
-  // no la cuenta, para no permitir enumerar usuarios.
-  const params = new URLSearchParams({ error });
-
-  if (email) {
-    params.set("email", email);
-  }
-
-  return `/sigeco/login?${params.toString()}`;
+function getLoginErrorRedirect(error: "invalid" | "locked" = "invalid") {
+  return `/sigeco/login?error=${error}`;
 }
 
 export async function loginInternalUser(formData: FormData) {
@@ -38,7 +29,7 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect(email));
+    redirect(getLoginErrorRedirect());
   }
 
   const user = await prisma.internalUser.findUnique({
@@ -52,7 +43,7 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect(email));
+    redirect(getLoginErrorRedirect());
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -64,7 +55,7 @@ export async function loginInternalUser(formData: FormData) {
       result: "denied",
       context: { reason: "account_locked" }
     });
-    redirect(getLoginErrorRedirect(email, "locked"));
+    redirect(getLoginErrorRedirect("locked"));
   }
 
   const isValid = await verifyPassword(password, user.passwordHash);
@@ -89,7 +80,7 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect(email));
+    redirect(getLoginErrorRedirect());
   }
 
   await prisma.internalUser.update({

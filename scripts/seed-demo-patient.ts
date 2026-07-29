@@ -8,6 +8,7 @@
  */
 import { prisma } from "../src/modules/database";
 import { assertSafeDatabaseCommand } from "./database-safety";
+import { reportScriptError } from "./safe-error";
 
 const PATIENT_NAME = "Ariel Socrates Chura Choque";
 const PATIENT_PHONE = "72514890";
@@ -179,7 +180,7 @@ async function main() {
   });
 
   if (existing) {
-    console.log(`El paciente demo ya existe (${existing.internalCode}). No se creo nada.`);
+    console.log("El paciente demo ya existe. No se creó ningún registro.");
     return;
   }
 
@@ -1143,7 +1144,7 @@ async function main() {
         }
       });
 
-      console.log(`Paciente demo creado: ${patient.internalCode} — ${patient.fullName}`);
+      console.log("Paciente demo creado con datos sintéticos.");
       console.log("Visitas: 5 (2 completas con pago, 1 retirada, 1 con pago parcial, 1 activa en enfermería hoy)");
     },
     { timeout: 60000 }
@@ -1152,7 +1153,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error(error);
+    reportScriptError("Demo patient seed", error);
     process.exitCode = 1;
   })
   .finally(async () => {

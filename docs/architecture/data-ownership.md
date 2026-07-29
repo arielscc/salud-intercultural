@@ -9,6 +9,8 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 3. Prisma es la fuente de verdad de los dominios operativos transaccionales de SIGECO.
 4. `src/data` es fallback tecnico y fuente inicial para seeds, no fuente de verdad editable.
 5. Si un dato necesita aparecer en otro sistema, debe consumirse o derivarse; no mantenerse como copia editable independiente.
+6. Payload, marketing y analytics no reciben pacientes, visitas ni historia
+   clínica; su límite termina en contenido público y leads.
 
 ## Tabla De Ownership
 

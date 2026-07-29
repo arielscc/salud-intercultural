@@ -40,7 +40,7 @@ Estas variables no deben exponerse al navegador.
 | `STORAGE_ENVIRONMENT` | Si | `staging` | Etiqueta de ownership del Blob Store. |
 | `EXTERNAL_COMMUNICATIONS_MODE` | Si | `blocked` | Bloquea contacto real fuera de produccion. |
 | `DATABASE_URL` | Si | `postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require` | Conexion de Prisma y Payload a Postgres. |
-| `PAYLOAD_SECRET` | Si | valor aleatorio de 32+ caracteres | Firma de tokens y sesiones de Payload. |
+| `PAYLOAD_SECRET` | Si | valor aleatorio de 32+ caracteres | Firma de tokens y sesiones de Payload. Staging y producción no arrancan sin un valor fuerte. |
 | `PAYLOAD_PUBLIC_SERVER_URL` | Si | `http://localhost:3000` | URL base que Payload usa para resolver servidor/admin. |
 | `PAYLOAD_DB_SCHEMA` | Si | `payload` | Schema de Postgres usado por Payload. |
 | `BLOB_READ_WRITE_TOKEN` | Produccion; opcional en local | token generado por Vercel Blob | Store productivo o storage Blob opcional de desarrollo. Staging no lo utiliza. |
@@ -259,3 +259,5 @@ La validacion esta centralizada en `src/lib/env.ts`.
 - No commitear `.env`, `.env.staging` ni `.env.production.local`.
 - No usar variables con prefijo `NEXT_PUBLIC_` para secretos.
 - Rotar cualquier secreto compartido por chat, capturas, correo, tickets o commits.
+- Consultar [Permisos, privacidad, logs y secretos](./permissions-privacy-secrets.md)
+  para propietarios, frecuencia y procedimiento de rotación.

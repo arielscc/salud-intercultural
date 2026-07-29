@@ -4,6 +4,7 @@ import {
   deprecatedInternalRoles
 } from "../src/features/internal-auth/permissions";
 import type { InternalRole } from "../src/generated/prisma/client";
+import { reportScriptError } from "./safe-error";
 
 /*
  * Reasigna el rol de un usuario interno existente.
@@ -41,12 +42,12 @@ async function main() {
     data: { role: role as InternalRole }
   });
 
-  console.log(`Updated ${email}: ${user.role} -> ${role}`);
+  console.log(`Internal user role updated: ${user.role} -> ${role}.`);
 }
 
 main()
   .catch((error) => {
-    console.error(error);
+    reportScriptError("Internal role update", error);
     process.exitCode = 1;
   })
   .finally(async () => {

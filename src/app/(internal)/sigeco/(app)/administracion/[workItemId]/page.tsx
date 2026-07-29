@@ -33,9 +33,6 @@ type AdministrationWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
   searchParams: Promise<{
     error?: string;
-    product?: string;
-    available?: string;
-    requested?: string;
   }>;
 };
 
@@ -69,8 +66,8 @@ export default async function AdministrationWorkItemPage({
           >
             <p className="font-semibold">No hay stock suficiente para completar la venta.</p>
             <p className="mt-1">
-              {query.product ?? "Producto"}: disponible {query.available ?? "0"}, solicitado{" "}
-              {query.requested ?? "-"}. La venta no fue creada ni se registró ningún cobro.
+              Revisa las existencias del producto. La venta no fue creada ni se registró
+              ningún cobro.
             </p>
           </div>
         ) : null}

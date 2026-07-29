@@ -1,5 +1,6 @@
 import { prisma } from "../src/modules/database";
 import { hashPassword } from "../src/features/internal-auth/password";
+import { reportScriptError } from "./safe-error";
 
 async function main() {
   const email = process.env.INTERNAL_ADMIN_EMAIL?.trim().toLowerCase();
@@ -31,7 +32,7 @@ async function main() {
         passwordChangedAt: new Date()
       }
     });
-    console.log(`Updated internal super_admin: ${email}`);
+    console.log("Internal super administrator updated.");
     return;
   }
 
@@ -47,12 +48,12 @@ async function main() {
     }
   });
 
-  console.log(`Created internal super_admin: ${email}`);
+  console.log("Internal super administrator created.");
 }
 
 main()
   .catch((error) => {
-    console.error(error);
+    reportScriptError("Internal administrator seed", error);
     process.exitCode = 1;
   })
   .finally(async () => {

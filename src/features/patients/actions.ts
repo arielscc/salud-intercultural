@@ -36,7 +36,7 @@ export async function createPatientAction(formData: FormData) {
       const duplicates = await findPossibleDuplicatePatients(input.phone);
 
       if (duplicates.length > 0 && formData.get("allowDuplicate") !== "true") {
-        redirect(`/sigeco/recepcion/nuevo?duplicatePhone=${encodeURIComponent(input.phone)}`);
+        redirect("/sigeco/recepcion/nuevo?duplicate=true");
       }
 
       const created = await createPatientRecord({

@@ -66,9 +66,7 @@ export async function submitReceptionIntakeAction(formData: FormData) {
         const duplicates = await findPossibleDuplicatePatients(record.patient.phone);
 
         if (duplicates.length > 0 && formData.get("allowDuplicate") !== "true") {
-          redirect(
-            `/sigeco/recepcion/nuevo?duplicatePhone=${encodeURIComponent(record.patient.phone)}`
-          );
+          redirect("/sigeco/recepcion/nuevo?duplicate=true");
         }
       }
 

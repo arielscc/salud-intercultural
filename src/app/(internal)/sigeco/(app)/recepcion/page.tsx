@@ -44,7 +44,6 @@ type ReceptionPageProps = {
   searchParams: Promise<{
     vista?: string;
     status?: VisitStatus | "all";
-    search?: string;
     page?: string;
     visita?: string;
     periodo?: string;
@@ -106,7 +105,7 @@ const emptyVisitsMessage = (
 const emptyPatientsMessage = (
   <>
     <span className="block font-semibold text-text">
-      No hay pacientes con esa búsqueda.
+      Todavía no hay pacientes registrados.
     </span>
     <span className="mt-1 block text-sm text-muted">
       Regístralo desde “Registrar llegada”.
@@ -218,8 +217,8 @@ export default async function ReceptionPage({
   const patientPage =
     vista === "pacientes"
       ? await Promise.all([
-          getPatients({ search: params.search, page, pageSize }),
-          countPatients({ search: params.search }),
+          getPatients({ page, pageSize }),
+          countPatients(),
         ])
       : null;
   const patients = patientPage?.[0] ?? [];
@@ -339,26 +338,10 @@ export default async function ReceptionPage({
               </Button>
             </form>
           ) : (
-            <form className="flex min-w-0 flex-1 items-center gap-2">
-              <input type="hidden" name="vista" value="pacientes" />
-              <label className="sr-only" htmlFor="desktop-patient-search">
-                Buscar pacientes
-              </label>
-              <input
-                id="desktop-patient-search"
-                className={cn(
-                  internalInputClassName,
-                  "h-9 min-h-9 min-w-0 max-w-sm py-1.5 text-[13px]",
-                )}
-                type="search"
-                name="search"
-                placeholder="Nombre, teléfono, código o ciudad"
-                defaultValue={params.search}
-              />
-              <Button type="submit" variant="outline" size="sm">
-                Buscar
-              </Button>
-            </form>
+            <PatientAutocomplete
+              mode="navigate"
+              className="min-w-0 flex-1"
+            />
           )
         }
         count={
@@ -716,22 +699,10 @@ export default async function ReceptionPage({
       ) : (
         <>
           <Card className="sm:hidden">
-            <PatientAutocomplete mode="navigate" initialValue={params.search} />
+            <PatientAutocomplete mode="navigate" />
           </Card>
           <Card className="hidden sm:block lg:hidden">
-            <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
-              <input type="hidden" name="vista" value="pacientes" />
-              <input
-                className={internalInputClassName}
-                type="search"
-                name="search"
-                placeholder="Buscar por nombre, teléfono, código o ciudad"
-                defaultValue={params.search}
-              />
-              <Button type="submit" variant="outline">
-                Buscar
-              </Button>
-            </form>
+            <PatientAutocomplete mode="navigate" />
           </Card>
 
           <Card className="min-w-0 p-0">
@@ -801,7 +772,7 @@ export default async function ReceptionPage({
               pageSize={pageSize}
               totalItems={totalPatients}
               pathname="/sigeco/recepcion"
-              searchParams={{ vista: "pacientes", search: params.search }}
+              searchParams={{ vista: "pacientes" }}
             />
           </Card>
         </>

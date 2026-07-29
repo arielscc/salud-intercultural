@@ -3,7 +3,8 @@ import {
   areExternalCommunicationsBlocked,
   assertEnvironmentIsolation,
   resolveBlobReadWriteToken,
-  resolveDeploymentEnvironment
+  resolveDeploymentEnvironment,
+  resolvePayloadSecret
 } from "@/lib/deployment-environment";
 
 const stagingEnvironment = {
@@ -16,6 +17,7 @@ const stagingEnvironment = {
   PAYLOAD_PUBLIC_SERVER_URL: "https://staging.saludintercultural.com",
   DATABASE_URL: "postgresql://staging_user:secret@db.example.net/salud_intercultural_staging",
   PAYLOAD_DB_SCHEMA: "payload_staging",
+  PAYLOAD_SECRET: "staging-payload-secret-32-characters-minimum",
   STAGING_BLOB_READ_WRITE_TOKEN: "synthetic-staging-token",
   NEXT_PUBLIC_GA_ID: "",
   NEXT_PUBLIC_META_PIXEL_ID: "",
@@ -71,6 +73,9 @@ describe("deployment environment isolation", () => {
     ["production URL", { NEXT_PUBLIC_SITE_URL: "https://saludintercultural.com" }],
     ["shared Payload schema", { PAYLOAD_DB_SCHEMA: "payload" }],
     ["missing staging Blob token", { STAGING_BLOB_READ_WRITE_TOKEN: "" }],
+    ["missing Payload secret", { PAYLOAD_SECRET: "" }],
+    ["short Payload secret", { PAYLOAD_SECRET: "too-short" }],
+    ["placeholder Payload secret", { PAYLOAD_SECRET: "development-secret-that-is-long-enough" }],
     ["real communications", { EXTERNAL_COMMUNICATIONS_MODE: "enabled" }],
     ["production analytics", { NEXT_PUBLIC_GA_ID: "G-TEST123" }],
     ["wrong database marker", { DATABASE_ENVIRONMENT: "production" }]
@@ -98,5 +103,21 @@ describe("deployment environment isolation", () => {
         EXTERNAL_COMMUNICATIONS_MODE: "enabled"
       })
     ).toBe(false);
+  });
+
+  it("uses a local fallback only outside staging and production", () => {
+    expect(
+      resolvePayloadSecret({
+        APP_ENV: "local",
+        NEXT_PUBLIC_APP_ENV: "local"
+      })
+    ).toBe("development-payload-secret");
+
+    expect(() =>
+      resolvePayloadSecret({
+        ...stagingEnvironment,
+        PAYLOAD_SECRET: ""
+      })
+    ).toThrow(/32 characters/);
   });
 });

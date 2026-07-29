@@ -14,6 +14,7 @@ export type PatientSearchResult = Awaited<
 
 type PatientAutocompleteProps = {
   mode: "navigate" | "select";
+  className?: string;
   initialValue?: string;
   value?: string;
   onValueChange?: (value: string) => void;
@@ -23,6 +24,7 @@ type PatientAutocompleteProps = {
 
 export function PatientAutocomplete({
   mode,
+  className,
   initialValue = "",
   value: controlledValue,
   onValueChange,
@@ -41,7 +43,7 @@ export function PatientAutocomplete({
 
   useEffect(() => {
     const term = query.trim();
-    if (term.length < 2 || !window.matchMedia("(max-width: 639px)").matches) return;
+    if (term.length < 2) return;
 
     const currentRequest = ++requestId.current;
     const timeout = window.setTimeout(async () => {
@@ -116,7 +118,7 @@ export function PatientAutocomplete({
   const showPanel = isOpen && query.trim().length >= 2;
 
   return (
-    <div className="grid gap-3">
+    <div className={cn("grid gap-3", className)}>
       <div className="relative">
         <Search
           className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"

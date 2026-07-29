@@ -2,7 +2,10 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 import type { InternalUser } from "@/generated/prisma/client";
 import { logoutInternalUser } from "@/features/internal-auth/actions";
-import { internalRoleLabels } from "@/features/internal-auth/permissions";
+import {
+  internalRoleLabels,
+  roleHasPermission
+} from "@/features/internal-auth/permissions";
 import { formatLongDate } from "@/lib/dates";
 import { DesktopPatientSearch } from "@/components/internal/DesktopPatientSearch";
 import { DesktopSidebarNav } from "@/components/internal/DesktopSidebarNav";
@@ -67,7 +70,9 @@ export function InternalShell({
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
           <MobileSidebar role={user.role} userSlot={<UserBadge user={user} />} />
           <p className="font-sora text-sm font-bold text-text lg:hidden">Sigeco</p>
-          <DesktopPatientSearch />
+          {roleHasPermission(user.role, "patients_read") ? (
+            <DesktopPatientSearch />
+          ) : null}
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <p className="hidden text-xs text-muted md:block">{formatToday()}</p>
             <div className="hidden sm:block">

@@ -8,7 +8,8 @@ import { collections } from "./src/payload/collections/index.ts";
 import { globals } from "./src/payload/globals/index.ts";
 import {
   assertEnvironmentIsolation,
-  resolveBlobReadWriteToken
+  resolveBlobReadWriteToken,
+  resolvePayloadSecret
 } from "./src/lib/deployment-environment.ts";
 
 const filename = fileURLToPath(import.meta.url);
@@ -81,7 +82,7 @@ export default buildConfig({
       token: blobReadWriteToken
     })
   ],
-  secret: process.env.PAYLOAD_SECRET || "development-payload-secret",
+  secret: resolvePayloadSecret(),
   sharp,
   typescript: {
     outputFile: path.resolve(dirname, "src/types/payload-types.ts")

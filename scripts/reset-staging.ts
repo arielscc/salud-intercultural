@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import pg from "pg";
+import { reportScriptError } from "./safe-error";
 import { assertSafeStagingCommand } from "./staging-safety";
 
 function run(command: string, args: string[]) {
@@ -45,6 +46,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  reportScriptError("Staging reset", error);
   process.exitCode = 1;
 });

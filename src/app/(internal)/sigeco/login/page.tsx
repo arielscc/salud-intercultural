@@ -13,7 +13,7 @@ const supportWhatsappHref = createWhatsAppLink(
 );
 
 type LoginPageProps = {
-  searchParams: Promise<{ error?: string; email?: string }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
 export default async function SigecoLoginPage({
@@ -61,7 +61,6 @@ export default async function SigecoLoginPage({
               type="email"
               name="email"
               autoComplete="email"
-              defaultValue={params.email}
               required
             />
           </Field>

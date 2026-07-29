@@ -34,6 +34,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 19. [Prueba manual del flujo completo V3 Sigeco](./sigeco-v3-full-flow-testing.md)
 20. [Auditoría append-only de SIGECO](./audit-events.md)
 21. [Usuarios, roles y sesiones de SIGECO](./internal-users-sessions.md)
+22. [Permisos, privacidad, logs y secretos de SIGECO](./permissions-privacy-secrets.md)
 
 ## Flujo recomendado
 

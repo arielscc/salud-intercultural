@@ -135,6 +135,12 @@ vive en `/sigeco/usuarios`; cada empleado gestiona contraseña y sesiones propia
 en `/sigeco/mi-cuenta`. Las cuentas con `mustChangePassword` quedan limitadas a
 `/sigeco/cambiar-contrasena` hasta completar el cambio.
 
+La matriz completa y las reglas para páginas, actions, archivos, URLs, logs,
+caché y secretos viven en
+[Permisos, privacidad, logs y secretos](../operations/permissions-privacy-secrets.md).
+Las pruebas enumeran cada página de datos y cada server action; Payload y
+analytics tienen un límite automático que impide importar consultas clínicas.
+
 ## Dashboard
 
 `getReceptionDashboardSummary` calcula con rango diario local:

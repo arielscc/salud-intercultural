@@ -8,18 +8,19 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3 y 4 están en progreso. CI, las barreras de aislamiento, la
-auditoría y la administración de usuarios están implementadas localmente. Las
-doce migraciones anteriores están en staging y las catorce migraciones actuales
-están aplicadas en desarrollo. Falta validar las dos nuevas mediante CI y
-staging, completar QA autenticado y cerrar los pendientes remotos.
+Las Tareas 1, 2, 3, 4 y 5 están en progreso. CI, las barreras de aislamiento,
+la auditoría, la administración de usuarios y los límites de privacidad están
+implementados localmente. Las doce migraciones anteriores están en staging y
+las catorce migraciones actuales están aplicadas en desarrollo. Falta validar
+las dos nuevas mediante CI y staging, completar QA autenticado y cerrar los
+pendientes remotos.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 25 |
-| En progreso | 4 |
+| Pendiente | 24 |
+| En progreso | 5 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -42,7 +43,7 @@ staging, completar QA autenticado y cerrar los pendientes remotos.
 | 2 | Staging aislado | P0 | En progreso | 1 |
 | 3 | Auditoría append-only | P0 | En progreso | 1-2 |
 | 4 | Usuarios, roles y sesiones | P0 | En progreso | 3 |
-| 5 | Permisos, privacidad, logs y secretos | P0 | Pendiente | 3-4 |
+| 5 | Permisos, privacidad, logs y secretos | P0 | En progreso | 3-4 |
 | 6 | Adjuntos clínicos seguros | P0 | Pendiente | 2-5 |
 | 7 | Backup y restauración | P0 | Pendiente | 2, 6 |
 | 8 | Incidentes y gate de seguridad | P0 | Pendiente | 1-7 |
@@ -76,6 +77,8 @@ Las tareas activas son:
 - **Tarea 2 — Staging completamente aislado:** pendiente de seed, deployment y validación de cuentas.
 - **Tarea 3 — Auditoría append-only:** implementación local terminada; pendiente de migración y QA remotos.
 - **Tarea 4 — Usuarios, roles y sesiones:** implementación local terminada; pendiente de integración y QA en staging.
+- **Tarea 5 — Permisos, privacidad, logs y secretos:** controles locales
+  implementados; pendiente de verificación remota y QA negativo por rol.
 
 Para terminar la Tarea 1:
 
@@ -91,7 +94,7 @@ Para terminar la Tarea 2:
 - Ejecutar `pnpm staging:seed` y `pnpm staging:verify`.
 - Verificar los siete roles, media y bloqueo de comunicaciones en el deployment.
 
-No comenzar la Tarea 5 hasta cerrar las validaciones remotas de las Tareas 1-4.
+No comenzar la Tarea 6 hasta cerrar las validaciones remotas de las Tareas 1-5.
 
 ## Decisiones Vigentes
 
@@ -422,6 +425,60 @@ No comenzar la Tarea 5 hasta cerrar las validaciones remotas de las Tareas 1-4.
 - Completar QA autenticado en 390, 768, 1024, 1280 y 1440 px.
 
 **Commit sugerido:** `feat(sigeco): manage users roles and sessions`
+
+### 2026-07-29 — Tarea 5 — Permisos, Privacidad, Logs Y Secretos
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Documentada la matriz de acceso por rol y módulo.
+- Todas las páginas de datos y las 38 server actions actuales tienen una
+  política automatizada de permiso.
+- La navegación se contrasta con el permiso exigido por el servidor.
+- La búsqueda global de pacientes se oculta sin `patients_read`.
+- Login, duplicados, búsqueda de pacientes y errores de stock dejaron de
+  incluir datos sensibles en URLs.
+- SIGECO, Payload Admin y API usan `no-store`, `no-referrer` y `noindex`.
+- Prisma no imprime consultas y los scripts omiten mensajes libres que podrían
+  contener credenciales o datos personales.
+- Staging y producción exigen un `PAYLOAD_SECRET` fuerte de al menos 32 caracteres.
+- El JSON-LD escapa contenido administrable para evitar inyección.
+- Todas las acciones de GitHub están fijadas a commits inmutables.
+- Payload, marketing y analytics no importan consultas clínicas.
+- Propietarios y procedimientos de rotación de secretos quedaron documentados.
+
+#### Archivos Y Documentación
+
+- Pruebas en `scripts/security-boundaries.test.ts`,
+  `scripts/privacy-controls.test.ts` y `scripts/secret-policy.test.ts`.
+- Guía [permissions-privacy-secrets.md](../../operations/permissions-privacy-secrets.md).
+- Reporte
+  [2026-07-29-tarea-5-permisos-privacidad-logs-secretos.md](../task-reports/2026-07-29-tarea-5-permisos-privacidad-logs-secretos.md).
+- No requiere una migración nueva.
+
+#### Validación Ejecutada
+
+- Pruebas específicas: 5 archivos y 32 pruebas aprobadas.
+- Suite completa: 37 archivos y 143 pruebas aprobadas.
+- `pnpm lint`, `pnpm typecheck` y `pnpm run build`: aprobados.
+- `pnpm staging:check`: aprobado con base, storage y Blob de staging,
+  comunicaciones bloqueadas y analytics deshabilitado.
+- `pnpm deps:check`: 0 vulnerabilidades altas o críticas; 4 bajas y 14 moderadas.
+
+#### Pendientes Para Cerrar
+
+- Ejecutar integración y los cinco jobs en CI.
+- Verificar headers en el deployment de staging.
+- Entrar con los siete roles QA y probar navegación visible y URL directa.
+- Confirmar en Vercel propietario y fecha de rotación de cada secreto.
+- Rotar `PAYLOAD_SECRET` si algún despliegue remoto utilizó el fallback anterior.
+
+**Commit sugerido:** `test(sigeco): enforce privacy and permission boundaries`
 
 ## Cómo Actualizar El Progreso
 

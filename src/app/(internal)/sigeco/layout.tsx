@@ -26,7 +26,14 @@ const plexSans = IBM_Plex_Sans({
 
 export const metadata: Metadata = {
   title: "Sigeco | Salud Intercultural",
-  description: "Sistema interno de gestion clinica y operativa."
+  description: "Sistema interno de gestion clinica y operativa.",
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nosnippet: true,
+    noimageindex: true
+  }
 };
 
 export default function SigecoRootLayout({

@@ -9,6 +9,7 @@ import {
   internalRoleLabels
 } from "../src/features/internal-auth/permissions";
 import { prisma } from "../src/modules/database";
+import { reportScriptError } from "./safe-error";
 import { assertSafeStagingCommand } from "./staging-safety";
 
 const qaPatientFixtures = [
@@ -314,7 +315,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error(error);
+    reportScriptError("Staging SIGECO seed", error);
     process.exitCode = 1;
   })
   .finally(async () => {

@@ -1,5 +1,6 @@
 import { assignableInternalRoles } from "../src/features/internal-auth/permissions";
 import { prisma } from "../src/modules/database";
+import { reportScriptError } from "./safe-error";
 import { assertSafeStagingCommand } from "./staging-safety";
 
 async function main() {
@@ -52,7 +53,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error(error);
+    reportScriptError("Staging verification", error);
     process.exitCode = 1;
   })
   .finally(async () => {

@@ -16,6 +16,17 @@ El proyecto separa la suite rapida de los tests que usan PostgreSQL real.
 
 `pnpm test` excluye archivos `*.integration.test.ts` y `*.integration.test.tsx`.
 
+La suite rápida también bloquea regresiones de seguridad:
+
+- páginas y acciones sin permiso de servidor;
+- diferencias entre navegación y límite del servidor;
+- acceso clínico desde Payload, marketing o analytics;
+- datos personales o de stock dentro de URLs;
+- query logs de Prisma y errores de scripts con datos sensibles;
+- secretos con prefijo público o formatos de credencial dentro del repositorio;
+- GitHub Actions que no estén fijadas a un commit inmutable;
+- contenido CMS capaz de cerrar un script JSON-LD.
+
 ## Base De Test
 
 Los tests de integracion usan la base local `salud_intercultural_test` creada por Docker.

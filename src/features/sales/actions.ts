@@ -68,16 +68,10 @@ export async function createSaleAction(formData: FormData) {
         const stockError = findInsufficientStockError(error);
         if (!stockError) throw error;
 
-        const query = new URLSearchParams({
-          error: "insufficient-stock",
-          product: stockError.itemName,
-          available: String(stockError.available),
-          requested: String(stockError.requested)
-        });
         const target = parsed.data.workItemId
           ? `/sigeco/administracion/${parsed.data.workItemId}`
           : "/sigeco/administracion";
-        redirect(`${target}?${query.toString()}`);
+        redirect(`${target}?error=insufficient-stock`);
       }
 
       return auditedResult(created, {

@@ -7,7 +7,7 @@ import { requirePermission } from "@/modules/permissions";
 type ReceptionIntakePageProps = {
   searchParams: Promise<{
     error?: string;
-    duplicatePhone?: string;
+    duplicate?: string;
     paciente?: string;
   }>;
 };
@@ -48,21 +48,21 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
         </div>
       ) : null}
 
-      {params.duplicatePhone ? (
+      {params.duplicate === "true" ? (
         <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
           <p className="flex items-center gap-1.5 font-semibold text-warning">
             <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
             Posible paciente duplicado
           </p>
           <p className="mt-1 text-muted">
-            Ya existe una ficha con el teléfono {params.duplicatePhone}. Búscala en el primer paso o
-            vuelve a registrar para confirmar el duplicado.
+            Ya existe una ficha con ese teléfono. Búscala en el primer paso o vuelve a
+            registrar para confirmar el duplicado.
           </p>
         </div>
       ) : null}
 
       <IntakeFunnel
-        allowDuplicateFromServer={Boolean(params.duplicatePhone)}
+        allowDuplicateFromServer={params.duplicate === "true"}
         initialPatient={initialPatient}
       />
     </div>
