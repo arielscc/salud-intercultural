@@ -49,7 +49,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "users_manage",
     "attachments_read",
     "attachments_write",
-    "attachments_delete"
+    "attachments_delete",
+    "patient_consents_read",
+    "patient_consents_write"
   ],
   direccion: [
     "internal_access",
@@ -64,7 +66,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "inventory_read",
     "reports_read",
     "audit_read",
-    "attachments_read"
+    "attachments_read",
+    "patient_consents_read"
   ],
   medico: [
     "internal_access",
@@ -80,7 +83,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "attachments_read",
     "attachments_write",
     "followups_read",
-    "followups_write"
+    "followups_write",
+    "patient_consents_read"
   ],
   recepcion: [
     "internal_access",
@@ -93,7 +97,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_route_read",
     "patient_route_update",
     "followups_read",
-    "followups_write"
+    "followups_write",
+    "patient_consents_read",
+    "patient_consents_write"
   ],
   captacion: ["internal_access"],
   administracion: [
@@ -108,7 +114,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "followups_read",
     "followups_write",
     "inventory_read",
-    "inventory_write"
+    "inventory_write",
+    "patient_consents_read"
   ],
   enfermeria: [
     "internal_access",
@@ -120,13 +127,15 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "studies_read",
     "studies_write",
     "attachments_read",
-    "attachments_write"
+    "attachments_write",
+    "patient_consents_read"
   ],
   seguimiento: [
     "internal_access",
     "patients_read",
     "followups_read",
-    "followups_write"
+    "followups_write",
+    "patient_consents_read"
   ]
 };
 

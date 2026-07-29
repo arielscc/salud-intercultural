@@ -100,7 +100,6 @@ export type ReceptionPatientEditData = {
   allergies: string | null;
   relevantHistory: string | null;
   currentMedication: string | null;
-  followUpPreference: FollowUpContactPreference;
 };
 
 const dashboardRouteAreas: PatientRouteArea[] = [

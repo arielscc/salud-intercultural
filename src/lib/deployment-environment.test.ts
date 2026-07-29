@@ -27,6 +27,22 @@ const stagingEnvironment = {
   GOOGLE_SITE_VERIFICATION: ""
 };
 
+const productionEnvironment = {
+  APP_ENV: "production",
+  NEXT_PUBLIC_APP_ENV: "production",
+  DATABASE_ENVIRONMENT: "production",
+  STORAGE_ENVIRONMENT: "production",
+  EXTERNAL_COMMUNICATIONS_MODE: "enabled",
+  NEXT_PUBLIC_SITE_URL: "https://saludintercultural.com",
+  PAYLOAD_PUBLIC_SERVER_URL: "https://saludintercultural.com",
+  DATABASE_URL: "postgresql://production_user:secret@db.example.net/salud_intercultural",
+  PAYLOAD_DB_SCHEMA: "payload",
+  PAYLOAD_SECRET: "production-payload-secret-32-characters-minimum",
+  BLOB_READ_WRITE_TOKEN: "synthetic-production-editorial-token",
+  CLINICAL_FILES_STORAGE_DRIVER: "vercel-blob",
+  CLINICAL_BLOB_READ_WRITE_TOKEN: "synthetic-production-clinical-token"
+};
+
 describe("deployment environment isolation", () => {
   it("accepts a fully isolated staging configuration", () => {
     expect(assertEnvironmentIsolation(stagingEnvironment)).toMatchObject({
@@ -151,5 +167,17 @@ describe("deployment environment isolation", () => {
         PAYLOAD_SECRET: ""
       })
     ).toThrow(/32 characters/);
+  });
+
+  it("blocks production until the consent text version is explicitly approved", () => {
+    expect(() => assertEnvironmentIsolation(productionEnvironment)).toThrow(
+      /PATIENT_CONSENT_PRODUCTION_TEXT_VERSION/
+    );
+    expect(
+      assertEnvironmentIsolation({
+        ...productionEnvironment,
+        PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v1"
+      }).environment
+    ).toBe("production");
   });
 });

@@ -13,6 +13,7 @@ import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpAttemptAction } from "@/features/follow-ups/actions";
 import { followUpAttemptMethodLabels, followUpStatusLabels } from "@/features/follow-ups/labels";
+import { canContactPatient } from "@/features/patient-consents/policy";
 import { formatDateTime } from "@/lib/dates";
 import { getFollowUpTaskById } from "@/modules/database/queries/follow-ups";
 import { requirePermission } from "@/modules/permissions";
@@ -44,8 +45,22 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
 
   const phone = task.patient?.phone ?? task.lead?.phone;
   const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
-  const whatsappHref = phone ? createWhatsAppLink("", phone) : undefined;
-  const patientDeclinedContact = task.patient?.followUpPreference === "no_contact";
+  const followUpConsent = task.patient?.consents[0];
+  const canCall = task.patient
+    ? canContactPatient(followUpConsent, "follow_up", "call")
+    : Boolean(phone);
+  const canWhatsApp = task.patient
+    ? canContactPatient(followUpConsent, "follow_up", "whatsapp")
+    : Boolean(phone);
+  const whatsappHref =
+    phone && canWhatsApp ? createWhatsAppLink("", phone) : undefined;
+  const availableMethods = methodOptions.filter(([method]) => {
+    if (!task.patient) return true;
+    if (method === "in_person") return true;
+    if (method === "call") return canCall;
+    if (method === "whatsapp") return canWhatsApp;
+    return canCall || canWhatsApp;
+  });
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
@@ -66,23 +81,32 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
             <InfoRow label="Vence" value={formatDateTime(task.dueAt)} />
             {phone ? <InfoRow label="Teléfono" value={phone} /> : null}
           </dl>
-          {patientDeclinedContact ? (
+          {task.patient && (!canCall || !canWhatsApp) ? (
             <div className="mt-4 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
               <p className="flex items-center gap-1.5 font-semibold text-warning">
                 <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-                El paciente pidió no recibir seguimiento
+                Contacto limitado por la decisión del paciente
               </p>
               <p className="mt-1 text-muted">
-                Contáctalo solo si es necesario por razones clínicas y regístralo en las notas.
+                {canCall || canWhatsApp
+                  ? `Solo está autorizado: ${[
+                      canWhatsApp ? "WhatsApp" : null,
+                      canCall ? "llamada" : null
+                    ]
+                      .filter(Boolean)
+                      .join(" y ")}.`
+                  : "No se permiten llamadas ni WhatsApp hasta registrar una autorización vigente."}
               </p>
             </div>
           ) : null}
           {phone ? (
             <div className="mt-4 flex gap-2">
-              <a href={createCallLink(phone)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-                <Phone className="h-4 w-4" aria-hidden="true" />
-                Llamar
-              </a>
+              {canCall ? (
+                <a href={createCallLink(phone)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  Llamar
+                </a>
+              ) : null}
               {whatsappHref ? (
                 <a
                   href={whatsappHref}
@@ -134,8 +158,12 @@ export default async function FollowUpDetailPage({ params }: FollowUpDetailPageP
           <NoticeForm action={createFollowUpAttemptAction} notice="Contacto registrado" className="grid gap-3">
             <input type="hidden" name="taskId" value={task.id} />
             <Field label="Método">
-              <select className={internalInputClassName} name="method" defaultValue="call">
-                {methodOptions.map(([value, label]) => (
+              <select
+                className={internalInputClassName}
+                name="method"
+                defaultValue={availableMethods[0]?.[0] ?? "in_person"}
+              >
+                {availableMethods.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>

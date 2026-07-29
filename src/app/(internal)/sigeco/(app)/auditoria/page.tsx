@@ -61,6 +61,7 @@ const actionLabels: Record<string, string> = {
   "follow_up.task.create": "Creó un seguimiento",
   "follow_up.task.view": "Consultó un seguimiento",
   "follow_up.attempt.create": "Registró un intento de seguimiento",
+  "patient.consent.record": "Registró una decisión de consentimiento",
   "inventory.item.create": "Creó un producto",
   "inventory.item.view": "Consultó un producto",
   "inventory.entry.create": "Registró una entrada de inventario",

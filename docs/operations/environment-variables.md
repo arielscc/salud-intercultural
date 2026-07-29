@@ -74,6 +74,7 @@ Estas variables no deben exponerse al navegador.
 | `RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Ventana de rate limit para leads. |
 | `CMS_READS_DURING_BUILD` | No | `false` | Permite lecturas CMS durante build si se cambia a `true`. |
 | `ALLOW_REMOTE_DB_RESET` | No | `false` | Override operativo para `pnpm db:reset` contra una base remota no productiva aprobada explicitamente. |
+| `PATIENT_CONSENT_PRODUCTION_TEXT_VERSION` | Solo producción, después de aprobación | `v1` | Gate explícito: producción no arranca hasta que Dirección apruebe exactamente esa versión de los textos. |
 
 Nota de contacto: `+59164175822` es el numero principal. `+59162287251` queda como numero alternativo; ambos pueden recibir WhatsApp y llamadas.
 

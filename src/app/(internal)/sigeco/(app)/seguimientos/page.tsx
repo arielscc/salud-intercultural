@@ -117,7 +117,9 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
             const phone = task.patient?.phone ?? task.lead?.phone;
             const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
             const isOverdue = task.dueAt < new Date() && task.status === "pending";
-            const declinedContact = task.patient?.followUpPreference === "no_contact";
+            const contactBlocked =
+              Boolean(task.patient) &&
+              task.patient?.consents[0]?.decision !== "granted";
 
             return (
               <RecordItem
@@ -134,8 +136,10 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
                 <span className="tabular-nums">
                   {task.patient?.internalCode ?? "Sin ficha"} · {phone ?? "—"}
                 </span>
-                {declinedContact ? (
-                  <span className="font-semibold text-warning">Pidió no recibir seguimiento</span>
+                {contactBlocked ? (
+                  <span className="font-semibold text-warning">
+                    Sin autorización vigente de seguimiento
+                  </span>
                 ) : null}
               </RecordItem>
             );
@@ -158,7 +162,9 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
                 const phone = task.patient?.phone ?? task.lead?.phone;
                 const name = task.patient?.fullName ?? task.lead?.name ?? "Sin paciente";
                 const isOverdue = task.dueAt < new Date() && task.status === "pending";
-                const declinedContact = task.patient?.followUpPreference === "no_contact";
+                const contactBlocked =
+                  Boolean(task.patient) &&
+                  task.patient?.consents[0]?.decision !== "granted";
 
                 return (
                   <Tr key={task.id}>
@@ -176,9 +182,9 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
                     <Td className="max-w-[280px] truncate">{task.title}</Td>
                     <Td className="tabular-nums lg:hidden xl:table-cell">
                       {phone ?? "—"}
-                      {declinedContact ? (
+                      {contactBlocked ? (
                         <span className="mt-0.5 block text-[11px] font-semibold text-warning">
-                          Pidió no recibir seguimiento
+                          Sin autorización vigente
                         </span>
                       ) : null}
                     </Td>

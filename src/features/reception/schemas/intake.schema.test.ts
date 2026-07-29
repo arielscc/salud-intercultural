@@ -19,7 +19,6 @@ describe("reception intake schema", () => {
     expect(parsed.data.gender).toBe("unknown");
     expect(parsed.data.intakeType).toBe("first_visit");
     expect(parsed.data.captureSources).toEqual([]);
-    expect(parsed.data.followUpPreference).toBe("unknown");
     expect(toReceptionIntakeRecord(parsed.data).patient.captureSource).toBe("other");
   });
 
@@ -62,8 +61,7 @@ describe("reception intake schema", () => {
       allergies: "Ninguna conocida",
       relevantHistory: "Diabetes tipo 2",
       currentMedication: "Metformina",
-      captureSources: "referral,facebook",
-      followUpPreference: "whatsapp"
+      captureSources: "referral,facebook"
     });
 
     expect(parsed.success).toBe(true);
@@ -75,7 +73,6 @@ describe("reception intake schema", () => {
     expect(record.patient.phone).toBe("+591 71234567");
     expect(record.patient.captureSources).toEqual(["referral", "facebook"]);
     expect(record.patient.captureSource).toBe("referral");
-    expect(record.patient.followUpPreference).toBe("whatsapp");
     expect(record.visit.reason).toBe("Dolor de espalda");
     expect(record.visit.symptomDurationValue).toBe(3);
     expect(record.visit.symptomDurationUnit).toBe("months");
@@ -125,8 +122,7 @@ describe("patient edit schema", () => {
       allergies: "Penicilina",
       relevantHistory: "Hipertensión",
       currentMedication: "Enalapril",
-      captureSources: "referral,whatsapp",
-      followUpPreference: "call"
+      captureSources: "referral,whatsapp"
     });
 
     expect(parsed.success).toBe(true);
@@ -139,7 +135,6 @@ describe("patient edit schema", () => {
     expect(record.data.city).toBe("La Paz");
     expect(record.data.captureSources).toEqual(["referral", "whatsapp"]);
     expect(record.data.captureSource).toBe("referral");
-    expect(record.data.followUpPreference).toBe("call");
   });
 
   it("rejects an unknown capture source in the list", () => {
@@ -162,8 +157,7 @@ describe("patient edit schema", () => {
       city: "",
       allergies: "",
       relevantHistory: "",
-      currentMedication: "",
-      followUpPreference: "unknown"
+      currentMedication: ""
     });
 
     expect(parsed.success).toBe(true);

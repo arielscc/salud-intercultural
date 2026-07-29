@@ -173,8 +173,7 @@ describe("reception intake integration", () => {
       captureSources: ["referral", "facebook"],
       allergies: null,
       relevantHistory: "Hipertensión",
-      currentMedication: null,
-      followUpPreference: "no_contact"
+      currentMedication: null
     });
 
     const patients = await prisma.patient.findMany();
@@ -188,7 +187,7 @@ describe("reception intake integration", () => {
     expect(updated.captureSources).toEqual(["referral", "facebook"]);
     expect(updated.allergies).toBeNull();
     expect(updated.relevantHistory).toBe("Hipertensión");
-    expect(updated.followUpPreference).toBe("no_contact");
+    expect(updated.followUpPreference).toBe("unknown");
   });
 
   it("finds patients for prefill by name, phone and internal code", async () => {

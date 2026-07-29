@@ -104,4 +104,14 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("seguimiento", "users_manage")).toBe(false);
     expect(roleHasPermission("captacion", "users_manage")).toBe(false);
   });
+
+  it("lets only reception and super administrators record patient consents", () => {
+    expect(roleHasPermission("recepcion", "patient_consents_write")).toBe(true);
+    expect(roleHasPermission("super_admin", "patient_consents_write")).toBe(true);
+    expect(roleHasPermission("direccion", "patient_consents_read")).toBe(true);
+    expect(roleHasPermission("direccion", "patient_consents_write")).toBe(false);
+    expect(roleHasPermission("medico", "patient_consents_write")).toBe(false);
+    expect(roleHasPermission("seguimiento", "patient_consents_write")).toBe(false);
+    expect(roleHasPermission("captacion", "patient_consents_read")).toBe(false);
+  });
 });

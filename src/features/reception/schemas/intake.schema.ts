@@ -16,14 +16,6 @@ export const visitIntakeTypeSchema = z.enum([
 
 export const symptomDurationUnitSchema = z.enum(["days", "weeks", "months", "years"]);
 
-export const followUpContactPreferenceSchema = z.enum([
-  "whatsapp",
-  "call",
-  "both",
-  "no_contact",
-  "unknown"
-]);
-
 const yesNoSchema = z.enum(["yes", "no"]);
 
 /* El form serializa las fuentes multiples como "a,b,c" en un input oculto. */
@@ -61,8 +53,7 @@ export const receptionIntakeSchema = z
     allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
     relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
     currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
-    captureSources: captureSourcesSchema,
-    followUpPreference: followUpContactPreferenceSchema.default("unknown")
+    captureSources: captureSourcesSchema
   })
   .refine(
     (data) => (data.symptomDurationValue === undefined) === (data.symptomDurationUnit === undefined),
@@ -93,8 +84,7 @@ export const patientEditSchema = z.object({
   allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
   relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
   currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
-  captureSources: captureSourcesSchema,
-  followUpPreference: followUpContactPreferenceSchema.default("unknown")
+  captureSources: captureSourcesSchema
 });
 
 export type PatientEditInput = z.infer<typeof patientEditSchema>;
@@ -112,8 +102,7 @@ export function toPatientEditRecord(input: PatientEditInput) {
       captureSources: input.captureSources,
       allergies: input.allergies ? cleanText(input.allergies) : null,
       relevantHistory: input.relevantHistory ? cleanText(input.relevantHistory) : null,
-      currentMedication: input.currentMedication ? cleanText(input.currentMedication) : null,
-      followUpPreference: input.followUpPreference
+      currentMedication: input.currentMedication ? cleanText(input.currentMedication) : null
     }
   };
 }
@@ -131,8 +120,7 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
       captureSources: input.captureSources,
       allergies: input.allergies ? cleanText(input.allergies) : undefined,
       relevantHistory: input.relevantHistory ? cleanText(input.relevantHistory) : undefined,
-      currentMedication: input.currentMedication ? cleanText(input.currentMedication) : undefined,
-      followUpPreference: input.followUpPreference
+      currentMedication: input.currentMedication ? cleanText(input.currentMedication) : undefined
     },
     visit: {
       reason: cleanText(input.reason),

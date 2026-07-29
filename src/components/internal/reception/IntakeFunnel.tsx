@@ -30,7 +30,6 @@ import {
   submitReceptionIntakeAction
 } from "@/features/reception/actions";
 import {
-  followUpContactPreferenceLabels,
   symptomDurationUnitLabels,
   visitIntakeTypeLabels
 } from "@/features/reception/labels";
@@ -95,11 +94,6 @@ export function IntakeFunnel({
   const [captureSources, setCaptureSources] = useState<string[]>(
     normalizePatientCaptureSources(initialPatient?.captureSources ?? [])
   );
-  const [followUpPreference, setFollowUpPreference] = useState(
-    initialPatient && initialPatient.followUpPreference !== "unknown"
-      ? initialPatient.followUpPreference
-      : ""
-  );
 
   const age = calculateAge(birthDate);
   const city = cityChoice === "otra" ? cityOther : cityChoice;
@@ -125,7 +119,6 @@ export function IntakeFunnel({
     setRelevantHistory(patient.relevantHistory ?? "");
     setCurrentMedication(patient.currentMedication ?? "");
     setCaptureSources(normalizePatientCaptureSources(patient.captureSources));
-    setFollowUpPreference(patient.followUpPreference === "unknown" ? "" : patient.followUpPreference);
     setPhoneMatches([]);
     setStepError(null);
     setStep(1);
@@ -151,7 +144,6 @@ export function IntakeFunnel({
     setRelevantHistory("");
     setCurrentMedication("");
     setCaptureSources([]);
-    setFollowUpPreference("");
     setPhoneMatches([]);
     setStepError(null);
     setStep(1);
@@ -244,7 +236,6 @@ export function IntakeFunnel({
       <input type="hidden" name="relevantHistory" value={relevantHistory} />
       <input type="hidden" name="currentMedication" value={currentMedication} />
       <input type="hidden" name="captureSources" value={captureSources.join(",")} />
-      <input type="hidden" name="followUpPreference" value={followUpPreference || "unknown"} />
       {allowDuplicate ? <input type="hidden" name="allowDuplicate" value="true" /> : null}
 
       {step > 0 ? (
@@ -581,23 +572,10 @@ export function IntakeFunnel({
             ))}
           </div>
         </div>
-        <div className="grid gap-1.5 text-[13px] font-medium text-text">
-          <span>¿Podemos contactarlo para seguimiento?</span>
-          <div className="flex flex-wrap gap-2">
-            {(["whatsapp", "call", "both", "no_contact"] as const).map((value) => (
-              <ChipOption
-                key={value}
-                selected={followUpPreference === value}
-                onClick={() => setFollowUpPreference(followUpPreference === value ? "" : value)}
-              >
-                {followUpContactPreferenceLabels[value]}
-              </ChipOption>
-            ))}
-          </div>
-        </div>
         <div className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted lg:col-span-2">
           Solo al confirmar este último paso la persona se convierte en paciente: se crea su ficha y
-          la visita queda abierta en recepción. Lo médico lo completa el doctor en consulta.
+          la visita queda abierta en recepción. Los consentimientos se registran después, desde la
+          ficha del paciente, leyendo cada autorización por separado.
         </div>
       </Card>
 

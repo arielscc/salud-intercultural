@@ -178,6 +178,12 @@ export async function getPatientById(id: string) {
               take: 3
             }
           }
+        },
+        consents: {
+          include: {
+            recordedBy: true
+          },
+          orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }]
         }
       }
     });

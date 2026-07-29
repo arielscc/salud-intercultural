@@ -13,6 +13,19 @@ const closedStatuses: FollowUpStatus[] = [
   "cancelled"
 ];
 
+export class PatientFollowUpConsentRequiredError extends Error {
+  constructor() {
+    super("PATIENT_FOLLOW_UP_CONSENT_REQUIRED");
+    this.name = "PatientFollowUpConsentRequiredError";
+  }
+}
+
+const currentFollowUpConsent = {
+  where: { purpose: "follow_up" as const },
+  orderBy: [{ decidedAt: "desc" as const }, { createdAt: "desc" as const }],
+  take: 1
+};
+
 export async function createFollowUpTaskRecord(input: {
   leadId?: string;
   patientId?: string;
@@ -76,7 +89,11 @@ export async function getFollowUpTasks(
       },
       include: {
         lead: true,
-        patient: true,
+        patient: {
+          include: {
+            consents: currentFollowUpConsent
+          }
+        },
         visit: true,
         sale: true,
         assignedTo: true,
@@ -99,7 +116,11 @@ export async function getFollowUpTaskById(id: string) {
       where: { id },
       include: {
         lead: true,
-        patient: true,
+        patient: {
+          include: {
+            consents: currentFollowUpConsent
+          }
+        },
         visit: true,
         sale: true,
         assignedTo: true,
@@ -128,8 +149,30 @@ export async function createFollowUpAttemptRecord(input: {
   return withDatabaseError("createFollowUpAttemptRecord", async () => {
     return prisma.$transaction(async (tx) => {
       const task = await tx.followUpTask.findUniqueOrThrow({
-        where: { id: input.taskId }
+        where: { id: input.taskId },
+        include: {
+          patient: {
+            include: {
+              consents: currentFollowUpConsent
+            }
+          }
+        }
       });
+
+      if (task.patient && input.method !== "in_person") {
+        const consent = task.patient.consents[0];
+        const allowed =
+          consent?.decision === "granted" &&
+          (input.method === "call"
+            ? consent.contactChannels.includes("call")
+            : input.method === "whatsapp"
+              ? consent.contactChannels.includes("whatsapp")
+              : consent.contactChannels.length > 0);
+
+        if (!allowed) {
+          throw new PatientFollowUpConsentRequiredError();
+        }
+      }
       const completedAt = closedStatuses.includes(input.result) ? input.contactedAt ?? new Date() : null;
 
       const attempt = await tx.followUpAttempt.create({

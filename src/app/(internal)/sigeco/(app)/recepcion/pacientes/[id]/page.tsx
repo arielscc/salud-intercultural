@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PencilLine, UserRoundPlus } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { ClinicalAttachmentsPanel } from "@/components/internal/clinical-attachments/ClinicalAttachmentsPanel";
+import { PatientConsentPanel } from "@/components/internal/patient-consents/PatientConsentPanel";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
@@ -26,7 +27,6 @@ import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpTaskAction } from "@/features/follow-ups/actions";
 import { followUpStatusLabels } from "@/features/follow-ups/labels";
-import { followUpContactPreferenceLabels } from "@/features/reception/labels";
 import {
   patientCaptureSourceLabels,
   patientGenderLabels,
@@ -45,15 +45,26 @@ import { cn } from "@/lib/cn";
 
 type PatientDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    consentimiento?: string;
+    decision?: string;
+  }>;
 };
 
-export default async function PatientDetailPage({ params }: PatientDetailPageProps) {
+export default async function PatientDetailPage({
+  params,
+  searchParams
+}: PatientDetailPageProps) {
   const user = await requirePermission("patients_read");
   const { id } = await params;
+  const filters = await searchParams;
   const patient = await getPatientById(id);
 
   if (!patient) notFound();
 
+  const followUpConsent = patient.consents.find(
+    (consent) => consent.purpose === "follow_up"
+  );
   const canReadAttachments = roleHasPermission(user.role, "attachments_read");
   const attachments = canReadAttachments
     ? await getClinicalAttachmentsForPatient(patient.id)
@@ -94,11 +105,6 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                     <Chip>{patientGenderLabels[patient.gender]}</Chip>
                   ) : null}
                   {patient.city ? <Chip>{patient.city}</Chip> : null}
-                  {patient.followUpPreference === "no_contact" ? (
-                    <Chip tone="warning" dot>
-                      No contactar
-                    </Chip>
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -127,12 +133,37 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                   : patientCaptureSourceLabels[patient.captureSource]
               }
             />
-            <InfoRow
-              label="Seguimiento"
-              value={followUpContactPreferenceLabels[patient.followUpPreference]}
-            />
           </dl>
         </Card>
+
+        {roleHasPermission(user.role, "patient_consents_read") ? (
+          <PatientConsentPanel
+            patientId={patient.id}
+            consents={patient.consents}
+            role={user.role}
+            purposeFilter={
+              [
+                "follow_up",
+                "reminders",
+                "education",
+                "promotions",
+                "image_voice"
+              ].includes(filters.consentimiento ?? "")
+                ? (filters.consentimiento as
+                    | "follow_up"
+                    | "reminders"
+                    | "education"
+                    | "promotions"
+                    | "image_voice")
+                : undefined
+            }
+            decisionFilter={
+              ["granted", "denied", "withdrawn"].includes(filters.decision ?? "")
+                ? (filters.decision as "granted" | "denied" | "withdrawn")
+                : undefined
+            }
+          />
+        ) : null}
 
         <Card className="max-sm:order-4 xl:hidden">
           <CardHeader
@@ -484,14 +515,15 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
               title="Crear seguimiento"
               description="Programa una tarea de contacto posterior con el paciente."
             />
-            {patient.followUpPreference === "no_contact" ? (
+            {followUpConsent?.decision !== "granted" ? (
               <div className="mb-3 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
                 <p className="flex items-center gap-1.5 font-semibold text-warning">
                   <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-                  El paciente pidió no recibir seguimiento
+                  No hay autorización vigente para contactar
                 </p>
                 <p className="mt-1 text-muted">
-                  Crea la tarea solo si es necesaria por razones clínicas y regístralo en las notas.
+                  Puedes preparar la tarea, pero SIGECO bloqueará llamadas y WhatsApp
+                  hasta registrar la decisión del paciente.
                 </p>
               </div>
             ) : null}

@@ -32,6 +32,7 @@ Leyenda: `L` lectura, `E` escritura, `A` ajuste sensible y `—` sin acceso.
 | Auditoría | L | L | — | — | — | — | — |
 | Usuarios y roles | L/E | — | — | — | — | — | — |
 | Adjuntos clínicos | L/E/A | L | L/E | — | — | L/E | — |
+| Consentimientos | L/E | L | L | L/E | L | L | L |
 
 El rol retirado `captacion` solo conserva acceso a su cuenta hasta ser
 reasignado. No puede operar pacientes, leads internos ni módulos clínicos.
@@ -47,9 +48,13 @@ reasignado. No puede operar pacientes, leads internos ni módulos clínicos.
   `patients_read`.
 - Los accesos denegados importantes se registran en la auditoría append-only.
 
-Las pruebas automatizadas enumeran todas las páginas, las 38 acciones actuales
+Las pruebas automatizadas enumeran todas las páginas, las 39 acciones actuales
 y las rutas privadas de adjuntos. Si aparece una superficie nueva sin política,
 la suite debe fallar.
+
+Recepción y el super administrador son los únicos roles que pueden registrar
+una decisión de consentimiento. Consultar una decisión no autoriza usarla para
+otra finalidad. Ver [Consentimientos y preferencias de contacto](./patient-consents.md).
 
 ## Archivos Y Exportaciones
 

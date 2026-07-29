@@ -6,11 +6,15 @@ import {
   createFollowUpTaskRecord,
   getFollowUpTaskById,
   getFollowUpTasks,
-  getFollowUpWorkSummary
+  getFollowUpWorkSummary,
+  PatientFollowUpConsentRequiredError
 } from "@/modules/database/queries/follow-ups";
+import { appendPatientConsentRecord } from "@/modules/database/queries/patient-consents";
 import { createPatientRecord, getPatientById } from "@/modules/database/queries/patients";
+import { DatabaseError } from "@/modules/database";
 
 async function cleanFollowUps() {
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "PatientConsent"');
   await prisma.inventoryMovement.deleteMany();
   await prisma.inventoryAdjustment.deleteMany();
   await prisma.inventoryAlert.deleteMany();
@@ -48,7 +52,7 @@ describe("follow-up integration", () => {
         email: "seguimiento@example.com",
         name: "Seguimiento Test",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "captacion"
+        role: "seguimiento"
       }
     });
     const patient = await createPatientRecord({
@@ -71,6 +75,15 @@ describe("follow-up integration", () => {
     const summary = await getFollowUpWorkSummary(user.id);
     const overdueTasks = await getFollowUpTasks({ filter: "overdue", assignedToId: user.id });
 
+    await appendPatientConsentRecord({
+      patientId: patient.id,
+      purpose: "follow_up",
+      decision: "granted",
+      contactChannels: ["whatsapp"],
+      captureMethod: "in_person_verbal",
+      recordedById: user.id
+    });
+
     await createFollowUpAttemptRecord({
       taskId: task.id,
       userId: user.id,
@@ -90,5 +103,63 @@ describe("follow-up integration", () => {
       result: "wants_return"
     });
     expect(patientDetail?.followUpTasks[0]?.id).toBe(task.id);
+  });
+
+  it("keeps proof of withdrawal and blocks new remote attempts", async () => {
+    const user = await prisma.internalUser.create({
+      data: {
+        email: "consentimiento@example.com",
+        name: "Recepción Test",
+        passwordHash: await hashPassword("clave-segura-123"),
+        role: "recepcion"
+      }
+    });
+    const patient = await createPatientRecord({
+      fullName: "Paciente Retiro",
+      phone: "+591 70000056"
+    });
+    const granted = await appendPatientConsentRecord({
+      patientId: patient.id,
+      purpose: "follow_up",
+      decision: "granted",
+      contactChannels: ["call"],
+      captureMethod: "written_form",
+      recordedById: user.id
+    });
+    const withdrawn = await appendPatientConsentRecord({
+      patientId: patient.id,
+      purpose: "follow_up",
+      decision: "withdrawn",
+      contactChannels: [],
+      captureMethod: "phone_call",
+      recordedById: user.id
+    });
+    const task = await createFollowUpTaskRecord({
+      patientId: patient.id,
+      createdById: user.id,
+      title: "Control",
+      dueAt: new Date()
+    });
+
+    let captured: unknown;
+    try {
+      await createFollowUpAttemptRecord({
+        taskId: task.id,
+        userId: user.id,
+        method: "call",
+        result: "done"
+      });
+    } catch (error) {
+      captured = error;
+    }
+
+    expect(withdrawn.supersedesId).toBe(granted.id);
+    expect(withdrawn.textVersion).toBe("v1");
+    expect(withdrawn.textSnapshot).toContain("dar seguimiento a mi tratamiento");
+    expect(captured).toBeInstanceOf(DatabaseError);
+    expect((captured as DatabaseError).cause).toBeInstanceOf(
+      PatientFollowUpConsentRequiredError
+    );
+    expect(await prisma.followUpAttempt.count()).toBe(0);
   });
 });

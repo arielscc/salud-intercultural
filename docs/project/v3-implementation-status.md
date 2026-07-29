@@ -14,6 +14,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Sistema visual Marea | Implementado | Shell responsive, tablas de trabajo y tokens aislados del sitio publico. |
 | QA final V3.7 | Completado localmente | Matriz de roles, flujo de abandono, 17 pantallas activas a 390px, sitio publico y CMS. |
 | Publicacion remota | Pendiente | Requiere promocion controlada `develop -> staging -> main`. |
+| Consentimientos | En progreso | Cinco finalidades, historial y bloqueo implementados localmente; producción espera aprobación expresa de textos. |
 
 ## Fuentes Canonicas
 
@@ -54,6 +55,17 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Creacion o actualizacion de paciente y apertura de visita en una transaccion.
 - Padron de pacientes, ficha permanente y edicion.
 - Visitas activas, detalle, historial, ruta y abandono en un toque.
+- Consentimientos separados por finalidad, canales, versión y forma de confirmación.
+
+### Consentimientos Y Contacto
+
+- Seguimiento, recordatorios, educación, promociones e imagen/voz son
+  decisiones independientes.
+- El retiro conserva el historial y bloquea nuevas llamadas o WhatsApp.
+- La ficha permite demostrar el texto exacto aceptado.
+- La preferencia antigua no se considera autorización.
+- Producción permanece bloqueada hasta que Dirección apruebe expresamente la
+  versión de textos configurada.
 
 ### Consulta
 
@@ -186,4 +198,5 @@ El orden anterior fue reemplazado por la numeración vigente:
 2. Tarea 2: staging aislado.
 3. Tarea 3: auditoria append-only.
 4. Tareas 4-8: accesos, privacidad, adjuntos, recuperacion e incidentes.
-5. Continuar secuencialmente desde la Tarea 9 de [tasks.md](./sigeco-mejoras-integrales/tasks.md).
+5. Cerrar integración y QA de la Tarea 9 y continuar con la Tarea 10 de
+   [tasks.md](./sigeco-mejoras-integrales/tasks.md).

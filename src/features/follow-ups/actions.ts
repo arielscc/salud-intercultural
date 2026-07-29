@@ -4,9 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   createFollowUpAttemptRecord,
-  createFollowUpTaskRecord
+  createFollowUpTaskRecord,
+  PatientFollowUpConsentRequiredError
 } from "@/modules/database/queries/follow-ups";
-import { auditedResult, runAuditedAction } from "@/modules/audit/service";
+import { DatabaseError } from "@/modules/database";
+import {
+  auditedResult,
+  denyAuditedAction,
+  runAuditedAction
+} from "@/modules/audit/service";
 import {
   createFollowUpAttemptSchema,
   createFollowUpTaskSchema
@@ -66,10 +72,23 @@ export async function createFollowUpAttemptAction(formData: FormData) {
         redirect("/sigeco/seguimientos?error=invalid-attempt");
       }
 
-      const attempt = await createFollowUpAttemptRecord({
-        ...parsed.data,
-        userId: user.id
-      });
+      let attempt;
+
+      try {
+        attempt = await createFollowUpAttemptRecord({
+          ...parsed.data,
+          userId: user.id
+        });
+      } catch (error) {
+        if (
+          error instanceof PatientFollowUpConsentRequiredError ||
+          (error instanceof DatabaseError &&
+            error.cause instanceof PatientFollowUpConsentRequiredError)
+        ) {
+          denyAuditedAction("patient_follow_up_consent_missing");
+        }
+        throw error;
+      }
       return auditedResult(attempt, {
         entityId: parsed.data.taskId,
         context: { attemptId: attempt.id, result: parsed.data.result }

@@ -114,6 +114,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   loginInternalUser: null,
   logoutInternalUser: null,
   requireInternalUserPasswordChangeAction: "users_manage",
+  recordPatientConsentAction: "patient_consents_write",
   returnStudiesToDoctorAction: "nursing_write",
   revokeManagedInternalUserSessionsAction: "users_manage",
   revokeOwnInternalSessionAction: "internal_access",
@@ -251,6 +252,22 @@ describe("SIGECO permission and privacy boundaries", () => {
         expect(action.source).toContain("appendAuditEvent");
       }
     }
+  });
+
+  it("keeps patient contact shortcuts inside the consent-aware follow-up flow", () => {
+    expect(
+      source(
+        "src/app/(internal)/sigeco/(app)/recepcion/visitas/[id]/page.tsx"
+      )
+    ).not.toContain("createCallLink");
+    expect(
+      source(
+        "src/app/(internal)/sigeco/(app)/seguimientos/[taskId]/page.tsx"
+      )
+    ).toContain("canContactPatient");
+    expect(source("src/modules/database/queries/follow-ups.ts")).toContain(
+      "PatientFollowUpConsentRequiredError"
+    );
   });
 
   it("allows and denies every action permission according to the role matrix", () => {

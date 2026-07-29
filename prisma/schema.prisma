@@ -53,6 +53,8 @@ enum InternalPermission {
   attachments_read
   attachments_write
   attachments_delete
+  patient_consents_read
+  patient_consents_write
 }
 
 enum AuditResult {
@@ -168,6 +170,34 @@ enum FollowUpContactPreference {
   both
   no_contact
   unknown
+}
+
+enum PatientConsentPurpose {
+  follow_up
+  reminders
+  education
+  promotions
+  image_voice
+}
+
+enum PatientConsentDecision {
+  granted
+  denied
+  withdrawn
+}
+
+enum PatientConsentCaptureMethod {
+  in_person_verbal
+  written_form
+  phone_call
+  whatsapp
+  digital_form
+  legacy_record
+}
+
+enum PatientContactChannel {
+  whatsapp
+  call
 }
 
 enum VisitStatus {
@@ -307,53 +337,54 @@ enum InventoryAlertStatus {
 }
 
 model InternalUser {
-  id                     String                          @id @default(cuid())
-  email                  String                          @unique
-  name                   String?
-  passwordHash           String
-  role                   InternalRole                    @default(captacion)
-  active                 Boolean                         @default(true)
-  lastLoginAt            DateTime?
-  failedAttempts         Int                             @default(0)
-  lockedUntil            DateTime?
-  mustChangePassword     Boolean                         @default(false)
-  passwordChangedAt      DateTime?
-  createdAt              DateTime                        @default(now())
-  updatedAt              DateTime                        @updatedAt
-  sessions               InternalSession[]
-  assignedLeads          Lead[]                          @relation("LeadAssignee")
-  contactAttempts        LeadContactAttempt[]
-  reminders              LeadReminder[]
-  statusChanges          LeadStatusHistory[]
-  patientNotes           PatientNote[]
-  createdVisits          Visit[]                         @relation("VisitCreatedBy")
-  visitStatusChanges     VisitStatusHistory[]
-  receptionCheckIns      ReceptionCheckIn[]
-  createdWorkItems       VisitWorkItem[]
-  clinicalConsultations  ClinicalConsultation[]
-  prescriptions          Prescription[]
-  clinicalEvolutions     ClinicalEvolution[]
-  clinicalNotes          ClinicalNote[]
-  clinicalOrders         ClinicalOrder[]
-  recordedVitalSigns     VitalSigns[]
-  nursingApplications    NursingApplication[]            @relation("NursingApplicationResponsible")
-  nursingNotes           NursingNote[]
-  requestedStudies       Study[]                         @relation("StudyRequestedBy")
-  recordedStudies        Study[]                         @relation("StudyRecordedBy")
-  nursingWorkItemResults NursingWorkItemResult[]
-  createdSales           Sale[]                          @relation("SaleCreatedBy")
-  receivedPayments       Payment[]
-  cashMovements          CashMovement[]
-  assignedFollowUps      FollowUpTask[]                  @relation("FollowUpAssignedTo")
-  createdFollowUps       FollowUpTask[]                  @relation("FollowUpCreatedBy")
-  followUpAttempts       FollowUpAttempt[]
-  followUpStatusChanges  FollowUpStatusHistory[]
-  inventoryMovements     InventoryMovement[]
-  inventoryAdjustments   InventoryAdjustment[]
-  auditEvents            AuditEvent[]
-  uploadedAttachments    ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
-  deletedAttachments     ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
-  attachmentAccessGrants ClinicalAttachmentAccessGrant[]
+  id                      String                          @id @default(cuid())
+  email                   String                          @unique
+  name                    String?
+  passwordHash            String
+  role                    InternalRole                    @default(captacion)
+  active                  Boolean                         @default(true)
+  lastLoginAt             DateTime?
+  failedAttempts          Int                             @default(0)
+  lockedUntil             DateTime?
+  mustChangePassword      Boolean                         @default(false)
+  passwordChangedAt       DateTime?
+  createdAt               DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+  sessions                InternalSession[]
+  assignedLeads           Lead[]                          @relation("LeadAssignee")
+  contactAttempts         LeadContactAttempt[]
+  recordedPatientConsents PatientConsent[]                @relation("PatientConsentRecordedBy")
+  reminders               LeadReminder[]
+  statusChanges           LeadStatusHistory[]
+  patientNotes            PatientNote[]
+  createdVisits           Visit[]                         @relation("VisitCreatedBy")
+  visitStatusChanges      VisitStatusHistory[]
+  receptionCheckIns       ReceptionCheckIn[]
+  createdWorkItems        VisitWorkItem[]
+  clinicalConsultations   ClinicalConsultation[]
+  prescriptions           Prescription[]
+  clinicalEvolutions      ClinicalEvolution[]
+  clinicalNotes           ClinicalNote[]
+  clinicalOrders          ClinicalOrder[]
+  recordedVitalSigns      VitalSigns[]
+  nursingApplications     NursingApplication[]            @relation("NursingApplicationResponsible")
+  nursingNotes            NursingNote[]
+  requestedStudies        Study[]                         @relation("StudyRequestedBy")
+  recordedStudies         Study[]                         @relation("StudyRecordedBy")
+  nursingWorkItemResults  NursingWorkItemResult[]
+  createdSales            Sale[]                          @relation("SaleCreatedBy")
+  receivedPayments        Payment[]
+  cashMovements           CashMovement[]
+  assignedFollowUps       FollowUpTask[]                  @relation("FollowUpAssignedTo")
+  createdFollowUps        FollowUpTask[]                  @relation("FollowUpCreatedBy")
+  followUpAttempts        FollowUpAttempt[]
+  followUpStatusChanges   FollowUpStatusHistory[]
+  inventoryMovements      InventoryMovement[]
+  inventoryAdjustments    InventoryAdjustment[]
+  auditEvents             AuditEvent[]
+  uploadedAttachments     ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
+  deletedAttachments      ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
+  attachmentAccessGrants  ClinicalAttachmentAccessGrant[]
 
   @@index([role])
   @@index([active])
@@ -521,11 +552,37 @@ model Patient {
   cashMovements         CashMovement[]
   followUpTasks         FollowUpTask[]
   clinicalAttachments   ClinicalAttachment[]
+  consents              PatientConsent[]
 
   @@index([fullName])
   @@index([phone])
   @@index([status])
   @@index([captureSource])
+  @@index([createdAt])
+}
+
+model PatientConsent {
+  id              String                      @id @default(cuid())
+  patientId       String
+  purpose         PatientConsentPurpose
+  decision        PatientConsentDecision
+  contactChannels PatientContactChannel[]     @default([])
+  captureMethod   PatientConsentCaptureMethod
+  textVersion     String
+  textSnapshot    String
+  decidedAt       DateTime                    @default(now())
+  recordedById    String?
+  supersedesId    String?                     @unique
+  createdAt       DateTime                    @default(now())
+  patient         Patient                     @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  recordedBy      InternalUser?               @relation("PatientConsentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  supersedes      PatientConsent?             @relation("PatientConsentHistory", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy    PatientConsent?             @relation("PatientConsentHistory")
+
+  @@index([patientId, purpose, decidedAt])
+  @@index([patientId, decidedAt])
+  @@index([purpose, decision, decidedAt])
+  @@index([recordedById])
   @@index([createdAt])
 }
 

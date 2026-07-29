@@ -14,7 +14,6 @@ import {
   patientCaptureSourceOptions,
   patientGenderLabels
 } from "@/features/patients/labels";
-import { followUpContactPreferenceLabels } from "@/features/reception/labels";
 import { updateReceptionPatientAction } from "@/features/reception/actions";
 import {
   calculateAge,
@@ -38,7 +37,6 @@ export type EditablePatient = {
   allergies: string | null;
   relevantHistory: string | null;
   currentMedication: string | null;
-  followUpPreference: string;
 };
 
 export function PatientEditForm({ patient }: { patient: EditablePatient }) {
@@ -60,9 +58,6 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
 
   const [captureSources, setCaptureSources] = useState<string[]>(
     normalizePatientCaptureSources(patient.captureSources)
-  );
-  const [followUpPreference, setFollowUpPreference] = useState(
-    patient.followUpPreference === "unknown" ? "" : patient.followUpPreference
   );
 
   const age = calculateAge(birthDate);
@@ -107,7 +102,6 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       <input type="hidden" name="relevantHistory" value={relevantHistory} />
       <input type="hidden" name="currentMedication" value={currentMedication} />
       <input type="hidden" name="captureSources" value={captureSources.join(",")} />
-      <input type="hidden" name="followUpPreference" value={followUpPreference || "unknown"} />
 
       {formError ? (
         <p
@@ -235,7 +229,7 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       </Card>
 
       <Card className="grid gap-4">
-        <CardHeader title="Origen y seguimiento" className="mb-0" />
+        <CardHeader title="Origen" className="mb-0" />
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>¿Cómo nos conoció? (puede elegir varios)</span>
           <div className="flex flex-wrap gap-2">
@@ -250,20 +244,10 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
             ))}
           </div>
         </div>
-        <div className="grid gap-1.5 text-[13px] font-medium text-text">
-          <span>¿Podemos contactarlo para seguimiento?</span>
-          <div className="flex flex-wrap gap-2">
-            {(["whatsapp", "call", "both", "no_contact"] as const).map((value) => (
-              <ChipOption
-                key={value}
-                selected={followUpPreference === value}
-                onClick={() => setFollowUpPreference(followUpPreference === value ? "" : value)}
-              >
-                {followUpContactPreferenceLabels[value]}
-              </ChipOption>
-            ))}
-          </div>
-        </div>
+        <p className="text-xs leading-relaxed text-muted">
+          Los consentimientos no se cambian al editar la ficha. Se registran por
+          separado para conservar la decisión y el texto exacto aceptado.
+        </p>
       </Card>
 
       {formError ? (

@@ -38,6 +38,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 23. [Adjuntos clínicos seguros](./clinical-attachments.md)
 24. [Backup y restauración comprobada](./backup-restore.md)
 25. [Respuesta a incidentes y gate de seguridad](./incident-response.md)
+26. [Consentimientos y preferencias de contacto](./patient-consents.md)
 
 ## Flujo recomendado
 

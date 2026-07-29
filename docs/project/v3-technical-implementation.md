@@ -157,6 +157,21 @@ aparece en la URL y el contenido se verifica por SHA-256 antes de entregarse.
 La operación completa vive en
 [Adjuntos clínicos seguros](../operations/clinical-attachments.md).
 
+### Consentimientos
+
+`PatientConsent` registra eventos independientes para seguimiento,
+recordatorios, educación, promociones e imagen/voz. Cada evento conserva texto,
+versión, decisión, canales, fecha, forma de confirmación, responsable y
+referencia al evento anterior. Un trigger rechaza edición y borrado.
+
+Recepción registra la respuesta desde la ficha. Los métodos remotos de
+Seguimiento se muestran y se validan en servidor según la decisión más
+reciente. `Patient.followUpPreference` queda solo como compatibilidad histórica
+y nunca concede un uso nuevo.
+
+La guía operativa y el gate productivo viven en
+[Consentimientos y preferencias de contacto](../operations/patient-consents.md).
+
 ## Dashboard
 
 `getReceptionDashboardSummary` calcula con rango diario local:

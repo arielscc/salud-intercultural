@@ -8,14 +8,16 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6 y 7 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
 PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
-producción. Las doce migraciones anteriores están en staging y las quince
-migraciones actuales están aplicadas en desarrollo. Falta validar las tres
+producción. Los consentimientos independientes ya están implementados en
+desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
+anteriores están en staging y las dieciséis migraciones actuales están
+aplicadas en desarrollo. Falta validar las cuatro
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8.
@@ -24,8 +26,8 @@ funcionamiento del gate de la Tarea 8.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 21 |
-| En progreso | 7 |
+| Pendiente | 20 |
+| En progreso | 8 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -35,7 +37,7 @@ funcionamiento del gate de la Tarea 8.
 | Fase | Tareas | Estado | Gate |
 | --- | --- | --- | --- |
 | 1. Base segura | 1-8 | En progreso | Tarea 8 aprobada; producción conserva bloqueos remotos |
-| 2. Datos y flujo | 9-17 | Pendiente | Recorrido clínico íntegro y auditable |
+| 2. Datos y flujo | 9-17 | En progreso | Recorrido clínico íntegro y auditable |
 | 3. Caja e inventario | 18-21 | Pendiente | Caja, compra y stock reconcilian |
 | 4. Medición y continuidad | 22-27 | Pendiente | Indicadores reconciliados y móvil validado |
 | 5. Expansión y piloto | 28-29 | Pendiente | Piloto de El Alto aprobado |
@@ -52,7 +54,7 @@ funcionamiento del gate de la Tarea 8.
 | 6 | Adjuntos clínicos seguros | P0 | En progreso | 2-5 |
 | 7 | Backup y restauración | P0 | En progreso | 2, 6 |
 | 8 | Incidentes y gate de seguridad | P0 | Terminada | 1-7 |
-| 9 | Consentimientos | P0 | Pendiente | 3-5, textos aprobados |
+| 9 | Consentimientos | P0 | En progreso | 3-5, textos aprobados para local/staging |
 | 10 | Procedencia geográfica | P1 | Pendiente | 8 |
 | 11 | Fuentes de captación | P1 | Pendiente | 9-10 |
 | 12 | Duplicados y fusión | P1 | Pendiente | 3-5 |
@@ -93,6 +95,10 @@ Estado de las tareas de la base segura:
 - **Tarea 8 — Respuesta a incidentes y gate de seguridad:** terminada; runbook,
   simulacro, gate técnico y aprobación de Dirección documentados. Producción
   sigue bloqueada por cinco evidencias remotas o humanas.
+- **Tarea 9 — Consentimientos y preferencias de contacto:** modelo append-only,
+  cinco finalidades, permisos, historial, retiro y bloqueo de Seguimiento
+  implementados en desarrollo. Pendiente ejecutar integración con autorización,
+  QA por roles en staging y aprobación expresa de los textos para producción.
 
 Para terminar la Tarea 1:
 
@@ -136,7 +142,9 @@ Blob clínico privado y las credenciales separadas aprobadas.
 
 ### Consentimientos
 
-- Aprobar los textos para seguimiento, recordatorios, educación, promociones e imagen/voz.
+- La versión `v1` está aprobada para desarrollo y staging.
+- Antes de producción, Dirección debe revisar y autorizar expresamente la
+  versión exacta; hasta entonces el gate productivo permanece cerrado.
 
 ### Caja
 
