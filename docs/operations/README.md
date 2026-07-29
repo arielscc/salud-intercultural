@@ -32,6 +32,8 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 17. [Reportes de cambios por tarea](./task-change-reports.md)
 18. [Desarrollo asistido con skills](./ai-assisted-development.md)
 19. [Prueba manual del flujo completo V3 Sigeco](./sigeco-v3-full-flow-testing.md)
+20. [Auditoría append-only de SIGECO](./audit-events.md)
+21. [Usuarios, roles y sesiones de SIGECO](./internal-users-sessions.md)
 
 ## Flujo recomendado
 

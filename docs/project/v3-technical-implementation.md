@@ -130,6 +130,11 @@ Receta, evolucion y ordenes usan secciones colapsables. Una orden crea de forma 
 
 `captacion` esta deprecado y solo conserva acceso base hasta que sus usuarios sean reasignados.
 
+`users_manage` pertenece únicamente a `super_admin`. La administración completa
+vive en `/sigeco/usuarios`; cada empleado gestiona contraseña y sesiones propias
+en `/sigeco/mi-cuenta`. Las cuentas con `mustChangePassword` quedan limitadas a
+`/sigeco/cambiar-contrasena` hasta completar el cambio.
+
 ## Dashboard
 
 `getReceptionDashboardSummary` calcula con rango diario local:
@@ -166,6 +171,7 @@ Contratos criticos cubiertos:
 - Ventas, pagos y caja.
 - Stock, rollback y alertas.
 - Seguimientos y dashboard.
+- Auditoría append-only, usuarios, roles y sesiones.
 
 ## Deploy
 
@@ -187,8 +193,8 @@ Detener `next dev` antes de `next build`; ambos comparten `.next`. Las migracion
 
 ## Trabajo Posterior
 
-- CI, dependencias y staging aislado.
-- Auditoria, usuarios, permisos y sesiones.
+- Cierre remoto de CI y staging aislado.
+- Endurecimiento adicional de permisos, privacidad, logs y secretos.
 - Storage seguro para adjuntos clinicos.
 - Backup, restauracion y respuesta a incidentes.
 - Flujo operativo, Caja, compras, inventario, reportes y multi-sucursal.

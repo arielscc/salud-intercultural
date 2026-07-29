@@ -26,7 +26,9 @@ async function main() {
         role: "super_admin",
         active: true,
         failedAttempts: 0,
-        lockedUntil: null
+        lockedUntil: null,
+        mustChangePassword: false,
+        passwordChangedAt: new Date()
       }
     });
     console.log(`Updated internal super_admin: ${email}`);
@@ -39,6 +41,8 @@ async function main() {
       passwordHash,
       role: "super_admin",
       active: true,
+      mustChangePassword: false,
+      passwordChangedAt: new Date(),
       name: "Super Administrador"
     }
   });

@@ -49,6 +49,7 @@ enum InternalPermission {
   inventory_adjust
   reports_read
   audit_read
+  users_manage
 }
 
 enum AuditResult {
@@ -287,6 +288,8 @@ model InternalUser {
   lastLoginAt            DateTime?
   failedAttempts         Int                     @default(0)
   lockedUntil            DateTime?
+  mustChangePassword     Boolean                 @default(false)
+  passwordChangedAt      DateTime?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   sessions               InternalSession[]
@@ -326,12 +329,13 @@ model InternalUser {
 }
 
 model InternalSession {
-  id        String       @id @default(cuid())
-  tokenHash String       @unique
-  userId    String
-  expiresAt DateTime
-  createdAt DateTime     @default(now())
-  user      InternalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String       @id @default(cuid())
+  tokenHash   String       @unique
+  userId      String
+  deviceLabel String?
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+  user        InternalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])

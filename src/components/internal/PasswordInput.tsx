@@ -8,11 +8,15 @@ import { cn } from "@/lib/cn";
 export function PasswordInput({
   name = "password",
   autoComplete = "current-password",
-  required
+  required,
+  minLength,
+  maxLength
 }: {
   name?: string;
   autoComplete?: string;
   required?: boolean;
+  minLength?: number;
+  maxLength?: number;
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -24,6 +28,8 @@ export function PasswordInput({
         name={name}
         autoComplete={autoComplete}
         required={required}
+        minLength={minLength}
+        maxLength={maxLength}
       />
       <button
         type="button"

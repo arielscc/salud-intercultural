@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { appendAuditEvent } from "@/modules/audit/service";
 import { prisma } from "@/modules/database";
 import { getCurrentInternalUser } from "@/modules/permissions";
@@ -100,7 +101,8 @@ export async function loginInternalUser(formData: FormData) {
     }
   });
 
-  const session = await createInternalSession(user.id);
+  const requestHeaders = await headers();
+  const session = await createInternalSession(user.id, requestHeaders.get("user-agent"));
   await setInternalSessionCookie(session.token, session.expiresAt);
   await appendAuditEvent({
     actor: { id: user.id, role: user.role },
@@ -109,7 +111,7 @@ export async function loginInternalUser(formData: FormData) {
     entityId: user.id,
     result: "success"
   });
-  redirect("/sigeco");
+  redirect(user.mustChangePassword ? "/sigeco/cambiar-contrasena" : "/sigeco");
 }
 
 export async function logoutInternalUser() {

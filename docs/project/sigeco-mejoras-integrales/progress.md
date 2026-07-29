@@ -8,18 +8,18 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2 y 3 están en progreso. CI, las barreras de aislamiento, la base
-y el Blob Store QA están preparados. Las doce migraciones anteriores ya se
-aplicaron en staging. La auditoría append-only está implementada localmente;
-falta validar su nueva migración en CI y staging, probar el visor con los roles
-autorizados y cerrar los pendientes remotos de las tareas base.
+Las Tareas 1, 2, 3 y 4 están en progreso. CI, las barreras de aislamiento, la
+auditoría y la administración de usuarios están implementadas localmente. Las
+doce migraciones anteriores están en staging y las catorce migraciones actuales
+están aplicadas en desarrollo. Falta validar las dos nuevas mediante CI y
+staging, completar QA autenticado y cerrar los pendientes remotos.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 26 |
-| En progreso | 3 |
+| Pendiente | 25 |
+| En progreso | 4 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -41,7 +41,7 @@ autorizados y cerrar los pendientes remotos de las tareas base.
 | 1 | CI y control de dependencias | P0 | En progreso | Ninguna |
 | 2 | Staging aislado | P0 | En progreso | 1 |
 | 3 | Auditoría append-only | P0 | En progreso | 1-2 |
-| 4 | Usuarios, roles y sesiones | P0 | Pendiente | 3 |
+| 4 | Usuarios, roles y sesiones | P0 | En progreso | 3 |
 | 5 | Permisos, privacidad, logs y secretos | P0 | Pendiente | 3-4 |
 | 6 | Adjuntos clínicos seguros | P0 | Pendiente | 2-5 |
 | 7 | Backup y restauración | P0 | Pendiente | 2, 6 |
@@ -75,6 +75,7 @@ Las tareas activas son:
 - **Tarea 1 — CI y control de dependencias:** pendiente de ejecución remota y protecciones.
 - **Tarea 2 — Staging completamente aislado:** pendiente de seed, deployment y validación de cuentas.
 - **Tarea 3 — Auditoría append-only:** implementación local terminada; pendiente de migración y QA remotos.
+- **Tarea 4 — Usuarios, roles y sesiones:** implementación local terminada; pendiente de integración y QA en staging.
 
 Para terminar la Tarea 1:
 
@@ -90,7 +91,7 @@ Para terminar la Tarea 2:
 - Ejecutar `pnpm staging:seed` y `pnpm staging:verify`.
 - Verificar los siete roles, media y bloqueo de comunicaciones en el deployment.
 
-No comenzar la Tarea 4 hasta cerrar las validaciones remotas de las Tareas 1-3.
+No comenzar la Tarea 5 hasta cerrar las validaciones remotas de las Tareas 1-4.
 
 ## Decisiones Vigentes
 
@@ -359,10 +360,68 @@ No comenzar la Tarea 4 hasta cerrar las validaciones remotas de las Tareas 1-3.
 - Aplicar la nueva migración en staging.
 - Probar el visor con Dirección y super administrador y confirmar la denegación al resto.
 - Completar QA responsive en 390, 768, 1024, 1280 y 1440 px.
-- Compras, usuarios, adjuntos, reportes y exportaciones se auditarán cuando se
+- Compras, adjuntos, reportes y exportaciones se auditarán cuando se
   implementen sus módulos en las tareas correspondientes.
 
 **Commit sugerido:** `feat(sigeco): add append-only audit events`
+
+### 2026-07-29 — Tarea 4 — Usuarios, Roles Y Sesiones
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsable:** Super administrador y equipo técnico.
+
+#### Resultado Implementado Localmente
+
+- Creado `users_manage`, exclusivo de `super_admin`; todos los demás roles
+  conservan únicamente la gestión de su propia cuenta.
+- Creada `/sigeco/usuarios` para altas y revisión general en escritorio.
+- Creada `/sigeco/usuarios/[userId]` para rol, estado, último acceso,
+  desbloqueo, cambio obligatorio y revocación de sesiones.
+- Creada `/sigeco/mi-cuenta` para contraseña y sesiones propias, usable en móvil.
+- Creada `/sigeco/cambiar-contrasena` para primer ingreso o cambio forzado.
+- Las cuentas nuevas usan contraseña temporal de al menos 12 caracteres y no
+  acceden a módulos hasta reemplazarla.
+- El bloqueo de cambio obligatorio también se aplica a server actions.
+- Cambiar rol o estado revoca sesiones; desactivar una cuenta corta su acceso.
+- Nadie puede cambiar su propio rol o desactivarse.
+- El último super administrador activo no puede desactivarse ni degradarse.
+- `captacion` sigue visible solo para migrar registros antiguos y nunca puede
+  asignarse a una cuenta nueva.
+- Las sesiones guardan una etiqueta breve de dispositivo, sin user-agent completo
+  ni dirección IP.
+- Creación, acceso, desbloqueo, contraseñas y revocaciones generan auditoría.
+
+#### Archivos Y Migraciones
+
+- Migración `20260729160000_manage_internal_users_sessions`, aplicada en desarrollo.
+- Actions auditadas en `src/features/internal-auth/user-management-actions.ts`.
+- Reglas transaccionales en `src/modules/database/queries/internal-users.ts`.
+- Guía [internal-users-sessions.md](../../operations/internal-users-sessions.md).
+- Reporte [2026-07-29-tarea-4-usuarios-roles-sesiones.md](../task-reports/2026-07-29-tarea-4-usuarios-roles-sesiones.md).
+
+#### Validación Ejecutada
+
+- `pnpm test`: 33 archivos y 123 pruebas unitarias aprobadas.
+- `pnpm lint`: pasó sin advertencias.
+- `pnpm typecheck`: pasó.
+- `pnpm run build`: pasó; usuarios, Mi cuenta y cambio obligatorio son rutas dinámicas.
+- Matriz negativa confirma que únicamente `super_admin` posee `users_manage`.
+- Pruebas de rol deprecado, contraseña temporal, confirmación, etiquetas de
+  dispositivo y bloqueo por cambio obligatorio.
+- Pruebas de integración preparadas para último administrador, cambio propio,
+  revocación inmediata y rol deprecado.
+
+#### Pendientes Para Cerrar
+
+- Ejecutar `pnpm test:integration` en CI con PostgreSQL 16 efímero.
+- Aplicar la migración en staging y verificar las siete cuentas QA.
+- Probar creación, cambio de rol, desactivación, desbloqueo y revocación.
+- Completar QA autenticado en 390, 768, 1024, 1280 y 1440 px.
+
+**Commit sugerido:** `feat(sigeco): manage users roles and sessions`
 
 ## Cómo Actualizar El Progreso
 

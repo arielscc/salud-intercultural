@@ -1,12 +1,8 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const featuresRoot = resolve(process.cwd(), "src/features");
-const actionFiles = readdirSync(featuresRoot, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => `src/features/${entry.name}/actions.ts`)
-  .filter((file) => existsSync(resolve(process.cwd(), file)));
 const nonCriticalReadActions = new Set(["searchReceptionPatientsAction"]);
 
 function exportedActionSegments(source: string) {
@@ -28,10 +24,14 @@ function applicationSourceFiles(directory: string): string[] {
   });
 }
 
+const actionFiles = applicationSourceFiles(featuresRoot).filter((file) =>
+  file.endsWith("actions.ts")
+);
+
 describe("SIGECO audit coverage", () => {
   it("routes every current server action through the audit service", () => {
     for (const file of actionFiles) {
-      const source = readFileSync(resolve(process.cwd(), file), "utf8");
+      const source = readFileSync(file, "utf8");
       const actions = exportedActionSegments(source);
 
       expect(actions.length, `${file} has no exported actions`).toBeGreaterThan(0);

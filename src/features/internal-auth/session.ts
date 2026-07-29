@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
+import { describeSessionDevice } from "@/features/internal-auth/session-label";
 import { prisma } from "@/modules/database";
 
 export const internalSessionCookieName = "sigeco_session";
@@ -12,7 +13,7 @@ export function createSessionToken() {
   return randomBytes(32).toString("base64url");
 }
 
-export async function createInternalSession(userId: string) {
+export async function createInternalSession(userId: string, userAgent?: string | null) {
   const token = createSessionToken();
   const sessionSeconds = Number(process.env.INTERNAL_SESSION_SECONDS ?? 60 * 60 * 8);
   const expiresAt = new Date(Date.now() + sessionSeconds * 1000);
@@ -21,6 +22,7 @@ export async function createInternalSession(userId: string) {
     data: {
       tokenHash: hashSessionToken(token),
       userId,
+      deviceLabel: describeSessionDevice(userAgent),
       expiresAt
     }
   });
@@ -58,7 +60,7 @@ export async function deleteInternalSession(token: string) {
   });
 }
 
-export async function getInternalUserBySessionToken(token: string) {
+export async function getInternalSessionByToken(token: string) {
   const session = await prisma.internalSession.findUnique({
     where: {
       tokenHash: hashSessionToken(token)
@@ -76,5 +78,10 @@ export async function getInternalUserBySessionToken(token: string) {
     return null;
   }
 
-  return session.user;
+  return session;
+}
+
+export async function getInternalUserBySessionToken(token: string) {
+  const session = await getInternalSessionByToken(token);
+  return session?.user ?? null;
 }

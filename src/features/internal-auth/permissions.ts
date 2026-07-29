@@ -45,7 +45,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "inventory_write",
     "inventory_adjust",
     "reports_read",
-    "audit_read"
+    "audit_read",
+    "users_manage"
   ],
   direccion: [
     "internal_access",

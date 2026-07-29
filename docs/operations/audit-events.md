@@ -72,19 +72,18 @@ La ruta `/sigeco/auditoria` requiere `audit_read`. Solo Dirección y super admin
 
 - En escritorio muestra filtros por fecha, persona, acción y tipo de registro.
 - En móvil muestra tarjetas simplificadas y paginación.
-- Consultar el propio historial también genera un evento.
 
 ## Cobertura Actual Y Módulos Futuros
 
 La implementación actual cubre acciones importantes de sesiones, pacientes,
 visitas, consulta, enfermería, estudios, Caja, ventas, pagos, seguimiento e
-inventario.
+inventario, usuarios y sesiones.
 
 No generan eventos la búsqueda de pacientes, la apertura de fichas, los
 listados, los filtros, la paginación ni la consulta del propio visor.
 
-Compras, administración de usuarios, adjuntos, reportes y exportaciones todavía
-no tienen flujos funcionales en esta versión de SIGECO. Cuando se implementen,
+Compras, adjuntos, reportes y exportaciones todavía no tienen flujos funcionales
+en esta versión de SIGECO. Cuando se implementen,
 deben auditar cambios, descargas o exportaciones sensibles y accesos denegados;
 no cada apertura de pantalla.
 

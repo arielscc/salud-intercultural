@@ -64,7 +64,14 @@ const actionLabels: Record<string, string> = {
   "inventory.item.create": "Creó un producto",
   "inventory.item.view": "Consultó un producto",
   "inventory.entry.create": "Registró una entrada de inventario",
-  "inventory.adjustment.create": "Ajustó el inventario"
+  "inventory.adjustment.create": "Ajustó el inventario",
+  "user.create": "Creó un usuario",
+  "user.access.update": "Cambió rol o estado de un usuario",
+  "user.password_change.require": "Exigió cambio de contraseña",
+  "user.unlock": "Desbloqueó un usuario",
+  "user.sessions.revoke": "Cerró las sesiones de un usuario",
+  "user.password.change": "Cambió su contraseña",
+  "session.revoke": "Cerró una sesión"
 };
 
 const entityLabels: Record<string, string> = {
@@ -80,7 +87,8 @@ const entityLabels: Record<string, string> = {
   study: "Estudio",
   sale: "Venta",
   follow_up_task: "Seguimiento",
-  inventory_item: "Producto"
+  inventory_item: "Producto",
+  internal_user: "Usuario interno"
 };
 
 function buildPageHref(

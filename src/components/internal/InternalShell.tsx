@@ -23,7 +23,10 @@ function UserBadge({ user }: { user: InternalUser }) {
     .toUpperCase();
 
   return (
-    <div className="flex items-center gap-2.5">
+    <Link
+      href="/sigeco/mi-cuenta"
+      className="focus-ring flex items-center gap-2.5 rounded-[7px]"
+    >
       <span
         aria-hidden="true"
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-soft text-[11px] font-bold text-primary-dark"
@@ -34,7 +37,7 @@ function UserBadge({ user }: { user: InternalUser }) {
         <span className="block truncate text-xs font-semibold text-text">{displayName}</span>
         <span className="block text-[11px] text-muted">{internalRoleLabels[user.role]}</span>
       </span>
-    </div>
+    </Link>
   );
 }
 

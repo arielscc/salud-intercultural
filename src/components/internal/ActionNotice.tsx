@@ -15,7 +15,10 @@ const noticeMessages: Record<string, string> = {
   "ficha-actualizada": "Ficha actualizada",
   "seguimiento-creado": "Seguimiento creado",
   "producto-creado": "Producto creado",
-  "venta-creada": "Venta registrada"
+  "venta-creada": "Venta registrada",
+  "usuario-creado": "Usuario creado",
+  "acceso-actualizado": "Acceso actualizado",
+  "contrasena-actualizada": "Contraseña actualizada"
 };
 
 export function ActionNotice() {

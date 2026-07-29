@@ -64,6 +64,8 @@ async function seedQaUsers(basePassword: string, domain: string) {
         active: true,
         failedAttempts: 0,
         lockedUntil: null,
+        mustChangePassword: false,
+        passwordChangedAt: new Date(),
         name: `[QA] ${internalRoleLabels[role]}`,
         passwordHash,
         role
@@ -71,7 +73,9 @@ async function seedQaUsers(basePassword: string, domain: string) {
       create: {
         active: true,
         email,
+        mustChangePassword: false,
         name: `[QA] ${internalRoleLabels[role]}`,
+        passwordChangedAt: new Date(),
         passwordHash,
         role
       }

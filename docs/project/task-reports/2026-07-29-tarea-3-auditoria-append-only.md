@@ -41,7 +41,9 @@ Permitir que Dirección conozca quién consultó o cambió información crítica
 - El rol se guarda como una fotografía del momento para conservar contexto histórico.
 - Los usuarios con historia de auditoría se desactivan; la relación restringe su
   borrado para no alterar ni dejar sin actor eventos antiguos.
-- Los módulos aún inexistentes —compras, usuarios administrables, adjuntos, reportes y exportaciones— deben adoptar el mismo servicio en sus tareas futuras.
+- Los módulos aún inexistentes —compras, adjuntos, reportes y exportaciones—
+  deben adoptar el mismo servicio en sus tareas futuras. Usuarios y sesiones
+  ya lo utilizan desde la Tarea 4.
 
 ## Validación
 
@@ -65,7 +67,7 @@ Permitir que Dirección conozca quién consultó o cambió información crítica
 - Ejecutar la prueba de integración contra PostgreSQL mediante CI.
 - Aplicar la migración primero en staging y probar el visor con Dirección y super administrador.
 - Realizar QA visual de `/sigeco/auditoria` en 390, 768, 1024, 1280 y 1440 px.
-- Integrar compras, usuarios, adjuntos, reportes y exportaciones cuando esos módulos sean implementados.
+- Integrar compras, adjuntos, reportes y exportaciones cuando esos módulos sean implementados.
 
 ## Commit Sugerido
 

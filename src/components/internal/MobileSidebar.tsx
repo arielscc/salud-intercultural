@@ -58,7 +58,9 @@ export function MobileSidebar({
           <div className="flex-1 overflow-y-auto">
             <SidebarNav role={role} onNavigate={() => setOpen(false)} />
           </div>
-          <div className="mt-2 border-t border-border px-5 pt-3">{userSlot}</div>
+          <div className="mt-2 border-t border-border px-5 pt-3">
+            <DrawerClose asChild>{userSlot}</DrawerClose>
+          </div>
         </DrawerContent>
       </Drawer>
     </div>

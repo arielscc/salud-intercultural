@@ -123,6 +123,19 @@ export async function runAuditedAction<T>(
 
   const actor = { id: user.id, role: user.role };
 
+  if (user.mustChangePassword && input.action !== "user.password.change") {
+    await appendAuditEvent({
+      actor,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      result: "denied",
+      requestId,
+      context: { reason: "password_change_required" }
+    });
+    redirect("/sigeco/cambiar-contrasena");
+  }
+
   if (!roleHasPermission(user.role, input.permission)) {
     await appendAuditEvent({
       actor,

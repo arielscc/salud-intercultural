@@ -17,7 +17,11 @@ const navGroups: Array<{ label?: string; hrefs: string[] }> = [
     label: "Operación",
     hrefs: ["/sigeco/administracion", "/sigeco/seguimientos"]
   },
-  { label: "Control", hrefs: ["/sigeco/inventario", "/sigeco/auditoria"] }
+  {
+    label: "Control",
+    hrefs: ["/sigeco/inventario", "/sigeco/auditoria", "/sigeco/usuarios"]
+  },
+  { label: "Cuenta", hrefs: ["/sigeco/mi-cuenta"] }
 ];
 
 function DesktopNavLink({ item }: { item: SigecoNavItem }) {

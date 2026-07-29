@@ -93,4 +93,15 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("administracion", "audit_read")).toBe(false);
     expect(roleHasPermission("medico", "audit_read")).toBe(false);
   });
+
+  it("restricts user administration to super administrators", () => {
+    expect(roleHasPermission("super_admin", "users_manage")).toBe(true);
+    expect(roleHasPermission("direccion", "users_manage")).toBe(false);
+    expect(roleHasPermission("administracion", "users_manage")).toBe(false);
+    expect(roleHasPermission("medico", "users_manage")).toBe(false);
+    expect(roleHasPermission("recepcion", "users_manage")).toBe(false);
+    expect(roleHasPermission("enfermeria", "users_manage")).toBe(false);
+    expect(roleHasPermission("seguimiento", "users_manage")).toBe(false);
+    expect(roleHasPermission("captacion", "users_manage")).toBe(false);
+  });
 });

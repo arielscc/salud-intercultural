@@ -147,4 +147,30 @@ describe("runAuditedAction", () => {
       data: expect.objectContaining({ result: "denied" })
     });
   });
+
+  it("blocks critical actions until a required password change is completed", async () => {
+    mocks.getCurrentInternalUser.mockResolvedValue({
+      id: "user-3",
+      role: "super_admin",
+      mustChangePassword: true
+    });
+    const operation = vi.fn(async () => auditedResult(undefined));
+
+    await expect(
+      runAuditedAction(
+        {
+          permission: "users_manage",
+          action: "user.create",
+          entityType: "internal_user"
+        },
+        operation
+      )
+    ).rejects.toThrow("REDIRECT:/sigeco/cambiar-contrasena");
+
+    expect(operation).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ result: "denied" })
+    });
+  });
 });

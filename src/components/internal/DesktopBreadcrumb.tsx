@@ -85,6 +85,19 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
     return [{ label: "Auditoría" }];
   }
 
+  if (moduleSegment === "usuarios") {
+    return section
+      ? [
+          { label: "Usuarios", href: "/sigeco/usuarios" },
+          { label: "Detalle" }
+        ]
+      : [{ label: "Usuarios" }];
+  }
+
+  if (moduleSegment === "mi-cuenta") {
+    return [{ label: "Mi cuenta" }];
+  }
+
   return null;
 }
 
