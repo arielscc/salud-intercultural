@@ -12,6 +12,7 @@ El proyecto separa la suite rapida de los tests que usan PostgreSQL real.
 | Unitarios explicitos | `pnpm test:unit` | No | Alias de la suite rapida. |
 | Watch local | `pnpm test:watch` | No | Desarrollo iterativo. |
 | Integracion DB | `pnpm test:integration` | Si | Flujos criticos contra `salud_intercultural_test`. |
+| Simulacro de recuperación | `pnpm backup:drill:local` | Sí, dos bases sintéticas | Prueba backup cifrado, restauración, dominios y adjuntos sin tocar desarrollo. |
 | Dependencias | `pnpm deps:check` | No | Peers y vulnerabilidades altas/criticas. |
 
 `pnpm test` excluye archivos `*.integration.test.ts` y `*.integration.test.tsx`.
@@ -108,8 +109,8 @@ Convenciones:
 Candidatos recomendados:
 
 - Acciones autenticadas con permisos negativos por rol.
-- Backup y restauracion cuando exista el procedimiento operativo.
-- Restauración completa de metadata y contenido de adjuntos en la Tarea 7.
+- Activación y restauración remota de una copia coordinada de producción,
+  después de aprobar credenciales y destino externo.
 - Fallbacks CMS criticos si empiezan a depender de DB real.
 
 ## Validacion Recomendada
@@ -125,6 +126,11 @@ pnpm run build
 ```
 
 Detener `next dev` antes del build; ambos procesos usan `.next`.
+
+El simulacro de recuperación usa datos sintéticos y sus propias bases efímeras.
+No reemplaza `pnpm test:integration` ni utiliza
+`salud_intercultural_dev`. Consultar
+[Backup y restauración de SIGECO](./backup-restore.md).
 
 ## CI En GitHub
 

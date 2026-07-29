@@ -218,7 +218,9 @@ Detener `next dev` antes de `next build`; ambos comparten `.next`. Las migracion
 
 - Cierre remoto de CI y staging aislado.
 - Endurecimiento adicional de permisos, privacidad, logs y secretos.
-- Backup, restauracion y respuesta a incidentes.
+- Activación remota del backup coordinado y respuesta a incidentes. El
+  simulacro local cifrado de base y adjuntos está documentado en
+  [Backup y restauración de SIGECO](../operations/backup-restore.md).
 - Flujo operativo, Caja, compras, inventario, reportes y multi-sucursal.
 
 El orden técnico y funcional vigente vive en [Tasks de mejoras integrales](./sigeco-mejoras-integrales/tasks.md). Su estado se controla únicamente en [Progress](./sigeco-mejoras-integrales/progress.md).

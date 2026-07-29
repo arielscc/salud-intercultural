@@ -154,7 +154,8 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
 ### Bloqueantes Para Uso Clinico Amplio
 
 1. Auditoria append-only de cambios clinicos, financieros, inventario, permisos y ruta.
-2. Procedimiento probado de backup, restauracion y respuesta a incidentes.
+2. Activación remota del backup coordinado y simulacro de restauración; el
+   procedimiento cifrado ya está probado localmente con base y adjuntos.
 3. Cierre remoto de la auditoría de privacidad y permisos con casos negativos.
 4. Verificación del Blob Store clínico privado en staging.
 

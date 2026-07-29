@@ -36,6 +36,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 21. [Usuarios, roles y sesiones de SIGECO](./internal-users-sessions.md)
 22. [Permisos, privacidad, logs y secretos de SIGECO](./permissions-privacy-secrets.md)
 23. [Adjuntos clínicos seguros](./clinical-attachments.md)
+24. [Backup y restauración comprobada](./backup-restore.md)
 
 ## Flujo recomendado
 

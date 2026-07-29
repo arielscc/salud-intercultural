@@ -135,6 +135,10 @@ ignorados por Git.
 | `ADMIN_PASSWORD` | Seed temporal de Payload | Dirección entrega; equipo técnico ejecuta | En cada uso; eliminar la variable después del seed |
 | `INTERNAL_ADMIN_PASSWORD` | Bootstrap temporal de SIGECO | Super administrador | En cada uso; eliminar la variable después del seed |
 | `STAGING_QA_PASSWORD` | Staging | Equipo técnico | Al compartirla, cambiar personal QA o cerrar un ciclo de pruebas |
+| `BACKUP_DATABASE_URL` | Producción, cuando se active | Equipo técnico; Dirección autoriza producción | Incidente, cambio del runner o revisión semestral |
+| `BACKUP_ENCRYPTION_KEY` | Backup y restauración | Dirección custodia recuperación; equipo técnico ejecuta | Incidente, acceso no autorizado o rotación anual comprobada con una restauración |
+| Credencial del destino de backup | Producción, cuando se active | Dirección y equipo técnico | Incidente, cambio de proveedor o revisión semestral |
+| `RESTORE_DATABASE_URL` | Recuperación autorizada | Equipo técnico; Dirección autoriza | Crear para cada recuperación y revocar al terminar |
 
 Los emails de seed, nombres de schema, duraciones y variables
 `NEXT_PUBLIC_*` no son secretos, aunque los emails internos siguen siendo
@@ -154,3 +158,7 @@ datos personales.
 Si un secreto apareció en Git, chat o captura, se considera comprometido:
 primero se revoca, luego se reemplaza y finalmente se investiga el período de
 exposición.
+
+Las credenciales de backup, cifrado, almacenamiento de copias y restauración
+deben tener alcances separados. El procedimiento completo está en
+[Backup y restauración de SIGECO](./backup-restore.md).

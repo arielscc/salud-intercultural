@@ -118,6 +118,23 @@ pnpm test:integration
 
 Mas detalle: [testing](./testing.md).
 
+## Simulacro Local De Recuperación
+
+Con PostgreSQL de Docker saludable:
+
+```bash
+pnpm backup:drill:local
+```
+
+El comando crea dos bases con nombres controlados, aplica migraciones, genera
+datos sintéticos, cifra una copia, la restaura, comprueba los archivos clínicos
+y elimina únicamente esas bases temporales. No modifica
+`salud_intercultural_dev`. La evidencia privada queda bajo
+`.data/backup-evidence/`.
+
+Procedimiento manual y política operativa:
+[Backup y restauración de SIGECO](./backup-restore.md).
+
 Si `typecheck` o `build` fallan por `DATABASE_URL`, revisa que `.env` exista y apunte a una base PostgreSQL valida.
 
 ## Checklist De Validacion Local

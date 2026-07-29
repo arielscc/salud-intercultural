@@ -125,8 +125,9 @@ Una copia recuperable necesita dos partes:
 1. PostgreSQL: metadata, relaciones, checksum, estado, usuario y auditoría.
 2. Storage privado: objetos identificados por `storageKey`.
 
-Restaurar solo una parte no es suficiente. La Tarea 7 debe respaldar ambas,
-comparar conteos y verificar una muestra por SHA-256.
+Restaurar solo una parte no es suficiente. El procedimiento
+[Backup y restauración de SIGECO](./backup-restore.md) respalda ambas, compara
+conteos y verifica cada archivo por SHA-256.
 
 ## Auditoría
 

@@ -8,20 +8,21 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5 y 6 están en progreso. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6 y 7 están en progreso. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
-implementación local. Las doce migraciones anteriores están en staging y las
-quince migraciones actuales están aplicadas en desarrollo. Falta validar las
-tres nuevas mediante CI y staging, completar QA autenticado y cerrar los
-pendientes remotos.
+implementación local. El backup cifrado y la restauración conjunta de
+PostgreSQL y adjuntos están demostrados en bases locales aisladas. Las doce
+migraciones anteriores están en staging y las quince migraciones actuales
+están aplicadas en desarrollo. Falta validar las tres nuevas mediante CI y
+staging, completar QA autenticado y cerrar los pendientes remotos.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 23 |
-| En progreso | 6 |
+| Pendiente | 22 |
+| En progreso | 7 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -46,7 +47,7 @@ pendientes remotos.
 | 4 | Usuarios, roles y sesiones | P0 | En progreso | 3 |
 | 5 | Permisos, privacidad, logs y secretos | P0 | En progreso | 3-4 |
 | 6 | Adjuntos clínicos seguros | P0 | En progreso | 2-5 |
-| 7 | Backup y restauración | P0 | Pendiente | 2, 6 |
+| 7 | Backup y restauración | P0 | En progreso | 2, 6 |
 | 8 | Incidentes y gate de seguridad | P0 | Pendiente | 1-7 |
 | 9 | Consentimientos | P0 | Pendiente | 3-5, textos aprobados |
 | 10 | Procedencia geográfica | P1 | Pendiente | 8 |
@@ -83,6 +84,9 @@ Las tareas activas son:
 - **Tarea 6 — Adjuntos clínicos seguros:** modelo, storage privado, permisos y
   UI implementados y probados localmente; pendiente de integración autorizada,
   QA negativo remoto por rol y Blob privado de staging.
+- **Tarea 7 — Backup y restauración comprobada:** copia cifrada y restauración
+  completa demostradas localmente; pendiente de aprobar y activar la estrategia
+  remota de producción.
 
 Para terminar la Tarea 1:
 
@@ -99,9 +103,9 @@ Para terminar la Tarea 2:
 - Verificar los siete roles, media y bloqueo de comunicaciones en el deployment.
 
 La Tarea 6 empezó por instrucción explícita de Dirección. El QA local autenticado
-ya cubrió carga, lectura temporal y eliminación. No comenzar la Tarea 7 hasta
-cerrar la integración local de adjuntos y definir los recursos privados de
-staging.
+ya cubrió carga, lectura temporal y eliminación. La Tarea 7 ya incluye metadata
+y contenido de adjuntos locales; su activación remota depende de contar con el
+Blob clínico privado y las credenciales separadas aprobadas.
 
 ## Decisiones Vigentes
 
@@ -546,12 +550,81 @@ staging.
   destructivo de la base exclusiva `salud_intercultural_test`.
 - Crear Blob Stores clínicos privados y separados para staging y producción.
 - Aplicar la migración y validar con los roles QA en staging.
-- Incluir metadata y objetos privados en el simulacro de restauración de la
-  Tarea 7.
+- Validar la exportación y restauración de metadata y objetos desde el Blob
+  clínico privado cuando se active el procedimiento remoto de la Tarea 7.
 - Evaluar un motor antimalware real antes de describir los archivos como
   “analizados por antivirus”.
 
 **Commit sugerido:** `feat(sigeco): secure clinical attachments`
+
+### 2026-07-29 — Tarea 7 — Backup Y Restauración Comprobada
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Definidos RPO de 6 horas y RTO de 4 horas.
+- Implementado un paquete coordinado con PostgreSQL, adjuntos clínicos y
+  manifiesto de conteos, migraciones, tamaños y SHA-256.
+- `pg_dump`, los conteos y la metadata usan el mismo snapshot consistente de
+  PostgreSQL; una diferencia con los objetos físicos bloquea la copia.
+- El paquete se cifra y autentica con AES-256-GCM y una clave derivada mediante
+  `scrypt`; la clave no aparece en argumentos ni logs.
+- La creación rechaza bases remotas, staging y producción.
+- La restauración solo acepta una base local vacía con nombre controlado,
+  directorio vacío y confirmación exacta.
+- La comprobación posterior compara pacientes, visitas, Caja, inventario,
+  usuarios por rol, auditoría, metadata y contenido de adjuntos.
+- Programado un simulacro sintético mensual en GitHub Actions y una ejecución
+  manual trimestral por otra persona autorizada.
+- Documentadas frecuencia, retención, separación de credenciales, responsables
+  y pasos de activación remota.
+
+#### Archivos Y Documentación
+
+- Implementación y pruebas en `scripts/backup/`.
+- Comandos `backup:create:local`, `backup:restore:local` y
+  `backup:drill:local`.
+- Workflow `.github/workflows/backup-restore-drill.yml`.
+- Guía [backup-restore.md](../../operations/backup-restore.md).
+- Reporte
+  [2026-07-29-tarea-7-backup-restauracion-comprobada.md](../task-reports/2026-07-29-tarea-7-backup-restauracion-comprobada.md).
+- No requiere una migración nueva.
+
+#### Validación Ejecutada
+
+- Simulacro final `ms6gm2gq_cf63188f` aprobado únicamente en PostgreSQL local.
+- Aplicadas y restauradas 15 migraciones en dos bases sintéticas aisladas.
+- Backup: 407 ms; restauración y verificación: 2.507 ms; total: 8.091 ms.
+- Verificados un paciente, una visita, Caja por Bs 125, un producto con stock
+  7, un `super_admin`, un evento de auditoría y un adjunto clínico.
+- Cifrado autenticado, checksum y limpieza de texto plano: aprobados.
+- Evidencia privada con permisos `0700/0600`.
+- Las dos bases efímeras fueron eliminadas y se confirmó que no quedaron
+  destinos temporales.
+- Pruebas focalizadas: 3 archivos y 23 pruebas aprobadas.
+- Suite completa: 41 archivos y 179 pruebas aprobadas.
+- `pnpm lint`, `pnpm typecheck`, `pnpm env:check`, `prisma validate`,
+  `git diff --check` y `pnpm run build`: aprobados.
+- `pnpm deps:check`: sin vulnerabilidades altas o críticas; permanecen 4 bajas
+  y 14 moderadas.
+
+#### Pendientes Para Cerrar
+
+- Aprobar RPO, RTO, retención y responsables con Dirección.
+- Activar historial o snapshots adecuados en Neon.
+- Configurar un destino de backup externo y separado.
+- Crear credenciales exclusivas de lectura, almacenamiento y restauración.
+- Implementar la exportación paginada del Blob clínico privado.
+- Restaurar una copia real en infraestructura remota aislada y firmar el
+  resultado.
+- Observar la primera ejecución mensual del nuevo workflow.
+
+**Commit sugerido:** `docs(ops): prove sigeco backup and restore`
 
 ## Cómo Actualizar El Progreso
 

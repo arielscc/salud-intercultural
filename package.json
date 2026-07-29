@@ -38,6 +38,9 @@
     "staging:seed": "pnpm staging:check && pnpm payload:seed:staging && pnpm staging:seed:sigeco",
     "staging:verify": "DOTENV_CONFIG_PATH=.env.staging node --import dotenv/config --import tsx scripts/verify-staging.ts",
     "staging:reset": "DOTENV_CONFIG_PATH=.env.staging node --import dotenv/config --import tsx scripts/reset-staging.ts",
+    "backup:create:local": "node --import tsx scripts/backup/create-local-backup.ts",
+    "backup:restore:local": "node --import tsx scripts/backup/restore-local-backup.ts",
+    "backup:drill:local": "node --import tsx scripts/backup/drill-local-backup.ts",
     "payload:generate-types": "payload generate:types",
     "internal:seed": "node --import dotenv/config --import tsx scripts/seed-internal-user.ts",
     "internal:set-role": "node --import dotenv/config --import tsx scripts/set-internal-user-role.ts"

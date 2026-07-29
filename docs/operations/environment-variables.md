@@ -60,6 +60,15 @@ Estas variables no deben exponerse al navegador.
 | `INTERNAL_ADMIN_PASSWORD` | No | clave temporal de seed | Password para crear el primer super administrador interno con `pnpm internal:seed`. |
 | `STAGING_QA_EMAIL_DOMAIN` | Solo staging | `staging.invalid` | Dominio reservado usado por cuentas QA. |
 | `STAGING_QA_PASSWORD` | Solo staging | secreto de 20+ caracteres | Base privada para contraseñas QA diferentes por rol. |
+| `BACKUP_DATABASE_URL` | Al crear una copia | URL de solo lectura | Conexión exclusiva para exportar PostgreSQL; no reutilizar la credencial de la aplicación en producción. |
+| `BACKUP_CLINICAL_FILES_PATH` | Backup local | `.data/clinical-files` | Origen privado de los adjuntos incluidos en la copia local. |
+| `BACKUP_OUTPUT_PATH` | No | `.data/backups/...sigeco-backup` | Destino local permitido para el paquete cifrado. |
+| `BACKUP_ENCRYPTION_KEY` | Backup o restauración | secreto aleatorio de 32+ caracteres | Cifra y autentica el paquete; nunca se escribe en Git, logs ni argumentos. |
+| `BACKUP_RESPONSIBLE` | Al crear una copia | nombre del responsable | Identifica quién ejecutó la operación sin guardar credenciales. |
+| `BACKUP_FILE` | Al restaurar | `.data/backups/...sigeco-backup` | Paquete cifrado que se va a validar y restaurar. |
+| `RESTORE_DATABASE_URL` | Al restaurar | base local `salud_intercultural_restore_*` | Destino nuevo y vacío; el comando local bloquea desarrollo, test, staging y producción. |
+| `RESTORE_CLINICAL_FILES_PATH` | Al restaurar | `.data/restore-drills/...` | Directorio vacío donde se recuperan los adjuntos. |
+| `RESTORE_CONFIRMATION` | Al restaurar | `RESTORE_<base>` | Confirmación exacta que evita ejecutar la restauración sobre un destino equivocado. |
 | `GOOGLE_SITE_VERIFICATION` | No | token de Search Console | Verificacion de propiedad en Google. |
 | `RATE_LIMIT_MAX` | No | `10` | Limite de envios por ventana para leads. |
 | `RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Ventana de rate limit para leads. |
@@ -116,6 +125,15 @@ pnpm seed
 ```
 
 `pnpm seed` carga solo el seed canonico de Payload.
+
+Para probar recuperación completa en dos bases sintéticas y aisladas:
+
+```bash
+pnpm backup:drill:local
+```
+
+La guía completa, las variables temporales y las reglas de eliminación están en
+[Backup y restauración de SIGECO](./backup-restore.md).
 
 ## Test Local
 

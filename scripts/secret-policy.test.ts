@@ -5,10 +5,14 @@ import { describe, expect, it } from "vitest";
 
 function trackedFiles() {
   try {
-    return execFileSync("git", ["ls-files", "-z"], {
-      cwd: process.cwd(),
-      encoding: "utf8"
-    })
+    return execFileSync(
+      "git",
+      ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8"
+      }
+    )
       .split("\0")
       .filter(Boolean);
   } catch {
@@ -97,19 +101,26 @@ describe("repository secret policy", () => {
   });
 
   it("pins every GitHub Action to an immutable commit", () => {
-    const workflow = readFileSync(
-      resolve(process.cwd(), ".github/workflows/ci.yml"),
-      "utf8"
+    const workflowDirectory = resolve(process.cwd(), ".github/workflows");
+    const workflows = readdirSync(workflowDirectory).filter((file) =>
+      /\.ya?ml$/.test(file)
     );
-    const actionReferences = [...workflow.matchAll(/uses:\s+([^\s#]+)/g)].map(
-      (match) => match[1]
-    );
+    let actionCount = 0;
 
-    expect(actionReferences.length).toBeGreaterThan(0);
-    for (const reference of actionReferences) {
-      expect(reference, `${reference} must use a 40-character commit`).toMatch(
-        /@[0-9a-f]{40}$/
+    for (const file of workflows) {
+      const workflow = readFileSync(resolve(workflowDirectory, file), "utf8");
+      const actionReferences = [...workflow.matchAll(/uses:\s+([^\s#]+)/g)].map(
+        (match) => match[1]
       );
+      actionCount += actionReferences.length;
+      for (const reference of actionReferences) {
+        expect(
+          reference,
+          `${file}: ${reference} must use a 40-character commit`
+        ).toMatch(/@[0-9a-f]{40}$/);
+      }
     }
+
+    expect(actionCount).toBeGreaterThan(0);
   });
 });
