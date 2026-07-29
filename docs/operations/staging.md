@@ -10,6 +10,7 @@ Guia para preparar, validar, sembrar y reiniciar staging sin tocar produccion ni
 | PostgreSQL | base cuyo nombre contiene `staging` | base productiva separada |
 | Payload | schema `payload_staging` | schema productivo |
 | Media | Blob Store y token exclusivos | Blob Store y token productivos |
+| Adjuntos clínicos | Blob Store privado exclusivo | Blob Store privado productivo separado |
 | Secretos | valores exclusivos | valores productivos diferentes |
 | Comunicaciones | bloqueadas | habilitadas explicitamente |
 | Analytics | desactivado | propiedades oficiales |
@@ -27,6 +28,7 @@ Compartir una cuenta del proveedor no significa compartir recursos. La base, el 
 - exige `DATABASE_ENVIRONMENT=staging`;
 - exige un schema Payload separado;
 - exige un token Blob y `STORAGE_ENVIRONMENT=staging`;
+- exige `STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN` para un store clínico privado;
 - exige comunicaciones bloqueadas;
 - rechaza GA4, Meta Pixel y Search Console.
 
@@ -58,6 +60,10 @@ Después de conectar el store, retirar cualquier alcance Production de
 `STAGING_BLOB_READ_WRITE_TOKEN` y cualquier alcance Preview de
 `BLOB_READ_WRITE_TOKEN`.
 
+Crear un segundo Blob Store con acceso **private** para adjuntos clínicos.
+Configurar su token como `STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN`. No debe ser
+el store público de media ni el store clínico de producción.
+
 ### Secretos
 
 Generar valores nuevos para:
@@ -67,6 +73,7 @@ Generar valores nuevos para:
 - `STAGING_QA_PASSWORD`;
 - PostgreSQL;
 - Vercel Blob.
+- Vercel Blob privado para adjuntos clínicos.
 
 No usar datos o contraseñas de empleados y pacientes.
 

@@ -50,12 +50,40 @@ enum InternalPermission {
   reports_read
   audit_read
   users_manage
+  attachments_read
+  attachments_write
+  attachments_delete
 }
 
 enum AuditResult {
   success
   failure
   denied
+}
+
+enum ClinicalAttachmentStorageDriver {
+  local
+  vercel_blob
+}
+
+enum ClinicalAttachmentStatus {
+  pending
+  available
+  quarantined
+  failed
+  deleted
+}
+
+enum ClinicalAttachmentScanStatus {
+  basic_validation_only
+  pending
+  clean
+  rejected
+}
+
+enum ClinicalAttachmentAccessPurpose {
+  preview
+  download
 }
 
 enum InternalLeadSource {
@@ -279,26 +307,26 @@ enum InventoryAlertStatus {
 }
 
 model InternalUser {
-  id                     String                  @id @default(cuid())
-  email                  String                  @unique
+  id                     String                          @id @default(cuid())
+  email                  String                          @unique
   name                   String?
   passwordHash           String
-  role                   InternalRole            @default(captacion)
-  active                 Boolean                 @default(true)
+  role                   InternalRole                    @default(captacion)
+  active                 Boolean                         @default(true)
   lastLoginAt            DateTime?
-  failedAttempts         Int                     @default(0)
+  failedAttempts         Int                             @default(0)
   lockedUntil            DateTime?
-  mustChangePassword     Boolean                 @default(false)
+  mustChangePassword     Boolean                         @default(false)
   passwordChangedAt      DateTime?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  createdAt              DateTime                        @default(now())
+  updatedAt              DateTime                        @updatedAt
   sessions               InternalSession[]
-  assignedLeads          Lead[]                  @relation("LeadAssignee")
+  assignedLeads          Lead[]                          @relation("LeadAssignee")
   contactAttempts        LeadContactAttempt[]
   reminders              LeadReminder[]
   statusChanges          LeadStatusHistory[]
   patientNotes           PatientNote[]
-  createdVisits          Visit[]                 @relation("VisitCreatedBy")
+  createdVisits          Visit[]                         @relation("VisitCreatedBy")
   visitStatusChanges     VisitStatusHistory[]
   receptionCheckIns      ReceptionCheckIn[]
   createdWorkItems       VisitWorkItem[]
@@ -308,21 +336,24 @@ model InternalUser {
   clinicalNotes          ClinicalNote[]
   clinicalOrders         ClinicalOrder[]
   recordedVitalSigns     VitalSigns[]
-  nursingApplications    NursingApplication[]    @relation("NursingApplicationResponsible")
+  nursingApplications    NursingApplication[]            @relation("NursingApplicationResponsible")
   nursingNotes           NursingNote[]
-  requestedStudies       Study[]                 @relation("StudyRequestedBy")
-  recordedStudies        Study[]                 @relation("StudyRecordedBy")
+  requestedStudies       Study[]                         @relation("StudyRequestedBy")
+  recordedStudies        Study[]                         @relation("StudyRecordedBy")
   nursingWorkItemResults NursingWorkItemResult[]
-  createdSales           Sale[]                  @relation("SaleCreatedBy")
+  createdSales           Sale[]                          @relation("SaleCreatedBy")
   receivedPayments       Payment[]
   cashMovements          CashMovement[]
-  assignedFollowUps      FollowUpTask[]          @relation("FollowUpAssignedTo")
-  createdFollowUps       FollowUpTask[]          @relation("FollowUpCreatedBy")
+  assignedFollowUps      FollowUpTask[]                  @relation("FollowUpAssignedTo")
+  createdFollowUps       FollowUpTask[]                  @relation("FollowUpCreatedBy")
   followUpAttempts       FollowUpAttempt[]
   followUpStatusChanges  FollowUpStatusHistory[]
   inventoryMovements     InventoryMovement[]
   inventoryAdjustments   InventoryAdjustment[]
   auditEvents            AuditEvent[]
+  uploadedAttachments    ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
+  deletedAttachments     ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
+  attachmentAccessGrants ClinicalAttachmentAccessGrant[]
 
   @@index([role])
   @@index([active])
@@ -489,6 +520,7 @@ model Patient {
   deliveredProducts     DeliveredProduct[]
   cashMovements         CashMovement[]
   followUpTasks         FollowUpTask[]
+  clinicalAttachments   ClinicalAttachment[]
 
   @@index([fullName])
   @@index([phone])
@@ -559,6 +591,7 @@ model Visit {
   deliveredProducts    DeliveredProduct[]
   cashMovements        CashMovement[]
   followUpTasks        FollowUpTask[]
+  clinicalAttachments  ClinicalAttachment[]
 
   @@index([patientId])
   @@index([status, checkedInAt])
@@ -797,29 +830,29 @@ model VisitWorkItem {
 }
 
 model Study {
-  id              String            @id @default(cuid())
+  id              String               @id @default(cuid())
   patientId       String
   visitId         String?
   clinicalOrderId String?
   workItemId      String?
   requestedById   String?
   recordedById    String?
-  type            StudyType         @default(other)
-  status          StudyStatus       @default(performed)
+  type            StudyType            @default(other)
+  status          StudyStatus          @default(performed)
   title           String
   resultSummary   String?
   findings        String?
   performedAt     DateTime?
   reviewedAt      DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit           Visit?            @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  clinicalOrder   ClinicalOrder?    @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
-  workItem        VisitWorkItem?    @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  requestedBy     InternalUser?     @relation("StudyRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
-  recordedBy      InternalUser?     @relation("StudyRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
-  attachments     StudyAttachment[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  patient         Patient              @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit           Visit?               @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  clinicalOrder   ClinicalOrder?       @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
+  workItem        VisitWorkItem?       @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  requestedBy     InternalUser?        @relation("StudyRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  recordedBy      InternalUser?        @relation("StudyRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  attachments     ClinicalAttachment[]
 
   @@index([patientId])
   @@index([visitId])
@@ -828,20 +861,6 @@ model Study {
   @@index([type, status])
   @@index([performedAt])
   @@index([createdAt])
-}
-
-model StudyAttachment {
-  id          String   @id @default(cuid())
-  studyId     String
-  fileName    String
-  contentType String?
-  storageKey  String?
-  url         String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  study       Study    @relation(fields: [studyId], references: [id], onDelete: Cascade)
-
-  @@index([studyId])
 }
 
 model VitalSigns {
@@ -915,19 +934,60 @@ model NursingNote {
 }
 
 model ClinicalAttachment {
-  id          String   @id @default(cuid())
-  patientId   String
-  visitId     String?
-  label       String
-  contentType String?
-  storageKey  String?
-  url         String?
-  notes       String?
-  createdAt   DateTime @default(now())
+  id               String                          @id @default(cuid())
+  patientId        String
+  visitId          String?
+  studyId          String?
+  uploadedById     String?
+  deletedById      String?
+  uploadRequestId  String                          @unique
+  label            String
+  contentType      String
+  fileExtension    String
+  sizeBytes        Int
+  checksumSha256   String
+  storageDriver    ClinicalAttachmentStorageDriver
+  storageKey       String                          @unique
+  status           ClinicalAttachmentStatus        @default(pending)
+  scanStatus       ClinicalAttachmentScanStatus    @default(basic_validation_only)
+  scanProvider     String?
+  scannedAt        DateTime?
+  quarantineReason String?
+  notes            String?
+  createdAt        DateTime                        @default(now())
+  updatedAt        DateTime                        @updatedAt
+  deletedAt        DateTime?
+  patient          Patient                         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit            Visit?                          @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  study            Study?                          @relation(fields: [studyId], references: [id], onDelete: SetNull)
+  uploadedBy       InternalUser?                   @relation("ClinicalAttachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  deletedBy        InternalUser?                   @relation("ClinicalAttachmentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  accessGrants     ClinicalAttachmentAccessGrant[]
 
   @@index([patientId])
   @@index([visitId])
+  @@index([studyId])
+  @@index([uploadedById])
+  @@index([status, createdAt])
+  @@index([checksumSha256])
   @@index([createdAt])
+}
+
+model ClinicalAttachmentAccessGrant {
+  id           String                          @id @default(cuid())
+  attachmentId String
+  userId       String
+  tokenHash    String                          @unique
+  purpose      ClinicalAttachmentAccessPurpose
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  createdAt    DateTime                        @default(now())
+  attachment   ClinicalAttachment              @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  user         InternalUser                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([attachmentId, expiresAt])
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
 }
 
 model NursingWorkItemResult {

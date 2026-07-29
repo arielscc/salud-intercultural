@@ -31,6 +31,7 @@ Leyenda: `L` lectura, `E` escritura, `A` ajuste sensible y `—` sin acceso.
 | Reportes | L | L | — | — | — | — | — |
 | Auditoría | L | L | — | — | — | — | — |
 | Usuarios y roles | L/E | — | — | — | — | — | — |
+| Adjuntos clínicos | L/E/A | L | L/E | — | — | L/E | — |
 
 El rol retirado `captacion` solo conserva acceso a su cuenta hasta ser
 reasignado. No puede operar pacientes, leads internos ni módulos clínicos.
@@ -46,18 +47,18 @@ reasignado. No puede operar pacientes, leads internos ni módulos clínicos.
   `patients_read`.
 - Los accesos denegados importantes se registran en la auditoría append-only.
 
-Las pruebas automatizadas enumeran todas las páginas y las 38 acciones actuales.
-Si aparece una página o acción nueva sin política, la suite debe fallar.
+Las pruebas automatizadas enumeran todas las páginas, las 38 acciones actuales
+y las rutas privadas de adjuntos. Si aparece una superficie nueva sin política,
+la suite debe fallar.
 
 ## Archivos Y Exportaciones
 
-SIGECO todavía no ofrece descargas o exportaciones clínicas. La suite revisa
-que cualquier ruta futura cuyo nombre o respuesta indique descarga, adjunto o
-exportación tenga un permiso de servidor.
+SIGECO entrega adjuntos mediante concesiones de dos minutos y un solo uso
+enviadas por `POST`, nunca mediante una URL pública. La collection `media` de
+Payload sigue siendo exclusivamente editorial y pública.
 
-Los adjuntos clínicos seguros se implementarán en la Tarea 6. La collection
-`media` de Payload es exclusivamente editorial y pública; no debe usarse para
-resultados, recetas, estudios o historia clínica.
+Las exportaciones clínicas todavía no existen. Cualquier ruta futura de
+descarga, adjunto o exportación debe declarar un permiso de servidor.
 
 ## Datos Permitidos En URLs
 
@@ -129,6 +130,8 @@ ignorados por Git.
 | `PAYLOAD_SECRET` | Todos; 32+ caracteres en staging y producción | Equipo técnico | Incidente, acceso no autorizado o revisión semestral |
 | `BLOB_READ_WRITE_TOKEN` | Producción | Equipo técnico | Incidente, cambio de store o revisión semestral |
 | `STAGING_BLOB_READ_WRITE_TOKEN` | Staging | Equipo técnico | Incidente, reinicio del store o revisión semestral |
+| `CLINICAL_BLOB_READ_WRITE_TOKEN` | Producción | Equipo técnico; Dirección autoriza acceso | Incidente, cambio del store privado o revisión semestral |
+| `STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN` | Staging | Equipo técnico | Incidente, reinicio del store clínico QA o cierre del ciclo de pruebas |
 | `ADMIN_PASSWORD` | Seed temporal de Payload | Dirección entrega; equipo técnico ejecuta | En cada uso; eliminar la variable después del seed |
 | `INTERNAL_ADMIN_PASSWORD` | Bootstrap temporal de SIGECO | Super administrador | En cada uso; eliminar la variable después del seed |
 | `STAGING_QA_PASSWORD` | Staging | Equipo técnico | Al compartirla, cambiar personal QA o cerrar un ciclo de pruebas |

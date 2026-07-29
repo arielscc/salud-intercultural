@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PencilLine, UserRoundPlus } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { ClinicalAttachmentsPanel } from "@/components/internal/clinical-attachments/ClinicalAttachmentsPanel";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
@@ -36,6 +37,7 @@ import { studyTypeLabels } from "@/features/studies/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { formatDateTime } from "@/lib/dates";
 import { getPatientById } from "@/modules/database/queries/patients";
+import { getClinicalAttachmentsForPatient } from "@/modules/clinical-attachments/service";
 import { requirePermission } from "@/modules/permissions";
 import { Chip } from "@/components/internal/ui/Chip";
 import { calculateAgeFromDate } from "@/lib/age";
@@ -52,6 +54,10 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
   if (!patient) notFound();
 
+  const canReadAttachments = roleHasPermission(user.role, "attachments_read");
+  const attachments = canReadAttachments
+    ? await getClinicalAttachmentsForPatient(patient.id)
+    : [];
   const nursingCount =
     patient.vitalSigns.length + patient.nursingApplications.length + patient.nursingNotes.length;
   const age = calculateAgeFromDate(patient.birthDate);
@@ -414,6 +420,37 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
         </Card>
           </DesktopSectionPanel>
         </DesktopSectionTabs>
+
+        {canReadAttachments ? (
+          <ClinicalAttachmentsPanel
+            patientId={patient.id}
+            attachments={attachments.map((attachment) => ({
+              id: attachment.id,
+              label: attachment.label,
+              contentType: attachment.contentType,
+              sizeBytes: attachment.sizeBytes,
+              scanStatus: attachment.scanStatus,
+              createdAt: attachment.createdAt.toISOString(),
+              visitId: attachment.visitId,
+              studyId: attachment.studyId,
+              uploadedByName: attachment.uploadedBy?.name ?? null,
+              visitLabel: attachment.visit
+                ? `Visita del ${formatDateTime(attachment.visit.checkedInAt)}`
+                : null,
+              studyTitle: attachment.study?.title ?? null
+            }))}
+            visits={patient.visits.map((visit) => ({
+              id: visit.id,
+              label: formatDateTime(visit.checkedInAt)
+            }))}
+            studies={patient.studies.map((study) => ({
+              id: study.id,
+              label: study.title
+            }))}
+            canWrite={roleHasPermission(user.role, "attachments_write")}
+            canDelete={roleHasPermission(user.role, "attachments_delete")}
+          />
+        ) : null}
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">

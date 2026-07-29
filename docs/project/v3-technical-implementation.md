@@ -141,6 +141,22 @@ caché y secretos viven en
 Las pruebas enumeran cada página de datos y cada server action; Payload y
 analytics tienen un límite automático que impide importar consultas clínicas.
 
+### Adjuntos Clínicos
+
+`ClinicalAttachment` conserva metadata, relaciones, checksum, estado de
+cuarentena y responsable. El contenido usa un adapter separado:
+
+- `.data/clinical-files` fuera de `public/` en local;
+- Vercel Blob privado y exclusivo en staging o producción.
+
+La ficha del paciente permite selección múltiple, cámara móvil, compresión JPG,
+progreso y reintento idempotente. Ver y descargar requiere `attachments_read`
+y una concesión de dos minutos y un solo uso enviada por `POST`. El token no
+aparece en la URL y el contenido se verifica por SHA-256 antes de entregarse.
+
+La operación completa vive en
+[Adjuntos clínicos seguros](../operations/clinical-attachments.md).
+
 ## Dashboard
 
 `getReceptionDashboardSummary` calcula con rango diario local:
@@ -178,6 +194,7 @@ Contratos criticos cubiertos:
 - Stock, rollback y alertas.
 - Seguimientos y dashboard.
 - Auditoría append-only, usuarios, roles y sesiones.
+- Adjuntos clínicos privados, idempotencia y acceso temporal.
 
 ## Deploy
 
@@ -201,7 +218,6 @@ Detener `next dev` antes de `next build`; ambos comparten `.next`. Las migracion
 
 - Cierre remoto de CI y staging aislado.
 - Endurecimiento adicional de permisos, privacidad, logs y secretos.
-- Storage seguro para adjuntos clinicos.
 - Backup, restauracion y respuesta a incidentes.
 - Flujo operativo, Caja, compras, inventario, reportes y multi-sucursal.
 

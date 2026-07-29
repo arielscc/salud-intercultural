@@ -8,19 +8,20 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4 y 5 están en progreso. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5 y 6 están en progreso. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
-implementados localmente. Las doce migraciones anteriores están en staging y
-las catorce migraciones actuales están aplicadas en desarrollo. Falta validar
-las dos nuevas mediante CI y staging, completar QA autenticado y cerrar los
+implementados localmente. Los adjuntos clínicos privados ya tienen
+implementación local. Las doce migraciones anteriores están en staging y las
+quince migraciones actuales están aplicadas en desarrollo. Falta validar las
+tres nuevas mediante CI y staging, completar QA autenticado y cerrar los
 pendientes remotos.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 24 |
-| En progreso | 5 |
+| Pendiente | 23 |
+| En progreso | 6 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -44,7 +45,7 @@ pendientes remotos.
 | 3 | Auditoría append-only | P0 | En progreso | 1-2 |
 | 4 | Usuarios, roles y sesiones | P0 | En progreso | 3 |
 | 5 | Permisos, privacidad, logs y secretos | P0 | En progreso | 3-4 |
-| 6 | Adjuntos clínicos seguros | P0 | Pendiente | 2-5 |
+| 6 | Adjuntos clínicos seguros | P0 | En progreso | 2-5 |
 | 7 | Backup y restauración | P0 | Pendiente | 2, 6 |
 | 8 | Incidentes y gate de seguridad | P0 | Pendiente | 1-7 |
 | 9 | Consentimientos | P0 | Pendiente | 3-5, textos aprobados |
@@ -79,6 +80,9 @@ Las tareas activas son:
 - **Tarea 4 — Usuarios, roles y sesiones:** implementación local terminada; pendiente de integración y QA en staging.
 - **Tarea 5 — Permisos, privacidad, logs y secretos:** controles locales
   implementados; pendiente de verificación remota y QA negativo por rol.
+- **Tarea 6 — Adjuntos clínicos seguros:** modelo, storage privado, permisos y
+  UI implementados y probados localmente; pendiente de integración autorizada,
+  QA negativo remoto por rol y Blob privado de staging.
 
 Para terminar la Tarea 1:
 
@@ -94,7 +98,10 @@ Para terminar la Tarea 2:
 - Ejecutar `pnpm staging:seed` y `pnpm staging:verify`.
 - Verificar los siete roles, media y bloqueo de comunicaciones en el deployment.
 
-No comenzar la Tarea 6 hasta cerrar las validaciones remotas de las Tareas 1-5.
+La Tarea 6 empezó por instrucción explícita de Dirección. El QA local autenticado
+ya cubrió carga, lectura temporal y eliminación. No comenzar la Tarea 7 hasta
+cerrar la integración local de adjuntos y definir los recursos privados de
+staging.
 
 ## Decisiones Vigentes
 
@@ -479,6 +486,72 @@ No comenzar la Tarea 6 hasta cerrar las validaciones remotas de las Tareas 1-5.
 - Rotar `PAYLOAD_SECRET` si algún despliegue remoto utilizó el fallback anterior.
 
 **Commit sugerido:** `test(sigeco): enforce privacy and permission boundaries`
+
+### 2026-07-29 — Tarea 6 — Adjuntos Clínicos Seguros
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Unificadas las estructuras anteriores de adjuntos en un modelo clínico privado
+  relacionado con paciente, visita, estudio, usuario que sube y usuario que
+  elimina.
+- Añadidos permisos separados para ver, subir y eliminar archivos.
+- Los archivos locales se guardan fuera de `public/`, con rutas opacas, directorios
+  `0700` y archivos `0600`.
+- Staging y producción quedan obligados a usar un Blob Store privado distinto del
+  almacenamiento editorial de Payload.
+- Cada archivo se valida por tamaño, nombre, extensión, MIME, firma real,
+  estructura básica, marcador EICAR y SHA-256 antes de quedar disponible.
+- Cada lectura exige sesión, permiso, mismo origen y una concesión aleatoria de
+  dos minutos, un solo uso y vinculada al usuario.
+- Subida, lectura, rechazo y eliminación controlada generan auditoría sin guardar
+  tokens, nombres originales, checksum o texto clínico.
+- La ficha del paciente permite carga múltiple, progreso individual, cámara,
+  compresión de JPG, reintento idempotente, vista previa y descarga.
+- La eliminación borra el objeto privado, invalida concesiones y conserva la
+  metadata histórica como `deleted`.
+
+#### Archivos Y Documentación
+
+- Migración `20260729140000_secure_clinical_attachments`.
+- Módulo `src/modules/clinical-attachments/`.
+- API privada `src/app/(internal)/sigeco/api/clinical-attachments/`.
+- Interfaz `src/components/internal/clinical-attachments/ClinicalAttachmentsPanel.tsx`.
+- Guía [clinical-attachments.md](../../operations/clinical-attachments.md).
+- Reporte
+  [2026-07-29-tarea-6-adjuntos-clinicos-seguros.md](../task-reports/2026-07-29-tarea-6-adjuntos-clinicos-seguros.md).
+
+#### Validación Ejecutada
+
+- Migración aplicada únicamente a la base local de desarrollo.
+- Suite unitaria: 39 archivos y 160 pruebas aprobadas.
+- `pnpm lint`, `pnpm typecheck`, `pnpm env:check`, `prisma validate` y
+  `pnpm run build`: aprobados.
+- `pnpm deps:check`: sin vulnerabilidades altas o críticas; permanecen 4 bajas
+  y 14 moderadas.
+- QA autenticado local en escritorio y móvil: carga, progreso, previsualización,
+  descarga autorizada, eliminación y ausencia de desbordamiento horizontal.
+- Petición anónima a la concesión temporal: rechazada con `401`.
+- Pruebas automatizadas cubren tipos falsificados, PDF truncado, EICAR, exceso
+  de tamaño, traversal, idempotencia, concesión de un uso y relaciones cruzadas.
+
+#### Pendientes Para Cerrar
+
+- Ejecutar `pnpm test:integration` cuando Dirección autorice el reinicio
+  destructivo de la base exclusiva `salud_intercultural_test`.
+- Crear Blob Stores clínicos privados y separados para staging y producción.
+- Aplicar la migración y validar con los roles QA en staging.
+- Incluir metadata y objetos privados en el simulacro de restauración de la
+  Tarea 7.
+- Evaluar un motor antimalware real antes de describir los archivos como
+  “analizados por antivirus”.
+
+**Commit sugerido:** `feat(sigeco): secure clinical attachments`
 
 ## Cómo Actualizar El Progreso
 

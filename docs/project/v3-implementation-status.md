@@ -69,6 +69,14 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Formularios colapsables segun el tipo de orden.
 - Resultados visibles en consulta y ficha del paciente.
 
+### Adjuntos Clínicos
+
+- PDF e imágenes en storage privado separado de Payload.
+- Relaciones con paciente, visita, estudio y usuario.
+- Carga múltiple, cámara móvil, compresión JPG, progreso y reintento sin duplicar.
+- Acceso temporal de un uso, checksum, cuarentena y auditoría.
+- Eliminación de contenido reservada al super administrador.
+
 ### Administracion E Inventario
 
 - Ventas, pagos, saldos y movimientos de caja.
@@ -146,10 +154,9 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
 ### Bloqueantes Para Uso Clinico Amplio
 
 1. Auditoria append-only de cambios clinicos, financieros, inventario, permisos y ruta.
-2. Storage seguro con acceso, retencion y trazabilidad para adjuntos clinicos.
-3. Auditoria formal de privacidad y permisos con casos negativos.
-4. Procedimiento probado de backup, restauracion y respuesta a incidentes.
-5. Politica operativa de sesiones, secretos y accesos no autorizados.
+2. Procedimiento probado de backup, restauracion y respuesta a incidentes.
+3. Cierre remoto de la auditoría de privacidad y permisos con casos negativos.
+4. Verificación del Blob Store clínico privado en staging.
 
 ### Operacion
 

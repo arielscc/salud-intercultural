@@ -26,6 +26,8 @@ La suite rápida también bloquea regresiones de seguridad:
 - secretos con prefijo público o formatos de credencial dentro del repositorio;
 - GitHub Actions que no estén fijadas a un commit inmutable;
 - contenido CMS capaz de cerrar un script JSON-LD.
+- rutas de adjuntos sin permiso, storage público, nombres inseguros, MIME
+  suplantado, checksum y claves capaces de escapar del directorio privado.
 
 ## Base De Test
 
@@ -77,7 +79,7 @@ Los tests nunca deben usar `.env.staging`, `.env.production.local`, Neon remoto 
 
 ## Integracion Actual
 
-La suite contiene 10 archivos y cubre:
+La suite contiene 11 archivos y cubre:
 
 - Leads publicos e internos legacy, preservados sin UI operativa.
 - Funnel de recepcion, pacientes, visitas y dashboard.
@@ -86,8 +88,12 @@ La suite contiene 10 archivos y cubre:
 - Ventas, pagos y caja.
 - Inventario, rollback por stock insuficiente y alertas.
 - Seguimientos y cronologia del paciente.
+- Adjuntos clínicos: asociación, idempotencia, concesión de un uso, checksum y
+  eliminación de contenido.
 
-El baseline de cierre V3.7 es 21 tests de integracion. El reset completo ocurre antes de la suite; cada archivo tambien limpia los registros que crea.
+El baseline anterior de V3.7 era 21 tests de integración. La Tarea 6 agrega dos
+casos de adjuntos. El reset completo ocurre antes de la suite; cada archivo
+también limpia los registros que crea.
 
 ## Agregar Tests De Integracion
 
@@ -103,7 +109,7 @@ Candidatos recomendados:
 
 - Acciones autenticadas con permisos negativos por rol.
 - Backup y restauracion cuando exista el procedimiento operativo.
-- Adjuntos clinicos cuando se defina storage seguro.
+- Restauración completa de metadata y contenido de adjuntos en la Tarea 7.
 - Fallbacks CMS criticos si empiezan a depender de DB real.
 
 ## Validacion Recomendada

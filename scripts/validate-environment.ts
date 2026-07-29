@@ -16,6 +16,7 @@ console.log(
     `Environment validated: ${summary.environment}`,
     `database=${summary.databaseEnvironment ?? "not-labeled"}`,
     `storage=${summary.storageEnvironment ?? "not-labeled"}`,
+    `clinical-files=${summary.clinicalStorageDriver}`,
     `communications=${summary.externalCommunicationsMode}`,
     `analytics=${summary.analyticsEnabled ? "configured" : "disabled"}`,
     `blob=${summary.blobStorageConfigured ? "configured" : "disabled"}`

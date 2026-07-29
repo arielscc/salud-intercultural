@@ -69,6 +69,13 @@ export const privateEnvSchema = z.object({
   PAYLOAD_DB_SCHEMA: z.preprocess(emptyToUndefined, z.string().default("payload")),
   BLOB_READ_WRITE_TOKEN: optionalString,
   STAGING_BLOB_READ_WRITE_TOKEN: optionalString,
+  CLINICAL_FILES_STORAGE_DRIVER: z.preprocess(
+    emptyToUndefined,
+    z.enum(["local", "vercel-blob"]).optional()
+  ),
+  CLINICAL_FILES_LOCAL_PATH: optionalString,
+  CLINICAL_BLOB_READ_WRITE_TOKEN: optionalString,
+  STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN: optionalString,
   ADMIN_EMAIL: optionalEmail,
   ADMIN_PASSWORD: optionalString,
   ADMIN_RESET_PASSWORD_ON_SEED: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false")),

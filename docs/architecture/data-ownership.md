@@ -33,6 +33,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Pagos y Caja | Prisma | SIGECO | Activo | Ventas, pagos y movimientos financieros auditados. |
 | Inventario | Prisma | SIGECO | Activo | Productos, stock, movimientos y ajustes. |
 | Auditoría de SIGECO | Prisma | SIGECO, solo Dirección y super administrador | Activo | `AuditEvent` append-only; PostgreSQL bloquea update y delete. |
+| Adjuntos clínicos | Prisma + storage clínico privado | SIGECO, según permisos clínicos | Activo | Metadata y concesiones en Prisma; contenido fuera de Payload y de `public/`. |
 | Reportes analiticos internos futuros | Prisma | UI/reportes custom | Futuro | Consultas agregadas y metricas operativas. |
 | Integraciones transaccionales futuras | Prisma | Jobs/UI custom | Futuro | Idempotencia, retries y estados tecnicos. |
 | Workflows futuros | Prisma | UI custom futura | Futuro | Estados complejos, relaciones fuertes y transiciones. |
@@ -92,6 +93,7 @@ Ejemplos transaccionales:
 | `InventoryItem` | Inventario | Stock actual, SKU y constraints de unicidad. | El contenido descriptivo publico, si existe, va en Payload separado y derivado. |
 | `InventoryMovement` | Inventario | Movimientos, auditoría y cálculo de stock. | No editar movimientos como contenido CMS. |
 | `AuditEvent` | Auditoria | Eventos append-only, trazabilidad y consultas internas. | No exponer como collection editable. |
+| `ClinicalAttachment` | Historia clínica | Relaciones, idempotencia, checksum, cuarentena y acceso temporal. | El contenido vive en storage privado; Payload media no participa. |
 | `IntegrationJob` | Integraciones | Retries, errores, idempotency keys y estados tecnicos. | Payload no debe ser cola de jobs. |
 | `WorkflowInstance` | Workflows | Transiciones, estados complejos y relaciones operativas. | La UI futura debe operar sobre Prisma. |
 

@@ -46,7 +46,10 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "inventory_adjust",
     "reports_read",
     "audit_read",
-    "users_manage"
+    "users_manage",
+    "attachments_read",
+    "attachments_write",
+    "attachments_delete"
   ],
   direccion: [
     "internal_access",
@@ -60,7 +63,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "followups_read",
     "inventory_read",
     "reports_read",
-    "audit_read"
+    "audit_read",
+    "attachments_read"
   ],
   medico: [
     "internal_access",
@@ -73,6 +77,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "clinical_write",
     "nursing_read",
     "studies_read",
+    "attachments_read",
+    "attachments_write",
     "followups_read",
     "followups_write"
   ],
@@ -112,7 +118,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "nursing_read",
     "nursing_write",
     "studies_read",
-    "studies_write"
+    "studies_write",
+    "attachments_read",
+    "attachments_write"
   ],
   seguimiento: [
     "internal_access",

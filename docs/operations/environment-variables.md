@@ -45,6 +45,10 @@ Estas variables no deben exponerse al navegador.
 | `PAYLOAD_DB_SCHEMA` | Si | `payload` | Schema de Postgres usado por Payload. |
 | `BLOB_READ_WRITE_TOKEN` | Produccion; opcional en local | token generado por Vercel Blob | Store productivo o storage Blob opcional de desarrollo. Staging no lo utiliza. |
 | `STAGING_BLOB_READ_WRITE_TOKEN` | Solo staging | token generado con el prefijo `STAGING_BLOB` | Store exclusivo para media QA de staging. |
+| `CLINICAL_FILES_STORAGE_DRIVER` | Sí | `local` o `vercel-blob` | Storage de adjuntos clínicos; local/test usan disco privado y despliegues usan Blob privado. |
+| `CLINICAL_FILES_LOCAL_PATH` | Local y test | `.data/clinical-files` | Directorio ignorado por Git y fuera de `public/`. |
+| `CLINICAL_BLOB_READ_WRITE_TOKEN` | Solo producción | token de un Blob Store privado | Contenido clínico productivo; no reutilizar el token de Payload. |
+| `STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN` | Solo staging | token de un Blob Store privado QA | Contenido clínico de staging, separado de producción y de Payload. |
 | `ADMIN_EMAIL` | No | `admin@example.com` | Email para crear el primer admin con seed. |
 | `ADMIN_PASSWORD` | No | clave temporal de seed | Password para crear o resetear el primer admin con seed. |
 | `ADMIN_RESET_PASSWORD_ON_SEED` | No | `false` | Permite resetear el password de un admin existente durante seed cuando vale `true`. |
@@ -96,11 +100,15 @@ PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
 PAYLOAD_DB_SCHEMA="payload"
 STORAGE_ENVIRONMENT="local"
 BLOB_READ_WRITE_TOKEN=""
+CLINICAL_FILES_STORAGE_DRIVER="local"
+CLINICAL_FILES_LOCAL_PATH=".data/clinical-files"
 EXTERNAL_COMMUNICATIONS_MODE="blocked"
 CMS_READS_DURING_BUILD="false"
 ```
 
-6. Dejar `BLOB_READ_WRITE_TOKEN` vacio en local si se quiere usar storage local en `public/media`.
+6. Dejar `BLOB_READ_WRITE_TOKEN` vacío en local si se quiere usar storage
+   editorial en `public/media`. Los adjuntos clínicos siempre van a
+   `.data/clinical-files`, nunca a ese directorio público.
 7. Ejecutar seeds cuando corresponda:
 
 ```bash
@@ -163,6 +171,8 @@ DATABASE_URL="postgresql://STAGING_USER:STAGING_PASSWORD@STAGING_HOST/salud_inte
 PAYLOAD_DB_SCHEMA="payload_staging"
 STORAGE_ENVIRONMENT="staging"
 STAGING_BLOB_READ_WRITE_TOKEN="TOKEN_EXCLUSIVO_DE_STAGING"
+CLINICAL_FILES_STORAGE_DRIVER="vercel-blob"
+STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN="TOKEN_DE_STORE_CLINICO_PRIVADO_STAGING"
 EXTERNAL_COMMUNICATIONS_MODE="blocked"
 NEXT_PUBLIC_GA_ID=""
 NEXT_PUBLIC_META_PIXEL_ID=""
@@ -173,6 +183,8 @@ Recomendaciones:
 
 - Usar siempre una base separada; no es opcional.
 - Usar siempre un Blob Store y token separados.
+- Crear otro Blob Store privado para adjuntos clínicos; no reutilizar el store
+  público de Payload.
 - Aplicar variables Preview unicamente a la rama `staging`.
 - Ejecutar `pnpm staging:check`, `pnpm staging:seed` y `pnpm staging:verify`.
 - Seguir [staging aislado](./staging.md).
@@ -192,6 +204,8 @@ DATABASE_ENVIRONMENT="production"
 DATABASE_URL="postgresql://PROD_USER:PROD_PASSWORD@PROD_HOST/PROD_DB?sslmode=require"
 PAYLOAD_DB_SCHEMA="payload"
 STORAGE_ENVIRONMENT="production"
+CLINICAL_FILES_STORAGE_DRIVER="vercel-blob"
+CLINICAL_BLOB_READ_WRITE_TOKEN="TOKEN_DE_STORE_CLINICO_PRIVADO_PRODUCCION"
 EXTERNAL_COMMUNICATIONS_MODE="enabled"
 CMS_READS_DURING_BUILD="false"
 ```
@@ -237,7 +251,9 @@ Preview/Staging branch: staging
 4. Verificar `PAYLOAD_SECRET`; usar 32+ caracteres en produccion.
 5. Verificar `DATABASE_URL`, `PAYLOAD_DB_SCHEMA` y migraciones.
 6. Verificar `BLOB_READ_WRITE_TOKEN` en produccion y `STAGING_BLOB_READ_WRITE_TOKEN` en staging.
-7. Verificar `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CALL_PHONE`, email y Maps.
+7. Verificar el token del Blob Store clínico privado y confirmar que no
+   coincide con el store editorial.
+8. Verificar `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CALL_PHONE`, email y Maps.
 8. Verificar `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID` y `GOOGLE_SITE_VERIFICATION` si aplican.
 9. Ejecutar `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build`.
 10. Revisar logs de Vercel: Build Logs, Runtime Logs y Function Logs de `/api/leads` y Payload.

@@ -15,7 +15,9 @@ const safeStaging = {
   DATABASE_URL: "postgresql://staging:secret@db.example.net/sigeco_staging",
   PAYLOAD_DB_SCHEMA: "payload_staging",
   PAYLOAD_SECRET: "staging-payload-secret-32-characters-minimum",
-  STAGING_BLOB_READ_WRITE_TOKEN: "synthetic-token"
+  STAGING_BLOB_READ_WRITE_TOKEN: "synthetic-token",
+  CLINICAL_FILES_STORAGE_DRIVER: "vercel-blob",
+  STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN: "synthetic-private-clinical-token"
 };
 
 describe("staging command safety", () => {

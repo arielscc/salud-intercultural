@@ -129,6 +129,17 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   updateVisitStatusAction: "visits_update"
 };
 
+const clinicalAttachmentRoutePermissions: Record<string, InternalPermission> = {
+  "src/app/(internal)/sigeco/api/clinical-attachments/route.ts":
+    "attachments_write",
+  "src/app/(internal)/sigeco/api/clinical-attachments/[attachmentId]/route.ts":
+    "attachments_delete",
+  "src/app/(internal)/sigeco/api/clinical-attachments/[attachmentId]/grant/route.ts":
+    "attachments_read",
+  "src/app/(internal)/sigeco/api/clinical-attachments/[attachmentId]/content/route.ts":
+    "attachments_read"
+};
+
 function exportedActionSegments(file: string) {
   const contents = source(file);
   const starts = [...contents.matchAll(/export async function (\w+)\b/g)];
@@ -244,11 +255,12 @@ describe("SIGECO permission and privacy boundaries", () => {
 
   it("allows and denies every action permission according to the role matrix", () => {
     const roles = Object.keys(internalRolePermissions) as InternalRole[];
-    const permissions = new Set(
-      Object.values(actionPermissions).filter(
+    const permissions = new Set([
+      ...Object.values(actionPermissions).filter(
         (permission): permission is InternalPermission => Boolean(permission)
-      )
-    );
+      ),
+      ...Object.values(clinicalAttachmentRoutePermissions)
+    ]);
 
     for (const permission of permissions) {
       for (const role of roles) {
@@ -263,9 +275,32 @@ describe("SIGECO permission and privacy boundaries", () => {
     }
   });
 
+  it("enumerates clinical file routes and enforces their exact permission", () => {
+    const routeRoot = resolve(
+      process.cwd(),
+      "src/app/(internal)/sigeco/api/clinical-attachments"
+    );
+    const currentRoutes = applicationFiles(routeRoot)
+      .filter((file) => file.endsWith("/route.ts"))
+      .map((file) => file.replace(`${process.cwd()}/`, ""))
+      .sort();
+
+    expect(currentRoutes).toEqual(
+      Object.keys(clinicalAttachmentRoutePermissions).sort()
+    );
+
+    for (const [file, permission] of Object.entries(
+      clinicalAttachmentRoutePermissions
+    )) {
+      expect(source(file), `${file} must enforce ${permission}`).toContain(
+        `permission: "${permission}"`
+      );
+    }
+  });
+
   it("does not expose clinical queries to Payload, marketing or analytics", () => {
     const protectedQueryImport =
-      /@\/modules\/database\/queries\/(?:clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patients|reception|sales|studies|visits)/;
+      /@\/modules\/(?:clinical-attachments|database\/queries\/(?:clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patients|reception|sales|studies|visits))/;
     const publicRoots = [
       "src/payload",
       "src/features/analytics",
@@ -310,7 +345,7 @@ describe("SIGECO permission and privacy boundaries", () => {
 
     for (const file of routeFiles) {
       expect(readFileSync(file, "utf8"), `${file} needs a server guard`).toMatch(
-        /requirePermission\("[a-z_]+"\)/
+        /(?:requirePermission\("[a-z_]+"\)|requireClinicalAttachmentApiAccess)/
       );
     }
   });

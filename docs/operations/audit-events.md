@@ -77,15 +77,15 @@ La ruta `/sigeco/auditoria` requiere `audit_read`. Solo Dirección y super admin
 
 La implementación actual cubre acciones importantes de sesiones, pacientes,
 visitas, consulta, enfermería, estudios, Caja, ventas, pagos, seguimiento e
-inventario, usuarios y sesiones.
+inventario, usuarios, sesiones y adjuntos clínicos.
 
 No generan eventos la búsqueda de pacientes, la apertura de fichas, los
 listados, los filtros, la paginación ni la consulta del propio visor.
 
-Compras, adjuntos, reportes y exportaciones todavía no tienen flujos funcionales
-en esta versión de SIGECO. Cuando se implementen,
-deben auditar cambios, descargas o exportaciones sensibles y accesos denegados;
-no cada apertura de pantalla.
+Los adjuntos generan eventos al subir, leer, eliminar y denegar acceso. No
+generan eventos al mostrar la lista de metadata. Compras, reportes y
+exportaciones todavía no tienen flujos funcionales; cuando se implementen
+deben auditar cambios o entregas sensibles, no cada apertura de pantalla.
 
 ## Validación
 

@@ -32,12 +32,16 @@ PAYLOAD_SECRET="local-development-secret-change-me"
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
 PAYLOAD_DB_SCHEMA="payload"
 BLOB_READ_WRITE_TOKEN=""
+CLINICAL_FILES_STORAGE_DRIVER="local"
+CLINICAL_FILES_LOCAL_PATH=".data/clinical-files"
 CMS_READS_DURING_BUILD="false"
 NEXT_PUBLIC_GA_ID=""
 NEXT_PUBLIC_META_PIXEL_ID=""
 ```
 
-4. Dejar `BLOB_READ_WRITE_TOKEN` vacio en local si se quiere usar storage local en `public/media`.
+4. Dejar `BLOB_READ_WRITE_TOKEN` vacío en local si se quiere usar storage
+   editorial en `public/media`. Los adjuntos clínicos se guardan por separado
+   en `.data/clinical-files`, fuera de `public/`.
 
 Mas detalle: [variables de entorno](./environment-variables.md).
 
@@ -52,6 +56,7 @@ Rutas utiles:
 - Sitio publico: `http://localhost:3000`
 - Admin Payload: `http://localhost:3000/admin`
 - API leads: `http://localhost:3000/api/leads`
+- Adjuntos clínicos: dentro de la ficha del paciente, solo con un rol autorizado.
 
 ## Migraciones Y Seeds
 

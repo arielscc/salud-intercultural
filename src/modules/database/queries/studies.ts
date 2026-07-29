@@ -58,7 +58,16 @@ export async function getStudiesForPatient(patientId: string) {
       include: {
         recordedBy: true,
         requestedBy: true,
-        attachments: true
+        attachments: {
+          where: { status: "available" },
+          select: {
+            id: true,
+            label: true,
+            contentType: true,
+            sizeBytes: true,
+            createdAt: true
+          }
+        }
       },
       orderBy: [{ performedAt: "desc" }, { createdAt: "desc" }]
     });
@@ -72,7 +81,16 @@ export async function getStudiesForVisit(visitId: string) {
       include: {
         recordedBy: true,
         requestedBy: true,
-        attachments: true
+        attachments: {
+          where: { status: "available" },
+          select: {
+            id: true,
+            label: true,
+            contentType: true,
+            sizeBytes: true,
+            createdAt: true
+          }
+        }
       },
       orderBy: [{ performedAt: "desc" }, { createdAt: "desc" }]
     });

@@ -13,6 +13,7 @@ El proyecto esta preparado para operar con:
 - Base de datos: PostgreSQL, documentada para Neon o proveedor compatible
 - CMS: Payload dentro de Next.js
 - Media persistente: Vercel Blob con tokens distintos para produccion y staging
+- Adjuntos clínicos: Vercel Blob privado, separado de la media editorial
 - Analytics: GA4 con `NEXT_PUBLIC_GA_ID`
 - Meta Pixel: `NEXT_PUBLIC_META_PIXEL_ID`
 - Search Console: `GOOGLE_SITE_VERIFICATION`
@@ -81,6 +82,9 @@ Variables requeridas en Vercel:
 - `PAYLOAD_DB_SCHEMA`
 - `BLOB_READ_WRITE_TOKEN` para media productiva
 - `STAGING_BLOB_READ_WRITE_TOKEN` para media QA
+- `CLINICAL_FILES_STORAGE_DRIVER=vercel-blob`
+- `CLINICAL_BLOB_READ_WRITE_TOKEN` para adjuntos clínicos productivos
+- `STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN` para adjuntos clínicos QA
 
 Variables opcionales:
 

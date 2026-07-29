@@ -3,6 +3,7 @@ import {
   areExternalCommunicationsBlocked,
   assertEnvironmentIsolation,
   resolveBlobReadWriteToken,
+  resolveClinicalAttachmentStorage,
   resolveDeploymentEnvironment,
   resolvePayloadSecret
 } from "@/lib/deployment-environment";
@@ -19,6 +20,8 @@ const stagingEnvironment = {
   PAYLOAD_DB_SCHEMA: "payload_staging",
   PAYLOAD_SECRET: "staging-payload-secret-32-characters-minimum",
   STAGING_BLOB_READ_WRITE_TOKEN: "synthetic-staging-token",
+  CLINICAL_FILES_STORAGE_DRIVER: "vercel-blob",
+  STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN: "synthetic-private-clinical-token",
   NEXT_PUBLIC_GA_ID: "",
   NEXT_PUBLIC_META_PIXEL_ID: "",
   GOOGLE_SITE_VERIFICATION: ""
@@ -30,9 +33,26 @@ describe("deployment environment isolation", () => {
       environment: "staging",
       databaseEnvironment: "staging",
       storageEnvironment: "staging",
+      clinicalStorageDriver: "vercel-blob",
       externalCommunicationsMode: "blocked",
       analyticsEnabled: false,
       blobStorageConfigured: true
+    });
+  });
+
+  it("keeps clinical files local outside deployments and private in staging", () => {
+    expect(
+      resolveClinicalAttachmentStorage({
+        APP_ENV: "local",
+        CLINICAL_FILES_LOCAL_PATH: ".data/private-test"
+      })
+    ).toEqual({
+      driver: "local",
+      rootPath: ".data/private-test"
+    });
+    expect(resolveClinicalAttachmentStorage(stagingEnvironment)).toEqual({
+      driver: "vercel-blob",
+      token: "synthetic-private-clinical-token"
     });
   });
 
@@ -73,6 +93,18 @@ describe("deployment environment isolation", () => {
     ["production URL", { NEXT_PUBLIC_SITE_URL: "https://saludintercultural.com" }],
     ["shared Payload schema", { PAYLOAD_DB_SCHEMA: "payload" }],
     ["missing staging Blob token", { STAGING_BLOB_READ_WRITE_TOKEN: "" }],
+    [
+      "missing private clinical Blob token",
+      { STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN: "" }
+    ],
+    [
+      "shared editorial and clinical Blob token",
+      {
+        STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN:
+          stagingEnvironment.STAGING_BLOB_READ_WRITE_TOKEN
+      }
+    ],
+    ["local clinical storage", { CLINICAL_FILES_STORAGE_DRIVER: "local" }],
     ["missing Payload secret", { PAYLOAD_SECRET: "" }],
     ["short Payload secret", { PAYLOAD_SECRET: "too-short" }],
     ["placeholder Payload secret", { PAYLOAD_SECRET: "development-secret-that-is-long-enough" }],

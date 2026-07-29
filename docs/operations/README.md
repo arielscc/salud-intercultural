@@ -35,6 +35,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 20. [Auditoría append-only de SIGECO](./audit-events.md)
 21. [Usuarios, roles y sesiones de SIGECO](./internal-users-sessions.md)
 22. [Permisos, privacidad, logs y secretos de SIGECO](./permissions-privacy-secrets.md)
+23. [Adjuntos clínicos seguros](./clinical-attachments.md)
 
 ## Flujo recomendado
 

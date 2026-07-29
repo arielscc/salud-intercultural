@@ -8,10 +8,21 @@ export type EnvironmentIsolationSummary = {
   environment: DeploymentEnvironment;
   databaseEnvironment?: string;
   storageEnvironment?: string;
+  clinicalStorageDriver: "local" | "vercel-blob";
   externalCommunicationsMode: "blocked" | "enabled";
   analyticsEnabled: boolean;
   blobStorageConfigured: boolean;
 };
+
+export type ClinicalAttachmentStorageConfig =
+  | {
+      driver: "local";
+      rootPath: string;
+    }
+  | {
+      driver: "vercel-blob";
+      token: string;
+    };
 
 const productionHost = "saludintercultural.com";
 const stagingHost = "staging.saludintercultural.com";
@@ -30,6 +41,63 @@ export function resolveBlobReadWriteToken(
   return environment === "staging"
     ? clean(values.STAGING_BLOB_READ_WRITE_TOKEN)
     : clean(values.BLOB_READ_WRITE_TOKEN);
+}
+
+export function resolveClinicalAttachmentStorage(
+  values: EnvironmentVariables = process.env
+): ClinicalAttachmentStorageConfig {
+  const environment = resolveDeploymentEnvironment(values);
+  const configuredDriver = clean(values.CLINICAL_FILES_STORAGE_DRIVER);
+  const expectedDriver =
+    environment === "staging" || environment === "production"
+      ? "vercel-blob"
+      : "local";
+  const driver = configuredDriver ?? expectedDriver;
+
+  if (driver !== "local" && driver !== "vercel-blob") {
+    throw new Error(
+      'CLINICAL_FILES_STORAGE_DRIVER must be "local" or "vercel-blob".'
+    );
+  }
+
+  if (driver !== expectedDriver) {
+    throw new Error(
+      `Clinical files must use ${expectedDriver} storage in ${environment}.`
+    );
+  }
+
+  if (driver === "local") {
+    return {
+      driver,
+      rootPath: clean(values.CLINICAL_FILES_LOCAL_PATH) ?? ".data/clinical-files"
+    };
+  }
+
+  const token =
+    environment === "staging"
+      ? clean(values.STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN)
+      : clean(values.CLINICAL_BLOB_READ_WRITE_TOKEN);
+
+  if (!token) {
+    throw new Error(
+      environment === "staging"
+        ? "STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN is required for private clinical files."
+        : "CLINICAL_BLOB_READ_WRITE_TOKEN is required for private clinical files."
+    );
+  }
+
+  const editorialToken =
+    environment === "staging"
+      ? clean(values.STAGING_BLOB_READ_WRITE_TOKEN)
+      : clean(values.BLOB_READ_WRITE_TOKEN);
+
+  if (editorialToken && token === editorialToken) {
+    throw new Error(
+      "Clinical files must not reuse the Payload editorial Blob token."
+    );
+  }
+
+  return { driver, token };
 }
 
 function assertStrongPayloadSecret(values: EnvironmentVariables) {
@@ -203,6 +271,7 @@ function assertStagingIsolation(values: EnvironmentVariables) {
     );
   }
 
+  resolveClinicalAttachmentStorage(values);
   assertStrongPayloadSecret(values);
   assertNoAnalytics(values);
 }
@@ -235,6 +304,7 @@ function assertProductionIsolation(values: EnvironmentVariables) {
     throw new Error("Production PAYLOAD_DB_SCHEMA must not reference staging.");
   }
 
+  resolveClinicalAttachmentStorage(values);
   assertStrongPayloadSecret(values);
 }
 
@@ -293,10 +363,13 @@ export function assertEnvironmentIsolation(
   const communicationsMode =
     clean(values.EXTERNAL_COMMUNICATIONS_MODE) === "enabled" ? "enabled" : "blocked";
 
+  const clinicalStorage = resolveClinicalAttachmentStorage(values);
+
   return {
     environment,
     databaseEnvironment: clean(values.DATABASE_ENVIRONMENT),
     storageEnvironment: clean(values.STORAGE_ENVIRONMENT),
+    clinicalStorageDriver: clinicalStorage.driver,
     externalCommunicationsMode: communicationsMode,
     analyticsEnabled: Boolean(
       clean(values.NEXT_PUBLIC_GA_ID) || clean(values.NEXT_PUBLIC_META_PIXEL_ID)

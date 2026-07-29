@@ -25,6 +25,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-29 | [Tarea 3: auditoría append-only](./2026-07-29-tarea-3-auditoria-append-only.md) | Registra acciones críticas sin permitir edición o borrado. |
 | 2026-07-29 | [Tarea 4: usuarios, roles y sesiones](./2026-07-29-tarea-4-usuarios-roles-sesiones.md) | Administra cuentas, accesos y sesiones internas. |
 | 2026-07-29 | [Tarea 5: permisos, privacidad, logs y secretos](./2026-07-29-tarea-5-permisos-privacidad-logs-secretos.md) | Prueba límites por rol y evita fugas en URLs, logs, caché y configuración. |
+| 2026-07-29 | [Tarea 6: adjuntos clínicos seguros](./2026-07-29-tarea-6-adjuntos-clinicos-seguros.md) | Guarda documentos privados con validación, permisos temporales y auditoría. |
 
 ## Relacion Con Estado V3
 

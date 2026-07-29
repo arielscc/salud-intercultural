@@ -91,7 +91,16 @@ export async function getClinicalVisitById(visitId: string) {
           orderBy: [{ performedAt: "desc" }, { createdAt: "desc" }],
           include: {
             recordedBy: true,
-            attachments: true
+            attachments: {
+              where: { status: "available" },
+              select: {
+                id: true,
+                label: true,
+                contentType: true,
+                sizeBytes: true,
+                createdAt: true
+              }
+            }
           }
         },
         vitalSigns: {
