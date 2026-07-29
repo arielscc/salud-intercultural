@@ -23,6 +23,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 4. [Plan de simplificacion](./sigeco-simplificacion/tareas-de-simplificacion.md) y [progreso](./sigeco-simplificacion/progreso-de-simplificacion.md).
 5. [Prueba del flujo completo](../operations/sigeco-v3-full-flow-testing.md).
 6. [Reportes por tarea](./task-reports/).
+7. [Tasks de mejoras integrales](./sigeco-mejoras-integrales/tasks.md) y [progreso](./sigeco-mejoras-integrales/progress.md).
 
 ## Flujo Operativo Vigente
 
@@ -140,6 +141,8 @@ Baseline V3.7:
 
 ## Pendientes Posteriores
 
+Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de mejoras integrales](./sigeco-mejoras-integrales/tasks.md). Esta sección resume el baseline V3.7; no debe usarse como un backlog separado.
+
 ### Bloqueantes Para Uso Clinico Amplio
 
 1. Auditoria append-only de cambios clinicos, financieros, inventario, permisos y ruta.
@@ -166,9 +169,10 @@ Baseline V3.7:
 
 ## Siguiente Orden Recomendado
 
-1. Publicar o respaldar la rama `develop`.
-2. Resolver vulnerabilidades altas.
-3. Preparar staging separado y ejecutar migraciones con backup.
-4. Implementar CI y proteccion de ramas.
-5. Validar V3.7 con usuarios reales de la clinica.
-6. Abordar auditoria y storage clinico antes de uso operativo amplio.
+El orden anterior fue reemplazado por la numeración vigente:
+
+1. Tarea 1: CI y control de dependencias.
+2. Tarea 2: staging aislado.
+3. Tarea 3: auditoria append-only.
+4. Tareas 4-8: accesos, privacidad, adjuntos, recuperacion e incidentes.
+5. Continuar secuencialmente desde la Tarea 9 de [tasks.md](./sigeco-mejoras-integrales/tasks.md).

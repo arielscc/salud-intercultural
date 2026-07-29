@@ -1,6 +1,8 @@
 # Tareas De Mejoras Y Nuevas Funcionalidades De Sigeco
 
-Estado: backlog propuesto y priorizado el 2026-07-16. Ninguna tarea esta iniciada.
+Estado: antecedente técnico desde el 2026-07-28. Ninguna tarea se implementó desde este archivo.
+
+> **Fuente principal vigente:** las tareas de este documento fueron absorbidas, ampliadas o aplazadas en [tasks.md](../sigeco-mejoras-integrales/tasks.md). La tabla “Backlog técnico sigeco-mejoras-futuras” documenta el nuevo destino de cada tarea. El estado se actualiza únicamente en [progress.md](../sigeco-mejoras-integrales/progress.md).
 
 Docs relacionados:
 
@@ -23,7 +25,9 @@ Docs relacionados:
 8. Las decisiones clinicas, legales, contables o de retencion requieren aprobacion de la clinica antes de implementar.
 9. Docs y mensajes de commit en ASCII.
 
-## Orden Recomendado
+## Orden Técnico Histórico
+
+Este orden se conserva como antecedente. La secuencia vigente está en el progreso integral.
 
 1, 2, 3, 4 y 5 son prerequisitos para uso clinico amplio. Despues: 6, 7, 8, 9, 10, 11 y 12. Las tareas 13-16 requieren validacion operativa previa.
 
@@ -224,4 +228,3 @@ Docs relacionados:
 ## Gate De Cierre Por Fase
 
 Cada fase termina con lint, tipos, unitarias, integracion, migraciones desde cero, build, auditoria de permisos, QA web/movil, prueba de backup/restore cuando corresponda y actualizacion documental. No acumular todos los checks para el final de las 16 tareas.
-

@@ -1,10 +1,12 @@
 # Progreso De Mejoras Futuras De Sigeco
 
-Ultima actualizacion: 2026-07-16.
+Ultima actualizacion: 2026-07-28.
 
 ## Estado General
 
 Backlog investigado y priorizado. No se implemento codigo funcional en esta fase.
+
+Este archivo conserva el estado histórico y ya no controla la ejecución. La nueva numeración y la relación con este backlog están documentadas en [tasks.md](../sigeco-mejoras-integrales/tasks.md). Todo inicio o cierre nuevo se registra en [progress.md](../sigeco-mejoras-integrales/progress.md).
 
 | # | Tarea | Prioridad | Estado | Dependencia principal |
 | --- | --- | --- | --- | --- |
@@ -35,5 +37,4 @@ Backlog investigado y priorizado. No se implemento codigo funcional en esta fase
 
 ## Siguiente Paso Recomendado
 
-Ejecutar la Tarea 1 usando `docs/project/github-actions-implementation-plan.md` como base, pero iniciar con inventario actualizado de vulnerabilidades y un staging realmente aislado. Al cerrarla, actualizar esta tabla y registrar comandos, evidencia, decisiones y commit sugerido.
-
+No iniciar una tarea desde este archivo. Consultar su destino en `tasks.md` y actualizar únicamente `progress.md`. El primer paso vigente es la Tarea 1 de CI y control de dependencias.

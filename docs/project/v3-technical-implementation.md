@@ -187,11 +187,10 @@ Detener `next dev` antes de `next build`; ambos comparten `.next`. Las migracion
 
 ## Trabajo Posterior
 
-- Auditoria append-only transversal.
+- CI, dependencias y staging aislado.
+- Auditoria, usuarios, permisos y sesiones.
 - Storage seguro para adjuntos clinicos.
-- Realtime o polling formal.
-- Backup/restauracion y respuesta a incidentes.
-- GitHub Actions y proteccion de ramas.
-- Resolucion de vulnerabilidades altas.
+- Backup, restauracion y respuesta a incidentes.
+- Flujo operativo, Caja, compras, inventario, reportes y multi-sucursal.
 
-El detalle priorizado vive en [Estado de implementacion V3](./v3-implementation-status.md).
+El orden técnico y funcional vigente vive en [Tasks de mejoras integrales](./sigeco-mejoras-integrales/tasks.md). Su estado se controla únicamente en [Progress](./sigeco-mejoras-integrales/progress.md).
