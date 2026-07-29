@@ -8,30 +8,33 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6 y 7 están en progreso. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6 y 7 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
-PostgreSQL y adjuntos están demostrados en bases locales aisladas. Las doce
-migraciones anteriores están en staging y las quince migraciones actuales
-están aplicadas en desarrollo. Falta validar las tres nuevas mediante CI y
-staging, completar QA autenticado y cerrar los pendientes remotos.
+PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
+de incidentes y el gate técnico local también están aprobados, sin autorizar
+producción. Las doce migraciones anteriores están en staging y las quince
+migraciones actuales están aplicadas en desarrollo. Falta validar las tres
+nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
+remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
+funcionamiento del gate de la Tarea 8.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 22 |
+| Pendiente | 21 |
 | En progreso | 7 |
 | Bloqueada | 0 |
-| Terminada | 0 |
+| Terminada | 1 |
 | Descartada | 0 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Gate |
 | --- | --- | --- | --- |
-| 1. Base segura | 1-8 | En progreso | Dirección aprueba seguridad e incidentes |
+| 1. Base segura | 1-8 | En progreso | Tarea 8 aprobada; producción conserva bloqueos remotos |
 | 2. Datos y flujo | 9-17 | Pendiente | Recorrido clínico íntegro y auditable |
 | 3. Caja e inventario | 18-21 | Pendiente | Caja, compra y stock reconcilian |
 | 4. Medición y continuidad | 22-27 | Pendiente | Indicadores reconciliados y móvil validado |
@@ -48,7 +51,7 @@ staging, completar QA autenticado y cerrar los pendientes remotos.
 | 5 | Permisos, privacidad, logs y secretos | P0 | En progreso | 3-4 |
 | 6 | Adjuntos clínicos seguros | P0 | En progreso | 2-5 |
 | 7 | Backup y restauración | P0 | En progreso | 2, 6 |
-| 8 | Incidentes y gate de seguridad | P0 | Pendiente | 1-7 |
+| 8 | Incidentes y gate de seguridad | P0 | Terminada | 1-7 |
 | 9 | Consentimientos | P0 | Pendiente | 3-5, textos aprobados |
 | 10 | Procedencia geográfica | P1 | Pendiente | 8 |
 | 11 | Fuentes de captación | P1 | Pendiente | 9-10 |
@@ -73,7 +76,7 @@ staging, completar QA autenticado y cerrar los pendientes remotos.
 
 ## Próximo Trabajo
 
-Las tareas activas son:
+Estado de las tareas de la base segura:
 
 - **Tarea 1 — CI y control de dependencias:** pendiente de ejecución remota y protecciones.
 - **Tarea 2 — Staging completamente aislado:** pendiente de seed, deployment y validación de cuentas.
@@ -87,6 +90,9 @@ Las tareas activas son:
 - **Tarea 7 — Backup y restauración comprobada:** copia cifrada y restauración
   completa demostradas localmente; pendiente de aprobar y activar la estrategia
   remota de producción.
+- **Tarea 8 — Respuesta a incidentes y gate de seguridad:** terminada; runbook,
+  simulacro, gate técnico y aprobación de Dirección documentados. Producción
+  sigue bloqueada por cinco evidencias remotas o humanas.
 
 Para terminar la Tarea 1:
 
@@ -612,7 +618,6 @@ Blob clínico privado y las credenciales separadas aprobadas.
   `git diff --check` y `pnpm run build`: aprobados.
 - `pnpm deps:check`: sin vulnerabilidades altas o críticas; permanecen 4 bajas
   y 14 moderadas.
-
 #### Pendientes Para Cerrar
 
 - Aprobar RPO, RTO, retención y responsables con Dirección.
@@ -625,6 +630,80 @@ Blob clínico privado y las credenciales separadas aprobadas.
 - Observar la primera ejecución mensual del nuevo workflow.
 
 **Commit sugerido:** `docs(ops): prove sigeco backup and restore`
+
+### 2026-07-29 — Tarea 8 — Respuesta A Incidentes Y Gate De Seguridad
+
+**Estado anterior:** En progreso.
+
+**Estado nuevo:** Terminada.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Creado un runbook para acceso indebido, teléfono perdido, pérdida de datos,
+  malware, indisponibilidad y secreto expuesto.
+- Definidas severidades, responsables, evidencia mínima, comunicación,
+  contención, recuperación y revisión posterior.
+- Implementado un simulacro local con dos sesiones sintéticas, revocación,
+  cambio obligatorio de contraseña y auditoría append-only.
+- El mismo ejercicio ejecuta el backup y la restauración cifrada de la Tarea 7.
+- Implementado un gate local que exige evidencia menor a 90 días, artefactos de
+  las Tareas 1–8, pruebas de seguridad y dependencias sin altas o críticas.
+- El gate local nunca aprueba producción; conserva cinco bloqueos remotos o
+  humanos visibles.
+- La auditoría CSO local no confirmó hallazgos críticos ni altos.
+- Dirección aprobó expresamente el runbook y el gate de la Tarea 8 sin
+  autorizar producción.
+
+#### Archivos Y Documentación
+
+- Scripts y pruebas en `scripts/security/`.
+- Comandos `security:incident:drill:local` y `security:gate:local`.
+- Guía [incident-response.md](../../operations/incident-response.md).
+- Reporte
+  [2026-07-29-tarea-8-respuesta-incidentes-gate-seguridad.md](../task-reports/2026-07-29-tarea-8-respuesta-incidentes-gate-seguridad.md).
+- Aprobación estructurada
+  [task-8-approval.json](../security-gate/task-8-approval.json).
+- No requiere una migración nueva.
+
+#### Validación Ejecutada
+
+- Simulacro `ms6hi8bf_ad569853` aprobado únicamente en PostgreSQL local.
+- Dos sesiones revocadas, cero restantes y cambio de contraseña exigido.
+- Contención: 19 ms; auditoría append-only protegida.
+- Restauradas 15 migraciones y un adjunto; recuperación: 2.576 ms.
+- Duración completa del simulacro: 14.333 ms.
+- No quedaron bases temporales; evidencia con permisos `0700/0600`.
+- Gate local aprobado con `criticalOrHighFindings=0`,
+  `taskImplementationApproval=true`, `productionApproval=false` y cinco
+  bloqueos remotos.
+- Pruebas focalizadas: 4 archivos y 40 pruebas aprobadas.
+- Suite completa: 42 archivos y 203 pruebas aprobadas.
+- `pnpm lint`, `pnpm typecheck`, `pnpm env:check`, `prisma validate`,
+  `git diff --check` y `pnpm run build`: aprobados.
+- `pnpm deps:check`: sin vulnerabilidades altas o críticas; permanecen 4 bajas
+  y 14 moderadas.
+- `pnpm test:integration` no es un criterio de cierre de esta tarea y requiere
+  consentimiento textual específico porque reinicia la base exclusiva
+  `salud_intercultural_test`. La protección no se omitió y no se reinició
+  ninguna base.
+
+#### Bloqueos Que Permanecen Para Producción
+
+- Confirmar los cinco checks remotos y branch protection.
+- Cerrar QA de siete roles, headers y secretos en staging.
+- Probar Blob clínico privado, auditoría y revocación remotamente.
+- Restaurar y firmar una copia real fuera de producción.
+- Completar propietarios y fechas de rotación.
+- Ejecutar la integración cuando exista el consentimiento textual nuevo que
+  Prisma exige para reiniciar `salud_intercultural_test`.
+
+Estos puntos no reabren la Tarea 8. El gate los conserva visibles y bloquea
+producción hasta que las tareas responsables aporten evidencia y Dirección
+emita una autorización posterior.
+
+**Commit sugerido:** `docs(ops): complete sigeco security readiness`
 
 ## Cómo Actualizar El Progreso
 

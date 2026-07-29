@@ -41,6 +41,8 @@
     "backup:create:local": "node --import tsx scripts/backup/create-local-backup.ts",
     "backup:restore:local": "node --import tsx scripts/backup/restore-local-backup.ts",
     "backup:drill:local": "node --import tsx scripts/backup/drill-local-backup.ts",
+    "security:incident:drill:local": "node --import tsx scripts/security/incident-drill-local.ts",
+    "security:gate:local": "node --import tsx scripts/security/security-gate.ts",
     "payload:generate-types": "payload generate:types",
     "internal:seed": "node --import dotenv/config --import tsx scripts/seed-internal-user.ts",
     "internal:set-role": "node --import dotenv/config --import tsx scripts/set-internal-user-role.ts"

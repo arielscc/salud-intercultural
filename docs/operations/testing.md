@@ -13,6 +13,8 @@ El proyecto separa la suite rapida de los tests que usan PostgreSQL real.
 | Watch local | `pnpm test:watch` | No | Desarrollo iterativo. |
 | Integracion DB | `pnpm test:integration` | Si | Flujos criticos contra `salud_intercultural_test`. |
 | Simulacro de recuperación | `pnpm backup:drill:local` | Sí, dos bases sintéticas | Prueba backup cifrado, restauración, dominios y adjuntos sin tocar desarrollo. |
+| Simulacro de incidente | `pnpm security:incident:drill:local` | Sí, bases sintéticas | Prueba revocación, auditoría append-only y recuperación cifrada. |
+| Gate técnico local | `pnpm security:gate:local` | Lee evidencia local | Verifica controles técnicos sin aprobar producción. |
 | Dependencias | `pnpm deps:check` | No | Peers y vulnerabilidades altas/criticas. |
 
 `pnpm test` excluye archivos `*.integration.test.ts` y `*.integration.test.tsx`.

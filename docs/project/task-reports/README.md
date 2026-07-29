@@ -27,6 +27,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-29 | [Tarea 5: permisos, privacidad, logs y secretos](./2026-07-29-tarea-5-permisos-privacidad-logs-secretos.md) | Prueba límites por rol y evita fugas en URLs, logs, caché y configuración. |
 | 2026-07-29 | [Tarea 6: adjuntos clínicos seguros](./2026-07-29-tarea-6-adjuntos-clinicos-seguros.md) | Guarda documentos privados con validación, permisos temporales y auditoría. |
 | 2026-07-29 | [Tarea 7: backup y restauración comprobada](./2026-07-29-tarea-7-backup-restauracion-comprobada.md) | Cifra y restaura conjuntamente PostgreSQL y adjuntos en un entorno local aislado. |
+| 2026-07-29 | [Tarea 8: respuesta a incidentes y gate de seguridad](./2026-07-29-tarea-8-respuesta-incidentes-gate-seguridad.md) | Prueba contención, auditoría y recuperación sin confundir el pase local con la aprobación productiva. |
 
 ## Relacion Con Estado V3
 

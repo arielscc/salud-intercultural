@@ -158,6 +158,9 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
    procedimiento cifrado ya está probado localmente con base y adjuntos.
 3. Cierre remoto de la auditoría de privacidad y permisos con casos negativos.
 4. Verificación del Blob Store clínico privado en staging.
+5. Cierre de las evidencias remotas que el gate de seguridad mantiene
+   bloqueadas. Dirección ya aprobó el runbook y el funcionamiento del gate; esa
+   decisión no autoriza producción.
 
 ### Operacion
 

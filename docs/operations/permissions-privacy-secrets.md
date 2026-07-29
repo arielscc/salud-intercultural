@@ -162,3 +162,6 @@ exposición.
 Las credenciales de backup, cifrado, almacenamiento de copias y restauración
 deben tener alcances separados. El procedimiento completo está en
 [Backup y restauración de SIGECO](./backup-restore.md).
+
+La revocación y rotación durante un incidente se ejecutan en el orden definido
+en [Respuesta a incidentes y gate de seguridad](./incident-response.md).

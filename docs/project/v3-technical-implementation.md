@@ -221,6 +221,10 @@ Detener `next dev` antes de `next build`; ambos comparten `.next`. Las migracion
 - Activación remota del backup coordinado y respuesta a incidentes. El
   simulacro local cifrado de base y adjuntos está documentado en
   [Backup y restauración de SIGECO](../operations/backup-restore.md).
+- El runbook y la separación entre gate local y aprobación productiva están en
+  [Respuesta a incidentes](../operations/incident-response.md). Dirección ya
+  aprobó la implementación de la Tarea 8; la autorización de producción sigue
+  separada y bloqueada.
 - Flujo operativo, Caja, compras, inventario, reportes y multi-sucursal.
 
 El orden técnico y funcional vigente vive en [Tasks de mejoras integrales](./sigeco-mejoras-integrales/tasks.md). Su estado se controla únicamente en [Progress](./sigeco-mejoras-integrales/progress.md).

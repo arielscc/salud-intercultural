@@ -79,3 +79,6 @@ Abrir la lista de usuarios o `Mi cuenta` no genera auditoría.
 4. Desactivar la cuenta el mismo día que una persona deja de trabajar.
 5. Revocar sesiones ante pérdida de teléfono o actividad desconocida.
 6. Revisar periódicamente cuentas inactivas y roles asignados.
+
+Ante un teléfono perdido, acceso sospechoso o cuenta comprometida, seguir
+[Respuesta a incidentes y gate de seguridad](./incident-response.md).

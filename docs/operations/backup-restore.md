@@ -245,3 +245,7 @@ Antes de activar el proceso remoto:
 
 Hasta completar esos pasos, la Tarea 7 queda validada localmente pero no cerrada
 para producción.
+
+Si la recuperación ocurre por un acceso indebido, malware o pérdida real,
+seguir primero el orden de contención y conservación de evidencia de
+[Respuesta a incidentes y gate de seguridad](./incident-response.md).

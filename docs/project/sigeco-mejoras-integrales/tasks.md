@@ -282,7 +282,9 @@ Se debe ampliar esta base. No se reconstruyen ventas o inventario desde cero.
 
 - El simulacro registra tiempos, responsables y mejoras.
 - No quedan hallazgos críticos abiertos.
-- Dirección aprueba el gate.
+- Dirección aprueba el runbook y el funcionamiento del gate. Esta aprobación
+  termina la tarea, pero no autoriza producción mientras existan bloqueos
+  remotos.
 - [progress.md](./progress.md) contiene la evidencia.
 
 **Commit sugerido:** `docs(ops): complete sigeco security readiness`
