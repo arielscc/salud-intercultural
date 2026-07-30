@@ -35,6 +35,9 @@ Leyenda: `L` lectura, `E` escritura, `F` finalización, `C` corrección,
 | Adjuntos clínicos | L/E/A | L | L/E | — | — | L/E | — |
 | Consentimientos | L/E | L | L | L/E | L | L | L |
 | Abandono y pendientes | L/E | L | L/E | L/E | L/E | L/E | — |
+| Recetas versionadas | L/E/C | L | L/E/C | — | — | — | — |
+| Comprobantes internos | L/E | L | — | — | L/E | — | — |
+| Configuración profesional | E | E | — | — | — | — | — |
 
 En Seguimientos, `L/E` no significa que todos puedan trabajar todas las tareas.
 Médico atiende la relación clínica y las llamadas médicas; Recepción/Marlen
@@ -76,8 +79,10 @@ SIGECO entrega adjuntos mediante concesiones de dos minutos y un solo uso
 enviadas por `POST`, nunca mediante una URL pública. La collection `media` de
 Payload sigue siendo exclusivamente editorial y pública.
 
-Las exportaciones clínicas todavía no existen. Cualquier ruta futura de
-descarga, adjunto o exportación debe declarar un permiso de servidor.
+Las recetas y comprobantes PDF se generan desde snapshots inmutables. Exigen
+sesión y permiso según el tipo, usan `private, no-store` y auditan descarga y
+reimpresión. Cualquier ruta futura de descarga, adjunto o exportación también
+debe declarar un permiso de servidor.
 
 ## Datos Permitidos En URLs
 

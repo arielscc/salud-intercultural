@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-20 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-21 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las veintiocho migraciones actuales están
-aplicadas en desarrollo. Falta validar las dieciséis
+anteriores están en staging y las veintinueve migraciones actuales están
+aplicadas en desarrollo. Falta validar las diecisiete
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -27,13 +27,15 @@ El catálogo y los proveedores ya se administran desde SIGECO con versiones,
 costos separados, asociaciones múltiples y permisos por rol.
 Compras, pagos a proveedores, recepciones parciales, lotes, vencimientos y
 movimientos de stock ya son trazables en desarrollo local.
+Las recetas y comprobantes internos ya se emiten desde sus fuentes vigentes,
+con versiones inmutables, PDF privado e identidad profesional confirmable.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 9 |
-| En progreso | 19 |
+| Pendiente | 8 |
+| En progreso | 20 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -72,7 +74,7 @@ movimientos de stock ya son trazables en desarrollo local.
 | 18 | Caja, dinero al personal, gastos y cierre | P0 | En progreso | 3-5, 8 |
 | 19 | Catálogo y proveedores | P0 | En progreso | 3-5, 18 |
 | 20 | Compras, recepciones, lotes y stock | P0 | En progreso | 18-19 |
-| 21 | Recetas y comprobantes | P1 | Pendiente | 17-20 |
+| 21 | Recetas y comprobantes | P1 | En progreso | 17-20 |
 | 22 | Reporte del recorrido completo | P1 | Pendiente | 9-21 |
 | 23 | Tiempo por área | P1 | Pendiente | 13, 16, 22 |
 | 24 | Recordatorios supervisados | P1 | Pendiente | 9, 15 |
@@ -165,6 +167,12 @@ Estado de las tareas de la base segura:
   desarrollo local. Crédito no reduce Caja hasta pagar, una compra urgente no
   duplica el egreso y FEFO excluye lotes vencidos. Pendiente integración
   acumulada, QA web/móvil, datos reales y validación por roles en staging.
+- **Tarea 21 — Recetas y comprobantes versionados:** snapshot inmutable,
+  huella de fuente, versión, identidad profesional, PDF privado y auditoría de
+  generación, descarga y reimpresión implementados en desarrollo local. La
+  receta queda preparada para firma y sello; el comprobante se identifica como
+  interno y no fiscal. Pendiente integración acumulada, QA web/móvil, revisión
+  clínica/fiscal y validación por roles en staging.
 
 Para terminar la Tarea 1:
 
@@ -1034,6 +1042,58 @@ Responsables: Administración; Dirección autoriza ajustes y revisa.
 - No aplicar la migración en producción sin aviso y autorización expresa.
 
 **Commit sugerido:** `feat(sigeco): add purchases batches and stock receipts`
+
+## 2026-07-30 — Tarea 21 — Recetas Y Comprobantes Versionados
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Médico emite y corrige recetas; Administración emite
+comprobantes; Dirección confirma identidad y requisitos.
+
+### Resultado
+
+- Receta generada solo desde una consulta finalizada y la receta clínica
+  vigente.
+- Corrección con motivo, nueva `Prescription` y nueva versión documental.
+- Comprobante generado desde productos, descuento, total, pagos, devoluciones
+  y saldo reconciliados.
+- Una fuente sin cambios reutiliza la misma versión.
+- Snapshot JSON, huella SHA-256, número y cadena de versiones append-only.
+- Perfil profesional obligatorio con título, especialidad y dos registros.
+- PDF autenticado con vista previa, descarga y reimpresión controlada.
+- Comprobante rotulado “No es factura fiscal” y receta preparada para firma y
+  sello.
+
+### Archivos Y Migraciones
+
+- Modelo, permiso, schemas, actions, servicio de generación y PDF.
+- Pantallas de configuración, emisión, corrección e historial.
+- Migración local
+  `20260730201257_versioned_prescriptions_receipts`.
+- Guía operativa y reporte de cambios.
+
+### Validación
+
+- Prisma validate, migración local, Prisma generate y TypeScript aprobados; 29
+  migraciones locales al día.
+- Seguridad y pruebas enfocadas: 4 archivos, 14 pruebas aprobadas.
+- Integración de idempotencia, versiones e inmutabilidad agregada, reservada
+  para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar lint global, integración, build y QA gstack al cierre acumulado.
+- Probar PDF e impresión en teléfonos reales.
+- Confirmar datos profesionales y tipos de receta con Dirección y asesoría
+  clínica.
+- Confirmar el alcance no fiscal con asesoría contable.
+- Validar roles y flujo en staging.
+- No aplicar migración ni configuración en producción sin aviso y autorización
+  expresa.
+
+**Commit sugerido:** `feat(sigeco): generate versioned documents`
 
 ## Cómo Actualizar El Progreso
 

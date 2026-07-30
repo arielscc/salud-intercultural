@@ -344,6 +344,24 @@ storage privado, autorización server-side y `no-store`. Payload no participa.
 La operación completa vive en
 [Compras, recepciones, lotes y stock](../operations/purchases-receipts-batches-stock.md).
 
+### Recetas Y Comprobantes Versionados
+
+`Prescription` conserva versión y referencia a la receta anterior.
+`ClinicalProfessionalProfile` separa la identidad profesional confirmada de la
+cuenta de acceso. `GeneratedDocument` guarda una fotografía JSON inmutable,
+huella SHA-256 de la fuente, número, versión y relación con receta o venta.
+
+La huella hace idempotente la emisión: la misma fuente devuelve la versión ya
+existente; un cambio clínico o financiero crea la siguiente. Un trigger impide
+`UPDATE` y `DELETE`. El PDF se construye desde la fotografía, nunca desde datos
+que pudieron cambiar después.
+
+El endpoint PDF determina el permiso por tipo, exige sesión, usa `no-store` y
+audita descarga o reimpresión. Payload y el sitio público no acceden al módulo.
+
+La operación y el gate productivo viven en
+[Recetas y comprobantes versionados](../operations/versioned-prescriptions-receipts.md).
+
 ### Consentimientos
 
 `PatientConsent` registra eventos independientes para seguimiento,

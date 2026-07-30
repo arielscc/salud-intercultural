@@ -72,7 +72,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_duplicates_review",
     "patient_duplicates_merge",
     "visit_discontinuations_read",
-    "visit_discontinuations_write"
+    "visit_discontinuations_write",
+    "documents_configure"
   ],
   direccion: [
     "internal_access",
@@ -97,7 +98,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_consents_read",
     "attribution_manage",
     "patient_duplicates_read",
-    "visit_discontinuations_read"
+    "visit_discontinuations_read",
+    "documents_configure"
   ],
   medico: [
     "internal_access",

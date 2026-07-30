@@ -24,6 +24,10 @@ import {
   finalizeClinicalConsultationAction,
   saveClinicalConsultationAction
 } from "@/features/clinical-care/actions";
+import {
+  correctPrescriptionAction,
+  generatePrescriptionDocumentAction
+} from "@/features/generated-documents/actions";
 import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { clinicalRecordStatusLabels } from "@/features/clinical-records/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
@@ -38,6 +42,7 @@ import { formatMoney } from "@/features/sales/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { formatDateTime } from "@/lib/dates";
 import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
+import { getPrescriptionDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
 
 const orderTypeOptions = (Object.entries(clinicalOrderTypeLabels) as Array<
@@ -85,7 +90,14 @@ function pageErrorMessage(error: string) {
     "resultado-invalido":
       "Revisa el resultado, el motivo y la instrucción para Administración.",
     "resultado-cerrado":
-      "La propuesta aceptada ya fue confirmada y no puede enviarse nuevamente."
+      "La propuesta aceptada ya fue confirmada y no puede enviarse nuevamente.",
+    "receta-invalida": "No existe una receta vigente para emitir.",
+    "perfil-profesional-requerido":
+      "Dirección debe confirmar los registros profesionales antes de emitir la receta.",
+    "correccion-receta-invalida":
+      "Revisa el motivo y todos los datos de la receta corregida.",
+    "correccion-receta-sin-cambios":
+      "La receta no cambió; se conservó la versión vigente."
   };
   return (
     messages[error] ??
@@ -99,7 +111,10 @@ export default async function ConsultationDetailPage({
 }: ConsultationDetailPageProps) {
   const user = await requirePermission("clinical_read");
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
-  const visit = await getClinicalVisitById(visitId);
+  const [visit, prescriptionDocuments] = await Promise.all([
+    getClinicalVisitById(visitId),
+    getPrescriptionDocuments(visitId)
+  ]);
 
   if (!visit) notFound();
 
@@ -497,6 +512,115 @@ export default async function ConsultationDetailPage({
             </p>
           )}
         </Card>
+
+        {visit.clinicalConsultation?.status === "finalized" &&
+        prescriptionItem ? (
+          <div id="documentos-receta" className="max-sm:order-4">
+            <Card>
+              <CardHeader
+                title="Receta para entregar"
+                description="Se genera desde la receta clínica vigente; no permite escribir datos distintos en el documento."
+              />
+              {canWriteClinical ? (
+                <form action={generatePrescriptionDocumentAction}>
+                  <input type="hidden" name="visitId" value={visit.id} />
+                  <SubmitButton className="w-full sm:w-auto">
+                    {prescriptionDocuments.length > 0
+                      ? "Comprobar y emitir versión vigente"
+                      : "Emitir primera versión"}
+                  </SubmitButton>
+                </form>
+              ) : null}
+
+              <div className="mt-4 grid gap-2">
+                {prescriptionDocuments.map((document) => (
+                  <Link
+                    key={document.id}
+                    className="focus-ring flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-[9px] border border-border px-3 py-2 text-sm hover:border-primary/40"
+                    href={`/sigeco/consultas/${visit.id}/recetas/${document.id}`}
+                  >
+                    <span className="font-semibold text-text">
+                      Versión {document.version}
+                    </span>
+                    <span className="tabular-nums text-muted">
+                      {document.documentNumber} ·{" "}
+                      {formatDateTime(document.generatedAt)}
+                    </span>
+                  </Link>
+                ))}
+                {prescriptionDocuments.length === 0 ? (
+                  <p className="text-sm text-muted">
+                    Todavía no se emitió una versión para imprimir o descargar.
+                  </p>
+                ) : null}
+              </div>
+
+              {canCorrectClinical && prescriptionDocuments.length > 0 ? (
+                <CollapsibleSection
+                  title="Corregir receta emitida"
+                  description="Crea una nueva receta clínica y una nueva versión del documento. La anterior queda intacta."
+                  className="mt-4"
+                >
+                  <form
+                    id="corregir-receta"
+                    action={correctPrescriptionAction}
+                    className="grid gap-3"
+                  >
+                    <input type="hidden" name="visitId" value={visit.id} />
+                    <Field label="Motivo de la corrección">
+                      <textarea
+                        className={`${internalInputClassName} min-h-20 py-3`}
+                        name="reason"
+                        required
+                      />
+                    </Field>
+                    <Field label="Medicamento o tratamiento">
+                      <input
+                        className={internalInputClassName}
+                        name="medication"
+                        defaultValue={prescriptionItem.medication}
+                        required
+                      />
+                    </Field>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <Field label="Dosis">
+                        <input
+                          className={internalInputClassName}
+                          name="dose"
+                          defaultValue={prescriptionItem.dose ?? ""}
+                        />
+                      </Field>
+                      <Field label="Frecuencia">
+                        <input
+                          className={internalInputClassName}
+                          name="frequency"
+                          defaultValue={prescriptionItem.frequency ?? ""}
+                        />
+                      </Field>
+                      <Field label="Duración">
+                        <input
+                          className={internalInputClassName}
+                          name="duration"
+                          defaultValue={prescriptionItem.duration ?? ""}
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Observaciones">
+                      <textarea
+                        className={`${internalInputClassName} min-h-20 py-3`}
+                        name="observations"
+                        defaultValue={prescriptionItem.observations ?? ""}
+                      />
+                    </Field>
+                    <SubmitButton className="w-full sm:w-auto">
+                      Guardar corrección y emitir nueva versión
+                    </SubmitButton>
+                  </form>
+                </CollapsibleSection>
+              ) : null}
+            </Card>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">

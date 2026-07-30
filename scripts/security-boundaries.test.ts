@@ -42,6 +42,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/administracion/ventas/[saleId]/page.tsx": [
     "sales_read"
   ],
+  "src/app/(internal)/sigeco/(app)/administracion/ventas/[saleId]/comprobantes/[documentId]/page.tsx": [
+    "sales_read"
+  ],
   "src/app/(internal)/sigeco/(app)/auditoria/page.tsx": ["audit_read"],
   "src/app/(internal)/sigeco/(app)/atribucion/page.tsx": ["reports_read"],
   "src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx": [
@@ -50,7 +53,13 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/consultas/[visitId]/historial/page.tsx": [
     "clinical_read"
   ],
+  "src/app/(internal)/sigeco/(app)/consultas/[visitId]/recetas/[documentId]/page.tsx": [
+    "clinical_read"
+  ],
   "src/app/(internal)/sigeco/(app)/consultas/page.tsx": ["clinical_read"],
+  "src/app/(internal)/sigeco/(app)/documentos/configuracion/page.tsx": [
+    "documents_configure"
+  ],
   "src/app/(internal)/sigeco/(app)/compras/page.tsx": ["purchases_read"],
   "src/app/(internal)/sigeco/(app)/compras/nueva/page.tsx": [
     "purchases_write"
@@ -143,7 +152,9 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   applyVisitFlowAction: "visits_update",
   approveCashSessionCloseAction: "cash_sessions_approve",
   changeOwnInternalPasswordAction: "internal_access",
+  configureProfessionalProfileAction: "documents_configure",
   correctClinicalConsultationAction: "clinical_correct",
+  correctPrescriptionAction: "clinical_correct",
   createClinicalOrderAction: "clinical_write",
   createCaptureCampaignAction: "attribution_manage",
   createCaptureSourceAction: "attribution_manage",
@@ -165,6 +176,8 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createPurchaseReceiptAction: "purchase_receipts_write",
   dismissPatientDuplicateAction: "patient_duplicates_review",
   finalizeClinicalConsultationAction: "clinical_finalize",
+  generateInternalReceiptDocumentAction: "sales_write",
+  generatePrescriptionDocumentAction: "clinical_write",
   confirmPurchaseAction: "purchases_write",
   createPaymentAction: "payments_write",
   createReceptionPaidStudyOrderAction: "visits_update",
@@ -228,6 +241,14 @@ const cashReceiptRoutePermissions: Record<string, InternalPermission> = {
 const purchaseDocumentRoutePermissions: Record<string, InternalPermission> = {
   "src/app/(internal)/sigeco/api/purchase-documents/[documentId]/route.ts":
     "purchases_read"
+};
+
+const generatedDocumentRoutePermissions: Record<
+  string,
+  InternalPermission[]
+> = {
+  "src/app/(internal)/sigeco/api/generated-documents/[documentId]/pdf/route.ts":
+    ["clinical_read", "sales_read"]
 };
 
 function exportedActionSegments(file: string) {
@@ -367,7 +388,8 @@ describe("SIGECO permission and privacy boundaries", () => {
       ),
       ...Object.values(clinicalAttachmentRoutePermissions),
       ...Object.values(cashReceiptRoutePermissions),
-      ...Object.values(purchaseDocumentRoutePermissions)
+      ...Object.values(purchaseDocumentRoutePermissions),
+      ...Object.values(generatedDocumentRoutePermissions).flat()
     ]);
 
     for (const permission of permissions) {
@@ -426,11 +448,26 @@ describe("SIGECO permission and privacy boundaries", () => {
         `roleHasPermission(user.role, "${permission}")`
       );
     }
+
+    for (const [file, permissions] of Object.entries(
+      generatedDocumentRoutePermissions
+    )) {
+      const contents = source(file);
+      expect(contents, `${file} must authenticate`).toContain(
+        "getCurrentInternalUser()"
+      );
+      for (const permission of permissions) {
+        expect(contents, `${file} must enforce ${permission}`).toContain(
+          `roleHasPermission(user.role, "${permission}")`
+        );
+      }
+      expect(contents).toContain('"Cache-Control": "private, no-store');
+    }
   });
 
   it("does not expose clinical queries to Payload, marketing or analytics", () => {
     const protectedQueryImport =
-      /@\/modules\/(?:clinical-attachments|database\/queries\/(?:clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patients|reception|sales|studies|visits))/;
+      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patients|reception|sales|studies|visits))/;
     const publicRoots = [
       "src/payload",
       "src/features/analytics",

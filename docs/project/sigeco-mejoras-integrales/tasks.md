@@ -32,6 +32,8 @@ Control de avance: [progress.md](./progress.md)
 - [Reporte de la Tarea 19](../task-reports/2026-07-30-tarea-19-catalogo-productos-proveedores.md)
 - [Compras, recepciones, lotes y stock](../../operations/purchases-receipts-batches-stock.md)
 - [Reporte de la Tarea 20](../task-reports/2026-07-30-tarea-20-compras-recepciones-lotes-stock.md)
+- [Recetas y comprobantes versionados](../../operations/versioned-prescriptions-receipts.md)
+- [Reporte de la Tarea 21](../task-reports/2026-07-30-tarea-21-recetas-comprobantes-versionados.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
 
@@ -44,6 +46,9 @@ Control de avance: [progress.md](./progress.md)
 - [Actions de inventario](../../../src/features/inventory/actions.ts)
 - [Queries de compras y lotes](../../../src/modules/database/queries/purchases.ts)
 - [Actions de compras y recepciones](../../../src/features/purchases/actions.ts)
+- [Servicio de documentos versionados](../../../src/modules/generated-documents/service.ts)
+- [Generación PDF](../../../src/modules/generated-documents/pdf.ts)
+- [Actions de recetas y comprobantes](../../../src/features/generated-documents/actions.ts)
 
 ## Qué Existe Actualmente
 

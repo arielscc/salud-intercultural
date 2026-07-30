@@ -1,6 +1,7 @@
 import {
   Boxes,
   ClipboardList,
+  FileSignature,
   HeartPulse,
   Home,
   PhoneCall,
@@ -43,6 +44,12 @@ export const sigecoNavItems: SigecoNavItem[] = [
     permission: "reports_read"
   },
   { href: "/sigeco/auditoria", label: "Auditoría", icon: ShieldCheck, permission: "audit_read" },
+  {
+    href: "/sigeco/documentos/configuracion",
+    label: "Documentos",
+    icon: FileSignature,
+    permission: "documents_configure"
+  },
   { href: "/sigeco/usuarios", label: "Usuarios", icon: UserCog, permission: "users_manage" },
   { href: "/sigeco/mi-cuenta", label: "Mi cuenta", icon: UserRound, permission: "internal_access" }
 ];

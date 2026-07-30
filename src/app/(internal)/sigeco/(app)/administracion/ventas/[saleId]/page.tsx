@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
@@ -15,6 +16,8 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { createPaymentAction } from "@/features/sales/actions";
+import { generateInternalReceiptDocumentAction } from "@/features/generated-documents/actions";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import {
   formatMoney,
   saleItemTypeLabels,
@@ -22,6 +25,7 @@ import {
 } from "@/features/sales/labels";
 import { formatDateTime } from "@/lib/dates";
 import { getSaleById } from "@/modules/database/queries/sales";
+import { getSaleReceiptDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
 
@@ -34,27 +38,37 @@ export default async function SaleDetailPage({
   params,
   searchParams
 }: SaleDetailPageProps) {
-  await requirePermission("sales_read");
+  const user = await requirePermission("sales_read");
   const { saleId } = await params;
   const query = await searchParams;
-  const sale = await getSaleById(saleId);
+  const [sale, receiptDocuments] = await Promise.all([
+    getSaleById(saleId),
+    getSaleReceiptDocuments(saleId)
+  ]);
 
   if (!sale) notFound();
 
   const hasBalance = sale.balanceCents > 0;
+  const canGenerateReceipt = roleHasPermission(user.role, "sales_write");
 
   return (
     <div className={cn("grid items-start gap-4", hasBalance && "xl:grid-cols-[1.5fr_1fr]")}>
       <MobileBackLink href="/sigeco/administracion" label="Volver a Caja" />
       <div className="grid gap-4 max-sm:contents">
-        {query.error === "cash-session-required" ? (
+        {query.error ? (
           <div
             className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
             role="alert"
           >
-            <p className="font-semibold">Primero debes abrir la Caja de hoy.</p>
+            <p className="font-semibold">
+              {query.error === "cash-session-required"
+                ? "Primero debes abrir la Caja de hoy."
+                : "No se pudo emitir el comprobante."}
+            </p>
             <p className="mt-1">
-              El cobro no fue registrado. Abre una sesión en “Control de Caja” y vuelve a intentar.
+              {query.error === "cash-session-required"
+                ? "El cobro no fue registrado. Abre una sesión en “Control de Caja” y vuelve a intentar."
+                : "Los productos, totales y pagos deben coincidir antes de crear otra versión."}
             </p>
           </div>
         ) : null}
@@ -239,6 +253,47 @@ export default async function SaleDetailPage({
             </Table>
           </RecordTable>
         </Card>
+
+        <div id="comprobantes-versionados" className="max-sm:order-5">
+          <Card>
+            <CardHeader
+              title="Comprobante interno versionado"
+              description="Copia inmutable de los productos, totales y pagos actuales. No es una factura fiscal."
+            />
+            {canGenerateReceipt ? (
+              <form action={generateInternalReceiptDocumentAction}>
+                <input type="hidden" name="saleId" value={sale.id} />
+                <SubmitButton className="w-full sm:w-auto">
+                  {receiptDocuments.length > 0
+                    ? "Comprobar y emitir versión vigente"
+                    : "Emitir primera versión"}
+                </SubmitButton>
+              </form>
+            ) : null}
+            <div className="mt-4 grid gap-2">
+              {receiptDocuments.map((document) => (
+                <Link
+                  key={document.id}
+                  className="focus-ring flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-[9px] border border-border px-3 py-2 text-sm hover:border-primary/40"
+                  href={`/sigeco/administracion/ventas/${sale.id}/comprobantes/${document.id}`}
+                >
+                  <span className="font-semibold text-text">
+                    Versión {document.version}
+                  </span>
+                  <span className="tabular-nums text-muted">
+                    {document.documentNumber} ·{" "}
+                    {formatDateTime(document.generatedAt)}
+                  </span>
+                </Link>
+              ))}
+              {receiptDocuments.length === 0 ? (
+                <p className="text-sm text-muted">
+                  Todavía no se emitió una versión para imprimir o descargar.
+                </p>
+              ) : null}
+            </div>
+          </Card>
+        </div>
       </div>
 
       {hasBalance ? (

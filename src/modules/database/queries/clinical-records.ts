@@ -193,6 +193,11 @@ async function appendPrescriptionWhenChanged(
       visitId: input.visitId,
       patientId,
       doctorId: input.doctorId,
+      version: (latest?.version ?? 0) + 1,
+      supersedesId: latest?.id,
+      correctionReason: latest
+        ? "Actualización registrada antes del cierre de la consulta"
+        : null,
       notes: input.prescriptionObservations
     }
   });

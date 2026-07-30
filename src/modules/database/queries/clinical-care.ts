@@ -83,7 +83,7 @@ export async function getClinicalVisitById(visitId: string) {
           }
         },
         prescriptions: {
-          orderBy: { createdAt: "desc" },
+          orderBy: [{ version: "desc" }, { createdAt: "desc" }],
           include: {
             items: true
           }
