@@ -62,6 +62,10 @@ const actionLabels: Record<string, string> = {
   "follow_up.task.view": "Consultó un seguimiento",
   "follow_up.attempt.create": "Registró un intento de seguimiento",
   "patient.consent.record": "Registró una decisión de consentimiento",
+  "attribution.source.create": "Creó una fuente de captación",
+  "attribution.source.update": "Actualizó una fuente de captación",
+  "attribution.campaign.create": "Creó una campaña de atribución",
+  "attribution.campaign.access.update": "Cambió el estado de una campaña",
   "inventory.item.create": "Creó un producto",
   "inventory.item.view": "Consultó un producto",
   "inventory.entry.create": "Registró una entrada de inventario",
@@ -89,7 +93,9 @@ const entityLabels: Record<string, string> = {
   sale: "Venta",
   follow_up_task: "Seguimiento",
   inventory_item: "Producto",
-  internal_user: "Usuario interno"
+  internal_user: "Usuario interno",
+  capture_source: "Fuente de captación",
+  capture_campaign: "Campaña"
 };
 
 function buildPageHref(

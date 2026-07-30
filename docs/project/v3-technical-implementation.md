@@ -91,6 +91,16 @@ Las paginas consultan mediante modulos de `src/modules/database/queries`. Los fo
 3. Registrar check-in e historial inicial.
 4. Abrir `PatientRoute` en recepcion.
 5. Crear el primer `VisitWorkItem`.
+6. Crear `VisitAttribution` con fuente principal, apoyos y evidencia verificable.
+
+La fuente original del `Patient` solo se define al crear la ficha. Las visitas
+posteriores no la reemplazan. Cada `VisitAttribution` funciona como fotografía
+histórica y sus `VisitAttributionTouch` distinguen la fuente principal de los
+canales de apoyo.
+
+`CaptureSource` es el catálogo administrable. `CaptureCampaign` resuelve cuenta
+exacta y tráfico orgánico o pagado únicamente desde códigos de enlace o
+formulario. Si no hay evidencia, el detalle queda como no identificado.
 
 ### Ruta Flexible
 

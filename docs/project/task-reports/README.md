@@ -30,6 +30,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-29 | [Tarea 8: respuesta a incidentes y gate de seguridad](./2026-07-29-tarea-8-respuesta-incidentes-gate-seguridad.md) | Prueba contención, auditoría y recuperación sin confundir el pase local con la aprobación productiva. |
 | 2026-07-29 | [Tarea 9: consentimientos y preferencias de contacto](./2026-07-29-tarea-9-consentimientos-preferencias-contacto.md) | Separa cinco finalidades, conserva la prueba exacta y bloquea contactos sin autorización vigente. |
 | 2026-07-29 | [Tarea 10: departamento y procedencia geográfica](./2026-07-29-tarea-10-departamento-procedencia-geografica.md) | Separa residencia y origen de visita, normaliza lugares y permite medir Cochabamba. |
+| 2026-07-29 | [Tarea 11: fuentes de captación y atribución](./2026-07-29-tarea-11-fuentes-captacion-atribucion.md) | Conserva fuentes por llegada y compara cuentas verificadas, ventas e ingresos. |
 
 ## Relacion Con Estado V3
 

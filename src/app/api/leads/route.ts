@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { normalizeCampaignCode } from "@/features/attribution/catalog";
 import { createLeadSchema, sanitizeLeadInput } from "@/features/leads/schemas/lead.schema";
 import { env } from "@/lib/env";
 import { isStagingEnvironment } from "@/lib/deployment-environment";
+import { findActiveCaptureCampaignByCode } from "@/modules/database/queries/attribution";
 import { createLeadRecord } from "@/modules/database/queries/leads";
 
 type RateLimitEntry = {
@@ -109,8 +111,18 @@ export async function POST(request: Request) {
   }
 
   try {
+    const campaign = input.campaignCode
+      ? await findActiveCaptureCampaignByCode(
+          normalizeCampaignCode(input.campaignCode)
+        )
+      : null;
     const lead = await createLeadRecord({
       ...input,
+      campaignCode: campaign?.code,
+      attributedAccount:
+        campaign?.accountLabel ?? campaign?.source.internalLabel,
+      attributionTrafficType:
+        campaign?.trafficType ?? "unidentified",
       status: "new"
     });
 
@@ -120,7 +132,8 @@ export async function POST(request: Request) {
         lead: {
           id: lead.id,
           status: lead.status,
-          createdAt: lead.createdAt
+          createdAt: lead.createdAt,
+          attributionCode: `WEB-${lead.id}`
         },
         message: "Consulta registrada correctamente."
       },

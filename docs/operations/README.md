@@ -40,6 +40,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 25. [Respuesta a incidentes y gate de seguridad](./incident-response.md)
 26. [Consentimientos y preferencias de contacto](./patient-consents.md)
 27. [Departamento y procedencia geográfica](./geographic-origin.md)
+28. [Fuentes de captación y atribución](./capture-attribution.md)
 
 ## Flujo recomendado
 

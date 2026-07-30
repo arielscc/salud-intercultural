@@ -111,6 +111,17 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Seguimientos de hoy y vencidos.
 - Stock bajo y ultimas llegadas.
 
+### Captación Y Atribución
+
+- Fuente original del paciente conservada sin reescritura.
+- Fuente principal y canales de apoyo históricos por cada visita.
+- Facebook se pregunta de forma general.
+- Cuenta social, campaña y tráfico orgánico o pagado solo se completan mediante
+  códigos verificables.
+- Reporte agregado por fecha, ciudad y departamento con llegadas, planes,
+  ventas e ingresos cobrados.
+- Catálogo administrable por Dirección y super administrador.
+
 ## Mapa De Rutas Vigente
 
 | Ruta | Proposito |
@@ -126,6 +137,7 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 | `/sigeco/administracion` | Ventas, cobros y pendientes. |
 | `/sigeco/seguimientos` | Tareas de contacto posterior. |
 | `/sigeco/inventario` | Productos, stock, entradas y ajustes. |
+| `/sigeco/atribucion` | Comparación de fuentes, cuentas, ventas e ingresos. |
 
 Las rutas antiguas de pacientes y visitas solo existen como redirects de compatibilidad hacia Recepcion. El modulo interno de leads fue retirado; sus modelos y datos historicos permanecen sin UI.
 
@@ -198,5 +210,5 @@ El orden anterior fue reemplazado por la numeración vigente:
 2. Tarea 2: staging aislado.
 3. Tarea 3: auditoria append-only.
 4. Tareas 4-8: accesos, privacidad, adjuntos, recuperacion e incidentes.
-5. Cerrar integración y QA acumulados de las Tareas 9-10 y continuar con la Tarea 11 de
+5. Cerrar integración y QA acumulados de las Tareas 9-11 y continuar con la Tarea 12 de
    [tasks.md](./sigeco-mejoras-integrales/tasks.md).

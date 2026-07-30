@@ -9,7 +9,9 @@ import type {
 import { dayRange } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { createVisitInTransaction } from "@/modules/database/queries/visits";
+import { createVisitAttributionInTransaction } from "@/modules/database/queries/attribution";
 import { patientSearchWhere } from "@/modules/database/queries/patient-search";
+import type { AttributionEvidenceKind } from "@/generated/prisma/client";
 
 export type ReceptionIntakeRecordInput = {
   userId?: string;
@@ -41,26 +43,43 @@ export type ReceptionIntakeRecordInput = {
     originCountry: string;
     originMatchesPatient: boolean;
   };
+  attribution: {
+    primarySourceCode: string;
+    supportSourceCodes: string[];
+    campaignId?: string;
+    evidenceKind?: AttributionEvidenceKind;
+    externalEvidenceCode?: string;
+  };
 };
 
 export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
   return withDatabaseError("createReceptionIntake", async () => {
     return prisma.$transaction(async (tx) => {
       let patientId = input.patientId;
+      const {
+        captureSource,
+        captureSources,
+        ...patientProfile
+      } = input.patient;
 
       if (patientId) {
         await tx.patient.update({
           where: { id: patientId },
-          data: input.patient
+          // La fuente original del paciente no cambia en visitas posteriores.
+          data: patientProfile
         });
       } else {
         const patientCount = await tx.patient.count();
         const patient = await tx.patient.create({
           data: {
             internalCode: `SI-${String(patientCount + 1).padStart(6, "0")}`,
-            ...input.patient,
+            ...patientProfile,
             gender: input.patient.gender ?? "unknown",
-            captureSource: input.patient.captureSource ?? "other",
+            captureSource: captureSource ?? "other",
+            captureSources:
+              captureSources && captureSources.length > 0
+                ? captureSources
+                : [captureSource ?? "other"],
             followUpPreference: input.patient.followUpPreference ?? "unknown"
           }
         });
@@ -73,8 +92,14 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
         note: "Llegada registrada en recepción",
         ...input.visit
       });
+      const attribution = await createVisitAttributionInTransaction(tx, {
+        patientId,
+        visitId: visit.id,
+        capturedById: input.userId,
+        ...input.attribution
+      });
 
-      return { patientId, visit };
+      return { patientId, visit, attribution };
     });
   });
 }
@@ -105,8 +130,6 @@ export type ReceptionPatientEditData = {
   city: string;
   department: string | null;
   country: string;
-  captureSource: PatientCaptureSource;
-  captureSources: PatientCaptureSource[];
   allergies: string | null;
   relevantHistory: string | null;
   currentMedication: string | null;

@@ -19,10 +19,9 @@ import { Card } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import {
-  normalizePatientCaptureSources,
-  patientCaptureSourceOptions,
   patientGenderLabels
 } from "@/features/patients/labels";
+import type { CaptureSourceOption } from "@/modules/database/queries/attribution";
 import {
   searchReceptionPatientsAction,
   submitReceptionIntakeAction
@@ -51,10 +50,12 @@ const stepTitles: Record<number, string> = {
 
 export function IntakeFunnel({
   allowDuplicateFromServer = false,
-  initialPatient
+  initialPatient,
+  captureSourceOptions
 }: {
   allowDuplicateFromServer?: boolean;
   initialPatient?: PatientMatch;
+  captureSourceOptions: CaptureSourceOption[];
 }) {
   const [step, setStep] = useState(initialPatient ? 1 : 0);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -104,16 +105,23 @@ export function IntakeFunnel({
     initialPatient?.currentMedication ?? ""
   );
 
-  const [captureSources, setCaptureSources] = useState<string[]>(
-    normalizePatientCaptureSources(initialPatient?.captureSources ?? [])
-  );
+  const [capturePrimarySource, setCapturePrimarySource] = useState("");
+  const [captureSupportSources, setCaptureSupportSources] = useState<string[]>([]);
+  const [attributionEvidenceCode, setAttributionEvidenceCode] = useState("");
 
   const age = calculateAge(birthDate);
   const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
 
-  function toggleCaptureSource(value: string) {
-    setCaptureSources((current) =>
+  function toggleCaptureSupportSource(value: string) {
+    setCaptureSupportSources((current) =>
       current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
+  }
+
+  function choosePrimaryCaptureSource(value: string) {
+    setCapturePrimarySource(value);
+    setCaptureSupportSources((current) =>
+      current.filter((source) => source !== value)
     );
   }
 
@@ -134,7 +142,9 @@ export function IntakeFunnel({
     setAllergies(patient.allergies === NO_KNOWN_ALLERGIES ? "" : (patient.allergies ?? ""));
     setRelevantHistory(patient.relevantHistory ?? "");
     setCurrentMedication(patient.currentMedication ?? "");
-    setCaptureSources(normalizePatientCaptureSources(patient.captureSources));
+    setCapturePrimarySource("");
+    setCaptureSupportSources([]);
+    setAttributionEvidenceCode("");
     setPhoneMatches([]);
     setStepError(null);
     setStep(1);
@@ -164,7 +174,9 @@ export function IntakeFunnel({
     setAllergies("");
     setRelevantHistory("");
     setCurrentMedication("");
-    setCaptureSources([]);
+    setCapturePrimarySource("");
+    setCaptureSupportSources([]);
+    setAttributionEvidenceCode("");
     setPhoneMatches([]);
     setStepError(null);
     setStep(1);
@@ -253,6 +265,11 @@ export function IntakeFunnel({
         ) {
           event.preventDefault();
           setStepError("Completa la procedencia desde la que llega hoy.");
+          return;
+        }
+        if (!capturePrimarySource) {
+          event.preventDefault();
+          setStepError("Selecciona dónde conoció la clínica por primera vez.");
         }
       }}
     >
@@ -290,7 +307,21 @@ export function IntakeFunnel({
       <input type="hidden" name="allergies" value={resolvedAllergies} />
       <input type="hidden" name="relevantHistory" value={relevantHistory} />
       <input type="hidden" name="currentMedication" value={currentMedication} />
-      <input type="hidden" name="captureSources" value={captureSources.join(",")} />
+      <input
+        type="hidden"
+        name="capturePrimarySource"
+        value={capturePrimarySource}
+      />
+      <input
+        type="hidden"
+        name="captureSupportSources"
+        value={captureSupportSources.join(",")}
+      />
+      <input
+        type="hidden"
+        name="attributionEvidenceCode"
+        value={attributionEvidenceCode}
+      />
       {allowDuplicate ? <input type="hidden" name="allowDuplicate" value="true" /> : null}
 
       {step > 0 ? (
@@ -634,20 +665,66 @@ export function IntakeFunnel({
             .
           </p>
         )}
-        <div className="grid gap-1.5 text-[13px] font-medium text-text">
-          <span>¿Cómo nos conoció? (puede elegir varios)</span>
+        <div className="grid gap-2 text-[13px] font-medium text-text lg:col-span-2">
+          <span>¿Dónde conoció la clínica por primera vez? *</span>
+          <p className="text-xs font-normal leading-relaxed text-muted">
+            Haz esta pregunta con palabras simples. Por ejemplo: “¿Fue por
+            Facebook, TikTok, una recomendación u otro medio?”.
+          </p>
           <div className="flex flex-wrap gap-2">
-            {patientCaptureSourceOptions.map(({ value, label }) => (
+            {captureSourceOptions.map((source) => (
               <ChipOption
-                key={value}
-                selected={captureSources.includes(value)}
-                onClick={() => toggleCaptureSource(value)}
+                key={source.id}
+                selected={capturePrimarySource === source.code}
+                onClick={() => choosePrimaryCaptureSource(source.code)}
               >
-                {label}
+                {source.patientLabel}
               </ChipOption>
             ))}
           </div>
         </div>
+        {capturePrimarySource ? (
+          <div className="grid gap-2 text-[13px] font-medium text-text lg:col-span-2">
+            <span>¿Qué otro canal le ayudó a llegar? (opcional)</span>
+            <p className="text-xs font-normal leading-relaxed text-muted">
+              Ejemplo: conoció la clínica por TikTok y después escribió por
+              WhatsApp. WhatsApp queda como apoyo y no borra TikTok.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {captureSourceOptions
+                .filter((source) => source.code !== capturePrimarySource)
+                .map((source) => (
+                  <ChipOption
+                    key={source.id}
+                    selected={captureSupportSources.includes(source.code)}
+                    onClick={() => toggleCaptureSupportSource(source.code)}
+                  >
+                    {source.patientLabel}
+                  </ChipOption>
+                ))}
+            </div>
+          </div>
+        ) : null}
+        <Field
+          label="Código de formulario o campaña (opcional)"
+          className="lg:col-span-2"
+        >
+          <input
+            className={internalInputClassName}
+            value={attributionEvidenceCode}
+            onChange={(event) =>
+              setAttributionEvidenceCode(event.target.value.toUpperCase())
+            }
+            placeholder="Ej. WEB-123 o TIKTOK-DR"
+            autoComplete="off"
+            maxLength={120}
+          />
+          <span className="text-xs font-normal leading-relaxed text-muted">
+            Úsalo solo si aparece en el formulario, enlace o registro de
+            campaña. El sistema obtendrá la cuenta y si fue orgánico o pagado;
+            Recepción no debe adivinarlo.
+          </span>
+        </Field>
         <div className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted lg:col-span-2">
           Solo al confirmar este último paso la persona se convierte en paciente: se crea su ficha y
           la visita queda abierta en recepción. Los consentimientos se registran después, desde la

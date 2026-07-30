@@ -21,6 +21,7 @@ import {
   toPatientEditRecord,
   toReceptionIntakeRecord
 } from "@/features/reception/schemas/intake.schema";
+import { resolveAttributionEvidence } from "@/features/attribution/evidence";
 
 export async function searchReceptionPatientsAction(query: string) {
   await requirePermission("patients_read");
@@ -57,6 +58,13 @@ export async function submitReceptionIntakeAction(formData: FormData) {
       }
 
       const record = toReceptionIntakeRecord(parsed.data);
+      const evidence = await resolveAttributionEvidence(
+        record.attribution.evidenceCode
+      );
+
+      if (record.attribution.evidenceCode && !evidence) {
+        redirect("/sigeco/recepcion/nuevo?error=invalid-attribution");
+      }
       assertAuditedPermission(
         user,
         record.patientId ? "patients_update" : "patients_create"
@@ -72,6 +80,13 @@ export async function submitReceptionIntakeAction(formData: FormData) {
 
       const created = await createReceptionIntake({
         ...record,
+        attribution: {
+          primarySourceCode: record.attribution.primarySourceCode,
+          supportSourceCodes: record.attribution.supportSourceCodes,
+          campaignId: evidence?.campaignId,
+          evidenceKind: evidence?.evidenceKind,
+          externalEvidenceCode: evidence?.externalEvidenceCode
+        },
         userId: user.id
       });
       return auditedResult(created, {
@@ -82,7 +97,11 @@ export async function submitReceptionIntakeAction(formData: FormData) {
           originCity: record.visit.originCity,
           originDepartment: record.visit.originDepartment,
           originCountry: record.visit.originCountry,
-          originMatchesPatient: record.visit.originMatchesPatient
+          originMatchesPatient: record.visit.originMatchesPatient,
+          primaryCaptureSource: record.attribution.primarySourceCode,
+          supportCaptureSources: record.attribution.supportSourceCodes,
+          campaignCode: evidence?.campaignCode,
+          evidenceKind: evidence?.evidenceKind
         }
       });
     }

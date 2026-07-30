@@ -161,6 +161,12 @@ export async function getVisits(
       },
       include: {
         patient: true,
+        attribution: {
+          include: {
+            campaign: true,
+            touches: { include: { source: true } }
+          }
+        },
         route: true,
         workItems: {
           where: {
@@ -216,6 +222,12 @@ export async function getVisitById(id: string) {
       where: { id },
       include: {
         patient: true,
+        attribution: {
+          include: {
+            campaign: true,
+            touches: { include: { source: true } }
+          }
+        },
         route: {
           include: {
             steps: {

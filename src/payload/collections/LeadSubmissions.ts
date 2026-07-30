@@ -102,6 +102,55 @@ export const LeadSubmissions: CollectionConfig = {
       label: "Página de origen"
     },
     {
+      name: "campaignCode",
+      type: "text",
+      label: "Código de campaña",
+      admin: {
+        description:
+          "Se completa automáticamente desde un enlace o formulario identificado."
+      }
+    },
+    {
+      name: "attributedAccount",
+      type: "text",
+      label: "Cuenta atribuida",
+      admin: {
+        readOnly: true
+      }
+    },
+    {
+      name: "attributionTrafficType",
+      type: "select",
+      label: "Tipo de tráfico",
+      defaultValue: "unidentified",
+      options: [
+        { label: "No identificado", value: "unidentified" },
+        { label: "Orgánico", value: "organic" },
+        { label: "Publicidad pagada", value: "paid" }
+      ],
+      admin: {
+        readOnly: true
+      }
+    },
+    {
+      name: "utmSource",
+      type: "text",
+      label: "UTM source",
+      admin: { readOnly: true }
+    },
+    {
+      name: "utmMedium",
+      type: "text",
+      label: "UTM medium",
+      admin: { readOnly: true }
+    },
+    {
+      name: "utmCampaign",
+      type: "text",
+      label: "UTM campaign",
+      admin: { readOnly: true }
+    },
+    {
       name: "notes",
       type: "textarea",
       label: "Notas internas"

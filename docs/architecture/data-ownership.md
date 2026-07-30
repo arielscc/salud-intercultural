@@ -22,6 +22,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Testimonios | Payload | Payload Admin | Activo | `src/data/testimonials.ts` queda como fallback/seed. |
 | FAQs | Payload | Payload Admin | Activo | `src/data/faqs.ts` queda como fallback/seed. |
 | Leads | Payload | Payload Admin | Activo | Collection `lead-submissions`; sin modelo Prisma duplicado. |
+| Atribución de llegadas y ventas | Prisma | SIGECO | Activo | Catálogo, campañas y fotografía histórica por visita; Payload solo entrega evidencia del formulario previo. |
 | Configuracion global | Payload | Payload Admin | Activo | Global `site-settings`; config estatica solo fallback. |
 | Home editable | Payload | Payload Admin | Activo | Global `home-content`; `src/data/home.ts` queda como fallback/seed. |
 | Media | Payload | Payload Admin | Activo | Storage local o Vercel Blob segun ambiente. |
@@ -34,7 +35,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Inventario | Prisma | SIGECO | Activo | Productos, stock, movimientos y ajustes. |
 | Auditoría de SIGECO | Prisma | SIGECO, solo Dirección y super administrador | Activo | `AuditEvent` append-only; PostgreSQL bloquea update y delete. |
 | Adjuntos clínicos | Prisma + storage clínico privado | SIGECO, según permisos clínicos | Activo | Metadata y concesiones en Prisma; contenido fuera de Payload y de `public/`. |
-| Reportes analiticos internos futuros | Prisma | UI/reportes custom | Futuro | Consultas agregadas y metricas operativas. |
+| Reportes analiticos internos | Prisma | SIGECO | Parcial | Captación e ingresos está activo; el recorrido completo continúa en la Tarea 22. |
 | Integraciones transaccionales futuras | Prisma | Jobs/UI custom | Futuro | Idempotencia, retries y estados tecnicos. |
 | Workflows futuros | Prisma | UI custom futura | Futuro | Estados complejos, relaciones fuertes y transiciones. |
 

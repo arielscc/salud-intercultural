@@ -15,6 +15,12 @@ export type CreateLeadRecordInput = {
   source?: LeadSource;
   status?: LeadStatus;
   pagePath?: string;
+  campaignCode?: string;
+  attributedAccount?: string;
+  attributionTrafficType?: "unidentified" | "organic" | "paid";
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
 };
 
 export async function createLeadRecord(input: CreateLeadRecordInput) {
@@ -31,7 +37,13 @@ export async function createLeadRecord(input: CreateLeadRecordInput) {
         message: input.message,
         source: input.source ?? "website",
         status: input.status ?? "new",
-        pagePath: input.pagePath
+        pagePath: input.pagePath,
+        campaignCode: input.campaignCode,
+        attributedAccount: input.attributedAccount,
+        attributionTrafficType: input.attributionTrafficType,
+        utmSource: input.utmSource,
+        utmMedium: input.utmMedium,
+        utmCampaign: input.utmCampaign
       },
       overrideAccess: true
     });

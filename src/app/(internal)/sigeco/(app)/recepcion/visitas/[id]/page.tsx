@@ -16,6 +16,10 @@ import {
 import { applyVisitFlowAction, updateVisitStatusAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { geographicOriginLabel } from "@/features/geography/origin";
+import {
+  verifiedAttributionDetail,
+  visitAttributionSummary
+} from "@/features/attribution/catalog";
 import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { formatDateTime } from "@/lib/dates";
 import { getVisitById } from "@/modules/database/queries/visits";
@@ -111,6 +115,22 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 {!visit.originMatchesPatient
                   ? " · diferente de su procedencia habitual"
                   : ""}
+              </dd>
+            </div>
+            <div className="mt-px bg-surface px-3 py-2.5">
+              <dt className="text-[11px] font-semibold uppercase text-muted">
+                Fuentes de esta llegada
+              </dt>
+              <dd className="mt-0.5 text-sm font-medium text-text">
+                {visitAttributionSummary(visit.attribution)}
+              </dd>
+            </div>
+            <div className="mt-px bg-surface px-3 py-2.5 sm:ml-px">
+              <dt className="text-[11px] font-semibold uppercase text-muted">
+                Detalle interno verificado
+              </dt>
+              <dd className="mt-0.5 text-sm font-medium text-text">
+                {verifiedAttributionDetail(visit.attribution)}
               </dd>
             </div>
           </dl>

@@ -7,6 +7,7 @@
  * Uso: node --import dotenv/config --import tsx scripts/seed-demo-patient.ts
  */
 import { prisma } from "../src/modules/database";
+import { createVisitAttributionInTransaction } from "../src/modules/database/queries/attribution";
 import { assertSafeDatabaseCommand } from "./database-safety";
 import { reportScriptError } from "./safe-error";
 
@@ -59,6 +60,9 @@ type VisitSeedInput = {
   originDepartment?: string;
   originCountry?: string;
   originMatchesPatient?: boolean;
+  primarySourceCode?: string;
+  supportSourceCodes?: string[];
+  campaignCode?: string;
   steps: RouteStepInput[];
 };
 
@@ -91,6 +95,21 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
       completedAt: input.completedAt,
       createdAt: input.checkedInAt
     }
+  });
+  const campaign = input.campaignCode
+    ? await tx.captureCampaign.findUnique({
+        where: { code: input.campaignCode }
+      })
+    : null;
+  await createVisitAttributionInTransaction(tx, {
+    patientId: input.patientId,
+    visitId: visit.id,
+    capturedById: input.userId,
+    primarySourceCode: input.primarySourceCode ?? "referral",
+    supportSourceCodes: input.supportSourceCodes ?? [],
+    campaignId: campaign?.id,
+    evidenceKind: campaign ? "campaign_link" : "patient_reported",
+    externalEvidenceCode: campaign?.code
   });
 
   await tx.receptionCheckIn.create({
@@ -576,6 +595,9 @@ async function main() {
         checkedInAt: at(11, 16, 20),
         completedAt: at(11, 17, 10),
         checkInNote: "Viene a control programado de la semana pasada",
+        primarySourceCode: "tiktok",
+        supportSourceCodes: ["whatsapp"],
+        campaignCode: "TIKTOK-DR",
         steps: [
           {
             area: "recepcion",
@@ -705,6 +727,7 @@ async function main() {
         previouslyTreated: false,
         checkedInAt: at(6, 11, 5),
         checkInNote: "Llega sin cita, sala de espera llena",
+        primarySourceCode: "facebook",
         steps: [
           {
             area: "recepcion",
@@ -773,6 +796,9 @@ async function main() {
         checkedInAt: at(2, 15, 30),
         completedAt: at(2, 16, 45),
         checkInNote: "Trae hemograma de laboratorio externo; se le hace ecografía aquí",
+        primarySourceCode: "tiktok",
+        supportSourceCodes: ["whatsapp"],
+        campaignCode: "TIKTOK-DRA",
         steps: [
           {
             area: "recepcion",
@@ -985,6 +1011,8 @@ async function main() {
         previouslyTreated: true,
         checkedInAt: at(0, 9, 15),
         checkInNote: "Control de gastritis; el médico indicó suero con protector gástrico",
+        primarySourceCode: "facebook",
+        campaignCode: "FACEBOOK-CLINICA",
         steps: [
           {
             area: "recepcion",

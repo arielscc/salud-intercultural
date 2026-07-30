@@ -9,6 +9,7 @@ import {
   internalRoleLabels
 } from "../src/features/internal-auth/permissions";
 import { prisma } from "../src/modules/database";
+import { createVisitAttributionInTransaction } from "../src/modules/database/queries/attribution";
 import { reportScriptError } from "./safe-error";
 import { assertSafeStagingCommand } from "./staging-safety";
 
@@ -162,6 +163,30 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         reason: fixture.reason,
         status: fixture.status
       }
+    });
+    const primarySourceCode =
+      index === 1 ? "tiktok" : index === 2 ? "facebook" : "other";
+    const supportSourceCodes =
+      index === 1 ? ["whatsapp"] : [];
+    const campaign =
+      index === 1
+        ? await prisma.captureCampaign.findUnique({
+            where: { code: "TIKTOK-DRA" }
+          })
+        : null;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.visitAttribution.deleteMany({ where: { visitId } });
+      await createVisitAttributionInTransaction(tx, {
+        patientId: patient.id,
+        visitId,
+        capturedById: receptionUserId,
+        primarySourceCode,
+        supportSourceCodes,
+        campaignId: campaign?.id,
+        evidenceKind: campaign ? "campaign_link" : "patient_reported",
+        externalEvidenceCode: campaign?.code
+      });
     });
 
     await prisma.receptionCheckIn.upsert({

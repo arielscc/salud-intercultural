@@ -135,6 +135,12 @@ export async function getPatientById(id: string) {
         visits: {
           orderBy: { checkedInAt: "desc" },
           include: {
+            attribution: {
+              include: {
+                campaign: true,
+                touches: { include: { source: true } }
+              }
+            },
             route: {
               include: {
                 steps: {

@@ -1,8 +1,12 @@
 import { z } from "zod";
 import {
-  patientCaptureSourceSchema,
   patientGenderSchema
 } from "@/features/patients/schemas/patient.schema";
+import {
+  captureEvidenceCodeSchema,
+  captureSourceCodeSchema
+} from "@/features/attribution/schemas/attribution.schema";
+import { toCompatiblePatientCaptureSource } from "@/features/attribution/catalog";
 import {
   geographicOriginsMatch,
   isCompleteGeographicOrigin,
@@ -29,12 +33,12 @@ const optionalPlaceText = z.preprocess(
   z.string().trim().max(120).optional()
 );
 
-/* El form serializa las fuentes multiples como "a,b,c" en un input oculto. */
-const captureSourcesSchema = z.preprocess(
+/* El form serializa las fuentes de apoyo como "a,b,c" en un input oculto. */
+const captureSupportSourcesSchema = z.preprocess(
   (value) => (typeof value === "string" ? (value === "" ? [] : value.split(",")) : value),
   z
-    .array(patientCaptureSourceSchema)
-    .max(9)
+    .array(captureSourceCodeSchema)
+    .max(12)
     .default([])
     .transform((sources) => Array.from(new Set(sources)))
 );
@@ -70,7 +74,9 @@ export const receptionIntakeSchema = z
     allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
     relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
     currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
-    captureSources: captureSourcesSchema
+    capturePrimarySource: captureSourceCodeSchema,
+    captureSupportSources: captureSupportSourcesSchema,
+    attributionEvidenceCode: captureEvidenceCodeSchema
   })
   .refine(
     (data) => (data.symptomDurationValue === undefined) === (data.symptomDurationUnit === undefined),
@@ -128,7 +134,6 @@ export const patientEditSchema = z.object({
   allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
   relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
   currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
-  captureSources: captureSourcesSchema
 }).refine(
   (data) =>
     isCompleteGeographicOrigin({
@@ -161,8 +166,6 @@ export function toPatientEditRecord(input: PatientEditInput) {
       city: origin.city,
       department: origin.department || null,
       country: origin.country,
-      captureSource: input.captureSources[0] ?? "other",
-      captureSources: input.captureSources,
       allergies: input.allergies ? cleanText(input.allergies) : null,
       relevantHistory: input.relevantHistory ? cleanText(input.relevantHistory) : null,
       currentMedication: input.currentMedication ? cleanText(input.currentMedication) : null
@@ -188,6 +191,15 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
     patientOrigin,
     requestedVisitOrigin
   );
+  const supportSourceCodes = input.captureSupportSources.filter(
+    (source) => source !== input.capturePrimarySource
+  );
+  const compatibleSources = Array.from(
+    new Set([
+      toCompatiblePatientCaptureSource(input.capturePrimarySource),
+      ...supportSourceCodes.map(toCompatiblePatientCaptureSource)
+    ])
+  );
 
   return {
     patientId: input.patientId,
@@ -199,8 +211,10 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
       city: patientOrigin.city,
       department: patientOrigin.department || null,
       country: patientOrigin.country,
-      captureSource: input.captureSources[0] ?? "other",
-      captureSources: input.captureSources,
+      captureSource: toCompatiblePatientCaptureSource(
+        input.capturePrimarySource
+      ),
+      captureSources: compatibleSources,
       allergies: input.allergies ? cleanText(input.allergies) : undefined,
       relevantHistory: input.relevantHistory ? cleanText(input.relevantHistory) : undefined,
       currentMedication: input.currentMedication ? cleanText(input.currentMedication) : undefined
@@ -216,6 +230,11 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
       originDepartment: requestedVisitOrigin.department || undefined,
       originCountry: requestedVisitOrigin.country,
       originMatchesPatient
+    },
+    attribution: {
+      primarySourceCode: input.capturePrimarySource,
+      supportSourceCodes,
+      evidenceCode: input.attributionEvidenceCode
     }
   };
 }

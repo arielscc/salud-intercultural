@@ -105,6 +105,15 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("captacion", "users_manage")).toBe(false);
   });
 
+  it("lets Direction and super administrators manage attribution catalogs", () => {
+    expect(roleHasPermission("super_admin", "attribution_manage")).toBe(true);
+    expect(roleHasPermission("direccion", "attribution_manage")).toBe(true);
+    expect(roleHasPermission("recepcion", "attribution_manage")).toBe(false);
+    expect(roleHasPermission("administracion", "attribution_manage")).toBe(
+      false
+    );
+  });
+
   it("lets only reception and super administrators record patient consents", () => {
     expect(roleHasPermission("recepcion", "patient_consents_write")).toBe(true);
     expect(roleHasPermission("super_admin", "patient_consents_write")).toBe(true);

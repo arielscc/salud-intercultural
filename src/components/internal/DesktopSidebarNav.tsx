@@ -19,7 +19,12 @@ const navGroups: Array<{ label?: string; hrefs: string[] }> = [
   },
   {
     label: "Control",
-    hrefs: ["/sigeco/inventario", "/sigeco/auditoria", "/sigeco/usuarios"]
+    hrefs: [
+      "/sigeco/inventario",
+      "/sigeco/atribucion",
+      "/sigeco/auditoria",
+      "/sigeco/usuarios"
+    ]
   },
   { label: "Cuenta", hrefs: ["/sigeco/mi-cuenta"] }
 ];

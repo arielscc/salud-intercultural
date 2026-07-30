@@ -14,14 +14,15 @@ describe("reception intake schema", () => {
       reason: "Dolor de espalda",
       city: "El Alto",
       department: "La Paz",
-      country: "Bolivia"
+      country: "Bolivia",
+      capturePrimarySource: "other"
     });
 
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
     expect(parsed.data.gender).toBe("unknown");
     expect(parsed.data.intakeType).toBe("first_visit");
-    expect(parsed.data.captureSources).toEqual([]);
+    expect(parsed.data.captureSupportSources).toEqual([]);
     expect(toReceptionIntakeRecord(parsed.data).patient.captureSource).toBe("other");
   });
 
@@ -32,6 +33,7 @@ describe("reception intake schema", () => {
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
+      capturePrimarySource: "other",
       reason: ""
     });
 
@@ -45,6 +47,7 @@ describe("reception intake schema", () => {
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
+      capturePrimarySource: "other",
       reason: "Dolor de espalda",
       symptomDurationValue: "3",
       symptomDurationUnit: ""
@@ -72,7 +75,9 @@ describe("reception intake schema", () => {
       allergies: "Ninguna conocida",
       relevantHistory: "Diabetes tipo 2",
       currentMedication: "Metformina",
-      captureSources: "referral,facebook"
+      capturePrimarySource: "referral",
+      captureSupportSources: "facebook,whatsapp",
+      attributionEvidenceCode: "TIKTOK-DR"
     });
 
     expect(parsed.success).toBe(true);
@@ -86,8 +91,18 @@ describe("reception intake schema", () => {
     expect(record.patient.country).toBe("Bolivia");
     expect(record.visit.originCity).toBe("El Alto");
     expect(record.visit.originMatchesPatient).toBe(true);
-    expect(record.patient.captureSources).toEqual(["referral", "facebook"]);
+    expect(record.patient.captureSources).toEqual([
+      "referral",
+      "facebook",
+      "whatsapp"
+    ]);
     expect(record.patient.captureSource).toBe("referral");
+    expect(record.attribution.primarySourceCode).toBe("referral");
+    expect(record.attribution.supportSourceCodes).toEqual([
+      "facebook",
+      "whatsapp"
+    ]);
+    expect(record.attribution.evidenceCode).toBe("TIKTOK-DR");
     expect(record.visit.reason).toBe("Dolor de espalda");
     expect(record.visit.symptomDurationValue).toBe(3);
     expect(record.visit.symptomDurationUnit).toBe("months");
@@ -102,6 +117,7 @@ describe("reception intake schema", () => {
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
+      capturePrimarySource: "other",
       reason: "Control",
       previouslyTreated: "",
       bringsStudies: ""
@@ -115,7 +131,7 @@ describe("reception intake schema", () => {
     expect(record.visit.bringsStudies).toBeUndefined();
   });
 
-  it("normalizes legacy Facebook sources without asking the patient to distinguish them", () => {
+  it("stores Facebook as a general patient-reported source", () => {
     const parsed = receptionIntakeSchema.parse({
       fullName: "Maria Quispe",
       phone: "+591 71234567",
@@ -123,10 +139,10 @@ describe("reception intake schema", () => {
       department: "La Paz",
       country: "Bolivia",
       reason: "Control",
-      captureSources: "facebook_ads,facebook_organic"
+      capturePrimarySource: "facebook"
     });
 
-    expect(parsed.captureSources).toEqual(["facebook"]);
+    expect(parsed.capturePrimarySource).toBe("facebook");
     expect(toReceptionIntakeRecord(parsed).patient.captureSource).toBe("facebook");
   });
 
@@ -141,7 +157,8 @@ describe("reception intake schema", () => {
       visitOriginCity: "cbba",
       visitOriginDepartment: "",
       visitOriginCountry: "bol",
-      reason: "Control"
+      reason: "Control",
+      capturePrimarySource: "tiktok"
     });
 
     const record = toReceptionIntakeRecord(parsed);
@@ -159,6 +176,7 @@ describe("reception intake schema", () => {
       city: "Tiquipaya",
       department: "",
       country: "Bolivia",
+      capturePrimarySource: "other",
       reason: "Control"
     });
 
@@ -179,8 +197,7 @@ describe("patient edit schema", () => {
       country: "Bolivia",
       allergies: "Penicilina",
       relevantHistory: "Hipertensión",
-      currentMedication: "Enalapril",
-      captureSources: "referral,whatsapp"
+      currentMedication: "Enalapril"
     });
 
     expect(parsed.success).toBe(true);
@@ -193,11 +210,11 @@ describe("patient edit schema", () => {
     expect(record.data.city).toBe("La Paz");
     expect(record.data.department).toBe("La Paz");
     expect(record.data.country).toBe("Bolivia");
-    expect(record.data.captureSources).toEqual(["referral", "whatsapp"]);
-    expect(record.data.captureSource).toBe("referral");
+    expect(record.data).not.toHaveProperty("captureSources");
+    expect(record.data).not.toHaveProperty("captureSource");
   });
 
-  it("rejects an unknown capture source in the list", () => {
+  it("does not accept capture fields as editable patient data", () => {
     const parsed = patientEditSchema.safeParse({
       patientId: "abc123",
       fullName: "Rosa Huanca",
@@ -208,7 +225,11 @@ describe("patient edit schema", () => {
       captureSources: "referral,invalido"
     });
 
-    expect(parsed.success).toBe(false);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(toPatientEditRecord(parsed.data).data).not.toHaveProperty(
+      "captureSources"
+    );
   });
 
   it("clears optional fields that were emptied", () => {

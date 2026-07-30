@@ -10,11 +10,7 @@ import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import { Field, internalInputClassName } from "@/components/internal/Field";
-import {
-  normalizePatientCaptureSources,
-  patientCaptureSourceOptions,
-  patientGenderLabels
-} from "@/features/patients/labels";
+import { patientGenderLabels } from "@/features/patients/labels";
 import { updateReceptionPatientAction } from "@/features/reception/actions";
 import {
   calculateAge,
@@ -38,7 +34,6 @@ export type EditablePatient = {
   city: string | null;
   department: string | null;
   country: string | null;
-  captureSources: string[];
   allergies: string | null;
   relevantHistory: string | null;
   currentMedication: string | null;
@@ -63,20 +58,10 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
   const [relevantHistory, setRelevantHistory] = useState(patient.relevantHistory ?? "");
   const [currentMedication, setCurrentMedication] = useState(patient.currentMedication ?? "");
 
-  const [captureSources, setCaptureSources] = useState<string[]>(
-    normalizePatientCaptureSources(patient.captureSources)
-  );
-
   const age = calculateAge(birthDate);
   const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
   const nameError = formError === "Ingresa el nombre completo.";
   const phoneError = formError === "Ingresa un teléfono válido.";
-
-  function toggleCaptureSource(value: string) {
-    setCaptureSources((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
-    );
-  }
 
   function validateBeforeSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (fullName.trim().length < 2) {
@@ -120,7 +105,6 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       <input type="hidden" name="allergies" value={resolvedAllergies} />
       <input type="hidden" name="relevantHistory" value={relevantHistory} />
       <input type="hidden" name="currentMedication" value={currentMedication} />
-      <input type="hidden" name="captureSources" value={captureSources.join(",")} />
 
       {formError ? (
         <p
@@ -227,22 +211,13 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
         </div>
       </Card>
 
-      <Card className="grid gap-4">
-        <CardHeader title="Origen" className="mb-0" />
-        <div className="grid gap-1.5 text-[13px] font-medium text-text">
-          <span>¿Cómo nos conoció? (puede elegir varios)</span>
-          <div className="flex flex-wrap gap-2">
-            {patientCaptureSourceOptions.map(({ value, label }) => (
-              <ChipOption
-                key={value}
-                selected={captureSources.includes(value)}
-                onClick={() => toggleCaptureSource(value)}
-              >
-                {label}
-              </ChipOption>
-            ))}
-          </div>
-        </div>
+      <Card className="grid gap-3">
+        <CardHeader title="Datos históricos" className="mb-0" />
+        <p className="text-sm leading-relaxed text-muted">
+          La fuente original no se modifica desde esta pantalla. Cada nueva
+          llegada registra sus propias fuentes para que el historial y los
+          reportes no cambien después.
+        </p>
         <p className="text-xs leading-relaxed text-muted">
           Los consentimientos no se cambian al editar la ficha. Se registran por
           separado para conservar la decisión y el texto exacto aceptado.

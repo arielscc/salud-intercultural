@@ -55,6 +55,7 @@ enum InternalPermission {
   attachments_delete
   patient_consents_read
   patient_consents_write
+  attribution_manage
 }
 
 enum AuditResult {
@@ -162,6 +163,33 @@ enum PatientCaptureSource {
   flyer
   website
   other
+}
+
+enum CaptureSourceCategory {
+  social
+  messaging
+  referral
+  offline
+  web
+  other
+}
+
+enum AttributionEvidenceKind {
+  patient_reported
+  campaign_link
+  web_form
+  legacy_backfill
+}
+
+enum AttributionTrafficType {
+  unidentified
+  organic
+  paid
+}
+
+enum AttributionTouchRole {
+  primary
+  support
 }
 
 enum FollowUpContactPreference {
@@ -385,6 +413,7 @@ model InternalUser {
   uploadedAttachments     ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
   deletedAttachments      ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
   attachmentAccessGrants  ClinicalAttachmentAccessGrant[]
+  capturedAttributions    VisitAttribution[]              @relation("VisitAttributionCapturedBy")
 
   @@index([role])
   @@index([active])
@@ -554,6 +583,7 @@ model Patient {
   followUpTasks         FollowUpTask[]
   clinicalAttachments   ClinicalAttachment[]
   consents              PatientConsent[]
+  visitAttributions     VisitAttribution[]
 
   @@index([fullName])
   @@index([phone])
@@ -656,6 +686,7 @@ model Visit {
   cashMovements        CashMovement[]
   followUpTasks        FollowUpTask[]
   clinicalAttachments  ClinicalAttachment[]
+  attribution          VisitAttribution?
 
   @@index([patientId])
   @@index([status, checkedInAt])
@@ -663,6 +694,84 @@ model Visit {
   @@index([originCountry, checkedInAt])
   @@index([createdById])
   @@index([checkedInAt])
+}
+
+model CaptureSource {
+  id                  String                  @id @default(cuid())
+  code                String                  @unique
+  patientLabel        String
+  internalLabel       String
+  category            CaptureSourceCategory
+  active              Boolean                 @default(true)
+  receptionSelectable Boolean                 @default(true)
+  sortOrder           Int                     @default(100)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  campaigns           CaptureCampaign[]
+  attributionTouches  VisitAttributionTouch[]
+
+  @@index([active, receptionSelectable, sortOrder])
+  @@index([category])
+}
+
+model CaptureCampaign {
+  id            String                 @id @default(cuid())
+  code          String                 @unique
+  name          String
+  sourceId      String
+  accountLabel  String?
+  accountHandle String?
+  trafficType   AttributionTrafficType @default(unidentified)
+  active        Boolean                @default(true)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  source        CaptureSource          @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  attributions  VisitAttribution[]
+
+  @@index([sourceId, active])
+  @@index([active, startsAt, endsAt])
+}
+
+model VisitAttribution {
+  id                   String                  @id @default(cuid())
+  visitId              String                  @unique
+  patientId            String
+  capturedById         String?
+  campaignId           String?
+  evidenceKind         AttributionEvidenceKind @default(patient_reported)
+  externalEvidenceCode String?
+  createdAt            DateTime                @default(now())
+  visit                Visit                   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient              Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  capturedBy           InternalUser?           @relation("VisitAttributionCapturedBy", fields: [capturedById], references: [id], onDelete: SetNull)
+  campaign             CaptureCampaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  touches              VisitAttributionTouch[]
+
+  @@index([patientId, createdAt])
+  @@index([campaignId, createdAt])
+  @@index([evidenceKind, createdAt])
+}
+
+model VisitAttributionTouch {
+  id                    String                  @id @default(cuid())
+  attributionId         String
+  sourceId              String
+  role                  AttributionTouchRole
+  evidenceKind          AttributionEvidenceKind
+  trafficType           AttributionTrafficType  @default(unidentified)
+  accountLabel          String?
+  accountHandle         String?
+  campaignCode          String?
+  automaticallyCaptured Boolean                 @default(false)
+  createdAt             DateTime                @default(now())
+  attribution           VisitAttribution        @relation(fields: [attributionId], references: [id], onDelete: Cascade)
+  source                CaptureSource           @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([attributionId, sourceId])
+  @@index([sourceId, role, createdAt])
+  @@index([campaignCode, createdAt])
 }
 
 model VisitStatusHistory {

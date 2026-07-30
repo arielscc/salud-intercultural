@@ -25,6 +25,7 @@ import {
   boliviaDepartments,
   geographicOriginLabel
 } from "@/features/geography/origin";
+import { visitAttributionSummary } from "@/features/attribution/catalog";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import type { VisitStatus } from "@/generated/prisma/client";
@@ -582,6 +583,9 @@ export default async function ReceptionPage({
                       country: visit.originCountry
                     }) || "Sin registrar"}
                   </span>
+                  <span>
+                    Fuente: {visitAttributionSummary(visit.attribution)}
+                  </span>
                   {visit.workItems.length > 0 ? (
                     <span>
                       <Chip tone="primary">
@@ -603,6 +607,7 @@ export default async function ReceptionPage({
                     <Th className="lg:hidden xl:table-cell">Teléfono</Th>
                     <Th className="lg:hidden xl:table-cell">Llegada</Th>
                     <Th>Procedencia</Th>
+                    <Th>Fuente</Th>
                     <Th>Área actual</Th>
                     <Th>Tareas</Th>
                     <Th>Estado</Th>
@@ -635,6 +640,7 @@ export default async function ReceptionPage({
                           country: visit.originCountry
                         }) || "—"}
                       </Td>
+                      <Td>{visitAttributionSummary(visit.attribution)}</Td>
                       <Td>
                         {visit.route
                           ? routeAreaLabels[visit.route.currentArea]
@@ -675,7 +681,7 @@ export default async function ReceptionPage({
                   ))}
                   {visitRows.length === 0 ? (
                     <tr>
-                      <Td className="py-8 text-center" colSpan={8}>
+                      <Td className="py-8 text-center" colSpan={9}>
                         {emptyVisitsMessage}
                       </Td>
                     </tr>
@@ -752,6 +758,9 @@ export default async function ReceptionPage({
                           country: visit.originCountry
                         }) || "Procedencia sin registrar"}
                       </span>
+                      <span className="min-w-0 truncate text-xs text-muted">
+                        {visitAttributionSummary(visit.attribution)}
+                      </span>
                     </Link>
                   );
                 })}
@@ -806,6 +815,14 @@ export default async function ReceptionPage({
                         {selectedVisit.route
                           ? routeAreaLabels[selectedVisit.route.currentArea]
                           : "Sin ruta"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        Fuente
+                      </dt>
+                      <dd className="mt-0.5 text-text">
+                        {visitAttributionSummary(selectedVisit.attribution)}
                       </dd>
                     </div>
                     <div>

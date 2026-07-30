@@ -85,6 +85,10 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
     return [{ label: "Auditoría" }];
   }
 
+  if (moduleSegment === "atribucion") {
+    return [{ label: "Captación y atribución" }];
+  }
+
   if (moduleSegment === "usuarios") {
     return section
       ? [

@@ -37,6 +37,7 @@ const pagePermissions: Record<string, InternalPermission[]> = {
     "sales_read"
   ],
   "src/app/(internal)/sigeco/(app)/auditoria/page.tsx": ["audit_read"],
+  "src/app/(internal)/sigeco/(app)/atribucion/page.tsx": ["reports_read"],
   "src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx": [
     "clinical_read"
   ],
@@ -93,6 +94,8 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   applyVisitFlowAction: "visits_update",
   changeOwnInternalPasswordAction: "internal_access",
   createClinicalOrderAction: "clinical_write",
+  createCaptureCampaignAction: "attribution_manage",
+  createCaptureSourceAction: "attribution_manage",
   createFollowUpAttemptAction: "followups_write",
   createFollowUpTaskAction: "followups_write",
   createInternalLeadAction: "leads_create",
@@ -122,9 +125,11 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   searchReceptionPatientsAction: "patients_read",
   sendPaidStudiesToNursingAction: "visits_update",
   submitReceptionIntakeAction: "visits_create",
+  setCaptureCampaignActiveAction: "attribution_manage",
   unlockManagedInternalUserAction: "users_manage",
   updateLeadStatusAction: "leads_update",
   updateManagedInternalUserAccessAction: "users_manage",
+  updateCaptureSourceAction: "attribution_manage",
   updateNursingWorkItemAction: "nursing_write",
   updateReceptionPatientAction: "patients_update",
   updateVisitStatusAction: "visits_update"

@@ -44,16 +44,26 @@ export function ContactLeadForm({
     "idle"
   );
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [attributionCode, setAttributionCode] = useState("");
 
   const onSubmit = async (data: CreateLeadInput) => {
     setSubmitState("loading");
     setFeedbackMessage("");
+    setAttributionCode("");
 
+    const query =
+      typeof window === "undefined"
+        ? new URLSearchParams()
+        : new URLSearchParams(window.location.search);
     const payload = {
       ...data,
       source,
       status: "new",
       pagePath: pathname,
+      campaignCode: query.get("camp") ?? undefined,
+      utmSource: query.get("utm_source") ?? undefined,
+      utmMedium: query.get("utm_medium") ?? undefined,
+      utmCampaign: query.get("utm_campaign") ?? undefined,
       website: data.website ?? ""
     };
 
@@ -73,7 +83,10 @@ export function ContactLeadForm({
       return;
     }
 
-    const result = (await response.json().catch(() => null)) as { message?: string } | null;
+    const result = (await response.json().catch(() => null)) as {
+      message?: string;
+      lead?: { attributionCode?: string };
+    } | null;
 
     if (!response.ok) {
       setSubmitState("error");
@@ -86,6 +99,7 @@ export function ContactLeadForm({
 
     setSubmitState("success");
     setFeedbackMessage(result?.message ?? "Consulta registrada correctamente.");
+    setAttributionCode(result?.lead?.attributionCode ?? "");
     trackLeadFormSubmit({
       formOrigin: origin,
       pagePath: pathname,
@@ -214,7 +228,11 @@ export function ContactLeadForm({
             {feedbackMessage}
           </p>
           <Button
-            href={createWhatsAppLink(siteConfig.conversion.afterLeadWhatsAppMessage)}
+            href={createWhatsAppLink(
+              attributionCode
+                ? `${siteConfig.conversion.afterLeadWhatsAppMessage} Código de contacto: ${attributionCode}.`
+                : siteConfig.conversion.afterLeadWhatsAppMessage
+            )}
             target="_blank"
             rel="noreferrer"
             variant="ghost"
@@ -226,6 +244,12 @@ export function ContactLeadForm({
             <MessageCircle className="mr-2 h-4 w-4" aria-hidden="true" />
             Continuar por WhatsApp
           </Button>
+          {attributionCode ? (
+            <p className="mt-1 text-xs text-muted">
+              Código de contacto: <strong>{attributionCode}</strong>. Se enviará
+              también por WhatsApp para conservar el origen del formulario.
+            </p>
+          ) : null}
         </div>
       ) : null}
 

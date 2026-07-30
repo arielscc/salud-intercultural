@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { persistedLead, validLeadInput } from "../../../../tests/fixtures/leads";
 import { createLeadRecord } from "@/modules/database/queries/leads";
+import { findActiveCaptureCampaignByCode } from "@/modules/database/queries/attribution";
 import { POST } from "@/app/api/leads/route";
 
 vi.mock("@/modules/database/queries/leads", () => ({
   createLeadRecord: vi.fn()
 }));
+vi.mock("@/modules/database/queries/attribution", () => ({
+  findActiveCaptureCampaignByCode: vi.fn()
+}));
 
 const createLeadRecordMock = vi.mocked(createLeadRecord);
+const findCampaignMock = vi.mocked(findActiveCaptureCampaignByCode);
 
 function createJsonRequest(body: unknown, headers?: HeadersInit) {
   return new Request("http://localhost:3000/api/leads", {
@@ -28,6 +33,7 @@ async function readJson(response: Response) {
 beforeEach(() => {
   vi.unstubAllEnvs();
   createLeadRecordMock.mockReset();
+  findCampaignMock.mockReset();
   delete (globalThis as typeof globalThis & {
     __saludInterculturalLeadRateLimit?: unknown;
   }).__saludInterculturalLeadRateLimit;
@@ -76,6 +82,53 @@ describe("POST /api/leads", () => {
       phone: expect.any(Array)
     });
     expect(createLeadRecordMock).not.toHaveBeenCalled();
+  });
+
+  it("uses a configured campaign to identify account and traffic automatically", async () => {
+    createLeadRecordMock.mockResolvedValue(persistedLead);
+    findCampaignMock.mockResolvedValue({
+      id: "campaign-tiktok-doctor",
+      code: "TIKTOK-DR",
+      name: "Contenido del doctor",
+      sourceId: "capture-tiktok",
+      accountLabel: "TikTok del Dr. Franco",
+      accountHandle: "@clinicademedicinanatural",
+      trafficType: "organic",
+      active: true,
+      startsAt: null,
+      endsAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      source: {
+        id: "capture-tiktok",
+        code: "tiktok",
+        patientLabel: "TikTok",
+        internalLabel: "TikTok",
+        category: "social",
+        active: true,
+        receptionSelectable: true,
+        sortOrder: 20,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+
+    const response = await POST(
+      createJsonRequest({
+        ...validLeadInput,
+        campaignCode: "tiktok-dr"
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(findCampaignMock).toHaveBeenCalledWith("TIKTOK-DR");
+    expect(createLeadRecordMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignCode: "TIKTOK-DR",
+        attributedAccount: "TikTok del Dr. Franco",
+        attributionTrafficType: "organic"
+      })
+    );
   });
 
   it("blocks honeypot submissions before persistence", async () => {

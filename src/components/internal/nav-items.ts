@@ -9,6 +9,7 @@ import {
   Stethoscope,
   UserCog,
   UserRound,
+  ChartNoAxesCombined,
   type LucideIcon
 } from "lucide-react";
 import type { InternalPermission } from "@/generated/prisma/client";
@@ -33,6 +34,12 @@ export const sigecoNavItems: SigecoNavItem[] = [
     permission: "followups_read"
   },
   { href: "/sigeco/inventario", label: "Inventario", icon: Boxes, permission: "inventory_read" },
+  {
+    href: "/sigeco/atribucion",
+    label: "Captación",
+    icon: ChartNoAxesCombined,
+    permission: "reports_read"
+  },
   { href: "/sigeco/auditoria", label: "Auditoría", icon: ShieldCheck, permission: "audit_read" },
   { href: "/sigeco/usuarios", label: "Usuarios", icon: UserCog, permission: "users_manage" },
   { href: "/sigeco/mi-cuenta", label: "Mi cuenta", icon: UserRound, permission: "internal_access" }

@@ -27,6 +27,11 @@ const visitOrigin = {
   originMatchesPatient: true
 };
 
+const reportedAttribution = {
+  primarySourceCode: "other",
+  supportSourceCodes: [] as string[]
+};
+
 async function cleanReceptionData() {
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
@@ -75,6 +80,10 @@ describe("reception intake integration", () => {
         previouslyTreated: true,
         bringsStudies: false,
         ...visitOrigin
+      },
+      attribution: {
+        primarySourceCode: "referral",
+        supportSourceCodes: ["whatsapp"]
       }
     });
 
@@ -87,7 +96,10 @@ describe("reception intake integration", () => {
         checkIn: true,
         route: { include: { steps: true } },
         statusHistory: true,
-        workItems: true
+        workItems: true,
+        attribution: {
+          include: { touches: { include: { source: true } } }
+        }
       }
     });
 
@@ -111,6 +123,11 @@ describe("reception intake integration", () => {
     expect(visit.route?.steps).toHaveLength(1);
     expect(visit.statusHistory).toHaveLength(1);
     expect(visit.workItems).toHaveLength(1);
+    expect(result.attribution.touches).toHaveLength(2);
+    expect(
+      result.attribution.touches.find((touch) => touch.role === "primary")
+        ?.source.code
+    ).toBe("referral");
   });
 
   it("updates an existing patient and opens a new visit without duplicating the record", async () => {
@@ -139,6 +156,10 @@ describe("reception intake integration", () => {
         originDepartment: "Cochabamba",
         originCountry: "Bolivia",
         originMatchesPatient: false
+      },
+      attribution: {
+        primarySourceCode: "tiktok",
+        supportSourceCodes: ["whatsapp"]
       }
     });
 
@@ -153,6 +174,8 @@ describe("reception intake integration", () => {
     expect(result.visit.intakeType).toBe("treatment_control");
     expect(result.visit.originCity).toBe("Cochabamba");
     expect(result.visit.originMatchesPatient).toBe(false);
+    // La nueva llegada no reemplaza la fuente original de la ficha.
+    expect(updated.captureSource).toBe("whatsapp");
   });
 
   it("creates the minimal intake with only name, phone and reason", async () => {
@@ -168,7 +191,8 @@ describe("reception intake integration", () => {
       visit: {
         reason: "Consulta general",
         ...visitOrigin
-      }
+      },
+      attribution: reportedAttribution
     });
 
     const patient = await prisma.patient.findUniqueOrThrow({
@@ -200,8 +224,6 @@ describe("reception intake integration", () => {
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
-      captureSource: "referral",
-      captureSources: ["referral", "facebook"],
       allergies: null,
       relevantHistory: "Hipertensión",
       currentMedication: null
@@ -215,7 +237,7 @@ describe("reception intake integration", () => {
     expect(updated.fullName).toBe("Rosa Huanca");
     expect(updated.phone).toBe("76543210");
     expect(updated.city).toBe("El Alto");
-    expect(updated.captureSources).toEqual(["referral", "facebook"]);
+    expect(updated.captureSources).toEqual(["referral"]);
     expect(updated.allergies).toBeNull();
     expect(updated.relevantHistory).toBe("Hipertensión");
     expect(updated.followUpPreference).toBe("unknown");
@@ -256,7 +278,8 @@ describe("reception intake integration", () => {
         originDepartment: "Cochabamba",
         originCountry: "Bolivia",
         originMatchesPatient: false
-      }
+      },
+      attribution: reportedAttribution
     });
 
     await updateVisitRouteStatus({
@@ -274,8 +297,6 @@ describe("reception intake integration", () => {
       city: "La Paz",
       department: "La Paz",
       country: "Bolivia",
-      captureSource: "other",
-      captureSources: [],
       allergies: null,
       relevantHistory: null,
       currentMedication: null
@@ -298,18 +319,21 @@ describe("reception intake integration", () => {
     const first = await createReceptionIntake({
       userId: user.id,
       patient: { fullName: "Paciente Uno", phone: "70000001", ...habitualOrigin },
-      visit: { reason: "Primera llegada", ...visitOrigin }
+      visit: { reason: "Primera llegada", ...visitOrigin },
+      attribution: reportedAttribution
     });
     await createReceptionIntake({
       userId: user.id,
       patientId: first.patientId,
       patient: { fullName: "Paciente Uno", phone: "70000001", ...habitualOrigin },
-      visit: { reason: "Segunda llegada", ...visitOrigin }
+      visit: { reason: "Segunda llegada", ...visitOrigin },
+      attribution: reportedAttribution
     });
     const second = await createReceptionIntake({
       userId: user.id,
       patient: { fullName: "Paciente Dos", phone: "70000002", ...habitualOrigin },
-      visit: { reason: "Consulta del día", ...visitOrigin }
+      visit: { reason: "Consulta del día", ...visitOrigin },
+      attribution: reportedAttribution
     });
 
     await updateVisitRouteStatus({
