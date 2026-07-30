@@ -17,6 +17,7 @@ export const clinicalOrderTypeSchema = z.enum([
 
 export const upsertClinicalConsultationSchema = z.object({
   visitId: z.string().min(1),
+  expectedRevision: z.coerce.number().int().min(0),
   motive: z.string().trim().min(3, "Registra el motivo.").max(700),
   primaryDiagnosis: z.string().trim().min(2, "Registra el diagnostico principal.").max(240),
   secondaryDiagnosis: z.preprocess(emptyToUndefined, z.string().trim().max(240).optional()),

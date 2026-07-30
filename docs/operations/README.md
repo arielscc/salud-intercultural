@@ -46,6 +46,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 31. [Resultado de la propuesta de tratamiento](./treatment-proposal-outcomes.md)
 32. [Tipos y resultados de seguimiento](./follow-up-classification.md)
 33. [Abandono, bloqueo y pendientes](./visit-discontinuations.md)
+34. [Correcciones, cierre y firma clínica](./clinical-record-versioning.md)
 
 ## Flujo recomendado
 

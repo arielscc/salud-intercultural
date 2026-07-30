@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-16 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-17 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las veintitrés migraciones actuales están
-aplicadas en desarrollo. Falta validar las once
+anteriores están en staging y las veinticuatro migraciones actuales están
+aplicadas en desarrollo. Falta validar las doce
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8.
@@ -26,8 +26,8 @@ funcionamiento del gate de la Tarea 8.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 13 |
-| En progreso | 15 |
+| Pendiente | 12 |
+| En progreso | 16 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -62,7 +62,7 @@ funcionamiento del gate de la Tarea 8.
 | 14 | Resultado de propuesta | P1 | En progreso | 3, 4, 9 |
 | 15 | Tipos de seguimiento | P1 | En progreso | 9, 14 |
 | 16 | Abandono, bloqueo y pendientes | P1 | En progreso | 13, 15 |
-| 17 | Correcciones y firma clínica | P1 | Pendiente | 3-5 |
+| 17 | Correcciones y firma clínica | P1 | En progreso | 3-5 |
 | 18 | Caja, dinero al personal, gastos y cierre | P0 | Pendiente | 3-5, 8 |
 | 19 | Catálogo y proveedores | P0 | Pendiente | 3-5, 18 |
 | 20 | Compras, recepciones, lotes y stock | P0 | Pendiente | 18-19 |
@@ -135,6 +135,12 @@ Estado de las tareas de la base segura:
   tareas y órdenes abiertas quedan bloqueadas, el seguimiento solo se crea con
   consentimiento y el reporte agrupa abandonos por motivo. Pendiente
   integración acumulada, QA de gstack y validación por roles en staging.
+- **Tarea 17 — Correcciones, cierre y firma clínica:** borrador, finalización,
+  autor, fecha, hora y versiones comparables implementados en desarrollo
+  local. Las correcciones exigen motivo, no modifican órdenes, ventas ni
+  aplicaciones y usan control de revisión contra cambios concurrentes.
+  Pendiente integración acumulada, QA de gstack y validación por roles en
+  staging.
 
 Para terminar la Tarea 1:
 
@@ -810,6 +816,51 @@ Responsables: áreas operativas y Dirección para revisión.
 - No aplicar la migración en producción sin autorización expresa.
 
 **Commit sugerido:** `feat(sigeco): record abandonment and blocked work`
+
+## 2026-07-30 — Tarea 17 — Correcciones, Cierre Y Firma Clínica
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Médico y Dirección para revisión.
+
+### Resultado
+
+- La consulta distingue borrador y finalizada.
+- Guardar, finalizar y corregir crea versiones con autor, fecha y hora.
+- La versión finalizada no vuelve a editarse como borrador.
+- Corregir exige tipo y motivo y mantiene visible el contenido anterior.
+- El historial compara versiones y resalta campos modificados.
+- Las revisiones evitan que dos pestañas se sobrescriban.
+- Recetas, órdenes, ventas, cobros y aplicaciones no cambian con una corrección.
+- Una visita con consulta en borrador no puede cerrarse como completada.
+
+### Archivos Y Migraciones
+
+- Modelo, política, schemas, acciones y consultas de versiones clínicas.
+- Formulario responsive de corrección e historial comparable.
+- Permisos separados para finalizar y corregir.
+- Migración local `20260730154007_clinical_record_versions`, con versión
+  conservadora para consultas anteriores.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Prisma validate, generate y migración local aprobados; 24 migraciones al día.
+- Las 5 consultas históricas tienen una versión de borrador y ninguna recibió
+  una firma inventada.
+- TypeScript y lint aprobados.
+- 6 archivos y 35 pruebas enfocadas aprobados.
+
+### Pendientes
+
+- Ejecutar integración, build y QA gstack en el cierre acumulado.
+- Validar Médico y Dirección en staging.
+- Confirmar con Dirección el alcance de la firma clínica interna.
+- No aplicar la migración en producción sin autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): version clinical records`
 
 ## Cómo Actualizar El Progreso
 

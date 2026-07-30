@@ -90,6 +90,8 @@ La suite contiene 11 archivos y cubre:
 - Abandono detallado, pendientes conservados, trabajo bloqueado y seguimiento
   de recuperación sujeto a consentimiento.
 - Consulta clinica, enfermeria y estudios.
+- Versiones de consulta, firma interna, corrección, relaciones intactas y
+  rechazo de modificaciones concurrentes.
 - Ventas, pagos y caja.
 - Inventario, rollback por stock insuficiente y alertas.
 - Seguimientos y cronologia del paciente.

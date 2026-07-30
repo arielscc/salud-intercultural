@@ -9,6 +9,7 @@ describe("clinical care schemas", () => {
   it("validates and sanitizes consultation input", () => {
     const parsed = upsertClinicalConsultationSchema.parse({
       visitId: "visit_1",
+      expectedRevision: 0,
       motive: "  Dolor   general  ",
       primaryDiagnosis: "  Diagnostico principal  ",
       treatmentPlanText: "Plan inicial",
@@ -42,6 +43,7 @@ describe("clinical care schemas", () => {
     expect(() =>
       upsertClinicalConsultationSchema.parse({
         visitId: "visit_1",
+        expectedRevision: 0,
         motive: "",
         primaryDiagnosis: ""
       })

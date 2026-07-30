@@ -35,6 +35,8 @@ enum InternalPermission {
   patient_route_update
   clinical_read
   clinical_write
+  clinical_finalize
+  clinical_correct
   nursing_read
   nursing_write
   studies_read
@@ -266,6 +268,25 @@ enum VisitPendingType {
   payment
   delivery
   follow_up
+}
+
+enum ClinicalRecordStatus {
+  draft
+  finalized
+}
+
+enum ClinicalRecordVersionKind {
+  draft
+  finalized
+  correction
+}
+
+enum ClinicalCorrectionType {
+  diagnosis
+  findings
+  treatment_plan
+  indications
+  other
 }
 
 enum VisitIntakeType {
@@ -504,6 +525,8 @@ model InternalUser {
   performedPatientMerges      PatientMerge[]                  @relation("PatientMergePerformedBy")
   treatmentProposalOutcomes   TreatmentProposalOutcome[]
   recordedDiscontinuations    VisitDiscontinuation[]          @relation("VisitDiscontinuationRecordedBy")
+  finalizedConsultations      ClinicalConsultation[]          @relation("ClinicalConsultationFinalizedBy")
+  authoredClinicalVersions    ClinicalConsultationVersion[]   @relation("ClinicalConsultationVersionAuthor")
 
   @@index([role])
   @@index([active])
@@ -988,27 +1011,62 @@ model VisitStatusHistory {
 }
 
 model ClinicalConsultation {
-  id                        String                     @id @default(cuid())
-  visitId                   String                     @unique
+  id                        String                        @id @default(cuid())
+  visitId                   String                        @unique
   patientId                 String
   doctorId                  String?
+  status                    ClinicalRecordStatus          @default(draft)
+  revision                  Int                           @default(1)
+  finalizedById             String?
+  finalizedAt               DateTime?
   motive                    String
   findings                  String?
   observations              String?
   treatmentPlanText         String?
   indications               String?
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
-  visit                     Visit                      @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  patient                   Patient                    @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  doctor                    InternalUser?              @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  createdAt                 DateTime                      @default(now())
+  updatedAt                 DateTime                      @updatedAt
+  visit                     Visit                         @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient                   Patient                       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor                    InternalUser?                 @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  finalizedBy               InternalUser?                 @relation("ClinicalConsultationFinalizedBy", fields: [finalizedById], references: [id], onDelete: Restrict)
   diagnoses                 Diagnosis[]
   treatmentPlans            TreatmentPlan[]
   treatmentProposalOutcomes TreatmentProposalOutcome[]
+  versions                  ClinicalConsultationVersion[]
 
   @@index([patientId])
   @@index([doctorId])
+  @@index([status, finalizedAt])
+  @@index([finalizedById])
   @@index([createdAt])
+}
+
+/// Fotografía inmutable de una consulta en cada guardado, cierre o corrección.
+/// La tabla principal es la proyección vigente; estas versiones conservan la historia.
+model ClinicalConsultationVersion {
+  id                 String                    @id @default(cuid())
+  consultationId     String
+  version            Int
+  kind               ClinicalRecordVersionKind
+  correctionType     ClinicalCorrectionType?
+  correctionReason   String?
+  authorId           String?
+  motive             String
+  primaryDiagnosis   String?
+  secondaryDiagnosis String?
+  findings           String?
+  observations       String?
+  treatmentPlanText  String?
+  indications        String?
+  createdAt          DateTime                  @default(now())
+  consultation       ClinicalConsultation      @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  author             InternalUser?             @relation("ClinicalConsultationVersionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@unique([consultationId, version])
+  @@index([consultationId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([kind, createdAt])
 }
 
 model Diagnosis {

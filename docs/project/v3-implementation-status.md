@@ -18,6 +18,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Resultado de propuestas | En progreso | El médico registra la decisión; aceptación crea una instrucción, no una venta automática. |
 | Clasificación de seguimientos | En progreso | Tipo, prioridad, responsable y resultado separados; llamadas médicas escaladas al médico. |
 | Abandono y pendientes | En progreso | Punto, motivo, área y pendientes conservados; tareas abiertas quedan bloqueadas y recuperables. |
+| Versiones y firma clínica | En progreso | Borrador, cierre, autor y correcciones comparables implementados en desarrollo local. |
 
 ## Fuentes Canonicas
 
@@ -76,6 +77,10 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 
 - Contexto de recepcion prellenado sin volver a pedir el motivo.
 - Diagnosticos, hallazgos, plan, indicaciones, receta y evolucion.
+- Borradores versionados y cierre con usuario, fecha y hora.
+- Correcciones como nuevas versiones, con motivo e historial comparable.
+- Una corrección no cambia órdenes, ventas ni aplicaciones relacionadas.
+- Una visita con consulta en borrador no puede cerrarse como completada.
 - Resultado append-only de la propuesta con motivo, médico, visita y fecha.
 - Una aceptación crea una orden explícita para Administración; la venta y el
   pago se registran después.

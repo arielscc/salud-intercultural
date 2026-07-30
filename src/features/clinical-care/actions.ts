@@ -7,6 +7,11 @@ import {
   upsertClinicalConsultationRecord
 } from "@/modules/database/queries/clinical-care";
 import {
+  correctClinicalConsultation,
+  finalizeClinicalConsultation,
+  findClinicalRecordWorkflowError
+} from "@/modules/database/queries/clinical-records";
+import {
   auditedResult,
   denyAuditedAction,
   runAuditedAction
@@ -18,6 +23,10 @@ import {
 } from "@/features/clinical-care/schemas/clinical-care.schema";
 import { paidStudyOrderSchema } from "@/features/clinical-care/schemas/paid-study.schema";
 import { createPaidStudyOrder } from "@/modules/database/queries/paid-studies";
+import {
+  correctClinicalConsultationSchema,
+  finalizeClinicalConsultationSchema
+} from "@/features/clinical-records/schemas/clinical-record.schema";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -25,35 +34,182 @@ function parseFormData(formData: FormData) {
 
 export async function saveClinicalConsultationAction(formData: FormData) {
   const visitId = String(formData.get("visitId") ?? "");
-  await runAuditedAction(
-    {
-      permission: "clinical_write",
-      action: "clinical.consultation.save",
-      entityType: "visit",
-      entityId: visitId || undefined
-    },
-    async (user) => {
-      const parsed = upsertClinicalConsultationSchema.safeParse(parseFormData(formData));
+  try {
+    await runAuditedAction(
+      {
+        permission: "clinical_write",
+        action: "clinical.consultation.save",
+        entityType: "visit",
+        entityId: visitId || undefined
+      },
+      async (user) => {
+        const parsed = upsertClinicalConsultationSchema.safeParse(
+          parseFormData(formData)
+        );
 
-      if (!parsed.success) {
-        redirect("/sigeco/consultas?error=invalid");
+        if (!parsed.success) {
+          redirect(
+            `/sigeco/consultas/${encodeURIComponent(
+              visitId
+            )}?error=consulta-invalida`
+          );
+        }
+
+        const input = sanitizeClinicalConsultationInput(parsed.data);
+        const consultation = await upsertClinicalConsultationRecord({
+          ...input,
+          doctorId: user.id
+        });
+        return auditedResult(consultation, {
+          entityId: consultation.id,
+          context: {
+            visitId: input.visitId,
+            revision: consultation.revision,
+            status: consultation.status
+          }
+        });
       }
-
-      const input = sanitizeClinicalConsultationInput(parsed.data);
-
-      const consultation = await upsertClinicalConsultationRecord({
-        ...input,
-        doctorId: user.id
-      });
-      return auditedResult(consultation, {
-        entityId: input.visitId,
-        context: { consultationId: consultation.id }
-      });
+    );
+  } catch (error) {
+    const workflowError = findClinicalRecordWorkflowError(error);
+    if (workflowError) {
+      const code =
+        workflowError.code === "CLINICAL_RECORD_STALE"
+          ? "consulta-desactualizada"
+          : "consulta-finalizada";
+      redirect(
+        `/sigeco/consultas/${encodeURIComponent(visitId)}?error=${code}`
+      );
     }
-  );
+    throw error;
+  }
 
   revalidatePath("/sigeco/consultas");
   revalidatePath(`/sigeco/consultas/${visitId}`);
+}
+
+export async function finalizeClinicalConsultationAction(formData: FormData) {
+  const visitId = String(formData.get("visitId") ?? "");
+  try {
+    await runAuditedAction(
+      {
+        permission: "clinical_finalize",
+        action: "clinical.consultation.finalize",
+        entityType: "clinical_consultation"
+      },
+      async (user) => {
+        const parsed = finalizeClinicalConsultationSchema.safeParse(
+          parseFormData(formData)
+        );
+        if (!parsed.success) {
+          redirect(
+            `/sigeco/consultas/${encodeURIComponent(
+              visitId
+            )}?error=consulta-invalida`
+          );
+        }
+        const consultation = await finalizeClinicalConsultation({
+          ...parsed.data,
+          finalizedById: user.id
+        });
+        return auditedResult(consultation, {
+          entityId: consultation.id,
+          context: {
+            visitId: parsed.data.visitId,
+            revision: consultation.revision,
+            status: consultation.status
+          }
+        });
+      }
+    );
+  } catch (error) {
+    const workflowError = findClinicalRecordWorkflowError(error);
+    if (workflowError) {
+      const code =
+        workflowError.code === "CLINICAL_RECORD_STALE"
+          ? "consulta-desactualizada"
+          : "consulta-ya-finalizada";
+      redirect(
+        `/sigeco/consultas/${encodeURIComponent(visitId)}?error=${code}`
+      );
+    }
+    throw error;
+  }
+
+  revalidatePath("/sigeco/consultas");
+  revalidatePath(`/sigeco/consultas/${visitId}`);
+  revalidatePath(`/sigeco/consultas/${visitId}/historial`);
+  redirect(
+    `/sigeco/consultas/${encodeURIComponent(
+      visitId
+    )}?aviso=consulta-finalizada`
+  );
+}
+
+export async function correctClinicalConsultationAction(formData: FormData) {
+  const visitId = String(formData.get("visitId") ?? "");
+  try {
+    await runAuditedAction(
+      {
+        permission: "clinical_correct",
+        action: "clinical.consultation.correct",
+        entityType: "clinical_consultation"
+      },
+      async (user) => {
+        const parsed = correctClinicalConsultationSchema.safeParse(
+          parseFormData(formData)
+        );
+        if (!parsed.success) {
+          redirect(
+            `/sigeco/consultas/${encodeURIComponent(
+              visitId
+            )}?error=correccion-invalida#corregir-consulta`
+          );
+        }
+        const corrected = await correctClinicalConsultation({
+          ...parsed.data,
+          correctedById: user.id
+        });
+        return auditedResult(corrected, {
+          entityId: parsed.data.consultationId,
+          context: {
+            visitId: parsed.data.visitId,
+            version: corrected.version.version,
+            correctionType: parsed.data.correctionType,
+            changedFields: corrected.changedFields,
+            relatedSales: corrected.relatedRecords.sales,
+            relatedApplications: corrected.relatedRecords.applications,
+            relatedOrders: corrected.relatedRecords.orders
+          }
+        });
+      }
+    );
+  } catch (error) {
+    const workflowError = findClinicalRecordWorkflowError(error);
+    if (workflowError) {
+      const code =
+        workflowError.code === "CLINICAL_RECORD_STALE"
+          ? "consulta-desactualizada"
+          : workflowError.code === "CLINICAL_RECORD_NO_CHANGES"
+            ? "correccion-sin-cambios"
+            : "correccion-no-disponible";
+      redirect(
+        `/sigeco/consultas/${encodeURIComponent(
+          visitId
+        )}?error=${code}#corregir-consulta`
+      );
+    }
+    throw error;
+  }
+
+  revalidatePath("/sigeco/consultas");
+  revalidatePath(`/sigeco/consultas/${visitId}`);
+  revalidatePath(`/sigeco/consultas/${visitId}/historial`);
+  redirect(
+    `/sigeco/consultas/${encodeURIComponent(
+      visitId
+    )}?aviso=consulta-corregida`
+  );
 }
 
 export async function createClinicalOrderAction(formData: FormData) {

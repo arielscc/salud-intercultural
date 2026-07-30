@@ -28,6 +28,19 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("enfermeria", "clinical_read")).toBe(false);
   });
 
+  it("limits clinical finalization and correction to doctors and super administrators", () => {
+    for (const role of ["medico", "super_admin"] as const) {
+      expect(roleHasPermission(role, "clinical_finalize")).toBe(true);
+      expect(roleHasPermission(role, "clinical_correct")).toBe(true);
+    }
+
+    expect(roleHasPermission("direccion", "clinical_read")).toBe(true);
+    expect(roleHasPermission("direccion", "clinical_finalize")).toBe(false);
+    expect(roleHasPermission("direccion", "clinical_correct")).toBe(false);
+    expect(roleHasPermission("enfermeria", "clinical_correct")).toBe(false);
+    expect(roleHasPermission("administracion", "clinical_correct")).toBe(false);
+  });
+
   it("allows administration sales without clinical or studies writes", () => {
     expect(roleHasPermission("administracion", "sales_read")).toBe(true);
     expect(roleHasPermission("administracion", "sales_write")).toBe(true);

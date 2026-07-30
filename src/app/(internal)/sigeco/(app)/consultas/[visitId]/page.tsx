@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
@@ -9,6 +10,7 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { TreatmentProposalOutcomeForm } from "@/components/internal/treatment-proposals/TreatmentProposalOutcomeForm";
 import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
+import { ClinicalConsultationCorrectionForm } from "@/components/internal/clinical-records/ClinicalConsultationCorrectionForm";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
@@ -19,9 +21,11 @@ import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import {
   createClinicalOrderAction,
   createPaidStudyOrderAction,
+  finalizeClinicalConsultationAction,
   saveClinicalConsultationAction
 } from "@/features/clinical-care/actions";
 import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
+import { clinicalRecordStatusLabels } from "@/features/clinical-records/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { symptomDurationUnitLabels, visitIntakeTypeLabels } from "@/features/reception/labels";
@@ -45,7 +49,7 @@ const targetAreaOptions = (["enfermeria", "administracion", "seguimiento"] as Pa
 
 type ConsultationDetailPageProps = {
   params: Promise<{ visitId: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; aviso?: string }>;
 };
 
 function calculatePatientAge(birthDate: Date | null) {
@@ -60,6 +64,33 @@ function calculatePatientAge(birthDate: Date | null) {
 function yesNoLabel(value: boolean | null) {
   if (value === null) return "Sin registro";
   return value ? "Sí" : "No";
+}
+
+function pageErrorMessage(error: string) {
+  const messages: Record<string, string> = {
+    "consulta-invalida": "Revisa los datos obligatorios de la consulta.",
+    "consulta-desactualizada":
+      "Otra persona modificó esta consulta. Recarga la información antes de intentarlo nuevamente.",
+    "consulta-finalizada":
+      "La consulta ya está finalizada. Para cambiarla debes registrar una corrección.",
+    "consulta-ya-finalizada": "La consulta ya había sido finalizada.",
+    "consulta-sin-finalizar":
+      "Primero finaliza y firma la consulta. La visita continúa abierta.",
+    "correccion-invalida":
+      "Revisa el tipo, el motivo y los datos de la corrección.",
+    "correccion-sin-cambios":
+      "No se registró la corrección porque los datos son iguales a la versión vigente.",
+    "correccion-no-disponible":
+      "Solo puede corregirse una consulta finalizada y vigente.",
+    "resultado-invalido":
+      "Revisa el resultado, el motivo y la instrucción para Administración.",
+    "resultado-cerrado":
+      "La propuesta aceptada ya fue confirmada y no puede enviarse nuevamente."
+  };
+  return (
+    messages[error] ??
+    "La visita ya no está disponible para registrar esta decisión."
+  );
 }
 
 export default async function ConsultationDetailPage({
@@ -85,6 +116,11 @@ export default async function ConsultationDetailPage({
   const proposalSale =
     latestProposalOutcome?.administrationOrder?.workItem?.sales[0];
   const canWriteClinical = roleHasPermission(user.role, "clinical_write");
+  const canFinalizeClinical = roleHasPermission(
+    user.role,
+    "clinical_finalize"
+  );
+  const canCorrectClinical = roleHasPermission(user.role, "clinical_correct");
   const canRecordDiscontinuation = roleHasPermission(
     user.role,
     "visit_discontinuations_write"
@@ -94,8 +130,17 @@ export default async function ConsultationDetailPage({
   const canRecordProposal =
     canWriteClinical &&
     visit.status === "in_consultation" &&
-    Boolean(visit.clinicalConsultation) &&
+    visit.clinicalConsultation?.status === "finalized" &&
     latestProposalOutcome?.status !== "accepted";
+  const clinicalSnapshot = {
+    motive: consultationMotive,
+    primaryDiagnosis: primaryDiagnosis?.name ?? "",
+    secondaryDiagnosis: secondaryDiagnosis?.name,
+    findings: visit.clinicalConsultation?.findings,
+    observations: visit.clinicalConsultation?.observations,
+    treatmentPlanText: visit.clinicalConsultation?.treatmentPlanText,
+    indications: visit.clinicalConsultation?.indications
+  };
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -106,11 +151,17 @@ export default async function ConsultationDetailPage({
             className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error max-sm:order-1"
             role="alert"
           >
-            {query.error === "resultado-invalido"
-              ? "Revisa el resultado, el motivo y la instrucción para Administración."
-              : query.error === "resultado-cerrado"
-                ? "La propuesta aceptada ya fue confirmada y no puede enviarse nuevamente."
-                : "La visita ya no está disponible para registrar esta decisión."}
+            {pageErrorMessage(query.error)}
+          </div>
+        ) : null}
+        {query.aviso ? (
+          <div
+            className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text max-sm:order-1"
+            role="status"
+          >
+            {query.aviso === "consulta-finalizada"
+              ? "La consulta quedó finalizada con autor, fecha y hora."
+              : "La corrección quedó registrada como una nueva versión."}
           </div>
         ) : null}
         <Card className="max-sm:order-1">
@@ -140,116 +191,311 @@ export default async function ConsultationDetailPage({
         </Card>
 
         <Card className="max-sm:order-3">
-          <CardHeader
-            title="Consulta médica"
-            description="Registro clínico de la visita actual."
-          />
-          <NoticeForm action={saveClinicalConsultationAction} notice="Consulta guardada" className="grid gap-4">
-            <input type="hidden" name="visitId" value={visit.id} />
-            <input type="hidden" name="motive" value={consultationMotive} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Diagnóstico principal">
-                <input
-                  className={internalInputClassName}
-                  name="primaryDiagnosis"
-                  defaultValue={primaryDiagnosis?.name}
-                  required
-                />
-              </Field>
-              <Field label="Diagnóstico secundario">
-                <input
-                  className={internalInputClassName}
-                  name="secondaryDiagnosis"
-                  defaultValue={secondaryDiagnosis?.name}
-                />
-              </Field>
-            </div>
-            <Field label="Hallazgos">
-              <textarea
-                className={`${internalInputClassName} min-h-24 py-3`}
-                name="findings"
-                defaultValue={visit.clinicalConsultation?.findings ?? ""}
-              />
-            </Field>
-            <Field label="Observaciones">
-              <textarea
-                className={`${internalInputClassName} min-h-24 py-3`}
-                name="observations"
-                defaultValue={visit.clinicalConsultation?.observations ?? ""}
-              />
-            </Field>
-            <Field label="Plan de tratamiento">
-              <textarea
-                className={`${internalInputClassName} min-h-28 py-3`}
-                name="treatmentPlanText"
-                defaultValue={visit.clinicalConsultation?.treatmentPlanText ?? ""}
-              />
-            </Field>
-            <Field label="Indicaciones">
-              <textarea
-                className={`${internalInputClassName} min-h-28 py-3`}
-                name="indications"
-                defaultValue={visit.clinicalConsultation?.indications ?? ""}
-              />
-            </Field>
-
-            <CollapsibleSection
-              title="Receta rápida"
-              description="Abrir solo cuando se indique medicación."
-              defaultOpen={Boolean(prescriptionItem)}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <CardHeader
+              title="Consulta médica"
+              description={
+                visit.clinicalConsultation?.status === "finalized"
+                  ? "Registro aprobado. Los cambios posteriores crean otra versión."
+                  : "Guarda el borrador y finalízalo cuando esté completo."
+              }
+            />
+            <Chip
+              tone={
+                visit.clinicalConsultation?.status === "finalized"
+                  ? "success"
+                  : "warning"
+              }
+              dot
             >
-              <Field label="Medicamento">
+              {visit.clinicalConsultation
+                ? clinicalRecordStatusLabels[
+                    visit.clinicalConsultation.status
+                  ]
+                : "Sin guardar"}
+            </Chip>
+          </div>
+
+          {visit.clinicalConsultation?.status !== "finalized" &&
+          canWriteClinical ? (
+            <>
+              <NoticeForm
+                action={saveClinicalConsultationAction}
+                notice="Consulta guardada"
+                className="grid gap-4"
+              >
+                <input type="hidden" name="visitId" value={visit.id} />
                 <input
-                  className={internalInputClassName}
-                  name="prescriptionMedication"
-                  defaultValue={prescriptionItem?.medication}
+                  type="hidden"
+                  name="expectedRevision"
+                  value={visit.clinicalConsultation?.revision ?? 0}
                 />
-              </Field>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Dosis">
-                  <input
-                    className={internalInputClassName}
-                    name="prescriptionDose"
-                    defaultValue={prescriptionItem?.dose ?? ""}
+                <input
+                  type="hidden"
+                  name="motive"
+                  value={consultationMotive}
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Diagnóstico principal">
+                    <input
+                      className={internalInputClassName}
+                      name="primaryDiagnosis"
+                      defaultValue={primaryDiagnosis?.name}
+                      required
+                    />
+                  </Field>
+                  <Field label="Diagnóstico secundario">
+                    <input
+                      className={internalInputClassName}
+                      name="secondaryDiagnosis"
+                      defaultValue={secondaryDiagnosis?.name}
+                    />
+                  </Field>
+                </div>
+                <Field label="Hallazgos">
+                  <textarea
+                    className={`${internalInputClassName} min-h-24 py-3`}
+                    name="findings"
+                    defaultValue={
+                      visit.clinicalConsultation?.findings ?? ""
+                    }
                   />
                 </Field>
-                <Field label="Frecuencia">
-                  <input
-                    className={internalInputClassName}
-                    name="prescriptionFrequency"
-                    defaultValue={prescriptionItem?.frequency ?? ""}
+                <Field label="Observaciones">
+                  <textarea
+                    className={`${internalInputClassName} min-h-24 py-3`}
+                    name="observations"
+                    defaultValue={
+                      visit.clinicalConsultation?.observations ?? ""
+                    }
                   />
                 </Field>
-                <Field label="Duración">
-                  <input
-                    className={internalInputClassName}
-                    name="prescriptionDuration"
-                    defaultValue={prescriptionItem?.duration ?? ""}
+                <Field label="Plan de tratamiento">
+                  <textarea
+                    className={`${internalInputClassName} min-h-28 py-3`}
+                    name="treatmentPlanText"
+                    defaultValue={
+                      visit.clinicalConsultation?.treatmentPlanText ?? ""
+                    }
                   />
                 </Field>
+                <Field label="Indicaciones">
+                  <textarea
+                    className={`${internalInputClassName} min-h-28 py-3`}
+                    name="indications"
+                    defaultValue={
+                      visit.clinicalConsultation?.indications ?? ""
+                    }
+                  />
+                </Field>
+
+                <CollapsibleSection
+                  title="Receta rápida"
+                  description="Abrir solo cuando se indique medicación."
+                  defaultOpen={Boolean(prescriptionItem)}
+                >
+                  <Field label="Medicamento">
+                    <input
+                      className={internalInputClassName}
+                      name="prescriptionMedication"
+                      defaultValue={prescriptionItem?.medication}
+                    />
+                  </Field>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Field label="Dosis">
+                      <input
+                        className={internalInputClassName}
+                        name="prescriptionDose"
+                        defaultValue={prescriptionItem?.dose ?? ""}
+                      />
+                    </Field>
+                    <Field label="Frecuencia">
+                      <input
+                        className={internalInputClassName}
+                        name="prescriptionFrequency"
+                        defaultValue={prescriptionItem?.frequency ?? ""}
+                      />
+                    </Field>
+                    <Field label="Duración">
+                      <input
+                        className={internalInputClassName}
+                        name="prescriptionDuration"
+                        defaultValue={prescriptionItem?.duration ?? ""}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Observaciones de receta">
+                    <input
+                      className={internalInputClassName}
+                      name="prescriptionObservations"
+                      defaultValue={prescriptionItem?.observations ?? ""}
+                    />
+                  </Field>
+                </CollapsibleSection>
+
+                <CollapsibleSection
+                  title="Evolución"
+                  description="Agregar una nota solo cuando corresponda documentar evolución."
+                  defaultOpen={visit.clinicalEvolutions.length > 0}
+                >
+                  <Field label="Nota de evolución">
+                    <textarea
+                      className={`${internalInputClassName} min-h-24 py-3`}
+                      name="evolutionNote"
+                    />
+                  </Field>
+                </CollapsibleSection>
+                <FormActions className="justify-end">
+                  <SubmitButton>Guardar borrador</SubmitButton>
+                </FormActions>
+              </NoticeForm>
+
+              {visit.clinicalConsultation && canFinalizeClinical ? (
+                <ConfirmForm
+                  action={finalizeClinicalConsultationAction}
+                  notice="Consulta finalizada"
+                  confirmTitle="Finalizar y firmar consulta"
+                  confirmDescription="Después de confirmar, la consulta ya no podrá editarse como borrador. Cualquier cambio exigirá una corrección con motivo."
+                  confirmLabel="Finalizar consulta"
+                  confirmAtAllWidths
+                  className="mt-4 border-t border-border pt-4"
+                >
+                  <input
+                    type="hidden"
+                    name="visitId"
+                    value={visit.id}
+                  />
+                  <input
+                    type="hidden"
+                    name="consultationId"
+                    value={visit.clinicalConsultation.id}
+                  />
+                  <input
+                    type="hidden"
+                    name="expectedRevision"
+                    value={visit.clinicalConsultation.revision}
+                  />
+                  <SubmitButton variant="outline" className="w-full">
+                    Finalizar y firmar consulta
+                  </SubmitButton>
+                </ConfirmForm>
+              ) : null}
+            </>
+          ) : visit.clinicalConsultation ? (
+            <div className="grid gap-4">
+              <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                <InfoRow
+                  label="Motivo de consulta"
+                  value={visit.clinicalConsultation.motive}
+                  wide
+                />
+                <InfoRow
+                  label="Diagnóstico principal"
+                  value={primaryDiagnosis?.name}
+                />
+                <InfoRow
+                  label="Diagnóstico secundario"
+                  value={secondaryDiagnosis?.name}
+                />
+                <InfoRow
+                  label="Hallazgos"
+                  value={visit.clinicalConsultation.findings}
+                  wide
+                />
+                <InfoRow
+                  label="Observaciones"
+                  value={visit.clinicalConsultation.observations}
+                  wide
+                />
+                <InfoRow
+                  label="Plan de tratamiento"
+                  value={visit.clinicalConsultation.treatmentPlanText}
+                  wide
+                />
+                <InfoRow
+                  label="Indicaciones"
+                  value={visit.clinicalConsultation.indications}
+                  wide
+                />
+              </dl>
+
+              {prescriptionItem || visit.clinicalEvolutions.length > 0 ? (
+                <div className="grid gap-2 border-t border-border pt-4">
+                  {prescriptionItem ? (
+                    <div className="rounded-[9px] border border-border px-3 py-2.5 text-sm">
+                      <p className="font-semibold text-text">
+                        Receta: {prescriptionItem.medication}
+                      </p>
+                      <p className="mt-1 text-muted">
+                        {[
+                          prescriptionItem.dose,
+                          prescriptionItem.frequency,
+                          prescriptionItem.duration
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Sin detalle adicional"}
+                      </p>
+                    </div>
+                  ) : null}
+                  {visit.clinicalEvolutions.map((evolution) => (
+                    <div
+                      key={evolution.id}
+                      className="rounded-[9px] border border-border px-3 py-2.5 text-sm"
+                    >
+                      <p className="font-semibold text-text">Evolución</p>
+                      <p className="mt-1 text-muted">{evolution.note}</p>
+                      <p className="mt-1 text-xs tabular-nums text-muted">
+                        {formatDateTime(evolution.createdAt)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="rounded-[9px] border border-border bg-background px-3 py-2.5 text-sm">
+                <p className="font-semibold text-text">
+                  Versión {visit.clinicalConsultation.revision}
+                </p>
+                <p className="mt-1 text-muted">
+                  {visit.clinicalConsultation.finalizedAt
+                    ? `Finalizada ${formatDateTime(
+                        visit.clinicalConsultation.finalizedAt
+                      )} por ${
+                        visit.clinicalConsultation.finalizedBy?.name ??
+                        visit.clinicalConsultation.finalizedBy?.email ??
+                        "usuario no disponible"
+                      }`
+                    : "Este registro continúa como borrador."}
+                </p>
               </div>
-              <Field label="Observaciones de receta">
-                <input
-                  className={internalInputClassName}
-                  name="prescriptionObservations"
-                  defaultValue={prescriptionItem?.observations ?? ""}
-                />
-              </Field>
-            </CollapsibleSection>
 
-            <CollapsibleSection
-              title="Evolución"
-              description="Agregar una nota solo cuando corresponda documentar evolución."
-              defaultOpen={visit.clinicalEvolutions.length > 0}
-            >
-              <Field label="Nota de evolución">
-                <textarea className={`${internalInputClassName} min-h-24 py-3`} name="evolutionNote" />
-              </Field>
-            </CollapsibleSection>
-            <FormActions className="justify-end">
-              <SubmitButton>Guardar consulta</SubmitButton>
-            </FormActions>
-          </NoticeForm>
+              <Link
+                href={`/sigeco/consultas/${visit.id}/historial`}
+                className="focus-ring inline-flex min-h-11 items-center justify-center rounded-[9px] border border-border px-4 text-sm font-semibold text-text hover:border-primary/40 hover:text-primary-dark"
+              >
+                Ver historial y comparar versiones
+              </Link>
+
+              {visit.clinicalConsultation.status === "finalized" &&
+              canCorrectClinical ? (
+                <CollapsibleSection
+                  title="Corregir consulta finalizada"
+                  description="Crea otra versión y conserva intacta la anterior."
+                >
+                  <ClinicalConsultationCorrectionForm
+                    visitId={visit.id}
+                    consultationId={visit.clinicalConsultation.id}
+                    expectedRevision={visit.clinicalConsultation.revision}
+                    snapshot={clinicalSnapshot}
+                  />
+                </CollapsibleSection>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">
+              Todavía no existe una consulta guardada.
+            </p>
+          )}
         </Card>
       </div>
 
@@ -391,6 +637,11 @@ export default async function ConsultationDetailPage({
             <p className="text-sm text-warning">
               Guarda primero la consulta y el plan explicado al paciente.
             </p>
+          ) : visit.clinicalConsultation.status === "draft" ? (
+            <p className="text-sm text-warning">
+              Finaliza y firma la consulta antes de registrar la decisión del
+              paciente.
+            </p>
           ) : null}
         </Card>
 
@@ -402,20 +653,31 @@ export default async function ConsultationDetailPage({
             />
             <div className="grid gap-2">
               <PaidStudyOrderDialog visitId={visit.id} action={createPaidStudyOrderAction} />
-              <ConfirmForm
-                action={applyVisitFlowAction}
-                notice="Visita cerrada"
-                confirmTitle="Cerrar visita"
-                confirmDescription={`La visita de ${visit.patient.fullName} quedará completada y saldrá de las bandejas activas. Esta acción no se puede deshacer.`}
-                confirmLabel="Cerrar visita"
-              >
-                <input type="hidden" name="visitId" value={visit.id} />
-                <input type="hidden" name="flow" value="complete" />
-                <input type="hidden" name="note" value="Salida directa después de la consulta" />
-                <SubmitButton variant="outline" className="w-full">
-                  Se va — cerrar visita
-                </SubmitButton>
-              </ConfirmForm>
+              {visit.clinicalConsultation?.status === "finalized" ? (
+                <ConfirmForm
+                  action={applyVisitFlowAction}
+                  notice="Visita cerrada"
+                  confirmTitle="Cerrar visita"
+                  confirmDescription={`La visita de ${visit.patient.fullName} quedará completada y saldrá de las bandejas activas. Esta acción no se puede deshacer.`}
+                  confirmLabel="Cerrar visita"
+                >
+                  <input type="hidden" name="visitId" value={visit.id} />
+                  <input type="hidden" name="flow" value="complete" />
+                  <input
+                    type="hidden"
+                    name="note"
+                    value="Salida directa después de la consulta"
+                  />
+                  <SubmitButton variant="outline" className="w-full">
+                    Se va — cerrar visita
+                  </SubmitButton>
+                </ConfirmForm>
+              ) : (
+                <p className="rounded-[9px] border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-text">
+                  Para cerrar la atención, primero guarda, revisa y finaliza la
+                  consulta.
+                </p>
+              )}
               {canRecordDiscontinuation ? (
                 <VisitDiscontinuationForm
                   visitId={visit.id}

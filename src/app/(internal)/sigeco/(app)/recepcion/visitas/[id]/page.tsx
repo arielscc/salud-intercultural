@@ -75,6 +75,16 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           </p>
         </div>
       ) : null}
+      {query.error === "consulta-sin-finalizar" ? (
+        <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-warning">
+            La visita no puede cerrarse todavía.
+          </p>
+          <p className="mt-1 text-text">
+            El médico debe finalizar y firmar la consulta antes del cierre.
+          </p>
+        </div>
+      ) : null}
       {query.error === "abandono-invalido" ? (
         <div className="rounded-[9px] bg-error/10 px-4 py-3 text-sm text-error">
           <p className="font-semibold">Selecciona un motivo para continuar.</p>

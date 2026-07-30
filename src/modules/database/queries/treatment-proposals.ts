@@ -11,6 +11,7 @@ export class TreatmentProposalOutcomeError extends Error {
   constructor(
     public readonly code:
       | "CONSULTATION_REQUIRED"
+      | "CONSULTATION_NOT_FINALIZED"
       | "VISIT_NOT_IN_CONSULTATION"
       | "ACCEPTED_OUTCOME_ALREADY_RECORDED"
   ) {
@@ -111,6 +112,11 @@ export async function recordTreatmentProposalOutcome(
 
         if (!visit.clinicalConsultation) {
           throw new TreatmentProposalOutcomeError("CONSULTATION_REQUIRED");
+        }
+        if (visit.clinicalConsultation.status !== "finalized") {
+          throw new TreatmentProposalOutcomeError(
+            "CONSULTATION_NOT_FINALIZED"
+          );
         }
         if (visit.status !== "in_consultation") {
           throw new TreatmentProposalOutcomeError(

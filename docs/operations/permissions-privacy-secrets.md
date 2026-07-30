@@ -15,14 +15,15 @@ de SIGECO y cómo administrar los secretos de cada ambiente.
 
 ## Matriz De Acceso
 
-Leyenda: `L` lectura, `E` escritura, `A` ajuste sensible y `—` sin acceso.
+Leyenda: `L` lectura, `E` escritura, `F` finalización, `C` corrección,
+`A` ajuste sensible y `—` sin acceso.
 
 | Módulo | Super administrador | Dirección | Médico | Recepción | Administración | Enfermería | Seguimiento |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Cuenta y sesiones propias | L/E | L/E | L/E | L/E | L/E | L/E | L/E |
 | Pacientes | L/E | L | L | L/E | L | L | L |
 | Visitas y recorrido | L/E | L | L/E | L/E | L/E | L | — |
-| Consulta clínica | L/E | L | L/E | — | — | — | — |
+| Consulta clínica | L/E/F/C | L | L/E/F/C | — | — | — | — |
 | Enfermería | L/E | L | L | — | — | L/E | — |
 | Estudios | L/E | L | L | — | — | L/E | — |
 | Ventas y cobros | L/E | L | — | — | L/E | — | — |
@@ -44,6 +45,10 @@ separación también se valida en el servidor.
 En abandono y pendientes, la escritura solo registra que una visita activa no
 continuará. No permite reabrirla ni eliminar órdenes o tareas pendientes.
 
+En consulta clínica, guardar un borrador no concede automáticamente permiso
+para finalizar o corregir. Dirección puede revisar el registro vigente y todas
+sus versiones, pero no cambiar el contenido clínico.
+
 El rol retirado `captacion` solo conserva acceso a su cuenta hasta ser
 reasignado. No puede operar pacientes, leads internos ni módulos clínicos.
 
@@ -58,9 +63,8 @@ reasignado. No puede operar pacientes, leads internos ni módulos clínicos.
   `patients_read`.
 - Los accesos denegados importantes se registran en la auditoría append-only.
 
-Las pruebas automatizadas enumeran todas las páginas, las 39 acciones actuales
-y las rutas privadas de adjuntos. Si aparece una superficie nueva sin política,
-la suite debe fallar.
+Las pruebas automatizadas enumeran las páginas, acciones y rutas privadas de
+adjuntos. Si aparece una superficie nueva sin política, la suite debe fallar.
 
 Recepción y el super administrador son los únicos roles que pueden registrar
 una decisión de consentimiento. Consultar una decisión no autoriza usarla para

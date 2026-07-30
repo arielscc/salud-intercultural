@@ -70,6 +70,17 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
     ];
   }
 
+  if (moduleSegment === "consultas" && section && id === "historial") {
+    return [
+      { label: "Consulta", href: "/sigeco/consultas" },
+      {
+        label: "Atención",
+        href: `/sigeco/consultas/${section}`
+      },
+      { label: "Historial" }
+    ];
+  }
+
   const detailModules: Record<string, { label: string; href: string; detail: string }> = {
     consultas: { label: "Consulta", href: "/sigeco/consultas", detail: "Atención" },
     enfermeria: { label: "Enfermería", href: "/sigeco/enfermeria", detail: "Tarea" },

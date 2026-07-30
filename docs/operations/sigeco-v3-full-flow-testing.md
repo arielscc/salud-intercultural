@@ -194,11 +194,32 @@ Verificar la cabecera clinica (nada de esto debe pedirse de nuevo):
 | Enfermedad de base | Hipertension |
 | Medicacion actual | Enalapril 10 mg cada noche |
 
-4. Registra la consulta: Diagnostico principal `Hipertension descompensada`, Hallazgos `PA elevada en control`. Pulsa `Guardar consulta`.
-5. Confirma que `Receta rapida` y `Evolucion` estan **colapsadas** por defecto; abre `Receta rapida` y registra: Medicamento `Enalapril 20 mg`, Dosis `1 tableta`, Frecuencia `cada 12 horas`, Duracion `30 dias`. Guarda de nuevo.
-6. En `Indicacion para otra area` (colapsable): Tipo `Signos vitales`, Area destino `Enfermeria`, Indicacion `Control de presion arterial`, pulsa `Crear indicacion`.
+4. Registra la consulta: Diagnóstico principal `Hipertensión descompensada`,
+   Hallazgos `PA elevada en control`. Pulsa `Guardar borrador`.
+5. Confirma que `Receta rápida` y `Evolución` están **colapsadas** por defecto;
+   abre `Receta rápida` y registra: Medicamento `Enalapril 20 mg`, Dosis
+   `1 tableta`, Frecuencia `cada 12 horas`, Duración `30 días`. Guarda
+   nuevamente.
+6. Pulsa `Finalizar y firmar consulta` y confirma. Esperado: estado
+   `Finalizada`, usuario, fecha, hora y versión visibles; los campos dejan de
+   editarse como borrador.
+7. En `Indicación para otra área` (colapsable): Tipo `Signos vitales`, Área
+   destino `Enfermería`, Indicación `Control de presión arterial`, pulsa
+   `Crear indicación`.
 
-Resultado esperado: consulta guardada, contexto de recepcion intacto, orden visible en "Ordenes clinicas".
+Resultado esperado: consulta finalizada, contexto de recepción intacto y orden
+visible en `Órdenes clínicas`.
+
+### Corrección sin sobrescribir
+
+1. Abre `Corregir consulta finalizada`.
+2. Elige `Diagnóstico`, escribe el motivo
+   `Se digitó de forma incompleta el diagnóstico` y cambia el diagnóstico a
+   `Hipertensión arterial descompensada`.
+3. Confirma y abre `Ver historial y comparar versiones`.
+4. Esperado: la versión finalizada conserva el texto anterior, la corrección
+   muestra autor, fecha y motivo, y el diagnóstico aparece resaltado como
+   modificado. La receta y la orden de Enfermería no cambian.
 
 ## 6. Enfermeria
 

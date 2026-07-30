@@ -60,6 +60,13 @@ export async function recordTreatmentProposalOutcomeAction(
             `/sigeco/consultas/${encodeURIComponent(visitId)}?error=resultado-cerrado`
           );
         }
+        if (outcomeError?.code === "CONSULTATION_NOT_FINALIZED") {
+          redirect(
+            `/sigeco/consultas/${encodeURIComponent(
+              visitId
+            )}?error=consulta-sin-finalizar`
+          );
+        }
         if (
           outcomeError ||
           findClosedVisitTransitionError(error)

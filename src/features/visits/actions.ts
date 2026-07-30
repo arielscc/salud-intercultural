@@ -6,6 +6,7 @@ import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import {
   createVisitRecord,
   findClosedVisitTransitionError,
+  findDraftClinicalConsultationError,
   getVisitFlowState,
   updateVisitRouteStatus
 } from "@/modules/database/queries/visits";
@@ -118,6 +119,13 @@ export async function applyVisitFlowAction(formData: FormData) {
       } catch (error) {
         if (findClosedVisitTransitionError(error)) {
           redirect(`/sigeco/recepcion/visitas/${parsedVisitId}?error=cerrada`);
+        }
+        if (findDraftClinicalConsultationError(error)) {
+          const path =
+            currentArea === "medico"
+              ? `/sigeco/consultas/${parsedVisitId}`
+              : `/sigeco/recepcion/visitas/${parsedVisitId}`;
+          redirect(`${path}?error=consulta-sin-finalizar`);
         }
         throw error;
       }

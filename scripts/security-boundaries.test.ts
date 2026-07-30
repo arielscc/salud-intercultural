@@ -41,6 +41,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx": [
     "clinical_read"
   ],
+  "src/app/(internal)/sigeco/(app)/consultas/[visitId]/historial/page.tsx": [
+    "clinical_read"
+  ],
   "src/app/(internal)/sigeco/(app)/consultas/page.tsx": ["clinical_read"],
   "src/app/(internal)/sigeco/(app)/enfermeria/[workItemId]/page.tsx": [
     "nursing_read"
@@ -51,6 +54,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   ],
   "src/app/(internal)/sigeco/(app)/inventario/page.tsx": ["inventory_read"],
   "src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx": ["visits_create"],
+  "src/app/(internal)/sigeco/(app)/recepcion/abandonos/page.tsx": [
+    "visit_discontinuations_read"
+  ],
   "src/app/(internal)/sigeco/(app)/recepcion/duplicados/page.tsx": [
     "patient_duplicates_read"
   ],
@@ -99,6 +105,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   addInventoryEntryAction: "inventory_write",
   applyVisitFlowAction: "visits_update",
   changeOwnInternalPasswordAction: "internal_access",
+  correctClinicalConsultationAction: "clinical_correct",
   createClinicalOrderAction: "clinical_write",
   createCaptureCampaignAction: "attribution_manage",
   createCaptureSourceAction: "attribution_manage",
@@ -115,6 +122,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createPaidStudyOrderAction: "clinical_write",
   createPatientAction: "patients_create",
   dismissPatientDuplicateAction: "patient_duplicates_review",
+  finalizeClinicalConsultationAction: "clinical_finalize",
   createPaymentAction: "payments_write",
   createReceptionPaidStudyOrderAction: "visits_update",
   createSaleAction: "sales_write",
@@ -126,6 +134,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   logoutInternalUser: null,
   requireInternalUserPasswordChangeAction: "users_manage",
   recordPatientConsentAction: "patient_consents_write",
+  recordVisitDiscontinuationAction: "visit_discontinuations_write",
   recordTreatmentProposalOutcomeAction: "clinical_write",
   returnStudiesToDoctorAction: "nursing_write",
   revokeManagedInternalUserSessionsAction: "users_manage",

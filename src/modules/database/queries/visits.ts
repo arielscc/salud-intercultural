@@ -15,11 +15,31 @@ export class ClosedVisitTransitionError extends Error {
   }
 }
 
+export class DraftClinicalConsultationError extends Error {
+  constructor(public readonly visitId: string) {
+    super("CLINICAL_CONSULTATION_MUST_BE_FINALIZED");
+    this.name = "DraftClinicalConsultationError";
+  }
+}
+
 export function findClosedVisitTransitionError(error: unknown): ClosedVisitTransitionError | null {
   let current = error;
 
   while (current instanceof Error) {
     if (current instanceof ClosedVisitTransitionError) return current;
+    current = "cause" in current ? current.cause : undefined;
+  }
+
+  return null;
+}
+
+export function findDraftClinicalConsultationError(
+  error: unknown
+): DraftClinicalConsultationError | null {
+  let current = error;
+
+  while (current instanceof Error) {
+    if (current instanceof DraftClinicalConsultationError) return current;
     current = "cause" in current ? current.cause : undefined;
   }
 
@@ -306,6 +326,16 @@ export async function updateVisitRouteStatusInTransaction(
   const isClosed = ["completed", "left_without_care", "cancelled"].includes(
     input.status
   );
+
+  if (input.status === "completed") {
+    const consultation = await tx.clinicalConsultation.findUnique({
+      where: { visitId: input.visitId },
+      select: { status: true }
+    });
+    if (consultation?.status === "draft") {
+      throw new DraftClinicalConsultationError(input.visitId);
+    }
+  }
 
   const visit = await tx.visit.update({
     where: { id: input.visitId },

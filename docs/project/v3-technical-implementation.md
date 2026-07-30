@@ -26,7 +26,8 @@ Arquitectura vigente de Sigeco despues de la simplificacion V3.7.
 
 - Usuarios y sesiones internas.
 - Pacientes, visitas, rutas y tareas entre areas.
-- Consulta, diagnosticos, recetas y evoluciones.
+- Consulta vigente, versiones, firma interna, diagnosticos, recetas y
+  evoluciones.
 - Resultado y versiones de propuestas de tratamiento.
 - Enfermeria, estudios y adjuntos modelados.
 - Ventas, pagos, caja e inventario.
@@ -53,6 +54,7 @@ src/features/
   reception/
   visits/
   clinical-care/
+  clinical-records/
   nursing/
   studies/
   sales/
@@ -240,6 +242,31 @@ aparece en la URL y el contenido se verifica por SHA-256 antes de entregarse.
 La operación completa vive en
 [Adjuntos clínicos seguros](../operations/clinical-attachments.md).
 
+### Versiones Y Firma Clínica
+
+`ClinicalConsultation` conserva la proyección vigente y un contador
+`revision`. `ClinicalConsultationVersion` guarda una fotografía inmutable desde
+la aplicación por cada borrador, cierre o corrección.
+
+El cierre registra `finalizedById` y `finalizedAt`. No representa una firma
+criptográfica: identifica la cuenta autenticada que aprobó el contenido.
+
+Cada escritura envía `expectedRevision`. La actualización usa esa revisión
+como condición dentro de una transacción serializable; si otra pestaña cambió
+primero, la segunda operación se rechaza.
+
+Una corrección finalizada:
+
+1. exige tipo y motivo;
+2. crea otra versión;
+3. actualiza la proyección vigente;
+4. conserva las versiones anteriores;
+5. no modifica recetas, órdenes, ventas, cobros ni aplicaciones.
+
+El cierre de una visita consulta el estado clínico y rechaza `completed` si
+existe una consulta en borrador. La operación se documenta en
+[Correcciones, cierre y firma clínica](../operations/clinical-record-versioning.md).
+
 ### Consentimientos
 
 `PatientConsent` registra eventos independientes para seguimiento,
@@ -312,6 +339,8 @@ Contratos criticos cubiertos:
 - Detección normalizada, cola, alias y fusión transaccional de pacientes.
 - Intervalos, pausas y protección de formularios en bandejas operativas.
 - Validación del resultado, motivos permitidos y límite de permiso clínico.
+- Borrador, cierre, corrección, comparación y concurrencia optimista de la
+  consulta clínica.
 
 ## Deploy
 
