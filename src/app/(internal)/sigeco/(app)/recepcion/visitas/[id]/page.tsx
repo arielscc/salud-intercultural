@@ -7,6 +7,7 @@ import { PaidStudyOrderDialog } from "@/components/internal/PaidStudyOrderDialog
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { Chip } from "@/components/internal/ui/Chip";
 import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
@@ -31,6 +32,7 @@ import {
 import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { formatDateTime } from "@/lib/dates";
 import { getVisitById } from "@/modules/database/queries/visits";
+import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { requirePermission } from "@/modules/permissions";
 import { Clock3, MapPin, Phone } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -54,7 +56,10 @@ type VisitDetailPageProps = {
 export default async function VisitDetailPage({ params, searchParams }: VisitDetailPageProps) {
   const user = await requirePermission("visits_read");
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const visit = await getVisitById(id);
+  const [visit, areaTiming] = await Promise.all([
+    getVisitById(id),
+    getVisitAreaTimingState(id)
+  ]);
 
   if (!visit) notFound();
 
@@ -67,6 +72,10 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
   return (
     <div className="grid gap-4">
       <MobileBackLink href="/sigeco/recepcion" label="Volver a Recepción" />
+      {areaTiming?.area === "recepcion" &&
+      roleHasPermission(user.role, "area_time_write") ? (
+        <AreaTimeControl state={areaTiming} compact />
+      ) : null}
       {query.error === "cerrada" ? (
         <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
           <p className="flex items-center gap-1.5 font-semibold text-warning">

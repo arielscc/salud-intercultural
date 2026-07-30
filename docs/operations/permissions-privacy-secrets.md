@@ -35,6 +35,7 @@ Leyenda: `L` lectura, `E` escritura, `F` finalización, `C` corrección,
 | Adjuntos clínicos | L/E/A | L | L/E | — | — | L/E | — |
 | Consentimientos | L/E | L | L | L/E | L | L | L |
 | Abandono y pendientes | L/E | L | L/E | L/E | L/E | L/E | — |
+| Tiempos por área | L/E | L | E | E | E | E | — |
 | Recetas versionadas | L/E/C | L | L/E/C | — | — | — | — |
 | Comprobantes internos | L/E | L | — | — | L/E | — | — |
 | Configuración profesional | E | E | — | — | — | — | — |

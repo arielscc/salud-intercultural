@@ -42,6 +42,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-30 | [Tarea 20: compras, recepciones, lotes y stock](./2026-07-30-tarea-20-compras-recepciones-lotes-stock.md) | Enlaza orden, pago, recepción, lote y movimiento sin duplicar dinero ni stock. |
 | 2026-07-30 | [Tarea 21: recetas y comprobantes versionados](./2026-07-30-tarea-21-recetas-comprobantes-versionados.md) | Emite documentos inmutables desde la receta, venta y pagos vigentes. |
 | 2026-07-30 | [Tarea 22: reporte del recorrido completo](./2026-07-30-tarea-22-reporte-recorrido-completo.md) | Reconcilia llegada, consulta, propuesta, venta, cobro, seguimiento y retorno por visita. |
+| 2026-07-30 | [Tarea 23: tiempo de atención por área](./2026-07-30-tarea-23-tiempo-atencion-area.md) | Separa espera, atención y bloqueo mediante eventos inmutables y percentiles. |
 
 ## Relacion Con Estado V3
 

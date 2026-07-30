@@ -52,6 +52,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 37. [Compras, recepciones, lotes y stock](./purchases-receipts-batches-stock.md)
 38. [Recetas y comprobantes versionados](./versioned-prescriptions-receipts.md)
 39. [Reporte del recorrido completo](./patient-journey-report.md)
+40. [Tiempo de atención por área](./area-service-times.md)
 
 ## Flujo recomendado
 

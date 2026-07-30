@@ -8,6 +8,7 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
@@ -28,6 +29,7 @@ import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { getInventoryItems } from "@/modules/database/queries/inventory";
 import { getAdministrationWorkItemById } from "@/modules/database/queries/sales";
+import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { requirePermission } from "@/modules/permissions";
 
 const saleItemTypeOptions = Object.entries(saleItemTypeLabels) as Array<[SaleItemType, string]>;
@@ -52,6 +54,7 @@ export default async function AdministrationWorkItemPage({
   ]);
 
   if (!item) notFound();
+  const areaTiming = await getVisitAreaTimingState(item.visit.id);
 
   const patient = item.visit.patient;
   const order = item.clinicalOrders[0];
@@ -277,6 +280,10 @@ export default async function AdministrationWorkItemPage({
           meta={patient.phone}
           status={<VisitStatusPill status={item.visit.status} />}
         />
+        {areaTiming?.area === "administracion" &&
+        roleHasPermission(user.role, "area_time_write") ? (
+          <AreaTimeControl state={areaTiming} compact />
+        ) : null}
         {isActiveVisitStatus(item.visit.status) && !isPaidStudyOrder ? (
           <Card className="max-sm:order-3">
             <CardHeader

@@ -382,6 +382,27 @@ presentación.
 Las fórmulas y exclusiones viven en
 [Reporte del recorrido completo](../operations/patient-journey-report.md).
 
+### Tiempo De Atención Por Área
+
+`VisitAreaTimeEvent` conserva eventos append-only por
+`PatientRouteStep`: entrada, inicio de atención, bloqueo, reanudación y salida.
+`sequence` ordena transiciones concurrentes aun cuando compartan timestamp. Un
+trigger PostgreSQL rechaza actualización y borrado.
+
+La entrada y salida se agregan dentro de las mismas transacciones que mueven la
+ruta. El inicio de atención es explícito: abrir una pantalla no demuestra que
+el personal ya comenzó. `area_time_write` permite operar solamente al rol del
+área actual; Dirección conserva lectura mediante `reports_read`.
+
+`aggregateAreaTimeReport` reconstruye intervalos de espera, atención y bloqueo.
+Calcula promedio, mediana, P75 y P90 sobre sesiones cerradas. Visitas
+canceladas y `isTestData` quedan fuera; abandonos se conservan hasta la salida.
+Los pasos anteriores se marcan `inferred` y no atribuyen fases que nunca fueron
+registradas.
+
+El reporte y las reglas operativas viven en
+[Tiempo de atención por área](../operations/area-service-times.md).
+
 ### Consentimientos
 
 `PatientConsent` registra eventos independientes para seguimiento,

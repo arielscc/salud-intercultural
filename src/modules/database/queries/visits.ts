@@ -6,6 +6,10 @@ import type {
   VisitStatus
 } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
+import {
+  appendAreaEnteredEvent,
+  appendAreaExitedEvents
+} from "@/modules/database/queries/area-times";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 
 export class ClosedVisitTransitionError extends Error {
@@ -109,13 +113,20 @@ export async function createVisitInTransaction(
     }
   });
 
-  await tx.patientRouteStep.create({
+  const routeStep = await tx.patientRouteStep.create({
     data: {
       routeId: route.id,
       area: "recepcion",
       status: "in_reception",
       note: input.note ?? "Paciente en recepción"
     }
+  });
+  await appendAreaEnteredEvent(tx, {
+    visitId: visit.id,
+    routeStepId: routeStep.id,
+    area: "recepcion",
+    occurredAt: routeStep.startedAt,
+    recordedById: input.userId
   });
 
   await tx.visitWorkItem.create({
@@ -357,6 +368,20 @@ export async function updateVisitRouteStatusInTransaction(
   });
 
   if (existing.route) {
+    const openSteps = await tx.patientRouteStep.findMany({
+      where: {
+        routeId: existing.route.id,
+        endedAt: null
+      },
+      select: { id: true, area: true }
+    });
+    await appendAreaExitedEvents(tx, {
+      visitId: input.visitId,
+      routeStepIds: openSteps.map((step) => step.id),
+      areaByStepId: new Map(openSteps.map((step) => [step.id, step.area])),
+      occurredAt: now,
+      recordedById: input.userId
+    });
     await tx.patientRouteStep.updateMany({
       where: {
         routeId: existing.route.id,
@@ -375,7 +400,7 @@ export async function updateVisitRouteStatusInTransaction(
       }
     });
 
-    await tx.patientRouteStep.create({
+    const nextStep = await tx.patientRouteStep.create({
       data: {
         routeId: existing.route.id,
         area: input.area,
@@ -383,6 +408,15 @@ export async function updateVisitRouteStatusInTransaction(
         note: input.note
       }
     });
+    if (!isClosed) {
+      await appendAreaEnteredEvent(tx, {
+        visitId: input.visitId,
+        routeStepId: nextStep.id,
+        area: input.area,
+        occurredAt: nextStep.startedAt,
+        recordedById: input.userId
+      });
+    }
   }
 
   const workItem = await tx.visitWorkItem.create({

@@ -6,6 +6,7 @@ import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
@@ -25,6 +26,7 @@ import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { getNursingWorkItemById } from "@/modules/database/queries/nursing";
+import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { requirePermission } from "@/modules/permissions";
 
 const workItemStatusOptions = (["acknowledged", "in_progress", "completed", "blocked"] as VisitWorkItemStatus[]).map(
@@ -45,6 +47,7 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
   const item = await getNursingWorkItemById(workItemId);
 
   if (!item) notFound();
+  const areaTiming = await getVisitAreaTimingState(item.visit.id);
 
   const patient = item.visit.patient;
   const order = item.clinicalOrders[0];
@@ -252,6 +255,10 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
           meta={patient.phone}
           status={<VisitStatusPill status={item.visit.status} />}
         />
+        {areaTiming?.area === "enfermeria" &&
+        roleHasPermission(user.role, "area_time_write") ? (
+          <AreaTimeControl state={areaTiming} compact />
+        ) : null}
         {isActiveVisitStatus(item.visit.status) &&
         canRecordDiscontinuation ? (
           <Card className="max-sm:order-4">

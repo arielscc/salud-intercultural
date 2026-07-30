@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-22 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-23 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las treinta migraciones actuales están
-aplicadas en desarrollo. Falta validar las dieciocho
+anteriores están en staging y las treinta y dos migraciones actuales están
+aplicadas en desarrollo. Falta validar las veinte
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -31,13 +31,15 @@ Las recetas y comprobantes internos ya se emiten desde sus fuentes vigentes,
 con versiones inmutables, PDF privado e identidad profesional confirmable.
 El recorrido completo ya puede reconciliar llegada, consulta, propuesta,
 venta, cobro, seguimiento y retorno sin duplicar una visita entre áreas.
+Los tiempos de Recepción, Consulta, Enfermería y Administración ya separan
+espera, atención y bloqueo mediante eventos inmutables.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 7 |
-| En progreso | 21 |
+| Pendiente | 6 |
+| En progreso | 22 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -78,7 +80,7 @@ venta, cobro, seguimiento y retorno sin duplicar una visita entre áreas.
 | 20 | Compras, recepciones, lotes y stock | P0 | En progreso | 18-19 |
 | 21 | Recetas y comprobantes | P1 | En progreso | 17-20 |
 | 22 | Reporte del recorrido completo | P1 | En progreso | 9-21 |
-| 23 | Tiempo por área | P1 | Pendiente | 13, 16, 22 |
+| 23 | Tiempo por área | P1 | En progreso | 13, 16, 22 |
 | 24 | Recordatorios supervisados | P1 | Pendiente | 9, 15 |
 | 25 | Encuestas y reclamos | P2 | Pendiente | 9, 24, piloto manual |
 | 26 | Móvil y conectividad lenta | P1 | Pendiente | 2, 5, 13, 18, 20 |
@@ -180,6 +182,10 @@ Estado de las tareas de la base segura:
   reconciliable implementados en desarrollo local. Pendiente integración
   acumulada, QA web/móvil, revisión de cifras por Dirección y validación por
   roles en staging.
+- **Tarea 23 — Tiempo de atención por área:** eventos append-only, espera,
+  atención, bloqueo, promedio, mediana, P75, P90, franjas horarias y aviso
+  móvil implementados en desarrollo local. Pendiente integración acumulada,
+  QA web/móvil, medición del umbral y validación por roles en staging.
 
 Para terminar la Tarea 1:
 
@@ -221,6 +227,10 @@ Blob clínico privado y las credenciales separadas aprobadas.
   nunca duplica la visita por cambios de área.
 - “Fuente que genera ingresos” no significa rentabilidad neta mientras SIGECO
   no registre y distribuya el costo de campaña.
+- Abrir una pantalla no inicia automáticamente la atención; el responsable
+  pulsa “Iniciar atención” para que el tiempo provenga de un evento real.
+- Los recorridos anteriores a la Tarea 23 conservan su duración total, pero no
+  se usan para inventar espera o atención.
 - Web y móvil responsive usan las mismas reglas y permisos.
 - El Alto debe estabilizarse antes de activar Cochabamba.
 - Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
@@ -1160,6 +1170,57 @@ Responsable: Dirección; equipo técnico para implementación y reconciliación.
   autorización expresa.
 
 **Commit sugerido:** `feat(sigeco): report patient journey`
+
+## 2026-07-30 — Tarea 23 — Tiempo De Atención Por Área
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección revisa; cada área registra su propia atención.
+
+### Resultado
+
+- Eventos inmutables de entrada, atención, bloqueo, reanudación y salida.
+- Secuencia por paso para ordenar eventos incluso dentro del mismo milisegundo.
+- Entrada y salida automáticas al cambiar de área, completar o abandonar.
+- Control visible en Recepción, Consulta, Enfermería y Administración.
+- Tiempo móvil actualizado en pantalla sin consultar la base cada 30 segundos.
+- Aviso no invasivo después de 30 minutos de espera.
+- Reporte con promedio, mediana, P75, P90, día, hora, área y sucursal.
+- Sesiones activas separadas de las estadísticas cerradas.
+- Visitas canceladas y datos de prueba excluidos.
+- Abandonos conservados hasta el evento de salida.
+
+### Archivos Y Migraciones
+
+- Modelo, permiso, actions, consultas y agregación estadística.
+- Controles responsive y reporte de Dirección.
+- Seed de staging preparado para marcar fixtures como prueba.
+- Migraciones locales `20260730213127_area_service_times` y
+  `20260730214500_area_time_event_sequence`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local confirmado; staging y producción no fueron modificados.
+- Prisma format, validate, generate y 32 migraciones locales al día.
+- TypeScript y lint enfocado aprobados.
+- Fórmulas, permisos y seguridad: 3 archivos y 34 pruebas aprobadas.
+- `git diff --check` aprobado.
+- Integración transaccional escrita y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack al cierre
+  acumulado.
+- Validar cada rol y recorrido en staging.
+- Probar controles y avisos en teléfonos reales.
+- Medir si el aviso inicial de 30 minutos es correcto durante el piloto.
+- Reconciliar una muestra manual con Dirección.
+- No aplicar migraciones ni publicar en producción sin aviso y autorización.
+
+**Commit sugerido:** `feat(sigeco): measure time by area`
 
 ## Cómo Actualizar El Progreso
 

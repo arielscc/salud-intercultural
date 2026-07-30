@@ -12,6 +12,7 @@ import { TreatmentProposalOutcomeForm } from "@/components/internal/treatment-pr
 import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import { ClinicalConsultationCorrectionForm } from "@/components/internal/clinical-records/ClinicalConsultationCorrectionForm";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { Chip } from "@/components/internal/ui/Chip";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
@@ -42,6 +43,7 @@ import { formatMoney } from "@/features/sales/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { formatDateTime } from "@/lib/dates";
 import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
+import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { getPrescriptionDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
 
@@ -111,9 +113,10 @@ export default async function ConsultationDetailPage({
 }: ConsultationDetailPageProps) {
   const user = await requirePermission("clinical_read");
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
-  const [visit, prescriptionDocuments] = await Promise.all([
+  const [visit, prescriptionDocuments, areaTiming] = await Promise.all([
     getClinicalVisitById(visitId),
-    getPrescriptionDocuments(visitId)
+    getPrescriptionDocuments(visitId),
+    getVisitAreaTimingState(visitId)
   ]);
 
   if (!visit) notFound();
@@ -630,6 +633,10 @@ export default async function ConsultationDetailPage({
           meta={visit.patient.phone}
           status={<VisitStatusPill status={visit.status} />}
         />
+        {areaTiming?.area === "medico" &&
+        roleHasPermission(user.role, "area_time_write") ? (
+          <AreaTimeControl state={areaTiming} compact />
+        ) : null}
 
         <Card className="max-sm:order-2">
           <CardHeader

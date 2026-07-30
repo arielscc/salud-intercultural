@@ -239,4 +239,20 @@ describe("internal role permissions", () => {
       roleHasPermission("seguimiento", "visit_discontinuations_write")
     ).toBe(false);
   });
+
+  it("lets operational areas record time events but keeps Direction read-only", () => {
+    for (const role of [
+      "super_admin",
+      "recepcion",
+      "medico",
+      "enfermeria",
+      "administracion"
+    ] as const) {
+      expect(roleHasPermission(role, "area_time_write")).toBe(true);
+    }
+    expect(roleHasPermission("direccion", "reports_read")).toBe(true);
+    expect(roleHasPermission("direccion", "area_time_write")).toBe(false);
+    expect(roleHasPermission("seguimiento", "area_time_write")).toBe(false);
+    expect(roleHasPermission("captacion", "area_time_write")).toBe(false);
+  });
 });

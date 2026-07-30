@@ -153,6 +153,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       update: {
         checkedInAt,
         createdById: receptionUserId,
+        isTestData: true,
         originCity: visitOrigin.city,
         originDepartment: visitOrigin.department,
         originCountry: "Bolivia",
@@ -165,6 +166,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         checkedInAt,
         createdById: receptionUserId,
         id: visitId,
+        isTestData: true,
         originCity: visitOrigin.city,
         originDepartment: visitOrigin.department,
         originCountry: "Bolivia",
@@ -227,7 +229,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       }
     });
 
-    await prisma.patientRouteStep.upsert({
+    const routeStep = await prisma.patientRouteStep.upsert({
       where: { id: `qa_route_step_${fixture.area}` },
       update: {
         area: fixture.area,
@@ -243,6 +245,28 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         status: fixture.status
       }
     });
+    const existingEnteredEvent = await prisma.visitAreaTimeEvent.findFirst({
+      where: { routeStepId: routeStep.id, type: "entered" },
+      select: { id: true }
+    });
+    if (
+      !existingEnteredEvent &&
+      ["recepcion", "medico", "enfermeria", "administracion"].includes(
+        fixture.area
+      )
+    ) {
+      await prisma.visitAreaTimeEvent.create({
+        data: {
+          visitId,
+          routeStepId: routeStep.id,
+          area: fixture.area,
+          type: "entered",
+          sequence: 1,
+          recordedById: receptionUserId,
+          occurredAt: routeStep.startedAt
+        }
+      });
+    }
 
     await prisma.visitStatusHistory.upsert({
       where: { id: `qa_status_${fixture.area}` },

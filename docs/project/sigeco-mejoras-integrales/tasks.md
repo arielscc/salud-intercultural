@@ -36,6 +36,8 @@ Control de avance: [progress.md](./progress.md)
 - [Reporte de la Tarea 21](../task-reports/2026-07-30-tarea-21-recetas-comprobantes-versionados.md)
 - [Reporte del recorrido completo](../../operations/patient-journey-report.md)
 - [Reporte de la Tarea 22](../task-reports/2026-07-30-tarea-22-reporte-recorrido-completo.md)
+- [Tiempo de atención por área](../../operations/area-service-times.md)
+- [Reporte de la Tarea 23](../task-reports/2026-07-30-tarea-23-tiempo-atencion-area.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
 
@@ -53,6 +55,8 @@ Control de avance: [progress.md](./progress.md)
 - [Actions de recetas y comprobantes](../../../src/features/generated-documents/actions.ts)
 - [Query del recorrido completo](../../../src/modules/database/queries/patient-journey.ts)
 - [Fórmulas del recorrido](../../../src/features/patient-journey/report.ts)
+- [Query de tiempos por área](../../../src/modules/database/queries/area-times.ts)
+- [Fórmulas de tiempos por área](../../../src/features/area-times/report.ts)
 
 ## Qué Existe Actualmente
 

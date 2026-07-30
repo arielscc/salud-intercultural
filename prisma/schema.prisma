@@ -33,6 +33,7 @@ enum InternalPermission {
   visits_update
   patient_route_read
   patient_route_update
+  area_time_write
   clinical_read
   clinical_write
   clinical_finalize
@@ -324,6 +325,15 @@ enum PatientRouteArea {
   administracion
   seguimiento
   cierre
+}
+
+enum VisitAreaTimeEventType {
+  entered
+  attention_started
+  blocked
+  resumed_waiting
+  resumed_attention
+  exited
 }
 
 enum VisitWorkItemStatus {
@@ -651,6 +661,7 @@ model InternalUser {
   professionalProfile            ClinicalProfessionalProfile?    @relation("ProfessionalProfileUser")
   configuredProfessionalProfiles ClinicalProfessionalProfile[]   @relation("ProfessionalProfileConfiguredBy")
   generatedDocuments             GeneratedDocument[]             @relation("GeneratedDocumentGeneratedBy")
+  recordedAreaTimeEvents         VisitAreaTimeEvent[]            @relation("VisitAreaTimeEventRecordedBy")
 
   @@index([role])
   @@index([active])
@@ -968,6 +979,7 @@ model Visit {
   id                        String                     @id @default(cuid())
   patientId                 String
   branchCode                String                     @default("el-alto")
+  isTestData                Boolean                    @default(false)
   status                    VisitStatus                @default(in_reception)
   reason                    String?
   intakeType                VisitIntakeType            @default(first_visit)
@@ -1010,6 +1022,7 @@ model Visit {
   treatmentProposalOutcomes TreatmentProposalOutcome[]
   discontinuation           VisitDiscontinuation?
   generatedDocuments        GeneratedDocument[]
+  areaTimeEvents            VisitAreaTimeEvent[]
 
   @@index([patientId])
   @@index([branchCode, checkedInAt])
@@ -1387,18 +1400,45 @@ model PatientRoute {
 }
 
 model PatientRouteStep {
-  id        String           @id @default(cuid())
-  routeId   String
-  area      PatientRouteArea
-  status    VisitStatus
-  note      String?
-  startedAt DateTime         @default(now())
-  endedAt   DateTime?
-  route     PatientRoute     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  id         String               @id @default(cuid())
+  routeId    String
+  area       PatientRouteArea
+  status     VisitStatus
+  note       String?
+  startedAt  DateTime             @default(now())
+  endedAt    DateTime?
+  route      PatientRoute         @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  timeEvents VisitAreaTimeEvent[]
 
   @@index([routeId])
   @@index([area])
   @@index([startedAt])
+}
+
+/// Eventos inmutables para medir espera, atención y bloqueo por área.
+/// Los eventos inferidos provienen del recorrido anterior a la Tarea 23 y no
+/// se usan para atribuir una fase de espera o atención que nunca fue registrada.
+model VisitAreaTimeEvent {
+  id           String                 @id @default(cuid())
+  visitId      String
+  routeStepId  String
+  area         PatientRouteArea
+  type         VisitAreaTimeEventType
+  sequence     Int
+  reason       String?
+  inferred     Boolean                @default(false)
+  recordedById String?
+  occurredAt   DateTime               @default(now())
+  createdAt    DateTime               @default(now())
+  visit        Visit                  @relation(fields: [visitId], references: [id], onDelete: Restrict)
+  routeStep    PatientRouteStep       @relation(fields: [routeStepId], references: [id], onDelete: Restrict)
+  recordedBy   InternalUser?          @relation("VisitAreaTimeEventRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@unique([routeStepId, sequence])
+  @@index([visitId, occurredAt])
+  @@index([routeStepId, occurredAt])
+  @@index([area, occurredAt])
+  @@index([type, occurredAt])
 }
 
 model VisitWorkItem {

@@ -1,5 +1,9 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
+import {
+  appendAreaEnteredEvent,
+  appendAreaExitedEvents
+} from "@/modules/database/queries/area-times";
 import type { PaidStudyOrderInput } from "@/features/clinical-care/schemas/paid-study.schema";
 
 const studyCatalog = [
@@ -34,9 +38,27 @@ async function moveVisit(
     data: { visitId: input.visitId, userId: input.userId, fromStatus: visit.status, toStatus: input.status, note: input.note }
   });
   if (visit.route) {
+    const openSteps = await tx.patientRouteStep.findMany({
+      where: { routeId: visit.route.id, endedAt: null },
+      select: { id: true, area: true }
+    });
+    await appendAreaExitedEvents(tx, {
+      visitId: input.visitId,
+      routeStepIds: openSteps.map((step) => step.id),
+      areaByStepId: new Map(openSteps.map((step) => [step.id, step.area])),
+      occurredAt: now,
+      recordedById: input.userId
+    });
     await tx.patientRouteStep.updateMany({ where: { routeId: visit.route.id, endedAt: null }, data: { endedAt: now } });
     await tx.patientRoute.update({ where: { id: visit.route.id }, data: { currentArea: input.area, active: true } });
-    await tx.patientRouteStep.create({ data: { routeId: visit.route.id, area: input.area, status: input.status, note: input.note } });
+    const nextStep = await tx.patientRouteStep.create({ data: { routeId: visit.route.id, area: input.area, status: input.status, note: input.note } });
+    await appendAreaEnteredEvent(tx, {
+      visitId: input.visitId,
+      routeStepId: nextStep.id,
+      area: input.area,
+      occurredAt: nextStep.startedAt,
+      recordedById: input.userId
+    });
   }
 }
 

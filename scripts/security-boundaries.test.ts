@@ -125,6 +125,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/reportes/recorrido/page.tsx": [
     "reports_read"
   ],
+  "src/app/(internal)/sigeco/(app)/reportes/tiempos/page.tsx": [
+    "reports_read"
+  ],
   "src/app/(internal)/sigeco/(app)/seguimientos/[taskId]/page.tsx": [
     "followups_read"
   ],
@@ -195,6 +198,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   mergePatientDuplicateAction: "patient_duplicates_merge",
   logoutInternalUser: null,
   openCashSessionAction: "cash_sessions_open",
+  recordAreaTimeTransitionAction: "area_time_write",
   requireInternalUserPasswordChangeAction: "users_manage",
   recordPatientConsentAction: "patient_consents_write",
   recordPurchasePaymentAction: "purchases_write",
@@ -470,7 +474,7 @@ describe("SIGECO permission and privacy boundaries", () => {
 
   it("does not expose clinical queries to Payload, marketing or analytics", () => {
     const protectedQueryImport =
-      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patient-journey|patients|reception|sales|studies|visits))/;
+      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:area-times|clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patient-journey|patients|reception|sales|studies|visits))/;
     const publicRoots = [
       "src/payload",
       "src/features/analytics",

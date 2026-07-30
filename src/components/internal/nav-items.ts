@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   ShieldCheck,
   Stethoscope,
+  Timer,
   UserCog,
   UserRound,
   ChartNoAxesCombined,
@@ -48,6 +49,12 @@ export const sigecoNavItems: SigecoNavItem[] = [
     href: "/sigeco/reportes/recorrido",
     label: "Recorrido",
     icon: GitBranch,
+    permission: "reports_read"
+  },
+  {
+    href: "/sigeco/reportes/tiempos",
+    label: "Tiempos",
+    icon: Timer,
     permission: "reports_read"
   },
   { href: "/sigeco/auditoria", label: "Auditoría", icon: ShieldCheck, permission: "audit_read" },
