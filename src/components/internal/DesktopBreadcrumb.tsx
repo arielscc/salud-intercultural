@@ -108,6 +108,25 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
     ];
   }
 
+  if (
+    moduleSegment === "administracion" &&
+    section === "caja" &&
+    id === "cierres"
+  ) {
+    return [
+      { label: "Caja", href: "/sigeco/administracion" },
+      { label: "Control de Caja", href: "/sigeco/administracion/caja" },
+      { label: "Cierre" }
+    ];
+  }
+
+  if (moduleSegment === "administracion" && section === "caja") {
+    return [
+      { label: "Caja", href: "/sigeco/administracion" },
+      { label: "Control de Caja" }
+    ];
+  }
+
   if (moduleSegment === "administracion" && section) {
     return [
       { label: "Caja", href: "/sigeco/administracion" },

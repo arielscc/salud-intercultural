@@ -44,6 +44,12 @@ enum InternalPermission {
   sales_read
   sales_write
   payments_write
+  cash_sessions_read
+  cash_sessions_open
+  cash_movements_create
+  cash_movements_reverse
+  cash_sessions_close
+  cash_sessions_approve
   followups_read
   followups_write
   inventory_read
@@ -402,6 +408,46 @@ enum CashMovementType {
   income
   expense
   adjustment
+  refund
+  reversal
+}
+
+enum CashChannel {
+  cash
+  qr
+  card
+  transfer
+  other
+}
+
+enum CashSessionStatus {
+  open
+  pending_approval
+  closed
+}
+
+enum CashShift {
+  morning
+  afternoon
+  full_day
+  other
+}
+
+enum CashExpenseKind {
+  staff_support
+  urgent_purchase
+  other
+}
+
+enum CashExpenseCategory {
+  lunch
+  transport
+  staff_other
+  injectables
+  clinical_material
+  cleaning
+  office
+  other
 }
 
 enum FollowUpStatus {
@@ -510,6 +556,18 @@ model InternalUser {
   createdSales                Sale[]                          @relation("SaleCreatedBy")
   receivedPayments            Payment[]
   cashMovements               CashMovement[]
+  responsibleCashSessions     CashSession[]                   @relation("CashSessionResponsible")
+  openedCashSessions          CashSession[]                   @relation("CashSessionOpenedBy")
+  requestedCashClosures       CashSession[]                   @relation("CashSessionCloseRequestedBy")
+  approvedCashSessions        CashSession[]                   @relation("CashSessionApprovedBy")
+  closedCashSessions          CashSession[]                   @relation("CashSessionClosedBy")
+  authorizedCashMovements     CashMovement[]                  @relation("CashMovementAuthorizedBy")
+  registeredCashExpenses      CashExpense[]                   @relation("CashExpenseRegisteredBy")
+  deliveredCashExpenses       CashExpense[]                   @relation("CashExpenseDeliveredBy")
+  authorizedCashExpenses      CashExpense[]                   @relation("CashExpenseAuthorizedBy")
+  requestedCashExpenses       CashExpense[]                   @relation("CashExpenseRequestedBy")
+  receivedCashExpenses        CashExpense[]                   @relation("CashExpenseReceivedBy")
+  cashExpenseBenefits         CashExpenseBeneficiary[]
   assignedFollowUps           FollowUpTask[]                  @relation("FollowUpAssignedTo")
   createdFollowUps            FollowUpTask[]                  @relation("FollowUpCreatedBy")
   followUpAttempts            FollowUpAttempt[]
@@ -1586,29 +1644,155 @@ model DeliveredProduct {
 }
 
 model CashMovement {
-  id          String           @id @default(cuid())
-  saleId      String?
-  paymentId   String?
-  patientId   String?
-  visitId     String?
-  userId      String?
-  type        CashMovementType @default(income)
-  amountCents Int
-  description String
-  occurredAt  DateTime         @default(now())
-  createdAt   DateTime         @default(now())
-  sale        Sale?            @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  payment     Payment?         @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  patient     Patient?         @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  visit       Visit?           @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  user        InternalUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id                 String           @id @default(cuid())
+  cashSessionId      String?
+  saleId             String?
+  paymentId          String?
+  patientId          String?
+  visitId            String?
+  userId             String?
+  authorizedById     String?
+  originalMovementId String?
+  idempotencyKey     String?          @unique
+  type               CashMovementType @default(income)
+  channel            CashChannel      @default(cash)
+  amountCents        Int
+  description        String
+  reason             String?
+  note               String?
+  occurredAt         DateTime         @default(now())
+  createdAt          DateTime         @default(now())
+  cashSession        CashSession?     @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+  sale               Sale?            @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  payment            Payment?         @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  patient            Patient?         @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  visit              Visit?           @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  user               InternalUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  authorizedBy       InternalUser?    @relation("CashMovementAuthorizedBy", fields: [authorizedById], references: [id], onDelete: SetNull)
+  originalMovement   CashMovement?    @relation("CashMovementCorrections", fields: [originalMovementId], references: [id], onDelete: Restrict)
+  corrections        CashMovement[]   @relation("CashMovementCorrections")
+  expense            CashExpense?
 
+  @@index([cashSessionId, occurredAt])
   @@index([saleId])
   @@index([paymentId])
   @@index([patientId])
   @@index([visitId])
   @@index([userId])
+  @@index([authorizedById])
+  @@index([originalMovementId])
   @@index([type, occurredAt])
+}
+
+model CashSession {
+  id                 String                      @id @default(cuid())
+  branchCode         String
+  registerName       String
+  businessDate       DateTime                    @db.Date
+  shift              CashShift                   @default(full_day)
+  responsibleId      String
+  openedById         String
+  closeRequestedById String?
+  approvedById       String?
+  closedById         String?
+  idempotencyKey     String                      @unique
+  status             CashSessionStatus           @default(open)
+  openingCashCents   Int
+  expectedCashCents  Int?
+  countedCashCents   Int?
+  differenceCents    Int?
+  closeObservation   String?
+  openedAt           DateTime                    @default(now())
+  closeRequestedAt   DateTime?
+  approvedAt         DateTime?
+  closedAt           DateTime?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  responsible        InternalUser                @relation("CashSessionResponsible", fields: [responsibleId], references: [id], onDelete: Restrict)
+  openedBy           InternalUser                @relation("CashSessionOpenedBy", fields: [openedById], references: [id], onDelete: Restrict)
+  closeRequestedBy   InternalUser?               @relation("CashSessionCloseRequestedBy", fields: [closeRequestedById], references: [id], onDelete: Restrict)
+  approvedBy         InternalUser?               @relation("CashSessionApprovedBy", fields: [approvedById], references: [id], onDelete: Restrict)
+  closedBy           InternalUser?               @relation("CashSessionClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
+  movements          CashMovement[]
+  expenses           CashExpense[]
+  reconciliations    CashSessionReconciliation[]
+
+  @@index([status, openedAt])
+  @@index([branchCode, registerName, businessDate])
+  @@index([responsibleId])
+}
+
+model CashSessionReconciliation {
+  id              String      @id @default(cuid())
+  cashSessionId   String
+  channel         CashChannel
+  expectedCents   Int
+  reportedCents   Int
+  differenceCents Int
+  createdAt       DateTime    @default(now())
+  cashSession     CashSession @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+
+  @@unique([cashSessionId, channel])
+  @@index([channel, createdAt])
+}
+
+model CashExpense {
+  id                     String                           @id @default(cuid())
+  cashSessionId          String
+  movementId             String                           @unique
+  registeredById         String
+  deliveredById          String
+  authorizedById         String
+  requestedById          String?
+  receivedById           String?
+  idempotencyKey         String                           @unique
+  kind                   CashExpenseKind
+  category               CashExpenseCategory
+  totalCents             Int
+  reason                 String
+  note                   String?
+  itemDescription        String?
+  quantity               Int?
+  unitPriceCents         Int?
+  supplierName           String?
+  urgencyReason          String?
+  requiresInventoryEntry Boolean                          @default(false)
+  receiptStorageKey      String?
+  receiptStorageDriver   ClinicalAttachmentStorageDriver?
+  receiptOriginalName    String?
+  receiptMimeType        String?
+  receiptSizeBytes       Int?
+  receiptChecksumSha256  String?
+  receiptUploadedAt      DateTime?
+  occurredAt             DateTime                         @default(now())
+  createdAt              DateTime                         @default(now())
+  cashSession            CashSession                      @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+  movement               CashMovement                     @relation(fields: [movementId], references: [id], onDelete: Restrict)
+  registeredBy           InternalUser                     @relation("CashExpenseRegisteredBy", fields: [registeredById], references: [id], onDelete: Restrict)
+  deliveredBy            InternalUser                     @relation("CashExpenseDeliveredBy", fields: [deliveredById], references: [id], onDelete: Restrict)
+  authorizedBy           InternalUser                     @relation("CashExpenseAuthorizedBy", fields: [authorizedById], references: [id], onDelete: Restrict)
+  requestedBy            InternalUser?                    @relation("CashExpenseRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  receivedBy             InternalUser?                    @relation("CashExpenseReceivedBy", fields: [receivedById], references: [id], onDelete: Restrict)
+  beneficiaries          CashExpenseBeneficiary[]
+
+  @@index([cashSessionId, occurredAt])
+  @@index([kind, category, occurredAt])
+  @@index([registeredById])
+  @@index([authorizedById])
+}
+
+model CashExpenseBeneficiary {
+  id            String       @id @default(cuid())
+  cashExpenseId String
+  employeeId    String
+  amountCents   Int
+  note          String?
+  createdAt     DateTime     @default(now())
+  cashExpense   CashExpense  @relation(fields: [cashExpenseId], references: [id], onDelete: Restrict)
+  employee      InternalUser @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@index([cashExpenseId])
+  @@index([employeeId, createdAt])
 }
 
 model FollowUpTask {

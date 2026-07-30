@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-17 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-18 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,18 +16,20 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las veinticuatro migraciones actuales están
-aplicadas en desarrollo. Falta validar las doce
+anteriores están en staging y las veintiséis migraciones actuales están
+aplicadas en desarrollo. Falta validar las catorce
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
-funcionamiento del gate de la Tarea 8.
+funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
+apertura, egresos estructurados, conciliación por canal, cierre y correcciones
+compensatorias.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 12 |
-| En progreso | 16 |
+| Pendiente | 11 |
+| En progreso | 17 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -38,7 +40,7 @@ funcionamiento del gate de la Tarea 8.
 | --- | --- | --- | --- |
 | 1. Base segura | 1-8 | En progreso | Tarea 8 aprobada; producción conserva bloqueos remotos |
 | 2. Datos y flujo | 9-17 | En progreso | Recorrido clínico íntegro y auditable |
-| 3. Caja e inventario | 18-21 | Pendiente | Caja, compra y stock reconcilian |
+| 3. Caja e inventario | 18-21 | En progreso | Caja, compra y stock reconcilian |
 | 4. Medición y continuidad | 22-27 | Pendiente | Indicadores reconciliados y móvil validado |
 | 5. Expansión y piloto | 28-29 | Pendiente | Piloto de El Alto aprobado |
 
@@ -63,7 +65,7 @@ funcionamiento del gate de la Tarea 8.
 | 15 | Tipos de seguimiento | P1 | En progreso | 9, 14 |
 | 16 | Abandono, bloqueo y pendientes | P1 | En progreso | 13, 15 |
 | 17 | Correcciones y firma clínica | P1 | En progreso | 3-5 |
-| 18 | Caja, dinero al personal, gastos y cierre | P0 | Pendiente | 3-5, 8 |
+| 18 | Caja, dinero al personal, gastos y cierre | P0 | En progreso | 3-5, 8 |
 | 19 | Catálogo y proveedores | P0 | Pendiente | 3-5, 18 |
 | 20 | Compras, recepciones, lotes y stock | P0 | Pendiente | 18-19 |
 | 21 | Recetas y comprobantes | P1 | Pendiente | 17-20 |
@@ -141,6 +143,12 @@ Estado de las tareas de la base segura:
   aplicaciones y usan control de revisión contra cambios concurrentes.
   Pendiente integración acumulada, QA de gstack y validación por roles en
   staging.
+- **Tarea 18 — Caja, dinero al personal, gastos y cierre:** sesión de Caja,
+  cobros enlazados, entregas individuales al personal, compras urgentes con
+  comprobante privado opcional, otros egresos, conciliación por medio, cierre
+  imprimible y correcciones compensatorias implementados en desarrollo local.
+  Pendiente integración acumulada, QA web/móvil, validación por roles y
+  decisiones productivas de Dirección.
 
 Para terminar la Tarea 1:
 
@@ -206,8 +214,10 @@ Blob clínico privado y las credenciales separadas aprobadas.
 
 ### Caja
 
-- Definir qué usuarios abren y cierran.
-- Definir el límite de diferencia que requiere aprobación.
+- Administración abre y solicita el cierre; Dirección aprueba diferencias y
+  registra correcciones.
+- El límite local inicial es Bs 20. Dirección debe aprobar el valor exacto
+  antes de producción.
 - Definir qué gastos exigen comprobante.
 - Definir cuánto tiempo puede quedar pendiente un comprobante.
 
@@ -861,6 +871,59 @@ Responsables: Médico y Dirección para revisión.
 - No aplicar la migración en producción sin autorización expresa.
 
 **Commit sugerido:** `feat(sigeco): version clinical records`
+
+## 2026-07-30 — Tarea 18 — Caja, Dinero Al Personal, Gastos Y Cierre
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Administración y Dirección para revisión.
+
+### Resultado
+
+- Caja tiene apertura, responsable, turno, sucursal y efectivo inicial.
+- Cada cobro se enlaza a una sesión abierta; sin ella no se guarda el pago.
+- El dinero entregado al personal conserva beneficiarios y montos
+  individuales.
+- La compra urgente conserva artículo, cantidad, precio, responsables,
+  autorización, comprobante opcional y pendiente de inventario.
+- Otros egresos identifican receptor, responsable, autorización y motivo.
+- Efectivo, QR, tarjeta, transferencia y otros medios se concilian por
+  separado.
+- Diferencias mayores al límite bloquean Caja hasta la aprobación de Dirección.
+- Devoluciones y reintegros compensan al movimiento original sin borrarlo.
+- El cierre es imprimible y los formularios admiten teclado numérico y cámara
+  desde móvil.
+
+### Archivos Y Migraciones
+
+- Modelos, permisos, schemas, acciones y consultas de Caja.
+- Pantalla responsive de apertura, egresos, movimientos, filtros y cierre.
+- Almacenamiento privado y lectura protegida de comprobantes.
+- Migraciones locales `20260730162455_cash_sessions_expenses_close` y
+  `20260730174605_cash_receipt_integrity`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Prisma format, validate, generate y migraciones locales aprobados; 26 migraciones
+  al día.
+- Ambiente local aprobado; producción exige configurar expresamente el límite
+  autorizado por Dirección.
+- TypeScript y lint aprobados.
+- 6 archivos y 51 pruebas enfocadas aprobados.
+- La cobertura de integración quedó escrita para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración, build y QA gstack en el cierre acumulado.
+- Validar Administración y Dirección en staging.
+- Aprobar el límite productivo y la política de comprobantes.
+- Probar cámara y cierre en teléfonos reales.
+- No aplicar la migración en producción sin autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): add expenses and daily cash close`
 
 ## Cómo Actualizar El Progreso
 

@@ -11,6 +11,7 @@ import {
 } from "@/modules/database/queries/inventory";
 import { createPatientRecord } from "@/modules/database/queries/patients";
 import { createSaleRecord } from "@/modules/database/queries/sales";
+import { openCashSession } from "@/modules/database/queries/cash";
 
 async function cleanInventory() {
   await prisma.inventoryMovement.deleteMany();
@@ -19,7 +20,9 @@ async function cleanInventory() {
   await prisma.followUpStatusHistory.deleteMany();
   await prisma.followUpAttempt.deleteMany();
   await prisma.followUpTask.deleteMany();
-  await prisma.cashMovement.deleteMany();
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "CashExpenseBeneficiary", "CashExpense", "CashSessionReconciliation", "CashMovement", "CashSession" CASCADE'
+  );
   await prisma.deliveredProduct.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.saleItem.deleteMany();
@@ -58,6 +61,16 @@ describe("inventory integration", () => {
       minimumStock: 2,
       initialStock: 5,
       userId: user.id
+    });
+    await openCashSession({
+      branchCode: "el-alto",
+      registerName: "Caja principal",
+      businessDate: new Date("2026-07-30T00:00:00.000Z"),
+      shift: "full_day",
+      responsibleId: user.id,
+      openedById: user.id,
+      openingCashCents: 0,
+      idempotencyKey: "inventory-sale-session"
     });
 
     await createSaleRecord({
@@ -118,6 +131,23 @@ describe("inventory integration", () => {
   });
 
   it("rejects sales above stock and rolls back the complete sale", async () => {
+    const user = await prisma.internalUser.create({
+      data: {
+        email: "inventario-sin-stock@example.com",
+        passwordHash: await hashPassword("clave-segura-123"),
+        role: "super_admin"
+      }
+    });
+    await openCashSession({
+      branchCode: "el-alto",
+      registerName: "Caja principal",
+      businessDate: new Date("2026-07-30T00:00:00.000Z"),
+      shift: "full_day",
+      responsibleId: user.id,
+      openedById: user.id,
+      openingCashCents: 0,
+      idempotencyKey: "inventory-no-stock-session"
+    });
     const patient = await createPatientRecord({
       fullName: "Paciente Sin Stock",
       phone: "+591 70000067",

@@ -18,7 +18,15 @@ const noticeMessages: Record<string, string> = {
   "venta-creada": "Venta registrada",
   "usuario-creado": "Usuario creado",
   "acceso-actualizado": "Acceso actualizado",
-  "contrasena-actualizada": "Contraseña actualizada"
+  "contrasena-actualizada": "Contraseña actualizada",
+  "cash-session-opened": "Caja abierta",
+  "cash-staff-expense-created": "Dinero al personal registrado",
+  "cash-purchase-created": "Compra urgente registrada",
+  "cash-expense-created": "Egreso registrado",
+  "cash-close-pending": "Cierre enviado a Dirección",
+  "cash-session-closed": "Caja cerrada y conciliada",
+  "cash-close-approved": "Diferencia aprobada y Caja cerrada",
+  "cash-correction-created": "Corrección registrada"
 };
 
 export function ActionNotice() {

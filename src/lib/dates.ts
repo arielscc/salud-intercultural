@@ -46,6 +46,11 @@ export function toDateOnlyString(date: Date | null | undefined) {
   return date ? date.toISOString().slice(0, 10) : "";
 }
 
+/** Fecha actual en Bolivia como "yyyy-MM-dd", para campos de día operativo. */
+export function todayDateOnly(date: Date = new Date()) {
+  return format(inAppZone(date), "yyyy-MM-dd");
+}
+
 /** Limites del dia boliviano que contiene `date`, como instantes UTC. */
 export function dayRange(date: Date = new Date()) {
   const start = startOfDay(inAppZone(date));

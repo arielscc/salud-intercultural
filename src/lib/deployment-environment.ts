@@ -33,6 +33,21 @@ function clean(value: string | undefined) {
   return normalized ? normalized : undefined;
 }
 
+export function resolveCashCloseApprovalThresholdCents(
+  values: EnvironmentVariables = process.env
+) {
+  const raw = clean(values.CASH_CLOSE_APPROVAL_THRESHOLD_CENTS);
+  if (!raw) return 2_000;
+
+  const configured = Number(raw);
+  if (!Number.isSafeInteger(configured) || configured < 0) {
+    throw new Error(
+      "CASH_CLOSE_APPROVAL_THRESHOLD_CENTS must be a non-negative integer."
+    );
+  }
+  return configured;
+}
+
 export function resolveBlobReadWriteToken(
   values: EnvironmentVariables = process.env
 ) {
@@ -289,6 +304,12 @@ function assertProductionIsolation(values: EnvironmentVariables) {
     );
   }
 
+  if (!clean(values.CASH_CLOSE_APPROVAL_THRESHOLD_CENTS)) {
+    throw new Error(
+      "Production remains blocked until Dirección approves the cash close difference limit and CASH_CLOSE_APPROVAL_THRESHOLD_CENTS is explicitly configured."
+    );
+  }
+
   const siteHostname = hostnameFromUrl(values.NEXT_PUBLIC_SITE_URL, "NEXT_PUBLIC_SITE_URL");
   const payloadHostname = hostnameFromUrl(
     values.PAYLOAD_PUBLIC_SERVER_URL,
@@ -357,6 +378,7 @@ export function assertEnvironmentIsolation(
   values: EnvironmentVariables = process.env
 ): EnvironmentIsolationSummary {
   const environment = resolveDeploymentEnvironment(values);
+  resolveCashCloseApprovalThresholdCents(values);
 
   if (environment === "staging") {
     assertStagingIsolation(values);

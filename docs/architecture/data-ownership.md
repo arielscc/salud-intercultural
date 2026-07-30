@@ -36,7 +36,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Pagina Nosotros | Payload | Payload Admin | Activo | `src/data/about.ts` queda como fallback/seed. |
 | Pagina Tratamientos | Payload | Payload Admin | Activo | `pages/tratamientos` y `treatment-topics`; `src/data/problems.ts` y `src/data/treatments.ts` quedan como fallback/seed. |
 | Citas futuras | Prisma | UI custom futura | Futuro | Reglas de disponibilidad, solapamientos y estados. |
-| Pagos y Caja | Prisma | SIGECO | Activo | Ventas, pagos y movimientos financieros auditados. |
+| Pagos y Caja | Prisma + storage privado para comprobantes | SIGECO, Administración y Dirección | Activo | Sesiones, ventas, pagos, egresos, beneficiarios, conciliaciones y correcciones compensatorias; los comprobantes nunca son media pública. |
 | Inventario | Prisma | SIGECO | Activo | Productos, stock, movimientos y ajustes. |
 | Auditoría de SIGECO | Prisma | SIGECO, solo Dirección y super administrador | Activo | `AuditEvent` append-only; PostgreSQL bloquea update y delete. |
 | Adjuntos clínicos | Prisma + storage clínico privado | SIGECO, según permisos clínicos | Activo | Metadata y concesiones en Prisma; contenido fuera de Payload y de `public/`. |

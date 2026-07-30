@@ -25,6 +25,8 @@ Control de avance: [progress.md](./progress.md)
 - [Usuarios, roles y sesiones](../../operations/internal-users-sessions.md)
 - [Permisos, privacidad, logs y secretos](../../operations/permissions-privacy-secrets.md)
 - [Reporte de Administración, ventas y cobros](../task-reports/2026-05-30-v3-4-administracion-ventas-cobros.md)
+- [Caja, egresos y cierre diario](../../operations/cash-sessions-expenses-close.md)
+- [Reporte de la Tarea 18](../task-reports/2026-07-30-tarea-18-caja-dinero-personal-gastos-cierre.md)
 - [Reporte de inventario](../task-reports/2026-05-30-v3-6-inventario.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
@@ -32,15 +34,19 @@ Control de avance: [progress.md](./progress.md)
 ### Implementación actual
 
 - [Modelo Prisma](../../../prisma/schema.prisma)
-- [Queries de ventas y Caja](../../../src/modules/database/queries/sales.ts)
+- [Queries de ventas y cobros](../../../src/modules/database/queries/sales.ts)
+- [Queries de sesiones, egresos y cierre](../../../src/modules/database/queries/cash.ts)
 - [Queries de inventario](../../../src/modules/database/queries/inventory.ts)
 - [Actions de inventario](../../../src/features/inventory/actions.ts)
 
 ## Qué Existe Actualmente
 
-SIGECO ya registra pacientes, visitas, consultas, ruta entre áreas, ventas, pagos, movimientos básicos de Caja, productos, movimientos de inventario, alertas y seguimientos.
+SIGECO ya registra pacientes, visitas, consultas, ruta entre áreas, ventas,
+pagos, sesiones y movimientos de Caja, egresos, conciliaciones, productos,
+movimientos de inventario, alertas y seguimientos.
 
-- Un cobro genera `Payment` y `CashMovement`.
+- Un cobro exige una Caja abierta y genera `Payment` y `CashMovement`.
+- Los egresos guardan personas, autorización, motivo y detalle estructurado.
 - Una venta inventariable descuenta stock.
 - Las entradas y ajustes generan `InventoryMovement`.
 - Los montos se almacenan en centavos.

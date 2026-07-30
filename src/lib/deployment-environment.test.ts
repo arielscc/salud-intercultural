@@ -40,7 +40,8 @@ const productionEnvironment = {
   PAYLOAD_SECRET: "production-payload-secret-32-characters-minimum",
   BLOB_READ_WRITE_TOKEN: "synthetic-production-editorial-token",
   CLINICAL_FILES_STORAGE_DRIVER: "vercel-blob",
-  CLINICAL_BLOB_READ_WRITE_TOKEN: "synthetic-production-clinical-token"
+  CLINICAL_BLOB_READ_WRITE_TOKEN: "synthetic-production-clinical-token",
+  CASH_CLOSE_APPROVAL_THRESHOLD_CENTS: "2000"
 };
 
 describe("deployment environment isolation", () => {
@@ -179,5 +180,15 @@ describe("deployment environment isolation", () => {
         PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v1"
       }).environment
     ).toBe("production");
+  });
+
+  it("blocks production until Direction defines the cash difference limit", () => {
+    expect(() =>
+      assertEnvironmentIsolation({
+        ...productionEnvironment,
+        PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v1",
+        CASH_CLOSE_APPROVAL_THRESHOLD_CENTS: ""
+      })
+    ).toThrow(/CASH_CLOSE_APPROVAL_THRESHOLD_CENTS/);
   });
 });

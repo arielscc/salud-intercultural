@@ -37,6 +37,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-29 | [Tarea 15: tipos y resultados de seguimiento](./2026-07-29-tarea-15-tipos-resultados-seguimiento.md) | Separa propósito, responsable, prioridad, estado y resultado, con escalamiento real al médico. |
 | 2026-07-30 | [Tarea 16: abandono, bloqueo y pendientes](./2026-07-30-tarea-16-abandono-bloqueo-pendientes.md) | Registra dónde se detuvo la visita y conserva el trabajo que todavía debe recuperarse. |
 | 2026-07-30 | [Tarea 17: correcciones, cierre y firma clínica](./2026-07-30-tarea-17-correcciones-cierre-firma-clinica.md) | Finaliza consultas con autor y conserva cada corrección como una nueva versión comparable. |
+| 2026-07-30 | [Tarea 18: Caja, dinero al personal, gastos y cierre](./2026-07-30-tarea-18-caja-dinero-personal-gastos-cierre.md) | Abre y concilia Caja, registra egresos estructurados y corrige mediante movimientos compensatorios. |
 
 ## Relacion Con Estado V3
 

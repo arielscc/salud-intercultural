@@ -10,6 +10,7 @@ import {
   getSaleById,
   getSalesSummary
 } from "@/modules/database/queries/sales";
+import { openCashSession } from "@/modules/database/queries/cash";
 import { createVisitRecord } from "@/modules/database/queries/visits";
 
 async function cleanSales() {
@@ -19,7 +20,9 @@ async function cleanSales() {
   await prisma.followUpStatusHistory.deleteMany();
   await prisma.followUpAttempt.deleteMany();
   await prisma.followUpTask.deleteMany();
-  await prisma.cashMovement.deleteMany();
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "CashExpenseBeneficiary", "CashExpense", "CashSessionReconciliation", "CashMovement", "CashSession" CASCADE'
+  );
   await prisma.deliveredProduct.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.saleItem.deleteMany();
@@ -65,6 +68,16 @@ describe("sales integration", () => {
       fullName: "Paciente Ventas",
       phone: "+591 70000044",
       captureSource: "whatsapp"
+    });
+    await openCashSession({
+      branchCode: "el-alto",
+      registerName: "Caja principal",
+      businessDate: new Date("2026-07-30T00:00:00.000Z"),
+      shift: "full_day",
+      responsibleId: admin.id,
+      openedById: admin.id,
+      openingCashCents: 0,
+      idempotencyKey: "sales-test-cash-session"
     });
     const visit = await createVisitRecord({
       patientId: patient.id,

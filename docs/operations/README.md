@@ -47,6 +47,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 32. [Tipos y resultados de seguimiento](./follow-up-classification.md)
 33. [Abandono, bloqueo y pendientes](./visit-discontinuations.md)
 34. [Correcciones, cierre y firma clínica](./clinical-record-versioning.md)
+35. [Caja, egresos y cierre diario](./cash-sessions-expenses-close.md)
 
 ## Flujo recomendado
 

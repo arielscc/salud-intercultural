@@ -49,7 +49,18 @@ export default async function AdministrationPage() {
 
   return (
     <div className="grid gap-4">
-      <PageHeader title="Ventas y cobros" description="Administración" />
+      <PageHeader
+        title="Ventas y cobros"
+        description="Administración"
+        actions={
+          <Link
+            href="/sigeco/administracion/caja"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Control de Caja
+          </Link>
+        }
+      />
 
       <OperationalQueueRefresh
         queueKey="administration"

@@ -1,8 +1,12 @@
-import type { Prisma, SaleItemType } from "@/generated/prisma/client";
+import type { CashChannel, Prisma, SaleItemType } from "@/generated/prisma/client";
 import { dayRange, monthRange } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 import { applyInventoryMovement } from "@/modules/database/queries/inventory";
+import {
+  CashWorkflowError,
+  getOpenCashSessionForOperation
+} from "@/modules/database/queries/cash";
 
 const paymentMethodNames: Record<string, string> = {
   cash: "Efectivo",
@@ -29,6 +33,15 @@ async function ensurePaymentMethod(tx: Prisma.TransactionClient, code: string) {
       active: true
     }
   });
+}
+
+function paymentCodeToCashChannel(code: string): CashChannel {
+  return code === "cash" ||
+    code === "qr" ||
+    code === "card" ||
+    code === "transfer"
+    ? code
+    : "other";
 }
 
 export async function getAdministrationWorkItems(input: PaginationInput = {}) {
@@ -148,6 +161,10 @@ export async function createSaleRecord(input: {
       const totalCents = Math.max(0, subtotalCents - discountCents);
       const initialPaymentCents = Math.min(input.initialPaymentCents ?? 0, totalCents);
       const status = getSaleStatus(totalCents, initialPaymentCents);
+      const cashSession =
+        initialPaymentCents > 0
+          ? await getOpenCashSessionForOperation(tx)
+          : null;
 
       const sale = await tx.sale.create({
         data: {
@@ -215,12 +232,16 @@ export async function createSaleRecord(input: {
 
         await tx.cashMovement.create({
           data: {
+            cashSessionId: cashSession?.id,
             saleId: sale.id,
             paymentId: payment.id,
             patientId: input.patientId,
             visitId: input.visitId,
             userId: input.createdById,
             type: "income",
+            channel: paymentCodeToCashChannel(
+              input.paymentMethodCode ?? "cash"
+            ),
             amountCents: initialPaymentCents,
             description: `Cobro de venta ${sale.id}`
           }
@@ -257,6 +278,10 @@ export async function createPaymentRecord(input: {
         where: { id: input.saleId }
       });
       const amountCents = Math.min(input.amountCents, sale.balanceCents);
+      if (amountCents <= 0) {
+        throw new CashWorkflowError("invalid_amount");
+      }
+      const cashSession = await getOpenCashSessionForOperation(tx);
       const paidCents = sale.paidCents + amountCents;
       const balanceCents = Math.max(0, sale.totalCents - paidCents);
       const method = await ensurePaymentMethod(tx, input.paymentMethodCode);
@@ -286,12 +311,14 @@ export async function createPaymentRecord(input: {
 
       await tx.cashMovement.create({
         data: {
+          cashSessionId: cashSession.id,
           saleId: sale.id,
           paymentId: payment.id,
           patientId: sale.patientId,
           visitId: sale.visitId,
           userId: input.receivedById,
           type: "income",
+          channel: paymentCodeToCashChannel(input.paymentMethodCode),
           amountCents,
           description: `Cobro de venta ${sale.id}`
         }
@@ -329,7 +356,15 @@ export async function getSaleById(id: string) {
         payments: {
           include: {
             method: true,
-            receivedBy: true
+            receivedBy: true,
+            cashMovements: {
+              include: {
+                corrections: {
+                  where: { type: "refund" },
+                  select: { id: true, amountCents: true }
+                }
+              }
+            }
           },
           orderBy: { paidAt: "desc" }
         }

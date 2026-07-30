@@ -27,11 +27,16 @@ import { cn } from "@/lib/cn";
 
 type SaleDetailPageProps = {
   params: Promise<{ saleId: string }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
-export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
+export default async function SaleDetailPage({
+  params,
+  searchParams
+}: SaleDetailPageProps) {
   await requirePermission("sales_read");
   const { saleId } = await params;
+  const query = await searchParams;
   const sale = await getSaleById(saleId);
 
   if (!sale) notFound();
@@ -42,6 +47,17 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
     <div className={cn("grid items-start gap-4", hasBalance && "xl:grid-cols-[1.5fr_1fr]")}>
       <MobileBackLink href="/sigeco/administracion" label="Volver a Caja" />
       <div className="grid gap-4 max-sm:contents">
+        {query.error === "cash-session-required" ? (
+          <div
+            className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
+            role="alert"
+          >
+            <p className="font-semibold">Primero debes abrir la Caja de hoy.</p>
+            <p className="mt-1">
+              El cobro no fue registrado. Abre una sesión en “Control de Caja” y vuelve a intentar.
+            </p>
+          </div>
+        ) : null}
         <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -132,16 +148,40 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
             description="Importes recibidos, método de pago, fecha y referencia."
           />
           <RecordList>
-            {sale.payments.map((payment) => (
-              <RecordItem
-                key={payment.id}
-                title={<span className="tabular-nums">{formatMoney(payment.amountCents)}</span>}
-                status={<Chip>{payment.method.name}</Chip>}
-              >
-                <span className="tabular-nums">{formatDateTime(payment.paidAt)}</span>
-                {payment.reference ? <span>Ref. {payment.reference}</span> : null}
-              </RecordItem>
-            ))}
+            {sale.payments.map((payment) => {
+              const refundedCents = payment.cashMovements.reduce(
+                (movementTotal, movement) =>
+                  movementTotal +
+                  movement.corrections.reduce(
+                    (total, correction) => total + correction.amountCents,
+                    0
+                  ),
+                0
+              );
+              return (
+                <RecordItem
+                  key={payment.id}
+                  title={
+                    <span className="tabular-nums">
+                      {formatMoney(payment.amountCents)}
+                    </span>
+                  }
+                  status={<Chip>{payment.method.name}</Chip>}
+                >
+                  <span className="tabular-nums">
+                    {formatDateTime(payment.paidAt)}
+                  </span>
+                  {payment.reference ? (
+                    <span>Ref. {payment.reference}</span>
+                  ) : null}
+                  {refundedCents > 0 ? (
+                    <span className="font-semibold text-warning">
+                      Devuelto: {formatMoney(refundedCents)}
+                    </span>
+                  ) : null}
+                </RecordItem>
+              );
+            })}
             {sale.payments.length === 0 ? (
               <RecordListEmpty>
                 <span className="text-sm text-muted">Sin pagos registrados.</span>
@@ -159,16 +199,35 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {sale.payments.map((payment) => (
-                  <Tr key={payment.id}>
-                    <Td className="font-semibold tabular-nums text-text">
-                      {formatMoney(payment.amountCents)}
-                    </Td>
-                    <Td>{payment.method.name}</Td>
-                    <Td className="tabular-nums">{formatDateTime(payment.paidAt)}</Td>
-                    <Td>{payment.reference ?? "—"}</Td>
-                  </Tr>
-                ))}
+                {sale.payments.map((payment) => {
+                  const refundedCents = payment.cashMovements.reduce(
+                    (movementTotal, movement) =>
+                      movementTotal +
+                      movement.corrections.reduce(
+                        (total, correction) =>
+                          total + correction.amountCents,
+                        0
+                      ),
+                    0
+                  );
+                  return (
+                    <Tr key={payment.id}>
+                      <Td className="font-semibold tabular-nums text-text">
+                        {formatMoney(payment.amountCents)}
+                        {refundedCents > 0 ? (
+                          <span className="block text-[11px] text-warning">
+                            Devuelto {formatMoney(refundedCents)}
+                          </span>
+                        ) : null}
+                      </Td>
+                      <Td>{payment.method.name}</Td>
+                      <Td className="tabular-nums">
+                        {formatDateTime(payment.paidAt)}
+                      </Td>
+                      <Td>{payment.reference ?? "—"}</Td>
+                    </Tr>
+                  );
+                })}
                 {sale.payments.length === 0 ? (
                   <tr>
                     <Td className="py-6 text-center" colSpan={4}>

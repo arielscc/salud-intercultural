@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import { createPaymentRecord, createSaleRecord } from "@/modules/database/queries/sales";
 import { findInsufficientStockError } from "@/modules/database/queries/inventory";
+import { findCashWorkflowError } from "@/modules/database/queries/cash";
 import {
   hasPaidStudyFlowError,
   releasePaidStudiesToNursing
@@ -65,6 +66,13 @@ export async function createSaleAction(formData: FormData) {
           notes: parsed.data.notes
         });
       } catch (error) {
+        const cashError = findCashWorkflowError(error);
+        if (cashError?.code === "session_not_open") {
+          const target = parsed.data.workItemId
+            ? `/sigeco/administracion/${parsed.data.workItemId}`
+            : "/sigeco/administracion";
+          redirect(`${target}?error=cash-session-required`);
+        }
         const stockError = findInsufficientStockError(error);
         if (!stockError) throw error;
 
@@ -113,15 +121,27 @@ export async function createPaymentAction(formData: FormData) {
       }
 
       const amountCents = moneyToCents(parsed.data.amount);
-      const payment = await createPaymentRecord({
-        saleId: parsed.data.saleId,
-        receivedById: user.id,
-        amountCents,
-        paymentMethodCode: parsed.data.paymentMethodCode,
-        reference: parsed.data.reference,
-        notes: parsed.data.notes,
-        paidAt: parsed.data.paidAt
-      });
+      let payment;
+      try {
+        payment = await createPaymentRecord({
+          saleId: parsed.data.saleId,
+          receivedById: user.id,
+          amountCents,
+          paymentMethodCode: parsed.data.paymentMethodCode,
+          reference: parsed.data.reference,
+          notes: parsed.data.notes,
+          paidAt: parsed.data.paidAt
+        });
+      } catch (error) {
+        const cashError = findCashWorkflowError(error);
+        if (cashError?.code === "session_not_open") {
+          const target = workItemId
+            ? `/sigeco/administracion/${workItemId}`
+            : `/sigeco/administracion/ventas/${parsed.data.saleId}`;
+          redirect(`${target}?error=cash-session-required`);
+        }
+        throw error;
+      }
       return auditedResult(payment, {
         entityId: parsed.data.saleId,
         context: { paymentId: payment.id, amountCents, workItemId: workItemId || undefined }

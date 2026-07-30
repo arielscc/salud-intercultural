@@ -267,6 +267,32 @@ El cierre de una visita consulta el estado clínico y rechaza `completed` si
 existe una consulta en borrador. La operación se documenta en
 [Correcciones, cierre y firma clínica](../operations/clinical-record-versioning.md).
 
+### Sesiones, Egresos Y Cierre De Caja
+
+`CashSession` delimita la jornada de una caja física. Una restricción parcial
+impide otra sesión `open` o `pending_approval` para la misma sucursal y caja.
+Cada cobro nuevo obtiene y bloquea la sesión abierta dentro de su transacción;
+si no existe, ni el pago ni la venta con cobro inicial se confirman.
+
+`CashMovement` conserva sesión, canal, tipo, usuario, autorización y referencia
+al movimiento original. `CashExpense` separa los datos del egreso y
+`CashExpenseBeneficiary` guarda las líneas individuales de una entrega grupal.
+Las claves de idempotencia evitan duplicar aperturas, egresos y correcciones.
+
+El cierre calcula el neto por efectivo, QR, tarjeta, transferencia y otros
+medios. `CashSessionReconciliation` fotografía el esperado, reportado y la
+diferencia. Las discrepancias superiores al límite configurable bloquean la
+sesión hasta que Dirección aprueba.
+
+PostgreSQL rechaza movimientos sobre una Caja no abierta y el borrado de
+evidencia financiera. Las devoluciones y reintegros insertan movimientos
+compensatorios. Los comprobantes de compra se validan y se guardan bajo un
+prefijo separado del storage privado; su lectura compara SHA-256 antes de
+servir el contenido.
+
+La operación completa vive en
+[Caja, egresos y cierre diario](../operations/cash-sessions-expenses-close.md).
+
 ### Consentimientos
 
 `PatientConsent` registra eventos independientes para seguimiento,
@@ -371,6 +397,6 @@ Detener `next dev` antes de `next build`; ambos comparten `.next`. Las migracion
   [Respuesta a incidentes](../operations/incident-response.md). Dirección ya
   aprobó la implementación de la Tarea 8; la autorización de producción sigue
   separada y bloqueada.
-- Flujo operativo, Caja, compras, inventario, reportes y multi-sucursal.
+- Compras, recepciones, inventario completo, reportes y multi-sucursal.
 
 El orden técnico y funcional vigente vive en [Tasks de mejoras integrales](./sigeco-mejoras-integrales/tasks.md). Su estado se controla únicamente en [Progress](./sigeco-mejoras-integrales/progress.md).

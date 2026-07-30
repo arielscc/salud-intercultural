@@ -49,6 +49,46 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("administracion", "studies_write")).toBe(false);
   });
 
+  it("separates Caja operation from Direction approval", () => {
+    for (const permission of [
+      "cash_sessions_read",
+      "cash_sessions_open",
+      "cash_movements_create",
+      "cash_sessions_close"
+    ] as const) {
+      expect(roleHasPermission("administracion", permission)).toBe(true);
+    }
+    expect(
+      roleHasPermission("administracion", "cash_movements_reverse")
+    ).toBe(false);
+    expect(
+      roleHasPermission("administracion", "cash_sessions_approve")
+    ).toBe(false);
+
+    expect(roleHasPermission("direccion", "cash_sessions_read")).toBe(true);
+    expect(
+      roleHasPermission("direccion", "cash_movements_reverse")
+    ).toBe(true);
+    expect(
+      roleHasPermission("direccion", "cash_sessions_approve")
+    ).toBe(true);
+    expect(roleHasPermission("direccion", "cash_sessions_open")).toBe(false);
+    expect(
+      roleHasPermission("direccion", "cash_movements_create")
+    ).toBe(false);
+
+    for (const role of [
+      "medico",
+      "recepcion",
+      "enfermeria",
+      "seguimiento",
+      "captacion"
+    ] as const) {
+      expect(roleHasPermission(role, "cash_sessions_read")).toBe(false);
+      expect(roleHasPermission(role, "cash_movements_create")).toBe(false);
+    }
+  });
+
   it("lets administration close visits after a sale (flexible flow)", () => {
     expect(roleHasPermission("administracion", "visits_update")).toBe(true);
     expect(roleHasPermission("administracion", "visits_create")).toBe(false);
