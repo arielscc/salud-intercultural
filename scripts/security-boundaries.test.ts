@@ -122,6 +122,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/recepcion/visitas/[id]/page.tsx": [
     "visits_read"
   ],
+  "src/app/(internal)/sigeco/(app)/reportes/recorrido/page.tsx": [
+    "reports_read"
+  ],
   "src/app/(internal)/sigeco/(app)/seguimientos/[taskId]/page.tsx": [
     "followups_read"
   ],
@@ -467,7 +470,7 @@ describe("SIGECO permission and privacy boundaries", () => {
 
   it("does not expose clinical queries to Payload, marketing or analytics", () => {
     const protectedQueryImport =
-      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patients|reception|sales|studies|visits))/;
+      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patient-journey|patients|reception|sales|studies|visits))/;
     const publicRoots = [
       "src/payload",
       "src/features/analytics",

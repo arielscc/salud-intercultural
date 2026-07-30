@@ -2,6 +2,7 @@ import {
   Boxes,
   ClipboardList,
   FileSignature,
+  GitBranch,
   HeartPulse,
   Home,
   PhoneCall,
@@ -41,6 +42,12 @@ export const sigecoNavItems: SigecoNavItem[] = [
     href: "/sigeco/atribucion",
     label: "Captación",
     icon: ChartNoAxesCombined,
+    permission: "reports_read"
+  },
+  {
+    href: "/sigeco/reportes/recorrido",
+    label: "Recorrido",
+    icon: GitBranch,
     permission: "reports_read"
   },
   { href: "/sigeco/auditoria", label: "Auditoría", icon: ShieldCheck, permission: "audit_read" },

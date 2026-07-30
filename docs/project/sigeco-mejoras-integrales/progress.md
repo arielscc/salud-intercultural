@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-21 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-22 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las veintinueve migraciones actuales están
-aplicadas en desarrollo. Falta validar las diecisiete
+anteriores están en staging y las treinta migraciones actuales están
+aplicadas en desarrollo. Falta validar las dieciocho
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -29,13 +29,15 @@ Compras, pagos a proveedores, recepciones parciales, lotes, vencimientos y
 movimientos de stock ya son trazables en desarrollo local.
 Las recetas y comprobantes internos ya se emiten desde sus fuentes vigentes,
 con versiones inmutables, PDF privado e identidad profesional confirmable.
+El recorrido completo ya puede reconciliar llegada, consulta, propuesta,
+venta, cobro, seguimiento y retorno sin duplicar una visita entre áreas.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 8 |
-| En progreso | 20 |
+| Pendiente | 7 |
+| En progreso | 21 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -47,7 +49,7 @@ con versiones inmutables, PDF privado e identidad profesional confirmable.
 | 1. Base segura | 1-8 | En progreso | Tarea 8 aprobada; producción conserva bloqueos remotos |
 | 2. Datos y flujo | 9-17 | En progreso | Recorrido clínico íntegro y auditable |
 | 3. Caja e inventario | 18-21 | En progreso | Caja, compra y stock reconcilian |
-| 4. Medición y continuidad | 22-27 | Pendiente | Indicadores reconciliados y móvil validado |
+| 4. Medición y continuidad | 22-27 | En progreso | Indicadores reconciliados y móvil validado |
 | 5. Expansión y piloto | 28-29 | Pendiente | Piloto de El Alto aprobado |
 
 ## Estado Por Tarea
@@ -75,7 +77,7 @@ con versiones inmutables, PDF privado e identidad profesional confirmable.
 | 19 | Catálogo y proveedores | P0 | En progreso | 3-5, 18 |
 | 20 | Compras, recepciones, lotes y stock | P0 | En progreso | 18-19 |
 | 21 | Recetas y comprobantes | P1 | En progreso | 17-20 |
-| 22 | Reporte del recorrido completo | P1 | Pendiente | 9-21 |
+| 22 | Reporte del recorrido completo | P1 | En progreso | 9-21 |
 | 23 | Tiempo por área | P1 | Pendiente | 13, 16, 22 |
 | 24 | Recordatorios supervisados | P1 | Pendiente | 9, 15 |
 | 25 | Encuestas y reclamos | P2 | Pendiente | 9, 24, piloto manual |
@@ -173,6 +175,11 @@ Estado de las tareas de la base segura:
   receta queda preparada para firma y sello; el comprobante se identifica como
   interno y no fiscal. Pendiente integración acumulada, QA web/móvil, revisión
   clínica/fiscal y validación por roles en staging.
+- **Tarea 22 — Reporte del recorrido completo:** cohorte por llegada, una fila
+  por visita, embudo, tendencia, fuente principal, dinero separado y tabla
+  reconciliable implementados en desarrollo local. Pendiente integración
+  acumulada, QA web/móvil, revisión de cifras por Dirección y validación por
+  roles en staging.
 
 Para terminar la Tarea 1:
 
@@ -210,6 +217,10 @@ Blob clínico privado y las credenciales separadas aprobadas.
 - Registrar una compra no aumenta stock; la recepción confirmada sí.
 - Compra, pago/egreso, recepción y movimiento de stock quedan enlazados.
 - Los registros históricos se corrigen, no se borran.
+- El reporte del recorrido usa la llegada de la visita como fecha de cohorte y
+  nunca duplica la visita por cambios de área.
+- “Fuente que genera ingresos” no significa rentabilidad neta mientras SIGECO
+  no registre y distribuya el costo de campaña.
 - Web y móvil responsive usan las mismas reglas y permisos.
 - El Alto debe estabilizarse antes de activar Cochabamba.
 - Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
@@ -1094,6 +1105,61 @@ comprobantes; Dirección confirma identidad y requisitos.
   expresa.
 
 **Commit sugerido:** `feat(sigeco): generate versioned documents`
+
+## 2026-07-30 — Tarea 22 — Reporte Del Recorrido Completo
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección; equipo técnico para implementación y reconciliación.
+
+### Resultado
+
+- Reporte de cohorte basado en la fecha de llegada de cada visita.
+- Una visita se cuenta una sola vez aunque pase por varias áreas.
+- Llegadas, consultas, propuestas, aceptaciones, compras, abandonos,
+  seguimientos, primeras visitas y retornos se derivan de registros fuente.
+- Cantidad de ventas, dinero vendido, cobrado y pendiente se muestran por
+  separado.
+- Fuente principal única y categoría “Sin fuente registrada” para no esconder
+  faltantes.
+- Filtros por período, fuente, ciudad, médico y sucursal.
+- Embudo, tendencia con días en cero, resultados por fuente y tabla
+  reconciliable.
+- Indicadores de calidad para fuente faltante y venta sin aceptación vigente.
+- Acceso limitado a Dirección y super administrador mediante `reports_read`.
+
+### Archivos Y Migraciones
+
+- Consulta de datos y agregación pura del recorrido.
+- Pantalla responsive y componentes de embudo y tendencia.
+- Prueba unitaria de fórmulas y cobertura de integración reservada.
+- Migración local `20260730205836_patient_journey_branch`, que agrega la
+  sucursal de llegada a la visita con valor inicial `el-alto`.
+- Guía operativa, reporte de tarea y referencias técnicas actualizadas.
+
+### Validación
+
+- Prisma generate y TypeScript aprobados; 30 migraciones locales al día.
+- Lint enfocado aprobado.
+- Seguridad y fórmulas: 2 archivos y 14 pruebas aprobadas.
+- `git diff --check` aprobado.
+- La prueba de integración fue escrita y se ejecutará con el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack al cierre
+  acumulado.
+- Reconciliar una muestra manual de visitas, decisiones, ventas y cobros con
+  Dirección.
+- Probar filtros, gráficos y tabla en teléfonos reales.
+- Validar roles y cifras en staging.
+- Confirmar sucursales reales durante la Tarea 28.
+- No aplicar la migración ni publicar el reporte en producción sin aviso y
+  autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): report patient journey`
 
 ## Cómo Actualizar El Progreso
 

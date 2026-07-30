@@ -34,6 +34,8 @@ Control de avance: [progress.md](./progress.md)
 - [Reporte de la Tarea 20](../task-reports/2026-07-30-tarea-20-compras-recepciones-lotes-stock.md)
 - [Recetas y comprobantes versionados](../../operations/versioned-prescriptions-receipts.md)
 - [Reporte de la Tarea 21](../task-reports/2026-07-30-tarea-21-recetas-comprobantes-versionados.md)
+- [Reporte del recorrido completo](../../operations/patient-journey-report.md)
+- [Reporte de la Tarea 22](../task-reports/2026-07-30-tarea-22-reporte-recorrido-completo.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
 
@@ -49,6 +51,8 @@ Control de avance: [progress.md](./progress.md)
 - [Servicio de documentos versionados](../../../src/modules/generated-documents/service.ts)
 - [Generación PDF](../../../src/modules/generated-documents/pdf.ts)
 - [Actions de recetas y comprobantes](../../../src/features/generated-documents/actions.ts)
+- [Query del recorrido completo](../../../src/modules/database/queries/patient-journey.ts)
+- [Fórmulas del recorrido](../../../src/features/patient-journey/report.ts)
 
 ## Qué Existe Actualmente
 
@@ -766,7 +770,8 @@ Registrar una compra no aumenta stock. El stock cambia al confirmar la recepció
 
 - Cada cifra coincide con registros fuente.
 - Una visita no se duplica al cambiar de área.
-- Dirección identifica puntos de pérdida y fuentes rentables.
+- Dirección identifica puntos de pérdida y fuentes que generan más ingresos.
+  La rentabilidad neta se mostrará cuando exista costo de campaña atribuible.
 
 **Commit sugerido:** `feat(sigeco): report patient journey`
 

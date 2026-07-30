@@ -239,7 +239,8 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
 1. Validación acumulada en staging del polling controlado de bandejas y de la
    detección y fusión segura de pacientes.
 2. Medición del piloto de bandejas antes de evaluar SSE o WebSocket.
-3. Formatos imprimibles de receta y comprobante, si la clinica los requiere.
+3. Validación acumulada en staging de recetas, comprobantes y reporte del
+   recorrido completo ya implementados localmente.
 4. Reglas aprobadas para automatizar seguimientos.
 5. Validación acumulada del flujo de compras, recepciones y lotes en staging.
 6. Reasignacion de usuarios `captacion` en cada ambiente.

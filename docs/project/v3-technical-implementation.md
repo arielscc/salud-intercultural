@@ -362,6 +362,26 @@ audita descarga o reimpresión. Payload y el sitio público no acceden al módul
 La operación y el gate productivo viven en
 [Recetas y comprobantes versionados](../operations/versioned-prescriptions-receipts.md).
 
+### Reporte Del Recorrido Completo
+
+`Visit` es la unidad estable del reporte y conserva `branchCode`. El período se
+ancla a `checkedInAt` en `America/La_Paz`. La consulta
+`getPatientJourneyReport` carga una fila por visita y relaciona consulta,
+decisión vigente, ventas no anuladas, seguimiento, abandono y atribución
+principal.
+
+`aggregatePatientJourney` es una función pura que rechaza identificadores de
+visita duplicados. Separa visitas con compra, cantidad de ventas,
+`totalCents`, `paidCents` y `balanceCents`. También calcula embudo, días con
+cero actividad, fuentes y señales de calidad sin modificar registros.
+
+La tabla reconciliable enlaza cada fila al registro de visita. Los totales se
+calculan sobre todo el conjunto filtrado y la paginación solo afecta la
+presentación.
+
+Las fórmulas y exclusiones viven en
+[Reporte del recorrido completo](../operations/patient-journey-report.md).
+
 ### Consentimientos
 
 `PatientConsent` registra eventos independientes para seguimiento,

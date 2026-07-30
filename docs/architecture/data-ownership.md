@@ -42,7 +42,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Compras, recepciones, lotes y documentos | Prisma + storage privado | SIGECO, Administración y Dirección | Activo | Orden, pago, recepción y stock separados pero trazables; costos históricos y documentos privados no se editan en Payload. |
 | Auditoría de SIGECO | Prisma | SIGECO, solo Dirección y super administrador | Activo | `AuditEvent` append-only; PostgreSQL bloquea update y delete. |
 | Adjuntos clínicos | Prisma + storage clínico privado | SIGECO, según permisos clínicos | Activo | Metadata y concesiones en Prisma; contenido fuera de Payload y de `public/`. |
-| Reportes analiticos internos | Prisma | SIGECO | Parcial | Captación e ingresos está activo; el recorrido completo continúa en la Tarea 22. |
+| Reportes analiticos internos | Prisma | SIGECO, Dirección | Activo | Captación y recorrido completo se derivan de visitas, decisiones, ventas, pagos y seguimientos; no se copian a Payload. |
 | Integraciones transaccionales futuras | Prisma | Jobs/UI custom | Futuro | Idempotencia, retries y estados tecnicos. |
 | Workflows futuros | Prisma | UI custom futura | Futuro | Estados complejos, relaciones fuertes y transiciones. |
 

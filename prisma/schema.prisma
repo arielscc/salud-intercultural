@@ -967,6 +967,7 @@ model PatientNote {
 model Visit {
   id                        String                     @id @default(cuid())
   patientId                 String
+  branchCode                String                     @default("el-alto")
   status                    VisitStatus                @default(in_reception)
   reason                    String?
   intakeType                VisitIntakeType            @default(first_visit)
@@ -1011,6 +1012,7 @@ model Visit {
   generatedDocuments        GeneratedDocument[]
 
   @@index([patientId])
+  @@index([branchCode, checkedInAt])
   @@index([status, checkedInAt])
   @@index([originDepartment, originCity, checkedInAt])
   @@index([originCountry, checkedInAt])
