@@ -142,6 +142,30 @@ automáticamente a Comunicación.
 La guía operativa vive en
 [Resultado de la propuesta de tratamiento](../operations/treatment-proposal-outcomes.md).
 
+### Clasificación De Seguimientos
+
+`FollowUpTask` separa:
+
+- `type`: propósito del contacto;
+- `domain`: relación clínica o administrativa;
+- `priority`: orden operativo;
+- `status`: pendiente, terminado o cancelado;
+- `result`: respuesta o resultado más reciente;
+- `assignedToId` y `dueAt`: responsable y vencimiento.
+
+`FollowUpAttempt.result` usa `FollowUpResult`; ya no modifica el estado con
+valores como “mejoró”. `No responde` y `Reprogramado` actualizan `dueAt` y
+mantienen la tarea pendiente.
+
+`createFollowUpAttemptRecord` valida consentimiento, resultado permitido y rol
+dentro de una transacción. Cuando el resultado es `worsened` o
+`escalated_to_doctor`, crea una tarea urgente `doctor_call` relacionada mediante
+`escalatedFromTaskId`. Solo Médico o Super administrador pueden resolverla.
+
+La asignación clínica busca Recepción/Marlen; el rol técnico `seguimiento`
+queda limitado a `domain=administrative`. La guía completa vive en
+[Tipos y resultados de seguimiento](../operations/follow-up-classification.md).
+
 ### Ventas E Inventario
 
 `createSaleRecord` calcula subtotal, descuento, total, pago y saldo en servidor. Si existe un item inventariable, el descuento de stock ocurre dentro de la misma transaccion.
@@ -157,8 +181,8 @@ La guía operativa vive en
 | `recepcion` | Recepcion, pacientes, visitas y seguimientos. |
 | `medico` | Recepcion lectura, consulta, enfermeria lectura y seguimientos. |
 | `enfermeria` | Recepcion lectura, enfermeria y estudios. |
-| `administracion` | Recepcion lectura, caja, seguimientos e inventario. |
-| `seguimiento` | Pacientes lectura y seguimientos. |
+| `administracion` | Recepcion lectura, caja, seguimientos administrativos e inventario. |
+| `seguimiento` | Pacientes lectura y seguimientos administrativos. |
 
 `captacion` esta deprecado y solo conserva acceso base hasta que sus usuarios sean reasignados.
 
@@ -254,7 +278,7 @@ Contratos criticos cubiertos:
 - Consulta, enfermeria y estudios.
 - Ventas, pagos y caja.
 - Stock, rollback y alertas.
-- Seguimientos y dashboard.
+- Tipos, resultados, roles y escalamiento de seguimientos; dashboard.
 - Auditoría append-only, usuarios, roles y sesiones.
 - Adjuntos clínicos privados, idempotencia y acceso temporal.
 - Detección normalizada, cola, alias y fusión transaccional de pacientes.

@@ -366,21 +366,29 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
   await prisma.followUpTask.upsert({
     where: { id: "qa_follow_up_pending" },
     update: {
-      assignedToId: users.get("seguimiento"),
+      assignedToId: receptionUserId,
       createdById: receptionUserId,
       dueAt: new Date(),
       notes: "Seguimiento sintético. Los enlaces de contacto deben permanecer bloqueados.",
       patientId: followUpPatient.id,
+      type: "evolution",
+      domain: "clinical",
+      priority: "high",
       status: "pending",
+      result: null,
+      completedAt: null,
       title: "[QA] Validar bandeja de seguimiento"
     },
     create: {
-      assignedToId: users.get("seguimiento"),
+      assignedToId: receptionUserId,
       createdById: receptionUserId,
       dueAt: new Date(),
       id: "qa_follow_up_pending",
       notes: "Seguimiento sintético. Los enlaces de contacto deben permanecer bloqueados.",
       patientId: followUpPatient.id,
+      type: "evolution",
+      domain: "clinical",
+      priority: "high",
       status: "pending",
       title: "[QA] Validar bandeja de seguimiento"
     }

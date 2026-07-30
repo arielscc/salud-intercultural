@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   createFollowUpAttemptRecord,
   createFollowUpTaskRecord,
+  FollowUpWorkflowError,
   PatientFollowUpConsentRequiredError
 } from "@/modules/database/queries/follow-ups";
 import { DatabaseError } from "@/modules/database";
@@ -17,6 +18,7 @@ import {
   createFollowUpAttemptSchema,
   createFollowUpTaskSchema
 } from "@/features/follow-ups/schemas/follow-up.schema";
+import { canRoleCreateFollowUpType } from "@/features/follow-ups/policy";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -37,6 +39,9 @@ export async function createFollowUpTaskAction(formData: FormData) {
       if (!parsed.success) {
         redirect("/sigeco/seguimientos?error=invalid-task");
       }
+      if (!canRoleCreateFollowUpType(user.role, parsed.data.type)) {
+        denyAuditedAction("follow_up_type_not_allowed_for_role");
+      }
 
       const created = await createFollowUpTaskRecord({
         ...parsed.data,
@@ -45,7 +50,12 @@ export async function createFollowUpTaskAction(formData: FormData) {
       });
       return auditedResult(created, {
         entityId: created.id,
-        context: { patientId: parsed.data.patientId }
+        context: {
+          patientId: parsed.data.patientId,
+          followUpType: created.type,
+          priority: created.priority,
+          assignedToId: created.assignedToId
+        }
       });
     }
   );
@@ -72,10 +82,10 @@ export async function createFollowUpAttemptAction(formData: FormData) {
         redirect("/sigeco/seguimientos?error=invalid-attempt");
       }
 
-      let attempt;
+      let result;
 
       try {
-        attempt = await createFollowUpAttemptRecord({
+        result = await createFollowUpAttemptRecord({
           ...parsed.data,
           userId: user.id
         });
@@ -87,11 +97,27 @@ export async function createFollowUpAttemptAction(formData: FormData) {
         ) {
           denyAuditedAction("patient_follow_up_consent_missing");
         }
+        const workflowError =
+          error instanceof FollowUpWorkflowError
+            ? error
+            : error instanceof DatabaseError &&
+                error.cause instanceof FollowUpWorkflowError
+              ? error.cause
+              : null;
+        if (workflowError) {
+          redirect(
+            `/sigeco/seguimientos/${encodeURIComponent(taskId)}?error=${workflowError.code.toLocaleLowerCase()}`
+          );
+        }
         throw error;
       }
-      return auditedResult(attempt, {
+      return auditedResult(result, {
         entityId: parsed.data.taskId,
-        context: { attemptId: attempt.id, result: parsed.data.result }
+        context: {
+          attemptId: result.attempt.id,
+          result: parsed.data.result,
+          escalatedToDoctor: Boolean(result.escalatedTask)
+        }
       });
     }
   );

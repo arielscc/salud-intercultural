@@ -70,6 +70,9 @@ async function createTreatmentDecisionFollowUp(
       visitId: input.visitId,
       assignedToId: marlen?.id,
       createdById: input.doctorId,
+      type: "treatment_recovery",
+      domain: "clinical",
+      priority: "high",
       status: "pending",
       title: "Confirmar decisión sobre tratamiento",
       notes:

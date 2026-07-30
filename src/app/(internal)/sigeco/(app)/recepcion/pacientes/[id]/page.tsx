@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PencilLine, UserRoundPlus } from "lucide-react";
+import type { FollowUpType } from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { ClinicalAttachmentsPanel } from "@/components/internal/clinical-attachments/ClinicalAttachmentsPanel";
 import { PatientConsentPanel } from "@/components/internal/patient-consents/PatientConsentPanel";
@@ -26,7 +27,12 @@ import {
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { createFollowUpTaskAction } from "@/features/follow-ups/actions";
-import { followUpStatusLabels } from "@/features/follow-ups/labels";
+import {
+  followUpPriorityLabels,
+  followUpResultLabels,
+  followUpStatusLabels,
+  followUpTypeLabels
+} from "@/features/follow-ups/labels";
 import {
   patientCaptureSourceLabels,
   patientGenderLabels,
@@ -88,6 +94,17 @@ export default async function PatientDetailPage({
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const followUpCreationTypes = (
+    Object.keys(followUpTypeLabels) as FollowUpType[]
+  ).filter((type) => {
+    if (
+      user.role === "seguimiento" ||
+      user.role === "administracion"
+    ) {
+      return type === "administrative";
+    }
+    return true;
+  });
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
@@ -549,9 +566,21 @@ export default async function PatientDetailPage({
                     {task.title}
                   </a>
                 }
-                meta={formatDateTime(task.dueAt)}
+                meta={`${followUpTypeLabels[task.type]} · ${formatDateTime(task.dueAt)}`}
                 aside={followUpStatusLabels[task.status]}
-                body={task.attempts[0]?.notes ?? undefined}
+                body={
+                  [
+                    task.assignedTo?.name
+                      ? `Responsable: ${task.assignedTo.name}`
+                      : "Sin responsable asignado",
+                    task.result
+                      ? `Resultado: ${followUpResultLabels[task.result]}`
+                      : null,
+                    task.attempts[0]?.notes
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || undefined
+                }
               />
             ))}
             {patient.followUpTasks.length === 0 ? (
@@ -639,6 +668,38 @@ export default async function PatientDetailPage({
             ) : null}
             <form action={createFollowUpTaskAction} className="grid gap-3">
               <input type="hidden" name="patientId" value={patient.id} />
+              <Field label="Tipo de seguimiento">
+                <select
+                  className={internalInputClassName}
+                  name="type"
+                  defaultValue={
+                    followUpCreationTypes.includes("evolution")
+                      ? "evolution"
+                      : "administrative"
+                  }
+                >
+                  {followUpCreationTypes.map((value) => (
+                    <option key={value} value={value}>
+                      {followUpTypeLabels[value]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Prioridad">
+                <select
+                  className={internalInputClassName}
+                  name="priority"
+                  defaultValue="normal"
+                >
+                  {Object.entries(followUpPriorityLabels).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    )
+                  )}
+                </select>
+              </Field>
               <Field label="Título">
                 <input
                   className={internalInputClassName}
@@ -657,6 +718,12 @@ export default async function PatientDetailPage({
                   placeholder="Ej. preguntar cómo sigue del dolor y si está tomando la medicación"
                 />
               </Field>
+              <p className="text-xs leading-relaxed text-muted">
+                Evolución, retorno y recuperación se asignan a
+                Recepción/Marlen. Las llamadas médicas se asignan al médico.
+                Los seguimientos administrativos pueden quedar con quien los
+                crea.
+              </p>
               <SubmitButton variant="outline">Crear seguimiento</SubmitButton>
             </form>
           </Card>

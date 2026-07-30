@@ -44,6 +44,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 29. [Duplicados y fusión de pacientes](./patient-duplicates.md)
 30. [Actualización de bandejas operativas](./operational-queue-refresh.md)
 31. [Resultado de la propuesta de tratamiento](./treatment-proposal-outcomes.md)
+32. [Tipos y resultados de seguimiento](./follow-up-classification.md)
 
 ## Flujo recomendado
 

@@ -49,10 +49,10 @@ describe("follow-up integration", () => {
   it("tracks overdue tasks and resolves contact attempts", async () => {
     const user = await prisma.internalUser.create({
       data: {
-        email: "seguimiento@example.com",
-        name: "Seguimiento Test",
+        email: "marlen.recepcion@example.com",
+        name: "Marlen Recepción Test",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "seguimiento"
+        role: "recepcion"
       }
     });
     const patient = await createPatientRecord({
@@ -67,6 +67,7 @@ describe("follow-up integration", () => {
       patientId: patient.id,
       assignedToId: user.id,
       createdById: user.id,
+      type: "return",
       title: "Control post consulta",
       dueAt: overdue,
       notes: "Verificar evolución"
@@ -97,7 +98,10 @@ describe("follow-up integration", () => {
 
     expect(summary.overdue).toBe(1);
     expect(overdueTasks[0]?.id).toBe(task.id);
-    expect(detail?.status).toBe("wants_return");
+    expect(detail).toMatchObject({
+      status: "done",
+      result: "wants_return"
+    });
     expect(detail?.attempts[0]).toMatchObject({
       method: "whatsapp",
       result: "wants_return"

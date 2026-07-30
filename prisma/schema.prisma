@@ -381,6 +381,42 @@ enum FollowUpAttemptMethod {
   other
 }
 
+enum FollowUpType {
+  evolution
+  return
+  treatment_recovery
+  administrative
+  doctor_call
+}
+
+enum FollowUpDomain {
+  clinical
+  administrative
+}
+
+enum FollowUpPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum FollowUpResult {
+  done
+  improved
+  not_improved
+  worsened
+  no_answer
+  wants_return
+  requires_new_visit
+  treatment_resumed
+  treatment_declined
+  rescheduled
+  escalated_to_doctor
+  cancelled
+  other
+}
+
 enum InventoryMovementType {
   entry
   automatic_sale_exit
@@ -1480,7 +1516,12 @@ model FollowUpTask {
   workItemId               String?
   assignedToId             String?
   createdById              String?
+  escalatedFromTaskId      String?                   @unique
+  type                     FollowUpType              @default(administrative)
+  domain                   FollowUpDomain            @default(administrative)
+  priority                 FollowUpPriority          @default(normal)
   status                   FollowUpStatus            @default(pending)
+  result                   FollowUpResult?
   title                    String
   notes                    String?
   dueAt                    DateTime
@@ -1495,6 +1536,8 @@ model FollowUpTask {
   workItem                 VisitWorkItem?            @relation(fields: [workItemId], references: [id], onDelete: SetNull)
   assignedTo               InternalUser?             @relation("FollowUpAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   createdBy                InternalUser?             @relation("FollowUpCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  escalatedFromTask        FollowUpTask?             @relation("FollowUpEscalation", fields: [escalatedFromTaskId], references: [id], onDelete: SetNull)
+  escalatedToTask          FollowUpTask?             @relation("FollowUpEscalation")
   attempts                 FollowUpAttempt[]
   statusHistory            FollowUpStatusHistory[]
   treatmentProposalOutcome TreatmentProposalOutcome?
@@ -1508,6 +1551,10 @@ model FollowUpTask {
   @@index([assignedToId])
   @@index([createdById])
   @@index([status, dueAt])
+  @@index([type, status, dueAt])
+  @@index([domain, status, dueAt])
+  @@index([priority, status, dueAt])
+  @@index([result, completedAt])
   @@index([createdAt])
 }
 
@@ -1516,7 +1563,7 @@ model FollowUpAttempt {
   taskId      String
   userId      String?
   method      FollowUpAttemptMethod @default(call)
-  result      FollowUpStatus
+  result      FollowUpResult
   notes       String?
   contactedAt DateTime              @default(now())
   createdAt   DateTime              @default(now())

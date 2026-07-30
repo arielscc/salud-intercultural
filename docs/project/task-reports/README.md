@@ -34,6 +34,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-29 | [Tarea 12: duplicados y fusión de pacientes](./2026-07-29-tarea-12-duplicados-fusion-pacientes.md) | Detecta coincidencias y reúne expedientes sin borrar la ficha anterior. |
 | 2026-07-29 | [Tarea 13: actualización de bandejas entre áreas](./2026-07-29-tarea-13-actualizacion-bandejas.md) | Actualiza las cuatro colas sin perder filtros, selección ni formularios en edición. |
 | 2026-07-29 | [Tarea 14: resultado de la propuesta de tratamiento](./2026-07-29-tarea-14-resultado-propuesta-tratamiento.md) | Conserva la decisión médica y conecta aceptación, instrucción administrativa, venta y pago. |
+| 2026-07-29 | [Tarea 15: tipos y resultados de seguimiento](./2026-07-29-tarea-15-tipos-resultados-seguimiento.md) | Separa propósito, responsable, prioridad, estado y resultado, con escalamiento real al médico. |
 
 ## Relacion Con Estado V3
 

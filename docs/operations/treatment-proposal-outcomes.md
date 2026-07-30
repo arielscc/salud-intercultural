@@ -54,8 +54,8 @@ SIGECO consulta la decisión vigente de consentimiento para seguimiento:
 
 - si está concedida, crea una tarea para mañana a las 10:00, hora de Bolivia;
 - intenta asignarla a un usuario activo de Recepción llamado Marlen;
-- si Marlen todavía no tiene una cuenta activa, deja la tarea en la bandeja
-  compartida de Recepción/Seguimiento para asignación manual;
+- si Marlen todavía no tiene una cuenta activa, deja la tarea clínica sin
+  asignar y visible para Recepción;
 - si no existe consentimiento vigente, guarda la decisión pero no crea una
   tarea de contacto.
 

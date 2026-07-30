@@ -59,7 +59,7 @@ export default async function SigecoDashboardPage() {
 
   const [receptionSummary, followUpSummary, inventorySummary] = await Promise.all([
     canSeeReception ? getReceptionDashboardSummary() : null,
-    canSeeFollowUps ? getFollowUpWorkSummary() : null,
+    canSeeFollowUps ? getFollowUpWorkSummary(undefined, user.role) : null,
     canSeeInventory ? getInventorySummary() : null
   ]);
 

@@ -16,6 +16,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Publicacion remota | Pendiente | Requiere promocion controlada `develop -> staging -> main`. |
 | Consentimientos | En progreso | Cinco finalidades, historial y bloqueo implementados localmente; producción espera aprobación expresa de textos. |
 | Resultado de propuestas | En progreso | El médico registra la decisión; aceptación crea una instrucción, no una venta automática. |
+| Clasificación de seguimientos | En progreso | Tipo, prioridad, responsable y resultado separados; llamadas médicas escaladas al médico. |
 
 ## Fuentes Canonicas
 
@@ -105,9 +106,16 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 ### Seguimiento
 
 - Tareas vencidas, del dia y proximas.
-- Registro de llamadas, WhatsApp y resultados.
+- Tipos de evolución, retorno, recuperación de tratamiento, administrativo y
+  llamada médica.
+- Prioridad, responsable, vencimiento, relación clínica/administrativa y
+  resultado visibles sin leer notas.
+- `No responde` y `Reprogramado` conservan la tarea pendiente con nueva fecha.
+- `Empeoró` o `Escalado al médico` crean una llamada médica urgente.
+- Recepción/Marlen trabaja seguimientos clínicos; Comunicación/Yazmin solo
+  gestiones administrativas.
 - Advertencia cuando el paciente prefiere no recibir contacto.
-- Acceso compartido por recepcion y el rol dedicado de seguimiento.
+- Llamadas y WhatsApp disponibles en móvil según consentimiento.
 
 ### Dashboard
 
@@ -219,5 +227,5 @@ El orden anterior fue reemplazado por la numeración vigente:
 2. Tarea 2: staging aislado.
 3. Tarea 3: auditoria append-only.
 4. Tareas 4-8: accesos, privacidad, adjuntos, recuperacion e incidentes.
-5. Cerrar integración y QA acumulados de las Tareas 9-14 y continuar con la
-   Tarea 15 de [tasks.md](./sigeco-mejoras-integrales/tasks.md).
+5. Cerrar integración y QA acumulados de las Tareas 9-15 y continuar con la
+   Tarea 16 de [tasks.md](./sigeco-mejoras-integrales/tasks.md).
