@@ -114,6 +114,34 @@ describe("internal role permissions", () => {
     );
   });
 
+  it("lets reception review duplicates but only super admin merge them", () => {
+    expect(
+      roleHasPermission("super_admin", "patient_duplicates_read")
+    ).toBe(true);
+    expect(
+      roleHasPermission("super_admin", "patient_duplicates_review")
+    ).toBe(true);
+    expect(
+      roleHasPermission("super_admin", "patient_duplicates_merge")
+    ).toBe(true);
+    expect(roleHasPermission("recepcion", "patient_duplicates_read")).toBe(
+      true
+    );
+    expect(roleHasPermission("recepcion", "patient_duplicates_review")).toBe(
+      true
+    );
+    expect(roleHasPermission("recepcion", "patient_duplicates_merge")).toBe(
+      false
+    );
+    expect(roleHasPermission("direccion", "patient_duplicates_read")).toBe(
+      true
+    );
+    expect(roleHasPermission("direccion", "patient_duplicates_review")).toBe(
+      false
+    );
+    expect(roleHasPermission("medico", "patient_duplicates_read")).toBe(false);
+  });
+
   it("lets only reception and super administrators record patient consents", () => {
     expect(roleHasPermission("recepcion", "patient_consents_write")).toBe(true);
     expect(roleHasPermission("super_admin", "patient_consents_write")).toBe(true);

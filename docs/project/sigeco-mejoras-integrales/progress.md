@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7, 9, 10 y 11 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7, 9, 10, 11 y 12 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las dieciocho migraciones actuales están
-aplicadas en desarrollo. Falta validar las seis
+anteriores están en staging y las veinte migraciones actuales están
+aplicadas en desarrollo. Falta validar las ocho
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8.
@@ -26,8 +26,8 @@ funcionamiento del gate de la Tarea 8.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 18 |
-| En progreso | 10 |
+| Pendiente | 17 |
+| En progreso | 11 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -57,7 +57,7 @@ funcionamiento del gate de la Tarea 8.
 | 9 | Consentimientos | P0 | En progreso | 3-5, textos aprobados para local/staging |
 | 10 | Procedencia geográfica | P1 | En progreso | 8 |
 | 11 | Fuentes de captación | P1 | En progreso | 9-10 |
-| 12 | Duplicados y fusión | P1 | Pendiente | 3-5 |
+| 12 | Duplicados y fusión | P1 | En progreso | 3-5 |
 | 13 | Actualización de bandejas | P1 | Pendiente | 1-5 |
 | 14 | Resultado de propuesta | P1 | Pendiente | 3, 4, 9 |
 | 15 | Tipos de seguimiento | P1 | Pendiente | 9, 14 |
@@ -108,6 +108,11 @@ Estado de las tareas de la base segura:
   público y reporte de llegada, plan, venta e ingreso implementados en
   desarrollo local. Pendiente integración acumulada, actualización de Payload,
   QA de gstack al cierre y validación en staging.
+- **Tarea 12 — Duplicados y fusión de pacientes:** normalización de teléfonos
+  y nombres, prevención al crear y editar, cola, comparación, simulación,
+  alias, redirección y fusión transaccional implementados en desarrollo local.
+  Pendiente integración acumulada, QA de gstack al cierre y validación por
+  roles en staging.
 
 Para terminar la Tarea 1:
 
@@ -144,6 +149,10 @@ Blob clínico privado y las credenciales separadas aprobadas.
 - El Alto debe estabilizarse antes de activar Cochabamba.
 - Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
 - El detalle pagado u orgánico solo se atribuye internamente cuando una campaña o enlace entrega evidencia.
+- Una fusión de pacientes archiva la ficha anterior, conserva su código como
+  alias y nunca borra su evidencia histórica.
+- Recepción revisa posibles duplicados; solo el super administrador puede
+  ejecutar la fusión.
 - Agenda y citas quedan aplazadas hasta un piloto manual.
 - FHIR queda fuera del plan actual.
 

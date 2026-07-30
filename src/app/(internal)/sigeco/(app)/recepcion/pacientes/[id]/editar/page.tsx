@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PatientEditForm } from "@/components/internal/reception/PatientEditForm";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { toDateOnlyString } from "@/lib/dates";
@@ -7,15 +7,21 @@ import { requirePermission } from "@/modules/permissions";
 
 type PatientEditPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; duplicate?: string }>;
 };
 
 export default async function PatientEditPage({ params, searchParams }: PatientEditPageProps) {
   await requirePermission("patients_update");
-  const [{ id }, { error }] = await Promise.all([params, searchParams]);
+  const [{ id }, { error, duplicate }] = await Promise.all([
+    params,
+    searchParams
+  ]);
   const patient = await getReceptionPatientById(id);
 
   if (!patient) notFound();
+  if (patient.mergedIntoId) {
+    redirect(`/sigeco/recepcion/pacientes/${patient.mergedIntoId}/editar`);
+  }
 
   return (
     <div className="mx-auto grid w-full max-w-2xl gap-4 lg:max-w-5xl">
@@ -36,7 +42,21 @@ export default async function PatientEditPage({ params, searchParams }: PatientE
         </div>
       ) : null}
 
+      {duplicate === "true" ? (
+        <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-warning">
+            Los nuevos datos coinciden con otra ficha
+          </p>
+          <p className="mt-1 text-muted">
+            Revisa la cola de duplicados antes de continuar. Si verificaste que
+            son personas distintas, puedes guardar de todos modos y la
+            coincidencia quedará disponible para revisión.
+          </p>
+        </div>
+      ) : null}
+
       <PatientEditForm
+        allowDuplicate={duplicate === "true"}
         patient={{
           ...patient,
           birthDate: toDateOnlyString(patient.birthDate)

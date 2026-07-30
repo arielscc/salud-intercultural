@@ -130,6 +130,8 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 | `/sigeco` | Dashboard operativo. |
 | `/sigeco/recepcion` | Llegadas activas y padron de pacientes. |
 | `/sigeco/recepcion/nuevo` | Funnel de llegada. |
+| `/sigeco/recepcion/duplicados` | Cola de posibles fichas duplicadas. |
+| `/sigeco/recepcion/duplicados/[candidateId]` | Comparación y simulación de fusión. |
 | `/sigeco/recepcion/pacientes/[id]` | Ficha y edicion del paciente. |
 | `/sigeco/recepcion/visitas/[id]` | Ruta e historial de la visita. |
 | `/sigeco/consultas` | Bandeja y atencion medica. |
@@ -189,7 +191,7 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
 ### Operacion
 
 1. Realtime o polling formal para las bandejas entre areas.
-2. Deteccion de telefono duplicado al editar pacientes.
+2. Validación acumulada en staging de la detección y fusión segura de pacientes.
 3. Formatos imprimibles de receta y comprobante, si la clinica los requiere.
 4. Reglas aprobadas para automatizar seguimientos.
 5. Flujo de proveedores y compras.
@@ -210,5 +212,5 @@ El orden anterior fue reemplazado por la numeración vigente:
 2. Tarea 2: staging aislado.
 3. Tarea 3: auditoria append-only.
 4. Tareas 4-8: accesos, privacidad, adjuntos, recuperacion e incidentes.
-5. Cerrar integración y QA acumulados de las Tareas 9-11 y continuar con la Tarea 12 de
+5. Cerrar integración y QA acumulados de las Tareas 9-12 y continuar con la Tarea 13 de
    [tasks.md](./sigeco-mejoras-integrales/tasks.md).

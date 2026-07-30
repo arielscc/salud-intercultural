@@ -56,6 +56,9 @@ enum InternalPermission {
   patient_consents_read
   patient_consents_write
   attribution_manage
+  patient_duplicates_read
+  patient_duplicates_review
+  patient_duplicates_merge
 }
 
 enum AuditResult {
@@ -150,6 +153,12 @@ enum PatientStatus {
   active
   inactive
   archived
+}
+
+enum PatientDuplicateCandidateStatus {
+  open
+  dismissed
+  merged
 }
 
 enum PatientCaptureSource {
@@ -365,55 +374,57 @@ enum InventoryAlertStatus {
 }
 
 model InternalUser {
-  id                      String                          @id @default(cuid())
-  email                   String                          @unique
-  name                    String?
-  passwordHash            String
-  role                    InternalRole                    @default(captacion)
-  active                  Boolean                         @default(true)
-  lastLoginAt             DateTime?
-  failedAttempts          Int                             @default(0)
-  lockedUntil             DateTime?
-  mustChangePassword      Boolean                         @default(false)
-  passwordChangedAt       DateTime?
-  createdAt               DateTime                        @default(now())
-  updatedAt               DateTime                        @updatedAt
-  sessions                InternalSession[]
-  assignedLeads           Lead[]                          @relation("LeadAssignee")
-  contactAttempts         LeadContactAttempt[]
-  recordedPatientConsents PatientConsent[]                @relation("PatientConsentRecordedBy")
-  reminders               LeadReminder[]
-  statusChanges           LeadStatusHistory[]
-  patientNotes            PatientNote[]
-  createdVisits           Visit[]                         @relation("VisitCreatedBy")
-  visitStatusChanges      VisitStatusHistory[]
-  receptionCheckIns       ReceptionCheckIn[]
-  createdWorkItems        VisitWorkItem[]
-  clinicalConsultations   ClinicalConsultation[]
-  prescriptions           Prescription[]
-  clinicalEvolutions      ClinicalEvolution[]
-  clinicalNotes           ClinicalNote[]
-  clinicalOrders          ClinicalOrder[]
-  recordedVitalSigns      VitalSigns[]
-  nursingApplications     NursingApplication[]            @relation("NursingApplicationResponsible")
-  nursingNotes            NursingNote[]
-  requestedStudies        Study[]                         @relation("StudyRequestedBy")
-  recordedStudies         Study[]                         @relation("StudyRecordedBy")
-  nursingWorkItemResults  NursingWorkItemResult[]
-  createdSales            Sale[]                          @relation("SaleCreatedBy")
-  receivedPayments        Payment[]
-  cashMovements           CashMovement[]
-  assignedFollowUps       FollowUpTask[]                  @relation("FollowUpAssignedTo")
-  createdFollowUps        FollowUpTask[]                  @relation("FollowUpCreatedBy")
-  followUpAttempts        FollowUpAttempt[]
-  followUpStatusChanges   FollowUpStatusHistory[]
-  inventoryMovements      InventoryMovement[]
-  inventoryAdjustments    InventoryAdjustment[]
-  auditEvents             AuditEvent[]
-  uploadedAttachments     ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
-  deletedAttachments      ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
-  attachmentAccessGrants  ClinicalAttachmentAccessGrant[]
-  capturedAttributions    VisitAttribution[]              @relation("VisitAttributionCapturedBy")
+  id                          String                          @id @default(cuid())
+  email                       String                          @unique
+  name                        String?
+  passwordHash                String
+  role                        InternalRole                    @default(captacion)
+  active                      Boolean                         @default(true)
+  lastLoginAt                 DateTime?
+  failedAttempts              Int                             @default(0)
+  lockedUntil                 DateTime?
+  mustChangePassword          Boolean                         @default(false)
+  passwordChangedAt           DateTime?
+  createdAt                   DateTime                        @default(now())
+  updatedAt                   DateTime                        @updatedAt
+  sessions                    InternalSession[]
+  assignedLeads               Lead[]                          @relation("LeadAssignee")
+  contactAttempts             LeadContactAttempt[]
+  recordedPatientConsents     PatientConsent[]                @relation("PatientConsentRecordedBy")
+  reminders                   LeadReminder[]
+  statusChanges               LeadStatusHistory[]
+  patientNotes                PatientNote[]
+  createdVisits               Visit[]                         @relation("VisitCreatedBy")
+  visitStatusChanges          VisitStatusHistory[]
+  receptionCheckIns           ReceptionCheckIn[]
+  createdWorkItems            VisitWorkItem[]
+  clinicalConsultations       ClinicalConsultation[]
+  prescriptions               Prescription[]
+  clinicalEvolutions          ClinicalEvolution[]
+  clinicalNotes               ClinicalNote[]
+  clinicalOrders              ClinicalOrder[]
+  recordedVitalSigns          VitalSigns[]
+  nursingApplications         NursingApplication[]            @relation("NursingApplicationResponsible")
+  nursingNotes                NursingNote[]
+  requestedStudies            Study[]                         @relation("StudyRequestedBy")
+  recordedStudies             Study[]                         @relation("StudyRecordedBy")
+  nursingWorkItemResults      NursingWorkItemResult[]
+  createdSales                Sale[]                          @relation("SaleCreatedBy")
+  receivedPayments            Payment[]
+  cashMovements               CashMovement[]
+  assignedFollowUps           FollowUpTask[]                  @relation("FollowUpAssignedTo")
+  createdFollowUps            FollowUpTask[]                  @relation("FollowUpCreatedBy")
+  followUpAttempts            FollowUpAttempt[]
+  followUpStatusChanges       FollowUpStatusHistory[]
+  inventoryMovements          InventoryMovement[]
+  inventoryAdjustments        InventoryAdjustment[]
+  auditEvents                 AuditEvent[]
+  uploadedAttachments         ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
+  deletedAttachments          ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
+  attachmentAccessGrants      ClinicalAttachmentAccessGrant[]
+  capturedAttributions        VisitAttribution[]              @relation("VisitAttributionCapturedBy")
+  reviewedDuplicateCandidates PatientDuplicateCandidate[]     @relation("PatientDuplicateCandidateReviewedBy")
+  performedPatientMerges      PatientMerge[]                  @relation("PatientMergePerformedBy")
 
   @@index([role])
   @@index([active])
@@ -541,57 +552,138 @@ model LeadStatusHistory {
 }
 
 model Patient {
-  id                    String                    @id @default(cuid())
-  internalCode          String                    @unique
-  fullName              String
-  phone                 String
-  secondaryPhone        String?
-  birthDate             DateTime?
-  gender                PatientGender             @default(unknown)
-  city                  String?
-  department            String?
-  country               String?
-  address               String?
-  captureSource         PatientCaptureSource      @default(other)
-  captureSources        PatientCaptureSource[]    @default([])
-  firstVisitAt          DateTime?
-  generalObservations   String?
-  allergies             String?
-  relevantHistory       String?
-  currentMedication     String?
-  followUpPreference    FollowUpContactPreference @default(unknown)
-  status                PatientStatus             @default(active)
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  convertedLeads        Lead[]                    @relation("LeadConvertedPatient")
-  contacts              PatientContact[]
-  notes                 PatientNote[]
-  visits                Visit[]
-  clinicalConsultations ClinicalConsultation[]
-  prescriptions         Prescription[]
-  clinicalEvolutions    ClinicalEvolution[]
-  clinicalNotes         ClinicalNote[]
-  clinicalOrders        ClinicalOrder[]
-  vitalSigns            VitalSigns[]
-  nursingApplications   NursingApplication[]
-  nursingNotes          NursingNote[]
-  studies               Study[]
-  sales                 Sale[]
-  payments              Payment[]
-  deliveredProducts     DeliveredProduct[]
-  cashMovements         CashMovement[]
-  followUpTasks         FollowUpTask[]
-  clinicalAttachments   ClinicalAttachment[]
-  consents              PatientConsent[]
-  visitAttributions     VisitAttribution[]
+  id                       String                      @id @default(cuid())
+  internalCode             String                      @unique
+  fullName                 String
+  phone                    String
+  secondaryPhone           String?
+  birthDate                DateTime?
+  gender                   PatientGender               @default(unknown)
+  city                     String?
+  department               String?
+  country                  String?
+  address                  String?
+  captureSource            PatientCaptureSource        @default(other)
+  captureSources           PatientCaptureSource[]      @default([])
+  firstVisitAt             DateTime?
+  generalObservations      String?
+  allergies                String?
+  relevantHistory          String?
+  currentMedication        String?
+  followUpPreference       FollowUpContactPreference   @default(unknown)
+  status                   PatientStatus               @default(active)
+  normalizedName           String                      @default("")
+  normalizedPhone          String                      @default("")
+  normalizedSecondaryPhone String                      @default("")
+  mergedIntoId             String?
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
+  mergedInto               Patient?                    @relation("PatientMergeRedirect", fields: [mergedIntoId], references: [id], onDelete: Restrict)
+  mergedPatients           Patient[]                   @relation("PatientMergeRedirect")
+  convertedLeads           Lead[]                      @relation("LeadConvertedPatient")
+  contacts                 PatientContact[]
+  notes                    PatientNote[]
+  visits                   Visit[]
+  clinicalConsultations    ClinicalConsultation[]
+  prescriptions            Prescription[]
+  clinicalEvolutions       ClinicalEvolution[]
+  clinicalNotes            ClinicalNote[]
+  clinicalOrders           ClinicalOrder[]
+  vitalSigns               VitalSigns[]
+  nursingApplications      NursingApplication[]
+  nursingNotes             NursingNote[]
+  studies                  Study[]
+  sales                    Sale[]
+  payments                 Payment[]
+  deliveredProducts        DeliveredProduct[]
+  cashMovements            CashMovement[]
+  followUpTasks            FollowUpTask[]
+  clinicalAttachments      ClinicalAttachment[]
+  consents                 PatientConsent[]
+  visitAttributions        VisitAttribution[]
+  duplicateCandidatesA     PatientDuplicateCandidate[] @relation("PatientDuplicateCandidateA")
+  duplicateCandidatesB     PatientDuplicateCandidate[] @relation("PatientDuplicateCandidateB")
+  mergesReceived           PatientMerge[]              @relation("PatientMergeTarget")
+  mergeAsSource            PatientMerge?               @relation("PatientMergeSource")
+  aliases                  PatientAlias[]              @relation("PatientAliasCanonical")
+  aliasAsSource            PatientAlias?               @relation("PatientAliasSource")
 
   @@index([fullName])
   @@index([phone])
+  @@index([normalizedPhone])
+  @@index([normalizedSecondaryPhone])
+  @@index([normalizedName, birthDate])
+  @@index([mergedIntoId])
   @@index([status])
   @@index([captureSource])
   @@index([department, city])
   @@index([country])
   @@index([createdAt])
+}
+
+model PatientDuplicateCandidate {
+  id             String                          @id @default(cuid())
+  pairKey        String                          @unique
+  patientAId     String
+  patientBId     String
+  phoneMatch     Boolean                         @default(false)
+  nameMatch      Boolean                         @default(false)
+  birthDateMatch Boolean                         @default(false)
+  score          Int
+  status         PatientDuplicateCandidateStatus @default(open)
+  detectedAt     DateTime                        @default(now())
+  lastDetectedAt DateTime                        @default(now())
+  reviewedAt     DateTime?
+  reviewedById   String?
+  mergeId        String?                         @unique
+  patientA       Patient                         @relation("PatientDuplicateCandidateA", fields: [patientAId], references: [id], onDelete: Restrict)
+  patientB       Patient                         @relation("PatientDuplicateCandidateB", fields: [patientBId], references: [id], onDelete: Restrict)
+  reviewedBy     InternalUser?                   @relation("PatientDuplicateCandidateReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  merge          PatientMerge?                   @relation(fields: [mergeId], references: [id], onDelete: SetNull)
+
+  @@index([status, score, lastDetectedAt])
+  @@index([patientAId, status])
+  @@index([patientBId, status])
+}
+
+model PatientMerge {
+  id              String                     @id @default(cuid())
+  sourcePatientId String                     @unique
+  targetPatientId String
+  mergedById      String?
+  sourceSnapshot  Json
+  targetSnapshot  Json
+  impact          Json
+  mergedAt        DateTime                   @default(now())
+  sourcePatient   Patient                    @relation("PatientMergeSource", fields: [sourcePatientId], references: [id], onDelete: Restrict)
+  targetPatient   Patient                    @relation("PatientMergeTarget", fields: [targetPatientId], references: [id], onDelete: Restrict)
+  mergedBy        InternalUser?              @relation("PatientMergePerformedBy", fields: [mergedById], references: [id], onDelete: SetNull)
+  candidate       PatientDuplicateCandidate?
+
+  @@index([targetPatientId, mergedAt])
+  @@index([mergedById, mergedAt])
+}
+
+model PatientAlias {
+  id                       String    @id @default(cuid())
+  patientId                String
+  sourcePatientId          String    @unique
+  internalCode             String    @unique
+  fullName                 String
+  normalizedName           String
+  phone                    String
+  secondaryPhone           String?
+  normalizedPhone          String
+  normalizedSecondaryPhone String
+  birthDate                DateTime?
+  createdAt                DateTime  @default(now())
+  patient                  Patient   @relation("PatientAliasCanonical", fields: [patientId], references: [id], onDelete: Restrict)
+  sourcePatient            Patient   @relation("PatientAliasSource", fields: [sourcePatientId], references: [id], onDelete: Restrict)
+
+  @@index([patientId])
+  @@index([normalizedPhone])
+  @@index([normalizedSecondaryPhone])
+  @@index([normalizedName, birthDate])
 }
 
 model PatientConsent {

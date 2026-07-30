@@ -26,6 +26,7 @@ import {
   geographicOriginLabel
 } from "@/features/geography/origin";
 import { visitAttributionSummary } from "@/features/attribution/catalog";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import type { VisitStatus } from "@/generated/prisma/client";
@@ -38,7 +39,7 @@ import {
 } from "@/modules/database/queries/patients";
 import { countVisits, getVisits } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
-import { UserRoundPlus } from "lucide-react";
+import { ScanSearch, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 
 const statusOptions = Object.entries(visitStatusLabels) as Array<
@@ -208,11 +209,14 @@ export default async function ReceptionPage({
   const departmentFilter =
     params.departamento?.trim().slice(0, 120) || undefined;
 
-  if (vista === "pacientes") {
-    await requirePermission("patients_read");
-  } else {
-    await requirePermission("visits_read");
-  }
+  const user =
+    vista === "pacientes"
+      ? await requirePermission("patients_read")
+      : await requirePermission("visits_read");
+  const canReadDuplicates = roleHasPermission(
+    user.role,
+    "patient_duplicates_read"
+  );
 
   const visitPage =
     vista === "visitas"
@@ -274,13 +278,26 @@ export default async function ReceptionPage({
         description="Visitas, rutas de atención y padrón de pacientes"
         actionsClassName="lg:hidden"
         actions={
-          <Link
-            href="/sigeco/recepcion/nuevo"
-            className={cn(buttonVariants({ size: "sm" }))}
-          >
-            <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
-            Registrar llegada
-          </Link>
+          <>
+            {canReadDuplicates ? (
+              <Link
+                href="/sigeco/recepcion/duplicados"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" })
+                )}
+              >
+                <ScanSearch className="h-4 w-4" aria-hidden="true" />
+                Duplicados
+              </Link>
+            ) : null}
+            <Link
+              href="/sigeco/recepcion/nuevo"
+              className={cn(buttonVariants({ size: "sm" }))}
+            >
+              <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
+              Registrar llegada
+            </Link>
+          </>
         }
       />
 
@@ -445,13 +462,26 @@ export default async function ReceptionPage({
             : `${patients.length} de ${totalPatients} pacientes`
         }
         actions={
-          <Link
-            href="/sigeco/recepcion/nuevo"
-            className={cn(buttonVariants({ size: "sm" }))}
-          >
-            <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
-            Registrar llegada
-          </Link>
+          <>
+            {canReadDuplicates ? (
+              <Link
+                href="/sigeco/recepcion/duplicados"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" })
+                )}
+              >
+                <ScanSearch className="h-4 w-4" aria-hidden="true" />
+                Duplicados
+              </Link>
+            ) : null}
+            <Link
+              href="/sigeco/recepcion/nuevo"
+              className={cn(buttonVariants({ size: "sm" }))}
+            >
+              <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
+              Registrar llegada
+            </Link>
+          </>
         }
       />
 

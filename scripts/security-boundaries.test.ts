@@ -51,6 +51,12 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   ],
   "src/app/(internal)/sigeco/(app)/inventario/page.tsx": ["inventory_read"],
   "src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx": ["visits_create"],
+  "src/app/(internal)/sigeco/(app)/recepcion/duplicados/page.tsx": [
+    "patient_duplicates_read"
+  ],
+  "src/app/(internal)/sigeco/(app)/recepcion/duplicados/[candidateId]/page.tsx": [
+    "patient_duplicates_read"
+  ],
   "src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/editar/page.tsx": [
     "patients_update"
   ],
@@ -108,6 +114,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createNursingNoteAction: "nursing_write",
   createPaidStudyOrderAction: "clinical_write",
   createPatientAction: "patients_create",
+  dismissPatientDuplicateAction: "patient_duplicates_review",
   createPaymentAction: "payments_write",
   createReceptionPaidStudyOrderAction: "visits_update",
   createSaleAction: "sales_write",
@@ -115,6 +122,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createVitalSignsAction: "nursing_write",
   createVisitAction: "visits_create",
   loginInternalUser: null,
+  mergePatientDuplicateAction: "patient_duplicates_merge",
   logoutInternalUser: null,
   requireInternalUserPasswordChangeAction: "users_manage",
   recordPatientConsentAction: "patient_consents_write",

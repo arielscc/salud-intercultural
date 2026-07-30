@@ -72,8 +72,9 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
             Posible paciente duplicado
           </p>
           <p className="mt-1 text-muted">
-            Ya existe una ficha con ese teléfono. Búscala en el primer paso o vuelve a
-            registrar para confirmar el duplicado.
+            Ya existe una ficha con el mismo teléfono normalizado o con el
+            mismo nombre y fecha de nacimiento. Búscala en el primer paso antes
+            de crear otra.
           </p>
         </div>
       ) : null}

@@ -33,7 +33,12 @@ export async function createPatientAction(formData: FormData) {
       }
 
       const input = sanitizePatientInput(parsed.data);
-      const duplicates = await findPossibleDuplicatePatients(input.phone);
+      const duplicates = await findPossibleDuplicatePatients({
+        fullName: input.fullName,
+        phone: input.phone,
+        secondaryPhone: input.secondaryPhone,
+        birthDate: input.birthDate
+      });
 
       if (duplicates.length > 0 && formData.get("allowDuplicate") !== "true") {
         redirect("/sigeco/recepcion/nuevo?duplicate=true");

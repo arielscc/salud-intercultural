@@ -71,7 +71,11 @@ export async function submitReceptionIntakeAction(formData: FormData) {
       );
 
       if (!record.patientId) {
-        const duplicates = await findPossibleDuplicatePatients(record.patient.phone);
+        const duplicates = await findPossibleDuplicatePatients({
+          fullName: record.patient.fullName,
+          phone: record.patient.phone,
+          birthDate: record.patient.birthDate
+        });
 
         if (duplicates.length > 0 && formData.get("allowDuplicate") !== "true") {
           redirect("/sigeco/recepcion/nuevo?duplicate=true");
@@ -132,6 +136,20 @@ export async function updateReceptionPatientAction(formData: FormData) {
       }
 
       const record = toPatientEditRecord(parsed.data);
+      const duplicates = await findPossibleDuplicatePatients({
+        fullName: record.data.fullName,
+        phone: record.data.phone,
+        birthDate: record.data.birthDate,
+        excludePatientId: record.patientId
+      });
+      if (
+        duplicates.length > 0 &&
+        formData.get("allowDuplicate") !== "true"
+      ) {
+        redirect(
+          `/sigeco/recepcion/pacientes/${encodeURIComponent(record.patientId)}/editar?duplicate=true`
+        );
+      }
       const patient = await updateReceptionPatient(record.patientId, record.data);
       return auditedResult(patient, { entityId: record.patientId });
     }

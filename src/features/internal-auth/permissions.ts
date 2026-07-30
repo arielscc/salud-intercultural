@@ -52,7 +52,10 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "attachments_delete",
     "patient_consents_read",
     "patient_consents_write",
-    "attribution_manage"
+    "attribution_manage",
+    "patient_duplicates_read",
+    "patient_duplicates_review",
+    "patient_duplicates_merge"
   ],
   direccion: [
     "internal_access",
@@ -69,7 +72,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "audit_read",
     "attachments_read",
     "patient_consents_read",
-    "attribution_manage"
+    "attribution_manage",
+    "patient_duplicates_read"
   ],
   medico: [
     "internal_access",
@@ -101,7 +105,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "followups_read",
     "followups_write",
     "patient_consents_read",
-    "patient_consents_write"
+    "patient_consents_write",
+    "patient_duplicates_read",
+    "patient_duplicates_review"
   ],
   captacion: ["internal_access"],
   administracion: [

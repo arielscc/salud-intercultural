@@ -8,6 +8,10 @@
  */
 import { prisma } from "../src/modules/database";
 import { createVisitAttributionInTransaction } from "../src/modules/database/queries/attribution";
+import {
+  normalizePatientName,
+  normalizePatientPhone
+} from "../src/features/patient-duplicates/normalize";
 import { assertSafeDatabaseCommand } from "./database-safety";
 import { reportScriptError } from "./safe-error";
 
@@ -224,6 +228,9 @@ async function main() {
           internalCode: `SI-${String(patientCount + 1).padStart(6, "0")}`,
           fullName: PATIENT_NAME,
           phone: PATIENT_PHONE,
+          normalizedName: normalizePatientName(PATIENT_NAME),
+          normalizedPhone: normalizePatientPhone(PATIENT_PHONE),
+          normalizedSecondaryPhone: normalizePatientPhone("68024417"),
           secondaryPhone: "68024417",
           birthDate: new Date("1988-06-21T12:00:00.000Z"),
           gender: "male",

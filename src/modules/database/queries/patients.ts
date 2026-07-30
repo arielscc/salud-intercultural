@@ -2,6 +2,14 @@ import type { PatientCaptureSource, PatientGender, Prisma } from "@/generated/pr
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 import { patientSearchWhere } from "@/modules/database/queries/patient-search";
+import {
+  normalizePatientName,
+  normalizePatientPhone
+} from "@/features/patient-duplicates/normalize";
+import {
+  findDuplicatePatientMatches,
+  recordDuplicateCandidatesInTransaction
+} from "@/modules/database/queries/patient-duplicates";
 
 export type CreatePatientRecordInput = {
   fullName: string;
@@ -28,6 +36,7 @@ function patientListWhere(input: {
 }): Prisma.PatientWhereInput {
   return {
     AND: [
+      { mergedIntoId: null },
       patientSearchWhere(input.search),
       input.city
         ? { city: { contains: input.city, mode: "insensitive" } }
@@ -48,6 +57,11 @@ export async function createPatientRecord(input: CreatePatientRecordInput) {
           internalCode: `SI-${String(patientCount + 1).padStart(6, "0")}`,
           fullName: input.fullName,
           phone: input.phone,
+          normalizedName: normalizePatientName(input.fullName),
+          normalizedPhone: normalizePatientPhone(input.phone),
+          normalizedSecondaryPhone: input.secondaryPhone
+            ? normalizePatientPhone(input.secondaryPhone)
+            : "",
           secondaryPhone: input.secondaryPhone,
           birthDate: input.birthDate,
           gender: input.gender ?? "unknown",
@@ -82,6 +96,7 @@ export async function createPatientRecord(input: CreatePatientRecordInput) {
         });
       }
 
+      await recordDuplicateCandidatesInTransaction(tx, patient.id);
       return patient;
     });
   });
@@ -132,6 +147,26 @@ export async function getPatientById(id: string) {
     return prisma.patient.findUnique({
       where: { id },
       include: {
+        mergedInto: {
+          select: { id: true, internalCode: true, fullName: true }
+        },
+        aliases: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            sourcePatient: {
+              select: {
+                internalCode: true,
+                fullName: true,
+                phone: true,
+                secondaryPhone: true,
+                allergies: true,
+                relevantHistory: true,
+                currentMedication: true,
+                generalObservations: true
+              }
+            }
+          }
+        },
         visits: {
           orderBy: { checkedInAt: "desc" },
           include: {
@@ -216,16 +251,16 @@ export async function getPatientById(id: string) {
   });
 }
 
-export async function findPossibleDuplicatePatients(phone: string) {
-  return withDatabaseError("findPossibleDuplicatePatients", async () => {
-    return prisma.patient.findMany({
-      where: {
-        OR: [{ phone }, { secondaryPhone: phone }]
-      },
-      take: 5,
-      orderBy: {
-        updatedAt: "desc"
-      }
-    });
-  });
+export async function findPossibleDuplicatePatients(input: {
+  fullName: string;
+  phone: string;
+  secondaryPhone?: string | null;
+  birthDate?: Date | null;
+  excludePatientId?: string;
+}) {
+  const matches = await findDuplicatePatientMatches(input);
+  return matches.map((match) => ({
+    ...match.patient,
+    match: match.signals
+  }));
 }

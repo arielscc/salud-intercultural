@@ -41,6 +41,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 26. [Consentimientos y preferencias de contacto](./patient-consents.md)
 27. [Departamento y procedencia geográfica](./geographic-origin.md)
 28. [Fuentes de captación y atribución](./capture-attribution.md)
+29. [Duplicados y fusión de pacientes](./patient-duplicates.md)
 
 ## Flujo recomendado
 

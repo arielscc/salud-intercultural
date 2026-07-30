@@ -18,7 +18,29 @@ export function patientSearchWhere(search?: string): Prisma.PatientWhereInput {
         { internalCode: { contains: term, mode: "insensitive" as const } },
         { city: { contains: term, mode: "insensitive" as const } },
         { department: { contains: term, mode: "insensitive" as const } },
-        { country: { contains: term, mode: "insensitive" as const } }
+        { country: { contains: term, mode: "insensitive" as const } },
+        {
+          aliases: {
+            some: {
+              OR: [
+                { fullName: { contains: term, mode: "insensitive" as const } },
+                { phone: { contains: term, mode: "insensitive" as const } },
+                {
+                  secondaryPhone: {
+                    contains: term,
+                    mode: "insensitive" as const
+                  }
+                },
+                {
+                  internalCode: {
+                    contains: term,
+                    mode: "insensitive" as const
+                  }
+                }
+              ]
+            }
+          }
+        }
       ]
     }))
   };

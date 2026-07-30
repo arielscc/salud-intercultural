@@ -23,6 +23,22 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
     ];
   }
 
+  if (moduleSegment === "recepcion" && section === "duplicados") {
+    return id
+      ? [
+          { label: "Recepción", href: "/sigeco/recepcion" },
+          {
+            label: "Duplicados",
+            href: "/sigeco/recepcion/duplicados"
+          },
+          { label: "Comparar" }
+        ]
+      : [
+          { label: "Recepción", href: "/sigeco/recepcion" },
+          { label: "Duplicados" }
+        ];
+  }
+
   if (moduleSegment === "recepcion" && section === "pacientes" && id) {
     const items: BreadcrumbItem[] = [
       { label: "Recepción", href: "/sigeco/recepcion" },

@@ -12,6 +12,11 @@ import { createVisitInTransaction } from "@/modules/database/queries/visits";
 import { createVisitAttributionInTransaction } from "@/modules/database/queries/attribution";
 import { patientSearchWhere } from "@/modules/database/queries/patient-search";
 import type { AttributionEvidenceKind } from "@/generated/prisma/client";
+import {
+  normalizePatientName,
+  normalizePatientPhone
+} from "@/features/patient-duplicates/normalize";
+import { recordDuplicateCandidatesInTransaction } from "@/modules/database/queries/patient-duplicates";
 
 export type ReceptionIntakeRecordInput = {
   userId?: string;
@@ -66,7 +71,11 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
         await tx.patient.update({
           where: { id: patientId },
           // La fuente original del paciente no cambia en visitas posteriores.
-          data: patientProfile
+          data: {
+            ...patientProfile,
+            normalizedName: normalizePatientName(patientProfile.fullName),
+            normalizedPhone: normalizePatientPhone(patientProfile.phone)
+          }
         });
       } else {
         const patientCount = await tx.patient.count();
@@ -74,6 +83,8 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
           data: {
             internalCode: `SI-${String(patientCount + 1).padStart(6, "0")}`,
             ...patientProfile,
+            normalizedName: normalizePatientName(patientProfile.fullName),
+            normalizedPhone: normalizePatientPhone(patientProfile.phone),
             gender: input.patient.gender ?? "unknown",
             captureSource: captureSource ?? "other",
             captureSources:
@@ -98,6 +109,7 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
         capturedById: input.userId,
         ...input.attribution
       });
+      await recordDuplicateCandidatesInTransaction(tx, patientId);
 
       return { patientId, visit, attribution };
     });
@@ -119,7 +131,8 @@ const receptionPatientSelect = {
   allergies: true,
   relevantHistory: true,
   currentMedication: true,
-  followUpPreference: true
+  followUpPreference: true,
+  mergedIntoId: true
 } as const;
 
 export type ReceptionPatientEditData = {
@@ -194,10 +207,18 @@ export async function getReceptionDashboardSummary(date = new Date()) {
 
 export async function updateReceptionPatient(id: string, data: ReceptionPatientEditData) {
   return withDatabaseError("updateReceptionPatient", async () => {
-    return prisma.patient.update({
-      where: { id },
-      data,
-      select: receptionPatientSelect
+    return prisma.$transaction(async (tx) => {
+      const patient = await tx.patient.update({
+        where: { id },
+        data: {
+          ...data,
+          normalizedName: normalizePatientName(data.fullName),
+          normalizedPhone: normalizePatientPhone(data.phone)
+        },
+        select: receptionPatientSelect
+      });
+      await recordDuplicateCandidatesInTransaction(tx, id);
+      return patient;
     });
   });
 }
@@ -214,7 +235,10 @@ export async function getReceptionPatientById(id: string) {
 export async function searchReceptionPatients(search: string) {
   return withDatabaseError("searchReceptionPatients", async () => {
     return prisma.patient.findMany({
-      where: patientSearchWhere(search),
+      where: {
+        ...patientSearchWhere(search),
+        mergedIntoId: null
+      },
       select: receptionPatientSelect,
       orderBy: { updatedAt: "desc" },
       take: 5

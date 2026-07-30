@@ -10,6 +10,11 @@ import {
 } from "../src/features/internal-auth/permissions";
 import { prisma } from "../src/modules/database";
 import { createVisitAttributionInTransaction } from "../src/modules/database/queries/attribution";
+import {
+  normalizePatientName,
+  normalizePatientPhone
+} from "../src/features/patient-duplicates/normalize";
+import { recordDuplicateCandidatesForPatient } from "../src/modules/database/queries/patient-duplicates";
 import { reportScriptError } from "./safe-error";
 import { assertSafeStagingCommand } from "./staging-safety";
 
@@ -115,8 +120,10 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         country: "Bolivia",
         followUpPreference: "no_contact",
         fullName: fixture.name,
+        normalizedName: normalizePatientName(fixture.name),
         generalObservations: "REGISTRO SINTÉTICO DE STAGING. NO CORRESPONDE A UNA PERSONA REAL.",
         phone: `+5910000000${index + 1}`,
+        normalizedPhone: normalizePatientPhone(`+5910000000${index + 1}`),
         status: "active"
       },
       create: {
@@ -127,9 +134,11 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         country: "Bolivia",
         followUpPreference: "no_contact",
         fullName: fixture.name,
+        normalizedName: normalizePatientName(fixture.name),
         generalObservations: "REGISTRO SINTÉTICO DE STAGING. NO CORRESPONDE A UNA PERSONA REAL.",
         internalCode: fixture.code,
         phone: `+5910000000${index + 1}`,
+        normalizedPhone: normalizePatientPhone(`+5910000000${index + 1}`),
         status: "active"
       }
     });
@@ -278,10 +287,12 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
     update: {
       followUpPreference: "no_contact",
       fullName: "[QA] Paciente de seguimiento",
+      normalizedName: normalizePatientName("[QA] Paciente de seguimiento"),
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
-      phone: "+59100000005"
+      phone: "+59100000005",
+      normalizedPhone: normalizePatientPhone("+59100000005")
     },
     create: {
       captureSource: "other",
@@ -291,11 +302,45 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       country: "Bolivia",
       followUpPreference: "no_contact",
       fullName: "[QA] Paciente de seguimiento",
+      normalizedName: normalizePatientName("[QA] Paciente de seguimiento"),
       generalObservations: "REGISTRO SINTÉTICO. NO CONTACTAR.",
       internalCode: "QA-000005",
-      phone: "+59100000005"
+      phone: "+59100000005",
+      normalizedPhone: normalizePatientPhone("+59100000005")
     }
   });
+
+  const duplicateQaName = "[QA] Posible ficha duplicada";
+  const duplicateQaPhone = "0000-0005";
+  const duplicateQaPatient = await prisma.patient.upsert({
+    where: { internalCode: "QA-000006" },
+    update: {
+      fullName: duplicateQaName,
+      normalizedName: normalizePatientName(duplicateQaName),
+      phone: duplicateQaPhone,
+      normalizedPhone: normalizePatientPhone(duplicateQaPhone),
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
+      status: "active",
+      mergedIntoId: null
+    },
+    create: {
+      captureSource: "other",
+      captureSources: ["other"],
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
+      followUpPreference: "no_contact",
+      fullName: duplicateQaName,
+      normalizedName: normalizePatientName(duplicateQaName),
+      generalObservations: "REGISTRO SINTÉTICO PARA VALIDAR DUPLICADOS. NO CONTACTAR.",
+      internalCode: "QA-000006",
+      phone: duplicateQaPhone,
+      normalizedPhone: normalizePatientPhone(duplicateQaPhone)
+    }
+  });
+  await recordDuplicateCandidatesForPatient(duplicateQaPatient.id);
 
   await prisma.followUpTask.upsert({
     where: { id: "qa_follow_up_pending" },

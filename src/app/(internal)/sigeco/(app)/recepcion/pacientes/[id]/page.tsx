@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PencilLine, UserRoundPlus } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { ClinicalAttachmentsPanel } from "@/components/internal/clinical-attachments/ClinicalAttachmentsPanel";
@@ -50,6 +50,7 @@ type PatientDetailPageProps = {
   searchParams: Promise<{
     consentimiento?: string;
     decision?: string;
+    aviso?: string;
   }>;
 };
 
@@ -63,6 +64,9 @@ export default async function PatientDetailPage({
   const patient = await getPatientById(id);
 
   if (!patient) notFound();
+  if (patient.mergedInto) {
+    redirect(`/sigeco/recepcion/pacientes/${patient.mergedInto.id}`);
+  }
 
   const followUpConsent = patient.consents.find(
     (consent) => consent.purpose === "follow_up"
@@ -88,6 +92,17 @@ export default async function PatientDetailPage({
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
       <MobileBackLink href="/sigeco/recepcion?vista=pacientes" label="Volver a Recepción" />
+      {filters.aviso === "fichas-fusionadas" ? (
+        <div className="rounded-[9px] bg-primary/10 px-4 py-3 text-sm xl:col-span-2">
+          <p className="font-semibold text-primary-dark">
+            Las fichas fueron fusionadas correctamente
+          </p>
+          <p className="mt-1 text-muted">
+            La historia quedó reunida aquí. El código anterior sigue
+            funcionando como alias y redirige a este expediente.
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-4 max-sm:contents">
         <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -146,8 +161,69 @@ export default async function PatientDetailPage({
                   : patientCaptureSourceLabels[patient.captureSource]
               }
             />
+            {patient.aliases.length > 0 ? (
+              <InfoRow
+                label="Códigos anteriores"
+                value={patient.aliases
+                  .map((alias) => alias.internalCode)
+                  .join(" · ")}
+                wide
+              />
+            ) : null}
           </dl>
         </Card>
+
+        {patient.aliases.length > 0 ? (
+          <Card className="max-sm:order-2">
+            <CardHeader
+              title="Datos de fichas anteriores"
+              description="Información conservada después de una fusión. No reemplaza los datos vigentes."
+            />
+            <div className="grid gap-3">
+              {patient.aliases.map((alias) => (
+                <section
+                  key={alias.id}
+                  className="rounded-[9px] border border-border bg-surface-soft/40 p-3"
+                >
+                  <p className="text-sm font-semibold text-text">
+                    {alias.sourcePatient.internalCode} ·{" "}
+                    {alias.sourcePatient.fullName}
+                  </p>
+                  <dl className="mt-2 grid gap-x-5 gap-y-2 text-sm sm:grid-cols-2">
+                    <InfoRow
+                      label="Teléfono anterior"
+                      value={[
+                        alias.sourcePatient.phone,
+                        alias.sourcePatient.secondaryPhone
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    />
+                    <InfoRow
+                      label="Alergias registradas"
+                      value={alias.sourcePatient.allergies}
+                    />
+                    <InfoRow
+                      label="Antecedentes"
+                      value={alias.sourcePatient.relevantHistory}
+                    />
+                    <InfoRow
+                      label="Medicación"
+                      value={alias.sourcePatient.currentMedication}
+                    />
+                    {alias.sourcePatient.generalObservations ? (
+                      <InfoRow
+                        label="Observaciones"
+                        value={alias.sourcePatient.generalObservations}
+                        wide
+                      />
+                    ) : null}
+                  </dl>
+                </section>
+              ))}
+            </div>
+          </Card>
+        ) : null}
 
         {roleHasPermission(user.role, "patient_consents_read") ? (
           <PatientConsentPanel

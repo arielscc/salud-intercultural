@@ -220,6 +220,7 @@ Contratos criticos cubiertos:
 - Seguimientos y dashboard.
 - Auditoría append-only, usuarios, roles y sesiones.
 - Adjuntos clínicos privados, idempotencia y acceso temporal.
+- Detección normalizada, cola, alias y fusión transaccional de pacientes.
 
 ## Deploy
 

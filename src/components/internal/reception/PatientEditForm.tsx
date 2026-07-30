@@ -39,7 +39,13 @@ export type EditablePatient = {
   currentMedication: string | null;
 };
 
-export function PatientEditForm({ patient }: { patient: EditablePatient }) {
+export function PatientEditForm({
+  patient,
+  allowDuplicate = false
+}: {
+  patient: EditablePatient;
+  allowDuplicate?: boolean;
+}) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const [fullName, setFullName] = useState(patient.fullName);
@@ -91,6 +97,9 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
     >
       <input type="hidden" name="patientId" value={patient.id} />
+      {allowDuplicate ? (
+        <input type="hidden" name="allowDuplicate" value="true" />
+      ) : null}
       <input type="hidden" name="fullName" value={fullName} />
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="birthDate" value={birthDate} />
