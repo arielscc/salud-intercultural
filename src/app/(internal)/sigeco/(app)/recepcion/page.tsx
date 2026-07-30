@@ -1,6 +1,7 @@
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { internalInputClassName } from "@/components/internal/Field";
 import { MobileTabs } from "@/components/internal/MobileTabs";
+import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueRefresh";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
@@ -299,6 +300,11 @@ export default async function ReceptionPage({
             </Link>
           </>
         }
+      />
+
+      <OperationalQueueRefresh
+        queueKey="reception"
+        serverUpdatedAt={new Date().toISOString()}
       />
 
       <MobileTabs

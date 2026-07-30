@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueRefresh";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -32,6 +33,11 @@ export default async function ConsultationsPage() {
   return (
     <div className="grid gap-4">
       <PageHeader title="Consultas" description="Atención médica" />
+
+      <OperationalQueueRefresh
+        queueKey="consultations"
+        serverUpdatedAt={new Date().toISOString()}
+      />
 
       <DesktopTableToolbar count={`${visits.length} pacientes en atención`} />
 

@@ -182,6 +182,21 @@ y nunca concede un uso nuevo.
 La guía operativa y el gate productivo viven en
 [Consentimientos y preferencias de contacto](../operations/patient-consents.md).
 
+## Actualización De Bandejas
+
+Recepción, Consulta, Enfermería y Administración comparten una política de
+polling con `router.refresh()`: 30 segundos en escritorio y 60 en móvil. La URL
+permanece estable para conservar filtros, paginación y selección.
+
+El polling se pausa cuando la pestaña está oculta, no existe conexión, ya hay
+una solicitud activa o un formulario contiene cambios sin aplicar. Las
+métricas técnicas permanecen en la sesión del navegador y no contienen datos
+del paciente. La base de datos sigue siendo la fuente de verdad; SSE o
+WebSocket solo se evaluarán con evidencia del piloto.
+
+La operación se documenta en
+[Actualización de bandejas operativas](../operations/operational-queue-refresh.md).
+
 ## Dashboard
 
 `getReceptionDashboardSummary` calcula con rango diario local:
@@ -221,6 +236,7 @@ Contratos criticos cubiertos:
 - Auditoría append-only, usuarios, roles y sesiones.
 - Adjuntos clínicos privados, idempotencia y acceso temporal.
 - Detección normalizada, cola, alias y fusión transaccional de pacientes.
+- Intervalos, pausas y protección de formularios en bandejas operativas.
 
 ## Deploy
 

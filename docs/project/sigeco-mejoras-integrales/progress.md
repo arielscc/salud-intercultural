@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7, 9, 10, 11 y 12 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-13 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -26,8 +26,8 @@ funcionamiento del gate de la Tarea 8.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 17 |
-| En progreso | 11 |
+| Pendiente | 16 |
+| En progreso | 12 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -58,7 +58,7 @@ funcionamiento del gate de la Tarea 8.
 | 10 | Procedencia geográfica | P1 | En progreso | 8 |
 | 11 | Fuentes de captación | P1 | En progreso | 9-10 |
 | 12 | Duplicados y fusión | P1 | En progreso | 3-5 |
-| 13 | Actualización de bandejas | P1 | Pendiente | 1-5 |
+| 13 | Actualización de bandejas | P1 | En progreso | 1-5 |
 | 14 | Resultado de propuesta | P1 | Pendiente | 3, 4, 9 |
 | 15 | Tipos de seguimiento | P1 | Pendiente | 9, 14 |
 | 16 | Abandono, bloqueo y pendientes | P1 | Pendiente | 13, 15 |
@@ -113,6 +113,11 @@ Estado de las tareas de la base segura:
   alias, redirección y fusión transaccional implementados en desarrollo local.
   Pendiente integración acumulada, QA de gstack al cierre y validación por
   roles en staging.
+- **Tarea 13 — Actualización de bandejas entre áreas:** polling visible y
+  controlado, actualización manual, estado de vigencia, protección de
+  formularios y menor frecuencia móvil implementados en las bandejas de
+  Recepción, Consulta, Enfermería y Administración. Pendiente QA acumulado,
+  medición del piloto y validación del recorrido en staging.
 
 Para terminar la Tarea 1:
 
@@ -153,6 +158,9 @@ Blob clínico privado y las credenciales separadas aprobadas.
   alias y nunca borra su evidencia histórica.
 - Recepción revisa posibles duplicados; solo el super administrador puede
   ejecutar la fusión.
+- Las bandejas operativas revisan cambios cada 30 segundos en escritorio y 60
+  segundos en móvil; se pausan sin conexión, en segundo plano o ante datos sin
+  aplicar.
 - Agenda y citas quedan aplazadas hasta un piloto manual.
 - FHIR queda fuera del plan actual.
 

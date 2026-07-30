@@ -42,6 +42,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 27. [Departamento y procedencia geográfica](./geographic-origin.md)
 28. [Fuentes de captación y atribución](./capture-attribution.md)
 29. [Duplicados y fusión de pacientes](./patient-duplicates.md)
+30. [Actualización de bandejas operativas](./operational-queue-refresh.md)
 
 ## Flujo recomendado
 

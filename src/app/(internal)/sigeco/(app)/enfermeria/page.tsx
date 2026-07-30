@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueRefresh";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
@@ -33,6 +34,11 @@ export default async function NursingWorkQueuePage() {
   return (
     <div className="grid gap-4">
       <PageHeader title="Enfermería" description="Bandeja operativa" />
+
+      <OperationalQueueRefresh
+        queueKey="nursing"
+        serverUpdatedAt={new Date().toISOString()}
+      />
 
       <DesktopTableToolbar count={`${workItems.length} indicaciones activas`} />
 

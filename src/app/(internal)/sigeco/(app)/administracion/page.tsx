@@ -1,4 +1,5 @@
 import { PriorityCollectionDialog } from "@/components/internal/PriorityCollectionDialog";
+import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueRefresh";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -49,6 +50,11 @@ export default async function AdministrationPage() {
   return (
     <div className="grid gap-4">
       <PageHeader title="Ventas y cobros" description="Administración" />
+
+      <OperationalQueueRefresh
+        queueKey="administration"
+        serverUpdatedAt={new Date().toISOString()}
+      />
 
       {priorityCollection ? (
         <section

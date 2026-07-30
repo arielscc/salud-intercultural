@@ -190,8 +190,9 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
 
 ### Operacion
 
-1. Realtime o polling formal para las bandejas entre areas.
-2. Validación acumulada en staging de la detección y fusión segura de pacientes.
+1. Validación acumulada en staging del polling controlado de bandejas y de la
+   detección y fusión segura de pacientes.
+2. Medición del piloto de bandejas antes de evaluar SSE o WebSocket.
 3. Formatos imprimibles de receta y comprobante, si la clinica los requiere.
 4. Reglas aprobadas para automatizar seguimientos.
 5. Flujo de proveedores y compras.
@@ -212,5 +213,5 @@ El orden anterior fue reemplazado por la numeración vigente:
 2. Tarea 2: staging aislado.
 3. Tarea 3: auditoria append-only.
 4. Tareas 4-8: accesos, privacidad, adjuntos, recuperacion e incidentes.
-5. Cerrar integración y QA acumulados de las Tareas 9-12 y continuar con la Tarea 13 de
-   [tasks.md](./sigeco-mejoras-integrales/tasks.md).
+5. Cerrar integración y QA acumulados de las Tareas 9-13 y continuar con la
+   Tarea 14 de [tasks.md](./sigeco-mejoras-integrales/tasks.md).

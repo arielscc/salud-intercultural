@@ -118,7 +118,10 @@ export function PatientAutocomplete({
   const showPanel = isOpen && query.trim().length >= 2;
 
   return (
-    <div className={cn("grid gap-3", className)}>
+    <div
+      className={cn("grid gap-3", className)}
+      data-queue-refresh-dirty={query !== initialValue ? "true" : undefined}
+    >
       <div className="relative">
         <Search
           className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"

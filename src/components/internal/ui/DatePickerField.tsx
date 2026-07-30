@@ -111,7 +111,12 @@ export function DateRangePickerField({
     : placeholder;
 
   return (
-    <div className={className}>
+    <div
+      className={className}
+      data-queue-refresh-dirty={
+        fromValue !== defaultFrom || toValue !== defaultTo ? "true" : undefined
+      }
+    >
       <input type="hidden" name={fromName} value={fromValue} />
       <input type="hidden" name={toName} value={toValue} />
       <Popover open={open} onOpenChange={setOpen}>
