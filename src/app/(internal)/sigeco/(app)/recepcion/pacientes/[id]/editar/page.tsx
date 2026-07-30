@@ -30,7 +30,9 @@ export default async function PatientEditPage({ params, searchParams }: PatientE
             <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
             No se pudieron guardar los cambios
           </p>
-          <p className="mt-1 text-muted">Revisa el nombre y el teléfono e inténtalo de nuevo.</p>
+          <p className="mt-1 text-muted">
+            Revisa el nombre, el teléfono y la procedencia geográfica e inténtalo de nuevo.
+          </p>
         </div>
       ) : null}
 

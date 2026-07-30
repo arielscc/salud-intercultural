@@ -39,6 +39,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 24. [Backup y restauración comprobada](./backup-restore.md)
 25. [Respuesta a incidentes y gate de seguridad](./incident-response.md)
 26. [Consentimientos y preferencias de contacto](./patient-consents.md)
+27. [Departamento y procedencia geográfica](./geographic-origin.md)
 
 ## Flujo recomendado
 

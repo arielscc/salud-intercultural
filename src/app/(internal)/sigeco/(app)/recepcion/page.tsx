@@ -21,6 +21,10 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
+import {
+  boliviaDepartments,
+  geographicOriginLabel
+} from "@/features/geography/origin";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import type { VisitStatus } from "@/generated/prisma/client";
@@ -49,6 +53,8 @@ type ReceptionPageProps = {
     periodo?: string;
     desde?: string;
     hasta?: string;
+    ciudad?: string;
+    departamento?: string;
   }>;
 };
 
@@ -78,7 +84,14 @@ function visitDateRange(
 }
 
 function receptionSelectionHref(
-  filters: { status?: VisitStatus | "all"; periodo?: string; desde?: string; hasta?: string },
+  filters: {
+    status?: VisitStatus | "all";
+    periodo?: string;
+    desde?: string;
+    hasta?: string;
+    ciudad?: string;
+    departamento?: string;
+  },
   visitId?: string,
 ) {
   const query = new URLSearchParams();
@@ -86,6 +99,8 @@ function receptionSelectionHref(
   if (filters.periodo && filters.periodo !== "all") query.set("periodo", filters.periodo);
   if (filters.desde) query.set("desde", filters.desde);
   if (filters.hasta) query.set("hasta", filters.hasta);
+  if (filters.ciudad) query.set("ciudad", filters.ciudad);
+  if (filters.departamento) query.set("departamento", filters.departamento);
   if (visitId) query.set("visita", visitId);
   const search = query.toString();
   return search ? `/sigeco/recepcion?${search}` : "/sigeco/recepcion";
@@ -188,6 +203,9 @@ export default async function ReceptionPage({
       : undefined;
   const statusFilter = selectedStatus === "all" ? undefined : selectedStatus;
   const activeOnly = !selectedStatus;
+  const cityFilter = params.ciudad?.trim().slice(0, 120) || undefined;
+  const departmentFilter =
+    params.departamento?.trim().slice(0, 120) || undefined;
 
   if (vista === "pacientes") {
     await requirePermission("patients_read");
@@ -205,20 +223,32 @@ export default async function ReceptionPage({
           pageSize,
           checkedInFrom: dateRange.start,
           checkedInTo: dateRange.end,
+          originCity: cityFilter,
+          originDepartment: departmentFilter,
         }),
         countVisits({
           status: statusFilter,
           activeOnly,
           checkedInFrom: dateRange.start,
           checkedInTo: dateRange.end,
+          originCity: cityFilter,
+          originDepartment: departmentFilter,
         }),
       ])
       : null;
   const patientPage =
     vista === "pacientes"
       ? await Promise.all([
-          getPatients({ page, pageSize }),
-          countPatients(),
+          getPatients({
+            page,
+            pageSize,
+            city: cityFilter,
+            department: departmentFilter
+          }),
+          countPatients({
+            city: cityFilter,
+            department: departmentFilter
+          }),
         ])
       : null;
   const patients = patientPage?.[0] ?? [];
@@ -231,6 +261,8 @@ export default async function ReceptionPage({
     periodo: period,
     desde: period === "custom" ? params.desde : undefined,
     hasta: period === "custom" ? params.hasta : undefined,
+    ciudad: cityFilter,
+    departamento: departmentFilter,
   };
   const clearSelectionHref = receptionSelectionHref(visitFilters);
 
@@ -333,15 +365,77 @@ export default async function ReceptionPage({
                 className="w-72"
                 triggerClassName="h-9 min-h-9 py-1.5 text-[13px]"
               />
+              <input
+                className={cn(
+                  internalInputClassName,
+                  "h-9 min-h-9 max-w-40 py-1.5 text-[13px]"
+                )}
+                type="search"
+                name="ciudad"
+                defaultValue={cityFilter}
+                placeholder="Ciudad de llegada"
+                aria-label="Filtrar por ciudad de procedencia"
+              />
+              <select
+                className={cn(
+                  internalInputClassName,
+                  "h-9 min-h-9 max-w-44 py-1.5 text-[13px]"
+                )}
+                name="departamento"
+                defaultValue={departmentFilter ?? ""}
+                aria-label="Filtrar por departamento de procedencia"
+              >
+                <option value="">Todos los departamentos</option>
+                {boliviaDepartments.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
               <Button type="submit" variant="outline" size="sm">
                 Filtrar
               </Button>
             </form>
           ) : (
-            <PatientAutocomplete
-              mode="navigate"
-              className="min-w-0 flex-1"
-            />
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <PatientAutocomplete
+                mode="navigate"
+                className="min-w-0 flex-1"
+              />
+              <form className="flex items-center gap-2">
+                <input type="hidden" name="vista" value="pacientes" />
+                <input
+                  className={cn(
+                    internalInputClassName,
+                    "h-9 min-h-9 max-w-40 py-1.5 text-[13px]"
+                  )}
+                  type="search"
+                  name="ciudad"
+                  defaultValue={cityFilter}
+                  placeholder="Ciudad"
+                  aria-label="Filtrar pacientes por ciudad habitual"
+                />
+                <select
+                  className={cn(
+                    internalInputClassName,
+                    "h-9 min-h-9 max-w-44 py-1.5 text-[13px]"
+                  )}
+                  name="departamento"
+                  defaultValue={departmentFilter ?? ""}
+                  aria-label="Filtrar pacientes por departamento habitual"
+                >
+                  <option value="">Todos los departamentos</option>
+                  {boliviaDepartments.map((department) => (
+                    <option key={department} value={department}>
+                      {department}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" variant="outline" size="sm">
+                  Filtrar
+                </Button>
+              </form>
+            </div>
           )
         }
         count={
@@ -379,6 +473,26 @@ export default async function ReceptionPage({
                 defaultFrom={params.desde}
                 defaultTo={params.hasta}
               />
+              <input
+                className={internalInputClassName}
+                type="search"
+                name="ciudad"
+                defaultValue={cityFilter}
+                placeholder="Ciudad de procedencia"
+              />
+              <select
+                className={internalInputClassName}
+                name="departamento"
+                defaultValue={departmentFilter ?? ""}
+                aria-label="Departamento de procedencia"
+              >
+                <option value="">Todos los departamentos</option>
+                {boliviaDepartments.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
               <Button type="submit" variant="outline">Aplicar filtros</Button>
             </form>
           </Card>
@@ -407,6 +521,25 @@ export default async function ReceptionPage({
                 defaultTo={params.hasta}
                 className="sm:col-span-2"
               />
+              <input
+                className={internalInputClassName}
+                type="search"
+                name="ciudad"
+                defaultValue={cityFilter}
+                placeholder="Ciudad de procedencia"
+              />
+              <select
+                className={internalInputClassName}
+                name="departamento"
+                defaultValue={departmentFilter ?? ""}
+              >
+                <option value="">Todos los departamentos</option>
+                {boliviaDepartments.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
               <Button type="submit" variant="outline" className="sm:col-span-2">Aplicar filtros</Button>
             </form>
           </Card>
@@ -441,6 +574,14 @@ export default async function ReceptionPage({
                       : "Sin ruta"}
                   </span>
                   <span className="tabular-nums">{visit.patient.phone}</span>
+                  <span>
+                    Procedencia:{" "}
+                    {geographicOriginLabel({
+                      city: visit.originCity,
+                      department: visit.originDepartment,
+                      country: visit.originCountry
+                    }) || "Sin registrar"}
+                  </span>
                   {visit.workItems.length > 0 ? (
                     <span>
                       <Chip tone="primary">
@@ -461,6 +602,7 @@ export default async function ReceptionPage({
                     <Th>Paciente</Th>
                     <Th className="lg:hidden xl:table-cell">Teléfono</Th>
                     <Th className="lg:hidden xl:table-cell">Llegada</Th>
+                    <Th>Procedencia</Th>
                     <Th>Área actual</Th>
                     <Th>Tareas</Th>
                     <Th>Estado</Th>
@@ -485,6 +627,13 @@ export default async function ReceptionPage({
                       </Td>
                       <Td className="tabular-nums lg:hidden xl:table-cell">
                         {formatDateTime(visit.checkedInAt)}
+                      </Td>
+                      <Td>
+                        {geographicOriginLabel({
+                          city: visit.originCity,
+                          department: visit.originDepartment,
+                          country: visit.originCountry
+                        }) || "—"}
                       </Td>
                       <Td>
                         {visit.route
@@ -526,7 +675,7 @@ export default async function ReceptionPage({
                   ))}
                   {visitRows.length === 0 ? (
                     <tr>
-                      <Td className="py-8 text-center" colSpan={7}>
+                      <Td className="py-8 text-center" colSpan={8}>
                         {emptyVisitsMessage}
                       </Td>
                     </tr>
@@ -544,6 +693,8 @@ export default async function ReceptionPage({
                 periodo: period === "all" ? undefined : period,
                 desde: period === "custom" ? params.desde : undefined,
                 hasta: period === "custom" ? params.hasta : undefined,
+                ciudad: cityFilter,
+                departamento: departmentFilter,
               }}
             />
           </Card>
@@ -581,7 +732,8 @@ export default async function ReceptionPage({
                           {visit.patient.fullName}
                         </span>
                         <span className="mt-0.5 block truncate text-xs tabular-nums text-muted">
-                          {visit.patient.internalCode} · {formatDateTime(visit.checkedInAt)}
+                          {visit.patient.internalCode} ·{" "}
+                          {formatDateTime(visit.checkedInAt)}
                         </span>
                       </span>
                       <VisitStatusPill status={visit.status} />
@@ -592,6 +744,13 @@ export default async function ReceptionPage({
                         {visit.workItems.length > 0
                           ? ` · ${visit.workItems.length} pendientes`
                           : ""}
+                      </span>
+                      <span className="min-w-0 truncate text-xs text-muted">
+                        {geographicOriginLabel({
+                          city: visit.originCity,
+                          department: visit.originDepartment,
+                          country: visit.originCountry
+                        }) || "Procedencia sin registrar"}
                       </span>
                     </Link>
                   );
@@ -610,6 +769,8 @@ export default async function ReceptionPage({
                   periodo: period === "all" ? undefined : period,
                   desde: period === "custom" ? params.desde : undefined,
                   hasta: period === "custom" ? params.hasta : undefined,
+                  ciudad: cityFilter,
+                  departamento: departmentFilter,
                 }}
               />
             </section>
@@ -657,6 +818,18 @@ export default async function ReceptionPage({
                     </div>
                     <div>
                       <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        Procedencia
+                      </dt>
+                      <dd className="mt-0.5 text-text">
+                        {geographicOriginLabel({
+                          city: selectedVisit.originCity,
+                          department: selectedVisit.originDepartment,
+                          country: selectedVisit.originCountry
+                        }) || "Sin registrar"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                         Motivo
                       </dt>
                       <dd className="mt-0.5 text-text">
@@ -700,9 +873,61 @@ export default async function ReceptionPage({
         <>
           <Card className="sm:hidden">
             <PatientAutocomplete mode="navigate" />
+            <form className="mt-3 grid gap-2 border-t border-border pt-3">
+              <input type="hidden" name="vista" value="pacientes" />
+              <input
+                className={internalInputClassName}
+                type="search"
+                name="ciudad"
+                defaultValue={cityFilter}
+                placeholder="Ciudad habitual"
+              />
+              <select
+                className={internalInputClassName}
+                name="departamento"
+                defaultValue={departmentFilter ?? ""}
+                aria-label="Departamento habitual"
+              >
+                <option value="">Todos los departamentos</option>
+                {boliviaDepartments.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
+              <Button type="submit" variant="outline">
+                Filtrar procedencia
+              </Button>
+            </form>
           </Card>
           <Card className="hidden sm:block lg:hidden">
             <PatientAutocomplete mode="navigate" />
+            <form className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-[1fr_1fr_auto]">
+              <input type="hidden" name="vista" value="pacientes" />
+              <input
+                className={internalInputClassName}
+                type="search"
+                name="ciudad"
+                defaultValue={cityFilter}
+                placeholder="Ciudad habitual"
+              />
+              <select
+                className={internalInputClassName}
+                name="departamento"
+                defaultValue={departmentFilter ?? ""}
+                aria-label="Departamento habitual"
+              >
+                <option value="">Todos los departamentos</option>
+                {boliviaDepartments.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
+              <Button type="submit" variant="outline">
+                Filtrar
+              </Button>
+            </form>
           </Card>
 
           <Card className="min-w-0 p-0">
@@ -722,7 +947,11 @@ export default async function ReceptionPage({
                   <span className="tabular-nums">
                     {patient.internalCode} · {patient.phone}
                   </span>
-                  {patient.city ? <span>{patient.city}</span> : null}
+                  {patient.city ? (
+                    <span>
+                      {geographicOriginLabel(patient)}
+                    </span>
+                  ) : null}
                 </RecordItem>
               ))}
               {patients.length === 0 ? (
@@ -736,7 +965,7 @@ export default async function ReceptionPage({
                     <Th>Nombre</Th>
                     <Th>Código</Th>
                     <Th>Teléfono</Th>
-                    <Th className="lg:hidden xl:table-cell">Ciudad</Th>
+                    <Th className="lg:hidden xl:table-cell">Procedencia habitual</Th>
                     <Th className="text-right">Visitas</Th>
                   </tr>
                 </thead>
@@ -753,7 +982,9 @@ export default async function ReceptionPage({
                       </Td>
                       <Td className="tabular-nums">{patient.internalCode}</Td>
                       <Td className="tabular-nums">{patient.phone}</Td>
-                      <Td className="lg:hidden xl:table-cell">{patient.city || "—"}</Td>
+                      <Td className="lg:hidden xl:table-cell">
+                        {geographicOriginLabel(patient) || "—"}
+                      </Td>
                       <Td className="text-right tabular-nums">{patient._count.visits}</Td>
                     </Tr>
                   ))}
@@ -772,7 +1003,11 @@ export default async function ReceptionPage({
               pageSize={pageSize}
               totalItems={totalPatients}
               pathname="/sigeco/recepcion"
-              searchParams={{ vista: "pacientes" }}
+              searchParams={{
+                vista: "pacientes",
+                ciudad: cityFilter,
+                departamento: departmentFilter
+              }}
             />
           </Card>
         </>

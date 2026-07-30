@@ -36,6 +36,10 @@ export type CreateVisitRecordInput = {
   symptomDurationUnit?: SymptomDurationUnit;
   previouslyTreated?: boolean;
   bringsStudies?: boolean;
+  originCity?: string;
+  originDepartment?: string;
+  originCountry?: string;
+  originMatchesPatient?: boolean;
 };
 
 export async function createVisitInTransaction(
@@ -52,7 +56,11 @@ export async function createVisitInTransaction(
       symptomDurationValue: input.symptomDurationValue,
       symptomDurationUnit: input.symptomDurationUnit,
       previouslyTreated: input.previouslyTreated,
-      bringsStudies: input.bringsStudies
+      bringsStudies: input.bringsStudies,
+      originCity: input.originCity,
+      originDepartment: input.originDepartment,
+      originCountry: input.originCountry,
+      originMatchesPatient: input.originMatchesPatient
     }
   });
 
@@ -125,6 +133,8 @@ export async function getVisits(
     activeOnly?: boolean;
     checkedInFrom?: Date;
     checkedInTo?: Date;
+    originCity?: string;
+    originDepartment?: string;
   } = {}
 ) {
   const pagination = getPagination(input);
@@ -137,6 +147,12 @@ export async function getVisits(
           input.checkedInFrom || input.checkedInTo
             ? { gte: input.checkedInFrom, lt: input.checkedInTo }
             : undefined,
+        originCity: input.originCity
+          ? { contains: input.originCity, mode: "insensitive" }
+          : undefined,
+        originDepartment: input.originDepartment
+          ? { equals: input.originDepartment, mode: "insensitive" }
+          : undefined,
         route: input.activeOnly
           ? {
               active: true
@@ -171,6 +187,8 @@ export async function countVisits(input: {
   activeOnly?: boolean;
   checkedInFrom?: Date;
   checkedInTo?: Date;
+  originCity?: string;
+  originDepartment?: string;
 } = {}) {
   return withDatabaseError("countVisits", async () => {
     return prisma.visit.count({
@@ -180,6 +198,12 @@ export async function countVisits(input: {
           input.checkedInFrom || input.checkedInTo
             ? { gte: input.checkedInFrom, lt: input.checkedInTo }
             : undefined,
+        originCity: input.originCity
+          ? { contains: input.originCity, mode: "insensitive" }
+          : undefined,
+        originDepartment: input.originDepartment
+          ? { equals: input.originDepartment, mode: "insensitive" }
+          : undefined,
         route: input.activeOnly ? { active: true } : undefined
       }
     });

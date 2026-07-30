@@ -521,6 +521,7 @@ model Patient {
   gender                PatientGender             @default(unknown)
   city                  String?
   department            String?
+  country               String?
   address               String?
   captureSource         PatientCaptureSource      @default(other)
   captureSources        PatientCaptureSource[]    @default([])
@@ -558,6 +559,8 @@ model Patient {
   @@index([phone])
   @@index([status])
   @@index([captureSource])
+  @@index([department, city])
+  @@index([country])
   @@index([createdAt])
 }
 
@@ -622,6 +625,10 @@ model Visit {
   symptomDurationUnit  SymptomDurationUnit?
   previouslyTreated    Boolean?
   bringsStudies        Boolean               @default(false)
+  originCity           String                @default("No informado")
+  originDepartment     String?
+  originCountry        String                @default("No informado")
+  originMatchesPatient Boolean               @default(true)
   createdById          String?
   checkedInAt          DateTime              @default(now())
   completedAt          DateTime?
@@ -652,6 +659,8 @@ model Visit {
 
   @@index([patientId])
   @@index([status, checkedInAt])
+  @@index([originDepartment, originCity, checkedInAt])
+  @@index([originCountry, checkedInAt])
   @@index([createdById])
   @@index([checkedInAt])
 }

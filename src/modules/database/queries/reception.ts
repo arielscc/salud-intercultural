@@ -20,6 +20,8 @@ export type ReceptionIntakeRecordInput = {
     birthDate?: Date;
     gender?: PatientGender;
     city?: string;
+    department?: string | null;
+    country?: string;
     captureSource?: PatientCaptureSource;
     captureSources?: PatientCaptureSource[];
     allergies?: string;
@@ -34,6 +36,10 @@ export type ReceptionIntakeRecordInput = {
     symptomDurationUnit?: SymptomDurationUnit;
     previouslyTreated?: boolean;
     bringsStudies?: boolean;
+    originCity: string;
+    originDepartment?: string;
+    originCountry: string;
+    originMatchesPatient: boolean;
   };
 };
 
@@ -81,6 +87,8 @@ const receptionPatientSelect = {
   birthDate: true,
   gender: true,
   city: true,
+  department: true,
+  country: true,
   captureSource: true,
   captureSources: true,
   allergies: true,
@@ -94,7 +102,9 @@ export type ReceptionPatientEditData = {
   phone: string;
   birthDate: Date | null;
   gender: PatientGender;
-  city: string | null;
+  city: string;
+  department: string | null;
+  country: string;
   captureSource: PatientCaptureSource;
   captureSources: PatientCaptureSource[];
   allergies: string | null;

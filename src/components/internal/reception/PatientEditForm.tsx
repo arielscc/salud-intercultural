@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { PhoneInput } from "@/components/internal/reception/PhoneInput";
+import { GeographicOriginFields } from "@/components/internal/reception/GeographicOriginFields";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { DatePickerField } from "@/components/internal/ui/DatePickerField";
@@ -18,11 +19,13 @@ import { updateReceptionPatientAction } from "@/features/reception/actions";
 import {
   calculateAge,
   ChipOption,
-  cityChips,
-  cityStateFrom,
-  NO_KNOWN_ALLERGIES,
-  type CityChoice
+  NO_KNOWN_ALLERGIES
 } from "@/components/internal/reception/funnel-fields";
+import {
+  BOLIVIA_COUNTRY,
+  isCompleteGeographicOrigin,
+  type GeographicOriginValue
+} from "@/features/geography/origin";
 import { cn } from "@/lib/cn";
 
 export type EditablePatient = {
@@ -33,6 +36,8 @@ export type EditablePatient = {
   birthDate: string;
   gender: string;
   city: string | null;
+  department: string | null;
+  country: string | null;
   captureSources: string[];
   allergies: string | null;
   relevantHistory: string | null;
@@ -46,9 +51,11 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
   const [phone, setPhone] = useState(patient.phone);
   const [birthDate, setBirthDate] = useState(patient.birthDate);
   const [gender, setGender] = useState(patient.gender);
-  const initialCity = cityStateFrom(patient.city);
-  const [cityChoice, setCityChoice] = useState<CityChoice>(initialCity.choice);
-  const [cityOther, setCityOther] = useState(initialCity.other);
+  const [patientOrigin, setPatientOrigin] = useState<GeographicOriginValue>({
+    city: patient.city ?? "",
+    department: patient.department ?? "",
+    country: patient.country ?? BOLIVIA_COUNTRY
+  });
 
   const initialNoAllergies = patient.allergies === NO_KNOWN_ALLERGIES;
   const [noKnownAllergies, setNoKnownAllergies] = useState(initialNoAllergies);
@@ -61,7 +68,6 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
   );
 
   const age = calculateAge(birthDate);
-  const city = cityChoice === "otra" ? cityOther : cityChoice;
   const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
   const nameError = formError === "Ingresa el nombre completo.";
   const phoneError = formError === "Ingresa un teléfono válido.";
@@ -83,6 +89,13 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       event.preventDefault();
       return;
     }
+    if (!isCompleteGeographicOrigin(patientOrigin)) {
+      setFormError(
+        "Completa la ciudad, el departamento y el país de procedencia habitual."
+      );
+      event.preventDefault();
+      return;
+    }
     setFormError(null);
   }
 
@@ -97,7 +110,13 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="birthDate" value={birthDate} />
       <input type="hidden" name="gender" value={gender} />
-      <input type="hidden" name="city" value={city} />
+      <input type="hidden" name="city" value={patientOrigin.city} />
+      <input
+        type="hidden"
+        name="department"
+        value={patientOrigin.department}
+      />
+      <input type="hidden" name="country" value={patientOrigin.country} />
       <input type="hidden" name="allergies" value={resolvedAllergies} />
       <input type="hidden" name="relevantHistory" value={relevantHistory} />
       <input type="hidden" name="currentMedication" value={currentMedication} />
@@ -143,34 +162,14 @@ export function PatientEditForm({ patient }: { patient: EditablePatient }) {
             <DatePickerField value={birthDate} onChange={setBirthDate} />
           </Field>
         </div>
-        <div className="grid gap-1.5 text-[13px] font-medium text-text">
-          <span>Ciudad</span>
-          <div className="flex flex-wrap gap-2">
-            {cityChips.map((option) => (
-              <ChipOption
-                key={option}
-                selected={cityChoice === option}
-                onClick={() => setCityChoice(cityChoice === option ? "" : option)}
-              >
-                {option}
-              </ChipOption>
-            ))}
-            <ChipOption
-              selected={cityChoice === "otra"}
-              onClick={() => setCityChoice(cityChoice === "otra" ? "" : "otra")}
-            >
-              Otra
-            </ChipOption>
-          </div>
-          {cityChoice === "otra" ? (
-            <input
-              className={internalInputClassName}
-              value={cityOther}
-              onChange={(event) => setCityOther(event.target.value)}
-              placeholder="¿Cuál?"
-            />
-          ) : null}
-        </div>
+        <GeographicOriginFields
+          idPrefix="patient-edit-origin"
+          label="Procedencia habitual"
+          description="Lugar donde vive normalmente el paciente."
+          value={patientOrigin}
+          onChange={setPatientOrigin}
+          required
+        />
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>Género (opcional)</span>
           <div className="flex flex-wrap gap-2">

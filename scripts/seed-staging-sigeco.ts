@@ -96,12 +96,22 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
   }
 
   for (const [index, fixture] of qaPatientFixtures.entries()) {
+    const visitOrigin =
+      index === 1
+        ? {
+            city: "Cochabamba",
+            department: "Cochabamba",
+            matchesPatient: false
+          }
+        : { city: "El Alto", department: "La Paz", matchesPatient: true };
     const patient = await prisma.patient.upsert({
       where: { internalCode: fixture.code },
       update: {
         captureSource: "other",
         captureSources: ["other"],
         city: "El Alto",
+        department: "La Paz",
+        country: "Bolivia",
         followUpPreference: "no_contact",
         fullName: fixture.name,
         generalObservations: "REGISTRO SINTÉTICO DE STAGING. NO CORRESPONDE A UNA PERSONA REAL.",
@@ -112,6 +122,8 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         captureSource: "other",
         captureSources: ["other"],
         city: "El Alto",
+        department: "La Paz",
+        country: "Bolivia",
         followUpPreference: "no_contact",
         fullName: fixture.name,
         generalObservations: "REGISTRO SINTÉTICO DE STAGING. NO CORRESPONDE A UNA PERSONA REAL.",
@@ -130,6 +142,10 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       update: {
         checkedInAt,
         createdById: receptionUserId,
+        originCity: visitOrigin.city,
+        originDepartment: visitOrigin.department,
+        originCountry: "Bolivia",
+        originMatchesPatient: visitOrigin.matchesPatient,
         patientId: patient.id,
         reason: fixture.reason,
         status: fixture.status
@@ -138,6 +154,10 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         checkedInAt,
         createdById: receptionUserId,
         id: visitId,
+        originCity: visitOrigin.city,
+        originDepartment: visitOrigin.department,
+        originCountry: "Bolivia",
+        originMatchesPatient: visitOrigin.matchesPatient,
         patientId: patient.id,
         reason: fixture.reason,
         status: fixture.status
@@ -233,12 +253,17 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
     update: {
       followUpPreference: "no_contact",
       fullName: "[QA] Paciente de seguimiento",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       phone: "+59100000005"
     },
     create: {
       captureSource: "other",
       captureSources: ["other"],
       city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       followUpPreference: "no_contact",
       fullName: "[QA] Paciente de seguimiento",
       generalObservations: "REGISTRO SINTÉTICO. NO CONTACTAR.",

@@ -7,11 +7,14 @@ import {
 } from "@/features/reception/schemas/intake.schema";
 
 describe("reception intake schema", () => {
-  it("accepts the minimal funnel with only name, phone and reason", () => {
+  it("accepts the minimal funnel with a classified geographic origin", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
       phone: "+591 71234567",
-      reason: "Dolor de espalda"
+      reason: "Dolor de espalda",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia"
     });
 
     expect(parsed.success).toBe(true);
@@ -26,6 +29,9 @@ describe("reception intake schema", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
       phone: "+591 71234567",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       reason: ""
     });
 
@@ -36,6 +42,9 @@ describe("reception intake schema", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
       phone: "+591 71234567",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       reason: "Dolor de espalda",
       symptomDurationValue: "3",
       symptomDurationUnit: ""
@@ -52,6 +61,8 @@ describe("reception intake schema", () => {
       birthDate: "1988-04-12",
       gender: "female",
       city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       reason: "  Dolor de   espalda ",
       symptomDurationValue: "3",
       symptomDurationUnit: "months",
@@ -71,6 +82,10 @@ describe("reception intake schema", () => {
     expect(record.patientId).toBeUndefined();
     expect(record.patient.fullName).toBe("Maria Quispe");
     expect(record.patient.phone).toBe("+591 71234567");
+    expect(record.patient.department).toBe("La Paz");
+    expect(record.patient.country).toBe("Bolivia");
+    expect(record.visit.originCity).toBe("El Alto");
+    expect(record.visit.originMatchesPatient).toBe(true);
     expect(record.patient.captureSources).toEqual(["referral", "facebook"]);
     expect(record.patient.captureSource).toBe("referral");
     expect(record.visit.reason).toBe("Dolor de espalda");
@@ -84,6 +99,9 @@ describe("reception intake schema", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
       phone: "+591 71234567",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       reason: "Control",
       previouslyTreated: "",
       bringsStudies: ""
@@ -101,12 +119,50 @@ describe("reception intake schema", () => {
     const parsed = receptionIntakeSchema.parse({
       fullName: "Maria Quispe",
       phone: "+591 71234567",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       reason: "Control",
       captureSources: "facebook_ads,facebook_organic"
     });
 
     expect(parsed.captureSources).toEqual(["facebook"]);
     expect(toReceptionIntakeRecord(parsed).patient.captureSource).toBe("facebook");
+  });
+
+  it("preserves a different origin for the current visit", () => {
+    const parsed = receptionIntakeSchema.parse({
+      fullName: "Maria Quispe",
+      phone: "+591 71234567",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
+      visitOriginMode: "different",
+      visitOriginCity: "cbba",
+      visitOriginDepartment: "",
+      visitOriginCountry: "bol",
+      reason: "Control"
+    });
+
+    const record = toReceptionIntakeRecord(parsed);
+    expect(record.patient.city).toBe("El Alto");
+    expect(record.visit.originCity).toBe("Cochabamba");
+    expect(record.visit.originDepartment).toBe("Cochabamba");
+    expect(record.visit.originCountry).toBe("Bolivia");
+    expect(record.visit.originMatchesPatient).toBe(false);
+  });
+
+  it("rejects an unclassified Bolivian origin", () => {
+    const parsed = receptionIntakeSchema.safeParse({
+      fullName: "Maria Quispe",
+      phone: "+591 71234567",
+      city: "Tiquipaya",
+      department: "",
+      country: "Bolivia",
+      reason: "Control"
+    });
+
+    expect(parsed.success).toBe(false);
   });
 });
 
@@ -119,6 +175,8 @@ describe("patient edit schema", () => {
       birthDate: "1986-02-20",
       gender: "female",
       city: "La Paz",
+      department: "La Paz",
+      country: "Bolivia",
       allergies: "Penicilina",
       relevantHistory: "Hipertensión",
       currentMedication: "Enalapril",
@@ -133,6 +191,8 @@ describe("patient edit schema", () => {
     expect(record.data.fullName).toBe("Rosa Huanca");
     expect(record.data.phone).toBe("765-43210");
     expect(record.data.city).toBe("La Paz");
+    expect(record.data.department).toBe("La Paz");
+    expect(record.data.country).toBe("Bolivia");
     expect(record.data.captureSources).toEqual(["referral", "whatsapp"]);
     expect(record.data.captureSource).toBe("referral");
   });
@@ -142,6 +202,9 @@ describe("patient edit schema", () => {
       patientId: "abc123",
       fullName: "Rosa Huanca",
       phone: "76543210",
+      city: "La Paz",
+      department: "La Paz",
+      country: "Bolivia",
       captureSources: "referral,invalido"
     });
 
@@ -154,7 +217,9 @@ describe("patient edit schema", () => {
       fullName: "Rosa Huanca",
       phone: "76543210",
       birthDate: "",
-      city: "",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       allergies: "",
       relevantHistory: "",
       currentMedication: ""
@@ -165,7 +230,7 @@ describe("patient edit schema", () => {
 
     const record = toPatientEditRecord(parsed.data);
     expect(record.data.birthDate).toBeNull();
-    expect(record.data.city).toBeNull();
+    expect(record.data.city).toBe("El Alto");
     expect(record.data.allergies).toBeNull();
     expect(record.data.relevantHistory).toBeNull();
     expect(record.data.currentMedication).toBeNull();
@@ -174,11 +239,25 @@ describe("patient edit schema", () => {
 
   it("rejects an edit without patient id or with a bad phone", () => {
     expect(
-      patientEditSchema.safeParse({ patientId: "", fullName: "Rosa Huanca", phone: "76543210" })
+      patientEditSchema.safeParse({
+        patientId: "",
+        fullName: "Rosa Huanca",
+        phone: "76543210",
+        city: "El Alto",
+        department: "La Paz",
+        country: "Bolivia"
+      })
         .success
     ).toBe(false);
     expect(
-      patientEditSchema.safeParse({ patientId: "abc", fullName: "Rosa Huanca", phone: "tel#malo" })
+      patientEditSchema.safeParse({
+        patientId: "abc",
+        fullName: "Rosa Huanca",
+        phone: "tel#malo",
+        city: "El Alto",
+        department: "La Paz",
+        country: "Bolivia"
+      })
         .success
     ).toBe(false);
   });

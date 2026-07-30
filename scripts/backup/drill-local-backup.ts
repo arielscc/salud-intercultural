@@ -42,14 +42,19 @@ async function seedRecoveryFixture(input: {
         fullName: "Paciente Sintético De Recuperación",
         phone: "00000000",
         city: "El Alto",
-        department: "La Paz"
+        department: "La Paz",
+        country: "Bolivia"
       }
     });
     const visit = await prisma.visit.create({
       data: {
         patientId: patient.id,
         createdById: user.id,
-        reason: "Simulacro de backup y restauración"
+        reason: "Simulacro de backup y restauración",
+        originCity: "El Alto",
+        originDepartment: "La Paz",
+        originCountry: "Bolivia",
+        originMatchesPatient: true
       }
     });
     await prisma.cashMovement.create({

@@ -35,6 +35,7 @@ import {
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
 import { studyTypeLabels } from "@/features/studies/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
+import { geographicOriginLabel } from "@/features/geography/origin";
 import { formatDateTime } from "@/lib/dates";
 import { getPatientById } from "@/modules/database/queries/patients";
 import { getClinicalAttachmentsForPatient } from "@/modules/clinical-attachments/service";
@@ -72,6 +73,7 @@ export default async function PatientDetailPage({
   const nursingCount =
     patient.vitalSigns.length + patient.nursingApplications.length + patient.nursingNotes.length;
   const age = calculateAgeFromDate(patient.birthDate);
+  const patientOrigin = geographicOriginLabel(patient);
   const initials = patient.fullName
     .split(" ")
     .map((part) => part.charAt(0))
@@ -123,6 +125,11 @@ export default async function PatientDetailPage({
             {patient.secondaryPhone ? (
               <InfoRow label="Alternativo" value={patient.secondaryPhone} />
             ) : null}
+            <InfoRow
+              label="Procedencia habitual"
+              value={patientOrigin || "Sin registrar"}
+              wide
+            />
             <InfoRow
               label="Fuente"
               value={
@@ -222,6 +229,14 @@ export default async function PatientDetailPage({
                 status={<VisitStatusPill status={visit.status} />}
               >
                 <span>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</span>
+                <span>
+                  Procedencia:{" "}
+                  {geographicOriginLabel({
+                    city: visit.originCity,
+                    department: visit.originDepartment,
+                    country: visit.originCountry
+                  }) || "Sin registrar"}
+                </span>
               </RecordItem>
             ))}
             {patient.visits.length === 0 ? (
@@ -237,6 +252,7 @@ export default async function PatientDetailPage({
               <thead>
                 <tr>
                   <Th>Llegada</Th>
+                  <Th>Procedencia de la visita</Th>
                   <Th>Área actual</Th>
                   <Th>Estado</Th>
                 </tr>
@@ -252,6 +268,13 @@ export default async function PatientDetailPage({
                         {formatDateTime(visit.checkedInAt)}
                       </a>
                     </Td>
+                    <Td>
+                      {geographicOriginLabel({
+                        city: visit.originCity,
+                        department: visit.originDepartment,
+                        country: visit.originCountry
+                      }) || "—"}
+                    </Td>
                     <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
                     <Td>
                       <VisitStatusPill status={visit.status} />
@@ -260,7 +283,7 @@ export default async function PatientDetailPage({
                 ))}
                 {patient.visits.length === 0 ? (
                   <tr>
-                    <Td className="py-6 text-center" colSpan={3}>
+                    <Td className="py-6 text-center" colSpan={4}>
                       Este paciente aún no tiene visitas registradas.
                     </Td>
                   </tr>

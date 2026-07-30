@@ -11,6 +11,7 @@ export type CreatePatientRecordInput = {
   gender?: PatientGender;
   city?: string;
   department?: string;
+  country?: string;
   address?: string;
   captureSource?: PatientCaptureSource;
   generalObservations?: string;
@@ -20,8 +21,22 @@ export type CreatePatientRecordInput = {
   createdById?: string;
 };
 
-function patientListWhere(search?: string): Prisma.PatientWhereInput {
-  return patientSearchWhere(search);
+function patientListWhere(input: {
+  search?: string;
+  city?: string;
+  department?: string;
+}): Prisma.PatientWhereInput {
+  return {
+    AND: [
+      patientSearchWhere(input.search),
+      input.city
+        ? { city: { contains: input.city, mode: "insensitive" } }
+        : {},
+      input.department
+        ? { department: { equals: input.department, mode: "insensitive" } }
+        : {}
+    ]
+  };
 }
 
 export async function createPatientRecord(input: CreatePatientRecordInput) {
@@ -38,6 +53,7 @@ export async function createPatientRecord(input: CreatePatientRecordInput) {
           gender: input.gender ?? "unknown",
           city: input.city,
           department: input.department,
+          country: input.country,
           address: input.address,
           captureSource: input.captureSource ?? "other",
           captureSources: input.captureSource ? [input.captureSource] : [],
@@ -74,13 +90,15 @@ export async function createPatientRecord(input: CreatePatientRecordInput) {
 export async function getPatients(
   input: PaginationInput & {
     search?: string;
+    city?: string;
+    department?: string;
   } = {}
 ) {
   const pagination = getPagination(input);
 
   return withDatabaseError("getPatients", async () => {
     return prisma.patient.findMany({
-      where: patientListWhere(input.search),
+      where: patientListWhere(input),
       include: {
         visits: {
           orderBy: { checkedInAt: "desc" },
@@ -101,9 +119,11 @@ export async function getPatients(
   });
 }
 
-export async function countPatients(input: { search?: string } = {}) {
+export async function countPatients(
+  input: { search?: string; city?: string; department?: string } = {}
+) {
   return withDatabaseError("countPatients", async () => {
-    return prisma.patient.count({ where: patientListWhere(input.search) });
+    return prisma.patient.count({ where: patientListWhere(input) });
   });
 }
 

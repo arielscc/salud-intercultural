@@ -198,5 +198,5 @@ El orden anterior fue reemplazado por la numeración vigente:
 2. Tarea 2: staging aislado.
 3. Tarea 3: auditoria append-only.
 4. Tareas 4-8: accesos, privacidad, adjuntos, recuperacion e incidentes.
-5. Cerrar integración y QA de la Tarea 9 y continuar con la Tarea 10 de
+5. Cerrar integración y QA acumulados de las Tareas 9-10 y continuar con la Tarea 11 de
    [tasks.md](./sigeco-mejoras-integrales/tasks.md).

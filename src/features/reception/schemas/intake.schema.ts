@@ -3,6 +3,11 @@ import {
   patientCaptureSourceSchema,
   patientGenderSchema
 } from "@/features/patients/schemas/patient.schema";
+import {
+  geographicOriginsMatch,
+  isCompleteGeographicOrigin,
+  normalizeGeographicOrigin
+} from "@/features/geography/origin";
 
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 const cleanText = (value: string) => value.trim().replace(/\s+/g, " ");
@@ -17,6 +22,12 @@ export const visitIntakeTypeSchema = z.enum([
 export const symptomDurationUnitSchema = z.enum(["days", "weeks", "months", "years"]);
 
 const yesNoSchema = z.enum(["yes", "no"]);
+const visitOriginModeSchema = z.enum(["same", "different"]);
+const requiredPlaceText = z.string().trim().min(2).max(120);
+const optionalPlaceText = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().max(120).optional()
+);
 
 /* El form serializa las fuentes multiples como "a,b,c" en un input oculto. */
 const captureSourcesSchema = z.preprocess(
@@ -40,7 +51,13 @@ export const receptionIntakeSchema = z
       .regex(/^[+()\d\s-]+$/, "Ingresa un telefono valido."),
     birthDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
     gender: patientGenderSchema.default("unknown"),
-    city: z.preprocess(emptyToUndefined, z.string().trim().max(120).optional()),
+    city: requiredPlaceText,
+    department: optionalPlaceText,
+    country: requiredPlaceText,
+    visitOriginMode: visitOriginModeSchema.default("same"),
+    visitOriginCity: optionalPlaceText,
+    visitOriginDepartment: optionalPlaceText,
+    visitOriginCountry: optionalPlaceText,
     reason: z.string().trim().min(2, "Ingresa el motivo de la visita.").max(500),
     symptomDurationValue: z.preprocess(
       emptyToUndefined,
@@ -61,6 +78,31 @@ export const receptionIntakeSchema = z
       message: "La duracion necesita cantidad y unidad.",
       path: ["symptomDurationUnit"]
     }
+  )
+  .refine(
+    (data) =>
+      isCompleteGeographicOrigin({
+        city: data.city,
+        department: data.department ?? "",
+        country: data.country
+      }),
+    {
+      message: "Completa la ciudad, el departamento y el país de procedencia.",
+      path: ["department"]
+    }
+  )
+  .refine(
+    (data) =>
+      data.visitOriginMode === "same" ||
+      isCompleteGeographicOrigin({
+        city: data.visitOriginCity ?? "",
+        department: data.visitOriginDepartment ?? "",
+        country: data.visitOriginCountry ?? ""
+      }),
+    {
+      message: "Completa la procedencia de esta visita.",
+      path: ["visitOriginCity"]
+    }
   );
 
 export type ReceptionIntakeInput = z.infer<typeof receptionIntakeSchema>;
@@ -80,16 +122,35 @@ export const patientEditSchema = z.object({
     .regex(/^[+()\d\s-]+$/, "Ingresa un telefono valido."),
   birthDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
   gender: patientGenderSchema.default("unknown"),
-  city: z.preprocess(emptyToUndefined, z.string().trim().max(120).optional()),
+  city: requiredPlaceText,
+  department: optionalPlaceText,
+  country: requiredPlaceText,
   allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
   relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
   currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
   captureSources: captureSourcesSchema
-});
+}).refine(
+  (data) =>
+    isCompleteGeographicOrigin({
+      city: data.city,
+      department: data.department ?? "",
+      country: data.country
+    }),
+  {
+    message: "Completa la ciudad, el departamento y el país de procedencia.",
+    path: ["department"]
+  }
+);
 
 export type PatientEditInput = z.infer<typeof patientEditSchema>;
 
 export function toPatientEditRecord(input: PatientEditInput) {
+  const origin = normalizeGeographicOrigin({
+    city: input.city,
+    department: input.department ?? "",
+    country: input.country
+  });
+
   return {
     patientId: input.patientId,
     data: {
@@ -97,7 +158,9 @@ export function toPatientEditRecord(input: PatientEditInput) {
       phone: cleanText(input.phone),
       birthDate: input.birthDate ?? null,
       gender: input.gender,
-      city: input.city ? cleanText(input.city) : null,
+      city: origin.city,
+      department: origin.department || null,
+      country: origin.country,
       captureSource: input.captureSources[0] ?? "other",
       captureSources: input.captureSources,
       allergies: input.allergies ? cleanText(input.allergies) : null,
@@ -108,6 +171,24 @@ export function toPatientEditRecord(input: PatientEditInput) {
 }
 
 export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
+  const patientOrigin = normalizeGeographicOrigin({
+    city: input.city,
+    department: input.department ?? "",
+    country: input.country
+  });
+  const requestedVisitOrigin =
+    input.visitOriginMode === "different"
+      ? normalizeGeographicOrigin({
+          city: input.visitOriginCity ?? "",
+          department: input.visitOriginDepartment ?? "",
+          country: input.visitOriginCountry ?? ""
+        })
+      : patientOrigin;
+  const originMatchesPatient = geographicOriginsMatch(
+    patientOrigin,
+    requestedVisitOrigin
+  );
+
   return {
     patientId: input.patientId,
     patient: {
@@ -115,7 +196,9 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
       phone: cleanText(input.phone),
       birthDate: input.birthDate,
       gender: input.gender,
-      city: input.city ? cleanText(input.city) : undefined,
+      city: patientOrigin.city,
+      department: patientOrigin.department || null,
+      country: patientOrigin.country,
       captureSource: input.captureSources[0] ?? "other",
       captureSources: input.captureSources,
       allergies: input.allergies ? cleanText(input.allergies) : undefined,
@@ -128,7 +211,11 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
       symptomDurationValue: input.symptomDurationValue,
       symptomDurationUnit: input.symptomDurationUnit,
       previouslyTreated: input.previouslyTreated ? input.previouslyTreated === "yes" : undefined,
-      bringsStudies: input.bringsStudies ? input.bringsStudies === "yes" : undefined
+      bringsStudies: input.bringsStudies ? input.bringsStudies === "yes" : undefined,
+      originCity: requestedVisitOrigin.city,
+      originDepartment: requestedVisitOrigin.department || undefined,
+      originCountry: requestedVisitOrigin.country,
+      originMatchesPatient
     }
   };
 }

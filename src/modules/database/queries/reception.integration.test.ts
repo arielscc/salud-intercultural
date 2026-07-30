@@ -8,7 +8,24 @@ import {
   updateReceptionPatient
 } from "@/modules/database/queries/reception";
 import { createPatientRecord } from "@/modules/database/queries/patients";
-import { updateVisitRouteStatus } from "@/modules/database/queries/visits";
+import {
+  getVisitById,
+  getVisits,
+  updateVisitRouteStatus
+} from "@/modules/database/queries/visits";
+
+const habitualOrigin = {
+  city: "El Alto",
+  department: "La Paz",
+  country: "Bolivia"
+};
+
+const visitOrigin = {
+  originCity: "El Alto",
+  originDepartment: "La Paz",
+  originCountry: "Bolivia",
+  originMatchesPatient: true
+};
 
 async function cleanReceptionData() {
   await prisma.visit.deleteMany();
@@ -43,7 +60,7 @@ describe("reception intake integration", () => {
         phone: "+591 71234567",
         birthDate: new Date("1988-04-12"),
         gender: "female",
-        city: "El Alto",
+        ...habitualOrigin,
         captureSource: "referral",
         allergies: "Ninguna conocida",
         relevantHistory: "Diabetes tipo 2",
@@ -56,7 +73,8 @@ describe("reception intake integration", () => {
         symptomDurationValue: 3,
         symptomDurationUnit: "months",
         previouslyTreated: true,
-        bringsStudies: false
+        bringsStudies: false,
+        ...visitOrigin
       }
     });
 
@@ -85,6 +103,9 @@ describe("reception intake integration", () => {
     expect(visit.symptomDurationUnit).toBe("months");
     expect(visit.previouslyTreated).toBe(true);
     expect(visit.bringsStudies).toBe(false);
+    expect(visit.originCity).toBe("El Alto");
+    expect(visit.originDepartment).toBe("La Paz");
+    expect(visit.originCountry).toBe("Bolivia");
     expect(visit.checkIn).not.toBeNull();
     expect(visit.route?.currentArea).toBe("recepcion");
     expect(visit.route?.steps).toHaveLength(1);
@@ -107,13 +128,17 @@ describe("reception intake integration", () => {
       patient: {
         fullName: "Jose Mamani",
         phone: "+591 70000001",
-        city: "El Alto",
+        ...habitualOrigin,
         currentMedication: "Ibuprofeno",
         followUpPreference: "call"
       },
       visit: {
         reason: "Control de tratamiento",
-        intakeType: "treatment_control"
+        intakeType: "treatment_control",
+        originCity: "Cochabamba",
+        originDepartment: "Cochabamba",
+        originCountry: "Bolivia",
+        originMatchesPatient: false
       }
     });
 
@@ -126,6 +151,8 @@ describe("reception intake integration", () => {
     expect(updated.currentMedication).toBe("Ibuprofeno");
     expect(updated.followUpPreference).toBe("call");
     expect(result.visit.intakeType).toBe("treatment_control");
+    expect(result.visit.originCity).toBe("Cochabamba");
+    expect(result.visit.originMatchesPatient).toBe(false);
   });
 
   it("creates the minimal intake with only name, phone and reason", async () => {
@@ -135,10 +162,12 @@ describe("reception intake integration", () => {
       userId: user.id,
       patient: {
         fullName: "Ana Condori",
-        phone: "+591 79999999"
+        phone: "+591 79999999",
+        ...habitualOrigin
       },
       visit: {
-        reason: "Consulta general"
+        reason: "Consulta general",
+        ...visitOrigin
       }
     });
 
@@ -169,6 +198,8 @@ describe("reception intake integration", () => {
       birthDate: new Date("1986-02-20"),
       gender: "female",
       city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
       captureSource: "referral",
       captureSources: ["referral", "facebook"],
       allergies: null,
@@ -210,23 +241,75 @@ describe("reception intake integration", () => {
     expect(noMatch).toHaveLength(0);
   });
 
+  it("preserves and filters a closed visit from Cochabamba", async () => {
+    const user = await createReceptionUser();
+    const result = await createReceptionIntake({
+      userId: user.id,
+      patient: {
+        fullName: "Paciente viajero",
+        phone: "70000009",
+        ...habitualOrigin
+      },
+      visit: {
+        reason: "Control durante viaje",
+        originCity: "Cochabamba",
+        originDepartment: "Cochabamba",
+        originCountry: "Bolivia",
+        originMatchesPatient: false
+      }
+    });
+
+    await updateVisitRouteStatus({
+      visitId: result.visit.id,
+      userId: user.id,
+      status: "completed",
+      area: "cierre",
+      note: "Atención terminada"
+    });
+    await updateReceptionPatient(result.patientId, {
+      fullName: "Paciente viajero",
+      phone: "70000009",
+      birthDate: null,
+      gender: "unknown",
+      city: "La Paz",
+      department: "La Paz",
+      country: "Bolivia",
+      captureSource: "other",
+      captureSources: [],
+      allergies: null,
+      relevantHistory: null,
+      currentMedication: null
+    });
+
+    const closedVisit = await getVisitById(result.visit.id);
+    const cochabambaVisits = await getVisits({
+      originCity: "Cochabamba",
+      originDepartment: "Cochabamba"
+    });
+
+    expect(closedVisit?.originCity).toBe("Cochabamba");
+    expect(closedVisit?.originDepartment).toBe("Cochabamba");
+    expect(closedVisit?.originMatchesPatient).toBe(false);
+    expect(cochabambaVisits.map((visit) => visit.id)).toContain(result.visit.id);
+  });
+
   it("summarizes unique arrivals, active routes and today abandonments", async () => {
     const user = await createReceptionUser();
     const first = await createReceptionIntake({
       userId: user.id,
-      patient: { fullName: "Paciente Uno", phone: "70000001" },
-      visit: { reason: "Primera llegada" }
+      patient: { fullName: "Paciente Uno", phone: "70000001", ...habitualOrigin },
+      visit: { reason: "Primera llegada", ...visitOrigin }
     });
     await createReceptionIntake({
       userId: user.id,
       patientId: first.patientId,
-      patient: { fullName: "Paciente Uno", phone: "70000001" },
-      visit: { reason: "Segunda llegada" }
+      patient: { fullName: "Paciente Uno", phone: "70000001", ...habitualOrigin },
+      visit: { reason: "Segunda llegada", ...visitOrigin }
     });
     const second = await createReceptionIntake({
       userId: user.id,
-      patient: { fullName: "Paciente Dos", phone: "70000002" },
-      visit: { reason: "Consulta del día" }
+      patient: { fullName: "Paciente Dos", phone: "70000002", ...habitualOrigin },
+      visit: { reason: "Consulta del día", ...visitOrigin }
     });
 
     await updateVisitRouteStatus({

@@ -15,6 +15,7 @@ import {
 } from "@/features/patients/labels";
 import { applyVisitFlowAction, updateVisitStatusAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
+import { geographicOriginLabel } from "@/features/geography/origin";
 import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { formatDateTime } from "@/lib/dates";
 import { getVisitById } from "@/modules/database/queries/visits";
@@ -95,6 +96,21 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
               <dt className="text-[11px] font-semibold uppercase text-muted">Motivo de atención</dt>
               <dd className="mt-0.5 text-sm font-medium text-text">
                 {visit.reason || "Sin motivo registrado"}
+              </dd>
+            </div>
+            <div className="mt-px bg-surface px-3 py-2.5 sm:col-span-2">
+              <dt className="text-[11px] font-semibold uppercase text-muted">
+                Procedencia de esta visita
+              </dt>
+              <dd className="mt-0.5 text-sm font-medium text-text">
+                {geographicOriginLabel({
+                  city: visit.originCity,
+                  department: visit.originDepartment,
+                  country: visit.originCountry
+                }) || "Sin registrar"}
+                {!visit.originMatchesPatient
+                  ? " · diferente de su procedencia habitual"
+                  : ""}
               </dd>
             </div>
           </dl>

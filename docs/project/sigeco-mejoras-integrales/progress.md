@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7, 9 y 10 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las dieciséis migraciones actuales están
-aplicadas en desarrollo. Falta validar las cuatro
+anteriores están en staging y las diecisiete migraciones actuales están
+aplicadas en desarrollo. Falta validar las cinco
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8.
@@ -26,8 +26,8 @@ funcionamiento del gate de la Tarea 8.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 20 |
-| En progreso | 8 |
+| Pendiente | 19 |
+| En progreso | 9 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -55,7 +55,7 @@ funcionamiento del gate de la Tarea 8.
 | 7 | Backup y restauración | P0 | En progreso | 2, 6 |
 | 8 | Incidentes y gate de seguridad | P0 | Terminada | 1-7 |
 | 9 | Consentimientos | P0 | En progreso | 3-5, textos aprobados para local/staging |
-| 10 | Procedencia geográfica | P1 | Pendiente | 8 |
+| 10 | Procedencia geográfica | P1 | En progreso | 8 |
 | 11 | Fuentes de captación | P1 | Pendiente | 9-10 |
 | 12 | Duplicados y fusión | P1 | Pendiente | 3-5 |
 | 13 | Actualización de bandejas | P1 | Pendiente | 1-5 |
@@ -99,6 +99,10 @@ Estado de las tareas de la base segura:
   cinco finalidades, permisos, historial, retiro y bloqueo de Seguimiento
   implementados en desarrollo. Pendiente ejecutar integración con autorización,
   QA por roles en staging y aprobación expresa de los textos para producción.
+- **Tarea 10 — Departamento y procedencia geográfica:** procedencia habitual,
+  fotografía histórica por visita, normalización y filtros implementados en
+  desarrollo local. Pendiente integración acumulada, QA de gstack al cierre y
+  validación en staging.
 
 Para terminar la Tarea 1:
 

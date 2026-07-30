@@ -7,14 +7,12 @@ import {
   type PatientSearchResult
 } from "@/components/internal/reception/PatientAutocomplete";
 import { PhoneInput } from "@/components/internal/reception/PhoneInput";
+import { GeographicOriginFields } from "@/components/internal/reception/GeographicOriginFields";
 import {
   calculateAge,
   ChipOption,
-  cityChips,
-  cityStateFrom,
   NO_KNOWN_ALLERGIES,
-  normalizePhone,
-  type CityChoice
+  normalizePhone
 } from "@/components/internal/reception/funnel-fields";
 import { Button } from "@/components/internal/ui/Button";
 import { Card } from "@/components/internal/ui/Card";
@@ -33,6 +31,11 @@ import {
   symptomDurationUnitLabels,
   visitIntakeTypeLabels
 } from "@/features/reception/labels";
+import {
+  BOLIVIA_COUNTRY,
+  isCompleteGeographicOrigin,
+  type GeographicOriginValue
+} from "@/features/geography/origin";
 import { cn } from "@/lib/cn";
 import { Search, UserRoundPlus } from "lucide-react";
 import { useState, useTransition } from "react";
@@ -40,10 +43,10 @@ import { useState, useTransition } from "react";
 type PatientMatch = PatientSearchResult;
 
 const stepTitles: Record<number, string> = {
-  1: "Datos de la persona",
+  1: "Datos y procedencia habitual",
   2: "¿A qué viene?",
   3: "Antecedentes rápidos",
-  4: "Origen y seguimiento"
+  4: "Procedencia de la visita y captación"
 };
 
 export function IntakeFunnel({
@@ -70,9 +73,19 @@ export function IntakeFunnel({
   const [phone, setPhone] = useState(initialPatient?.phone ?? "");
   const [birthDate, setBirthDate] = useState(initialPatient?.birthDate ?? "");
   const [gender, setGender] = useState(initialPatient?.gender ?? "unknown");
-  const initialCity = cityStateFrom(initialPatient?.city);
-  const [cityChoice, setCityChoice] = useState<CityChoice>(initialCity.choice);
-  const [cityOther, setCityOther] = useState(initialCity.other);
+  const [patientOrigin, setPatientOrigin] = useState<GeographicOriginValue>({
+    city: initialPatient?.city ?? "",
+    department: initialPatient?.department ?? "",
+    country: initialPatient?.country ?? BOLIVIA_COUNTRY
+  });
+  const [visitOriginMode, setVisitOriginMode] = useState<"same" | "different">(
+    "same"
+  );
+  const [visitOrigin, setVisitOrigin] = useState<GeographicOriginValue>({
+    city: "",
+    department: "",
+    country: BOLIVIA_COUNTRY
+  });
 
   const [reason, setReason] = useState("");
   const [durationValue, setDurationValue] = useState("");
@@ -96,7 +109,6 @@ export function IntakeFunnel({
   );
 
   const age = calculateAge(birthDate);
-  const city = cityChoice === "otra" ? cityOther : cityChoice;
   const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
 
   function toggleCaptureSource(value: string) {
@@ -111,9 +123,13 @@ export function IntakeFunnel({
     setPhone(patient.phone);
     setBirthDate(patient.birthDate);
     setGender(patient.gender);
-    const cityState = cityStateFrom(patient.city);
-    setCityChoice(cityState.choice);
-    setCityOther(cityState.other);
+    setPatientOrigin({
+      city: patient.city ?? "",
+      department: patient.department ?? "",
+      country: patient.country ?? BOLIVIA_COUNTRY
+    });
+    setVisitOriginMode("same");
+    setVisitOrigin({ city: "", department: "", country: BOLIVIA_COUNTRY });
     setNoKnownAllergies(patient.allergies === NO_KNOWN_ALLERGIES);
     setAllergies(patient.allergies === NO_KNOWN_ALLERGIES ? "" : (patient.allergies ?? ""));
     setRelevantHistory(patient.relevantHistory ?? "");
@@ -137,8 +153,13 @@ export function IntakeFunnel({
     setPhone(looksLikePhone ? term : "");
     setBirthDate("");
     setGender("unknown");
-    setCityChoice("");
-    setCityOther("");
+    setPatientOrigin({
+      city: "",
+      department: "",
+      country: BOLIVIA_COUNTRY
+    });
+    setVisitOriginMode("same");
+    setVisitOrigin({ city: "", department: "", country: BOLIVIA_COUNTRY });
     setNoKnownAllergies(false);
     setAllergies("");
     setRelevantHistory("");
@@ -168,6 +189,12 @@ export function IntakeFunnel({
     }
     if (!/^[+()\d\s-]{6,}$/.test(phone.trim())) {
       setStepError("Ingresa un teléfono válido.");
+      return;
+    }
+    if (!isCompleteGeographicOrigin(patientOrigin)) {
+      setStepError(
+        "Completa la ciudad, el departamento y el país de procedencia habitual."
+      );
       return;
     }
     setStepError(null);
@@ -216,7 +243,17 @@ export function IntakeFunnel({
       action={submitReceptionIntakeAction}
       className="grid gap-4"
       onSubmit={(event) => {
-        if (step !== 4) event.preventDefault();
+        if (step !== 4) {
+          event.preventDefault();
+          return;
+        }
+        if (
+          visitOriginMode === "different" &&
+          !isCompleteGeographicOrigin(visitOrigin)
+        ) {
+          event.preventDefault();
+          setStepError("Completa la procedencia desde la que llega hoy.");
+        }
       }}
     >
       <input type="hidden" name="funnelCompleted" value={step === 4 ? "true" : "false"} />
@@ -225,7 +262,25 @@ export function IntakeFunnel({
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="birthDate" value={birthDate} />
       <input type="hidden" name="gender" value={gender} />
-      <input type="hidden" name="city" value={city} />
+      <input type="hidden" name="city" value={patientOrigin.city} />
+      <input
+        type="hidden"
+        name="department"
+        value={patientOrigin.department}
+      />
+      <input type="hidden" name="country" value={patientOrigin.country} />
+      <input type="hidden" name="visitOriginMode" value={visitOriginMode} />
+      <input type="hidden" name="visitOriginCity" value={visitOrigin.city} />
+      <input
+        type="hidden"
+        name="visitOriginDepartment"
+        value={visitOrigin.department}
+      />
+      <input
+        type="hidden"
+        name="visitOriginCountry"
+        value={visitOrigin.country}
+      />
       <input type="hidden" name="reason" value={reason} />
       <input type="hidden" name="symptomDurationValue" value={durationValue} />
       <input type="hidden" name="symptomDurationUnit" value={durationUnit} />
@@ -358,34 +413,15 @@ export function IntakeFunnel({
         <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
           <DatePickerField value={birthDate} onChange={setBirthDate} />
         </Field>
-        <div className="grid gap-1.5 text-[13px] font-medium text-text lg:col-span-2">
-          <span>Ciudad</span>
-          <div className="flex flex-wrap gap-2">
-            {cityChips.map((option) => (
-              <ChipOption
-                key={option}
-                selected={cityChoice === option}
-                onClick={() => setCityChoice(cityChoice === option ? "" : option)}
-              >
-                {option}
-              </ChipOption>
-            ))}
-            <ChipOption
-              selected={cityChoice === "otra"}
-              onClick={() => setCityChoice(cityChoice === "otra" ? "" : "otra")}
-            >
-              Otra
-            </ChipOption>
-          </div>
-          {cityChoice === "otra" ? (
-            <input
-              className={internalInputClassName}
-              value={cityOther}
-              onChange={(event) => setCityOther(event.target.value)}
-              placeholder="¿Cuál?"
-            />
-          ) : null}
-        </div>
+        <GeographicOriginFields
+          idPrefix="patient-origin"
+          label="Procedencia habitual"
+          description="Lugar donde vive normalmente. No necesariamente es el lugar desde el que llegó hoy."
+          value={patientOrigin}
+          onChange={setPatientOrigin}
+          required
+          className="lg:col-span-2"
+        />
         <div className="grid gap-1.5 text-[13px] font-medium text-text lg:col-span-2">
           <span>Género (opcional)</span>
           <div className="flex flex-wrap gap-2">
@@ -558,6 +594,46 @@ export function IntakeFunnel({
       </Card>
 
       <Card className={cn("grid gap-4 lg:grid-cols-2", step === 4 ? "" : "hidden")}>
+        <div className="grid gap-2 lg:col-span-2">
+          <p className="text-[13px] font-semibold text-text">
+            ¿Hoy llega desde su procedencia habitual?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <ChipOption
+              selected={visitOriginMode === "same"}
+              onClick={() => setVisitOriginMode("same")}
+            >
+              Sí, desde el mismo lugar
+            </ChipOption>
+            <ChipOption
+              selected={visitOriginMode === "different"}
+              onClick={() => setVisitOriginMode("different")}
+            >
+              No, llega desde otro lugar
+            </ChipOption>
+          </div>
+        </div>
+        {visitOriginMode === "different" ? (
+          <GeographicOriginFields
+            idPrefix="visit-origin"
+            label="Procedencia de esta visita"
+            description="Este dato queda guardado en la visita aunque después cambie la ficha del paciente."
+            value={visitOrigin}
+            onChange={setVisitOrigin}
+            required
+            className="lg:col-span-2"
+          />
+        ) : (
+          <p className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted lg:col-span-2">
+            Esta visita conservará:{" "}
+            <span className="font-semibold text-text">
+              {[patientOrigin.city, patientOrigin.department, patientOrigin.country]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+            .
+          </p>
+        )}
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>¿Cómo nos conoció? (puede elegir varios)</span>
           <div className="flex flex-wrap gap-2">

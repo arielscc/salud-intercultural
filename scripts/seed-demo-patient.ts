@@ -55,6 +55,10 @@ type VisitSeedInput = {
   checkedInAt: Date;
   completedAt?: Date;
   checkInNote?: string;
+  originCity?: string;
+  originDepartment?: string;
+  originCountry?: string;
+  originMatchesPatient?: boolean;
   steps: RouteStepInput[];
 };
 
@@ -79,6 +83,10 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
       symptomDurationUnit: input.symptomDurationUnit,
       previouslyTreated: input.previouslyTreated,
       bringsStudies: input.bringsStudies ?? false,
+      originCity: input.originCity ?? "La Paz",
+      originDepartment: input.originDepartment ?? "La Paz",
+      originCountry: input.originCountry ?? "Bolivia",
+      originMatchesPatient: input.originMatchesPatient ?? true,
       checkedInAt: input.checkedInAt,
       completedAt: input.completedAt,
       createdAt: input.checkedInAt
@@ -202,6 +210,7 @@ async function main() {
           gender: "male",
           city: "La Paz",
           department: "La Paz",
+          country: "Bolivia",
           address: "Av. Buenos Aires 1240, zona Gran Poder",
           captureSource: "referral",
           captureSources: ["referral", "tiktok"],

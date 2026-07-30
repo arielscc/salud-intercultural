@@ -78,7 +78,11 @@ export async function submitReceptionIntakeAction(formData: FormData) {
         entityId: created.visit.id,
         context: {
           patientId: created.patientId,
-          patientRecord: record.patientId ? "existing" : "new"
+          patientRecord: record.patientId ? "existing" : "new",
+          originCity: record.visit.originCity,
+          originDepartment: record.visit.originDepartment,
+          originCountry: record.visit.originCountry,
+          originMatchesPatient: record.visit.originMatchesPatient
         }
       });
     }
