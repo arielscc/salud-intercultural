@@ -1,6 +1,6 @@
 # Progress — Mejoras Integrales De SIGECO
 
-Última actualización: 2026-07-29.
+Última actualización: 2026-07-30.
 
 Plan de ejecución: [tasks.md](./tasks.md)
 
@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-15 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-16 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las veintidós migraciones actuales están
-aplicadas en desarrollo. Falta validar las diez
+anteriores están en staging y las veintitrés migraciones actuales están
+aplicadas en desarrollo. Falta validar las once
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8.
@@ -26,8 +26,8 @@ funcionamiento del gate de la Tarea 8.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 14 |
-| En progreso | 14 |
+| Pendiente | 13 |
+| En progreso | 15 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -61,7 +61,7 @@ funcionamiento del gate de la Tarea 8.
 | 13 | Actualización de bandejas | P1 | En progreso | 1-5 |
 | 14 | Resultado de propuesta | P1 | En progreso | 3, 4, 9 |
 | 15 | Tipos de seguimiento | P1 | En progreso | 9, 14 |
-| 16 | Abandono, bloqueo y pendientes | P1 | Pendiente | 13, 15 |
+| 16 | Abandono, bloqueo y pendientes | P1 | En progreso | 13, 15 |
 | 17 | Correcciones y firma clínica | P1 | Pendiente | 3-5 |
 | 18 | Caja, dinero al personal, gastos y cierre | P0 | Pendiente | 3-5, 8 |
 | 19 | Catálogo y proveedores | P0 | Pendiente | 3-5, 18 |
@@ -130,6 +130,11 @@ Estado de las tareas de la base segura:
   desarrollo local. Los seguimientos clínicos quedan con Recepción/Marlen y el
   rol técnico de Yazmin solo puede trabajar tareas administrativas. Pendiente
   integración acumulada, QA de gstack y validación por roles en staging.
+- **Tarea 16 — Abandono, bloqueo y pendientes:** punto, área, motivo, usuario,
+  fecha y pendientes persistentes implementados en desarrollo local. Las
+  tareas y órdenes abiertas quedan bloqueadas, el seguimiento solo se crea con
+  consentimiento y el reporte agrupa abandonos por motivo. Pendiente
+  integración acumulada, QA de gstack y validación por roles en staging.
 
 Para terminar la Tarea 1:
 
@@ -173,6 +178,10 @@ Blob clínico privado y las credenciales separadas aprobadas.
 - El detalle pagado u orgánico solo se atribuye internamente cuando una campaña o enlace entrega evidencia.
 - Una fusión de pacientes archiva la ficha anterior, conserva su código como
   alias y nunca borra su evidencia histórica.
+- “No continuará” es abandono durante la visita y exige motivo. No equivale a
+  cancelación ni a atención completada.
+- Los pendientes de una visita abandonada se bloquean y conservan; nunca se
+  marcan automáticamente como terminados.
 - Recepción revisa posibles duplicados; solo el super administrador puede
   ejecutar la fusión.
 - Las bandejas operativas revisan cambios cada 30 segundos en escritorio y 60
@@ -755,6 +764,52 @@ producción hasta que las tareas responsables aporten evidencia y Dirección
 emita una autorización posterior.
 
 **Commit sugerido:** `docs(ops): complete sigeco security readiness`
+
+## 2026-07-30 — Tarea 16 — Abandono, Bloqueo Y Pendientes
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: áreas operativas y Dirección para revisión.
+
+### Resultado
+
+- “No continuará” exige motivo y registra el punto real de salida.
+- Se conservan área, estado anterior, usuario, fecha, nota y pendientes.
+- SIGECO detecta órdenes, estudios, cobros, entregas y seguimientos abiertos.
+- Las tareas y órdenes sin terminar quedan bloqueadas y visibles.
+- El seguimiento de recuperación requiere consentimiento vigente y pertenece a
+  Recepción/Marlen.
+- Se habilitó el registro desde Recepción, Consulta, Enfermería y Caja.
+- El reporte web agrupa por motivo y muestra los pendientes por visita.
+
+### Archivos Y Migraciones
+
+- Modelo, política, schema, acciones y consultas de interrupción de visita.
+- Formularios responsive y reporte `/sigeco/recepcion/abandonos`.
+- Permisos separados de lectura y escritura.
+- Migración local `20260730142202_visit_discontinuations`, con backfill
+  conservador para abandonos anteriores.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Prisma format, validate y generate aprobados.
+- TypeScript y lint aprobados.
+- 4 archivos y 25 pruebas enfocadas aprobados.
+- Migración aplicada únicamente a `salud_intercultural_dev`.
+- Los 4 abandonos históricos quedaron migrados y no existen visitas abandonadas
+  sin su evento asociado.
+
+### Pendientes
+
+- Ejecutar integración, build y QA gstack en el cierre acumulado.
+- Validar los cuatro puntos de salida con cuentas de cada área en staging.
+- Confirmar la cuenta activa de Marlen y revisar el reporte con Dirección.
+- No aplicar la migración en producción sin autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): record abandonment and blocked work`
 
 ## Cómo Actualizar El Progreso
 

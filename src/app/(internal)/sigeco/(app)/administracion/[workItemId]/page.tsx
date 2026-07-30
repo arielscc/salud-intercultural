@@ -12,6 +12,7 @@ import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
+import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import {
   createPaymentAction,
   createSaleAction,
@@ -24,6 +25,7 @@ import {
 } from "@/features/sales/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { getInventoryItems } from "@/modules/database/queries/inventory";
 import { getAdministrationWorkItemById } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";
@@ -41,7 +43,7 @@ export default async function AdministrationWorkItemPage({
   params,
   searchParams
 }: AdministrationWorkItemPageProps) {
-  await requirePermission("sales_read");
+  const user = await requirePermission("sales_read");
   const { workItemId } = await params;
   const query = await searchParams;
   const [item, inventoryItems] = await Promise.all([
@@ -56,6 +58,10 @@ export default async function AdministrationWorkItemPage({
   const proposalOutcome = order?.treatmentProposalOutcome;
   const generatedSale = item.sales[0];
   const isPaidStudyOrder = Boolean(generatedSale && item.clinicalOrders.some((entry) => entry.type === "study"));
+  const canRecordDiscontinuation = roleHasPermission(
+    user.role,
+    "visit_discontinuations_write"
+  );
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -272,22 +278,24 @@ export default async function AdministrationWorkItemPage({
                   Cerrar visita
                 </SubmitButton>
               </ConfirmForm>
-              <ConfirmForm
-                action={applyVisitFlowAction}
-                notice="Retiro registrado"
-                confirmTitle="Marcar retiro"
-                confirmDescription={`La visita de ${patient.fullName} se cerrará como retiro sin atención completa. Esta acción no se puede deshacer.`}
-                confirmLabel="Marcar retiro"
-              >
-                <input type="hidden" name="visitId" value={item.visit.id} />
-                <input type="hidden" name="flow" value="left" />
-                <SubmitButton
-                  variant="outline"
-                  className="w-full border-error/30 text-error hover:border-error/50 hover:text-error"
-                >
-                  Se retiró sin completar
-                </SubmitButton>
-              </ConfirmForm>
+              {canRecordDiscontinuation ? (
+                <VisitDiscontinuationForm
+                  visitId={item.visit.id}
+                  patientName={patient.fullName}
+                  defaultPendingTypes={[
+                    ...(item.sales.some((sale) => sale.balanceCents > 0) ||
+                    item.sales.length === 0
+                      ? (["payment"] as const)
+                      : []),
+                    ...(item.sales.some((sale) =>
+                      sale.items.some((saleItem) => !saleItem.delivered)
+                    )
+                      ? (["delivery"] as const)
+                      : [])
+                  ]}
+                  compact
+                />
+              ) : null}
             </div>
           </Card>
         ) : null}

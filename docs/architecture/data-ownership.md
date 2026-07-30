@@ -26,6 +26,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Identidad, duplicados y alias de pacientes | Prisma | SIGECO | Activo | La ficha anterior se archiva y redirige; la fusión transaccional conserva historia y evidencia. |
 | Resultado de propuestas de tratamiento | Prisma | SIGECO, Médico y Administración | Activo | Decisión append-only; una aceptación crea una orden, no una venta ni un pago automáticos. |
 | Clasificación y resultado de seguimientos | Prisma | SIGECO, Recepción/Marlen y Médico | Activo | Tipo, relación, prioridad, responsable y resultado separados; llamadas médicas no se cierran como trabajo administrativo. |
+| Abandono y pendientes de visita | Prisma | SIGECO, áreas operativas y Dirección | Activo | Conserva punto, área, motivo, responsable y pendientes; las tareas abiertas quedan bloqueadas, no eliminadas. |
 | Configuracion global | Payload | Payload Admin | Activo | Global `site-settings`; config estatica solo fallback. |
 | Home editable | Payload | Payload Admin | Activo | Global `home-content`; `src/data/home.ts` queda como fallback/seed. |
 | Media | Payload | Payload Admin | Activo | Storage local o Vercel Blob segun ambiente. |

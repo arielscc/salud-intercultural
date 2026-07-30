@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
@@ -7,6 +8,8 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
+import { Chip } from "@/components/internal/ui/Chip";
+import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import { createReceptionPaidStudyOrderAction } from "@/features/clinical-care/actions";
 import {
   routeAreaLabels,
@@ -15,7 +18,12 @@ import {
 } from "@/features/patients/labels";
 import { applyVisitFlowAction, updateVisitStatusAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
+import {
+  visitDiscontinuationReasonLabels,
+  visitPendingTypeLabels
+} from "@/features/visit-discontinuations/labels";
 import { geographicOriginLabel } from "@/features/geography/origin";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import {
   verifiedAttributionDetail,
   visitAttributionSummary
@@ -27,31 +35,65 @@ import { requirePermission } from "@/modules/permissions";
 import { Clock3, MapPin, Phone } from "lucide-react";
 import { notFound } from "next/navigation";
 
-const statusOptions = Object.entries(visitStatusLabels) as Array<[VisitStatus, string]>;
+const statusOptions = (
+  Object.entries(visitStatusLabels) as Array<[VisitStatus, string]>
+).filter(
+  ([status]) => !["completed", "left_without_care"].includes(status)
+);
 const areaOptions = Object.entries(routeAreaLabels) as Array<[PatientRouteArea, string]>;
 
 type VisitDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    aviso?: string;
+    seguimiento?: string;
+  }>;
 };
 
 export default async function VisitDetailPage({ params, searchParams }: VisitDetailPageProps) {
   const user = await requirePermission("visits_read");
-  const [{ id }, { error }] = await Promise.all([params, searchParams]);
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const visit = await getVisitById(id);
 
   if (!visit) notFound();
 
   const isActive = isActiveVisitStatus(visit.status);
+  const canRecordDiscontinuation = roleHasPermission(
+    user.role,
+    "visit_discontinuations_write"
+  );
 
   return (
     <div className="grid gap-4">
       <MobileBackLink href="/sigeco/recepcion" label="Volver a Recepción" />
-      {error === "cerrada" ? (
+      {query.error === "cerrada" ? (
         <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
           <p className="flex items-center gap-1.5 font-semibold text-warning">
             <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
             Esta visita ya está cerrada; no se aplicó la acción.
+          </p>
+        </div>
+      ) : null}
+      {query.error === "abandono-invalido" ? (
+        <div className="rounded-[9px] bg-error/10 px-4 py-3 text-sm text-error">
+          <p className="font-semibold">Selecciona un motivo para continuar.</p>
+          <p className="mt-1">
+            La visita permanece abierta y no se cambió ningún pendiente.
+          </p>
+        </div>
+      ) : null}
+      {query.aviso === "abandono-registrado" ? (
+        <div className="rounded-[9px] bg-primary/10 px-4 py-3 text-sm text-primary-dark">
+          <p className="font-semibold">El abandono quedó registrado.</p>
+          <p className="mt-1">
+            {query.seguimiento === "creado"
+              ? "También se creó el seguimiento de recuperación."
+              : query.seguimiento === "existente"
+                ? "La visita quedó vinculada al seguimiento que ya estaba pendiente."
+              : query.seguimiento === "sin-consentimiento"
+                ? "No se creó contacto porque no existe consentimiento vigente."
+                : "Los pendientes quedaron conservados para su revisión."}
           </p>
         </div>
       ) : null}
@@ -180,23 +222,14 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                   Cerrar atención completada
                 </SubmitButton>
               </ConfirmForm>
-              <ConfirmForm
-                action={applyVisitFlowAction}
-                notice="Retiro registrado"
-                confirmTitle="Marcar retiro"
-                confirmDescription={`La visita de ${visit.patient.fullName} se cerrará como retiro sin atención completa. Esta acción no se puede deshacer.`}
-                confirmLabel="Marcar retiro"
-              >
-                <input type="hidden" name="visitId" value={visit.id} />
-                <input type="hidden" name="flow" value="left" />
-                <SubmitButton
-                  size="sm"
-                  variant="outline"
-                  className="border-error/30 text-error hover:border-error/50 hover:text-error"
+              {canRecordDiscontinuation ? (
+                <a
+                  href="#no-continuara"
+                  className="focus-ring inline-flex min-h-9 items-center rounded-[7px] border border-error/30 px-3 text-sm font-semibold text-error hover:border-error/50"
                 >
-                  Registrar abandono
-                </SubmitButton>
-              </ConfirmForm>
+                  No continuará
+                </a>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -204,6 +237,84 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
 
       <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
         <div className="grid gap-4">
+          {visit.discontinuation ? (
+            <Card>
+              <CardHeader
+                title="Dónde se detuvo la visita"
+                description="Registro del abandono y de lo que todavía debe recuperarse."
+              />
+              <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-muted">
+                    Punto y área
+                  </dt>
+                  <dd className="mt-1 font-semibold text-text">
+                    {visitStatusLabels[visit.discontinuation.fromStatus]} ·{" "}
+                    {routeAreaLabels[visit.discontinuation.area]}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-muted">
+                    Motivo
+                  </dt>
+                  <dd className="mt-1 font-semibold text-text">
+                    {
+                      visitDiscontinuationReasonLabels[
+                        visit.discontinuation.reason
+                      ]
+                    }
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-muted">
+                    Registrado
+                  </dt>
+                  <dd className="mt-1 text-text">
+                    {formatDateTime(visit.discontinuation.occurredAt)} ·{" "}
+                    {visit.discontinuation.recordedBy?.name ??
+                      visit.discontinuation.recordedBy?.email ??
+                      "Usuario no disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-muted">
+                    Seguimiento
+                  </dt>
+                  <dd className="mt-1 text-text">
+                    {visit.discontinuation.followUpTask ? (
+                      <Link
+                        href={`/sigeco/seguimientos/${visit.discontinuation.followUpTask.id}`}
+                        className="focus-ring rounded-[7px] font-semibold text-primary-dark hover:underline"
+                      >
+                        {visit.discontinuation.followUpTask.assignedTo?.name ??
+                          visit.discontinuation.followUpTask.assignedTo?.email ??
+                          "Pendiente sin responsable"}
+                      </Link>
+                    ) : (
+                      "No creado"
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              {visit.discontinuation.note ? (
+                <p className="mt-3 rounded-[7px] bg-surface-soft px-3 py-2 text-sm text-text">
+                  {visit.discontinuation.note}
+                </p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {visit.discontinuation.pendingTypes.length > 0 ? (
+                  visit.discontinuation.pendingTypes.map((type) => (
+                    <Chip key={type}>{visitPendingTypeLabels[type]}</Chip>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted">
+                    No se registraron pendientes.
+                  </span>
+                )}
+              </div>
+            </Card>
+          ) : null}
+
           <Card className="max-sm:order-4">
             <CardHeader
               title="Tareas de esta visita"
@@ -249,53 +360,72 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
 
         <div className="grid gap-4 xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
           {isActive ? (
-            <Card>
-              <CardHeader
-                title="Derivar paciente"
-                description="Actualiza el estado y el área responsable de la atención."
-              />
-              <NoticeForm
-                action={updateVisitStatusAction}
-                notice="Ruta actualizada"
-                className="grid gap-3"
-              >
-                <input type="hidden" name="visitId" value={visit.id} />
-                <Field label="Estado">
-                  <select
-                    className={internalInputClassName}
-                    name="status"
-                    defaultValue={visit.status}
-                  >
-                    {statusOptions.map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Área destino">
-                  <select
-                    className={internalInputClassName}
-                    name="area"
-                    defaultValue={visit.route?.currentArea ?? "recepcion"}
-                  >
-                    {areaOptions.map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Nota">
-                  <input
-                    className={internalInputClassName}
-                    name="note"
-                    placeholder="Ej. pasa a caja solo a comprar un producto"
+            <>
+              <Card>
+                <CardHeader
+                  title="Derivar paciente"
+                  description="Actualiza el estado y el área responsable de la atención."
+                />
+                <NoticeForm
+                  action={updateVisitStatusAction}
+                  notice="Ruta actualizada"
+                  className="grid gap-3"
+                >
+                  <input type="hidden" name="visitId" value={visit.id} />
+                  <Field label="Estado">
+                    <select
+                      className={internalInputClassName}
+                      name="status"
+                      defaultValue={visit.status}
+                    >
+                      {statusOptions.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Área destino">
+                    <select
+                      className={internalInputClassName}
+                      name="area"
+                      defaultValue={visit.route?.currentArea ?? "recepcion"}
+                    >
+                      {areaOptions.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Nota">
+                    <input
+                      className={internalInputClassName}
+                      name="note"
+                      placeholder="Ej. pasa a caja solo a comprar un producto"
+                    />
+                  </Field>
+                  <SubmitButton>Actualizar ruta</SubmitButton>
+                </NoticeForm>
+              </Card>
+              {canRecordDiscontinuation ? (
+                <Card>
+                  <CardHeader
+                    title="No continuará"
+                    description="Registra el motivo y conserva todo lo que quedó pendiente."
                   />
-                </Field>
-                <SubmitButton>Actualizar ruta</SubmitButton>
-              </NoticeForm>
-            </Card>
+                  <VisitDiscontinuationForm
+                    visitId={visit.id}
+                    patientName={visit.patient.fullName}
+                    defaultPendingTypes={
+                      visit.route?.currentArea === "recepcion"
+                        ? ["consultation"]
+                        : []
+                    }
+                  />
+                </Card>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>

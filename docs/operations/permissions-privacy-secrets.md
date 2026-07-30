@@ -31,14 +31,18 @@ Leyenda: `L` lectura, `E` escritura, `A` ajuste sensible y `—` sin acceso.
 | Reportes | L | L | — | — | — | — | — |
 | Auditoría | L | L | — | — | — | — | — |
 | Usuarios y roles | L/E | — | — | — | — | — | — |
+| Adjuntos clínicos | L/E/A | L | L/E | — | — | L/E | — |
+| Consentimientos | L/E | L | L | L/E | L | L | L |
+| Abandono y pendientes | L/E | L | L/E | L/E | L/E | L/E | — |
 
 En Seguimientos, `L/E` no significa que todos puedan trabajar todas las tareas.
 Médico atiende la relación clínica y las llamadas médicas; Recepción/Marlen
 atiende evolución, retorno y recuperación de tratamiento; Administración y el
 rol técnico Seguimiento trabajan únicamente la relación administrativa. Esta
 separación también se valida en el servidor.
-| Adjuntos clínicos | L/E/A | L | L/E | — | — | L/E | — |
-| Consentimientos | L/E | L | L | L/E | L | L | L |
+
+En abandono y pendientes, la escritura solo registra que una visita activa no
+continuará. No permite reabrirla ni eliminar órdenes o tareas pendientes.
 
 El rol retirado `captacion` solo conserva acceso a su cuenta hasta ser
 reasignado. No puede operar pacientes, leads internos ni módulos clínicos.

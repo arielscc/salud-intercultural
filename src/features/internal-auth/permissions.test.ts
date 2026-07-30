@@ -151,4 +151,31 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("seguimiento", "patient_consents_write")).toBe(false);
     expect(roleHasPermission("captacion", "patient_consents_read")).toBe(false);
   });
+
+  it("lets operational areas record a discontinuation and Direction review it", () => {
+    for (const role of [
+      "super_admin",
+      "recepcion",
+      "medico",
+      "enfermeria",
+      "administracion"
+    ] as const) {
+      expect(
+        roleHasPermission(role, "visit_discontinuations_write")
+      ).toBe(true);
+      expect(
+        roleHasPermission(role, "visit_discontinuations_read")
+      ).toBe(true);
+    }
+
+    expect(
+      roleHasPermission("direccion", "visit_discontinuations_read")
+    ).toBe(true);
+    expect(
+      roleHasPermission("direccion", "visit_discontinuations_write")
+    ).toBe(false);
+    expect(
+      roleHasPermission("seguimiento", "visit_discontinuations_write")
+    ).toBe(false);
+  });
 });

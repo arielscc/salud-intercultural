@@ -7,8 +7,10 @@ import {
   updateVisitRouteStatus
 } from "@/modules/database/queries/visits";
 import { createPatientRecord } from "@/modules/database/queries/patients";
+import { recordVisitDiscontinuation } from "@/modules/database/queries/visit-discontinuations";
 
 async function cleanVisitFlowData() {
+  await prisma.visitDiscontinuation.deleteMany();
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
 }
@@ -103,11 +105,21 @@ describe("flexible visit flow integration", () => {
   it("records where the patient left when abandoning in reception", async () => {
     const visit = await createVisitInReception();
 
-    await updateVisitRouteStatus({
+    const user = await prisma.internalUser.create({
+      data: {
+        email: `reception-${visit.id}@test.invalid`,
+        name: "Marlen QA",
+        passwordHash: "integration-only",
+        role: "recepcion"
+      }
+    });
+    await recordVisitDiscontinuation({
       visitId: visit.id,
-      status: "left_without_care",
-      area: "recepcion",
-      note: "Se retiró en recepción"
+      recordedById: user.id,
+      reason: "wait",
+      note: "Esperó demasiado.",
+      pendingTypes: ["consultation"],
+      createFollowUp: false
     });
 
     const trace = await getVisitTrace(visit.id);
@@ -118,21 +130,115 @@ describe("flexible visit flow integration", () => {
     expect(trace.statusHistory.at(-1)).toMatchObject({
       fromStatus: "in_reception",
       toStatus: "left_without_care",
-      note: "Se retiró en recepción"
+      note: "No continuará por tiempo de espera. Esperó demasiado."
     });
     expect(trace.route?.steps.at(-1)).toMatchObject({
       area: "recepcion",
       status: "left_without_care"
+    });
+    expect(
+      await prisma.visitDiscontinuation.findUnique({
+        where: { visitId: visit.id }
+      })
+    ).toMatchObject({
+      fromStatus: "in_reception",
+      area: "recepcion",
+      reason: "wait",
+      pendingTypes: ["consultation"]
+    });
+  });
+
+  it("keeps unfinished work blocked and creates recovery only with consent", async () => {
+    const visit = await createVisitInReception();
+    const marlen = await prisma.internalUser.create({
+      data: {
+        email: `marlen-${visit.id}@test.invalid`,
+        name: "Marlen Recepción",
+        passwordHash: "integration-only",
+        role: "recepcion"
+      }
+    });
+    await prisma.patientConsent.create({
+      data: {
+        patientId: visit.patientId,
+        purpose: "follow_up",
+        decision: "granted",
+        contactChannels: ["whatsapp"],
+        captureMethod: "in_person_verbal",
+        textVersion: "integration",
+        textSnapshot: "Consentimiento de integración.",
+        recordedById: marlen.id
+      }
+    });
+    await updateVisitRouteStatus({
+      visitId: visit.id,
+      userId: marlen.id,
+      status: "in_nursing",
+      area: "enfermeria",
+      note: "Pasa a enfermería"
+    });
+    await prisma.clinicalOrder.create({
+      data: {
+        visitId: visit.id,
+        patientId: visit.patientId,
+        doctorId: marlen.id,
+        type: "serum",
+        targetArea: "enfermeria",
+        title: "Aplicar suero"
+      }
+    });
+
+    const result = await recordVisitDiscontinuation({
+      visitId: visit.id,
+      recordedById: marlen.id,
+      reason: "missing_supply",
+      pendingTypes: [],
+      createFollowUp: true
+    });
+
+    expect(result.followUpCreated).toBe(true);
+    expect(result.discontinuation.pendingTypes).toEqual([
+      "application",
+      "follow_up"
+    ]);
+    expect(
+      await prisma.visitWorkItem.count({
+        where: { visitId: visit.id, status: "blocked" }
+      })
+    ).toBeGreaterThan(0);
+    expect(
+      await prisma.clinicalOrder.findFirstOrThrow({
+        where: { visitId: visit.id }
+      })
+    ).toMatchObject({ status: "blocked" });
+    expect(
+      await prisma.followUpTask.findUniqueOrThrow({
+        where: { id: result.discontinuation.followUpTaskId! }
+      })
+    ).toMatchObject({
+      type: "treatment_recovery",
+      domain: "clinical",
+      priority: "high",
+      assignedToId: marlen.id
     });
   });
 
   it("exposes the flow state used to guard closed visits", async () => {
     const visit = await createVisitInReception();
 
-    await updateVisitRouteStatus({
+    const user = await prisma.internalUser.create({
+      data: {
+        email: `closed-${visit.id}@test.invalid`,
+        passwordHash: "integration-only",
+        role: "recepcion"
+      }
+    });
+    await recordVisitDiscontinuation({
       visitId: visit.id,
-      status: "left_without_care",
-      area: "recepcion"
+      recordedById: user.id,
+      reason: "other",
+      pendingTypes: [],
+      createFollowUp: false
     });
 
     const state = await getVisitFlowState(visit.id);
@@ -144,10 +250,19 @@ describe("flexible visit flow integration", () => {
   it("prevents reopening a visit after it is closed", async () => {
     const visit = await createVisitInReception();
 
-    await updateVisitRouteStatus({
+    const user = await prisma.internalUser.create({
+      data: {
+        email: `guard-${visit.id}@test.invalid`,
+        passwordHash: "integration-only",
+        role: "recepcion"
+      }
+    });
+    await recordVisitDiscontinuation({
       visitId: visit.id,
-      status: "left_without_care",
-      area: "recepcion"
+      recordedById: user.id,
+      reason: "other",
+      pendingTypes: [],
+      createFollowUp: false
     });
 
     let failure: unknown;

@@ -39,6 +39,13 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
         ];
   }
 
+  if (moduleSegment === "recepcion" && section === "abandonos") {
+    return [
+      { label: "Recepción", href: "/sigeco/recepcion" },
+      { label: "Abandonos y pendientes" }
+    ];
+  }
+
   if (moduleSegment === "recepcion" && section === "pacientes" && id) {
     const items: BreadcrumbItem[] = [
       { label: "Recepción", href: "/sigeco/recepcion" },

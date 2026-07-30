@@ -1,9 +1,7 @@
-import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { internalInputClassName } from "@/components/internal/Field";
 import { MobileTabs } from "@/components/internal/MobileTabs";
 import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueRefresh";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { SubmitButton } from "@/components/internal/SubmitButton";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
 import { DesktopPreviewDismiss } from "@/components/internal/reception/DesktopPreviewDismiss";
 import { DateRangePickerField } from "@/components/internal/ui/DatePickerField";
@@ -28,7 +26,6 @@ import {
 } from "@/features/geography/origin";
 import { visitAttributionSummary } from "@/features/attribution/catalog";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
-import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import type { VisitStatus } from "@/generated/prisma/client";
 import { cn } from "@/lib/cn";
@@ -40,7 +37,7 @@ import {
 } from "@/modules/database/queries/patients";
 import { countVisits, getVisits } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
-import { ScanSearch, UserRoundPlus } from "lucide-react";
+import { CircleOff, ScanSearch, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 
 const statusOptions = Object.entries(visitStatusLabels) as Array<
@@ -131,7 +128,7 @@ const emptyPatientsMessage = (
   </>
 );
 
-function VisitLeftForm({
+function VisitDiscontinuationLink({
   visitId,
   patientName,
   buttonClassName,
@@ -141,26 +138,17 @@ function VisitLeftForm({
   buttonClassName?: string;
 }) {
   return (
-    <ConfirmForm
-      action={applyVisitFlowAction}
-      notice="Retiro registrado"
-      confirmTitle="Marcar retiro"
-      confirmDescription={`La visita de ${patientName} se cerrará como retiro sin atención completa. Esta acción no se puede deshacer.`}
-      confirmLabel="Marcar retiro"
+    <Link
+      href={`/sigeco/recepcion/visitas/${visitId}#no-continuara`}
+      aria-label={`Registrar que ${patientName} no continuará`}
+      className={cn(
+        buttonVariants({ variant: "ghost", size: "sm" }),
+        "text-error hover:bg-error/10 hover:text-error",
+        buttonClassName
+      )}
     >
-      <input type="hidden" name="visitId" value={visitId} />
-      <input type="hidden" name="flow" value="left" />
-      <SubmitButton
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "text-error hover:bg-error/10 hover:text-error",
-          buttonClassName,
-        )}
-      >
-        Se retiró
-      </SubmitButton>
-    </ConfirmForm>
+      No continuará
+    </Link>
   );
 }
 
@@ -217,6 +205,14 @@ export default async function ReceptionPage({
   const canReadDuplicates = roleHasPermission(
     user.role,
     "patient_duplicates_read"
+  );
+  const canRecordDiscontinuation = roleHasPermission(
+    user.role,
+    "visit_discontinuations_write"
+  );
+  const canReadDiscontinuations = roleHasPermission(
+    user.role,
+    "visit_discontinuations_read"
   );
 
   const visitPage =
@@ -280,6 +276,17 @@ export default async function ReceptionPage({
         actionsClassName="lg:hidden"
         actions={
           <>
+            {canReadDiscontinuations ? (
+              <Link
+                href="/sigeco/recepcion/abandonos"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" })
+                )}
+              >
+                <CircleOff className="h-4 w-4" aria-hidden="true" />
+                Abandonos
+              </Link>
+            ) : null}
             {canReadDuplicates ? (
               <Link
                 href="/sigeco/recepcion/duplicados"
@@ -316,6 +323,15 @@ export default async function ReceptionPage({
             label: "Pacientes",
             active: vista === "pacientes",
           },
+          ...(canReadDiscontinuations
+            ? [
+                {
+                  href: "/sigeco/recepcion/abandonos",
+                  label: "Abandonos",
+                  active: false
+                }
+              ]
+            : [])
         ]}
       />
 
@@ -329,6 +345,11 @@ export default async function ReceptionPage({
         >
           Pacientes
         </ViewTab>
+        {canReadDiscontinuations ? (
+          <ViewTab href="/sigeco/recepcion/abandonos" active={false}>
+            Abandonos
+          </ViewTab>
+        ) : null}
       </div>
 
       <DesktopTableToolbar
@@ -343,6 +364,14 @@ export default async function ReceptionPage({
             >
               Pacientes
             </ViewTab>
+            {canReadDiscontinuations ? (
+              <ViewTab
+                href="/sigeco/recepcion/abandonos"
+                active={false}
+              >
+                Abandonos
+              </ViewTab>
+            ) : null}
           </>
         }
         filters={
@@ -595,8 +624,9 @@ export default async function ReceptionPage({
                   title={visit.patient.fullName}
                   status={<VisitStatusPill status={visit.status} />}
                   action={
-                    isActiveVisitStatus(visit.status) ? (
-                      <VisitLeftForm
+                    isActiveVisitStatus(visit.status) &&
+                    canRecordDiscontinuation ? (
+                      <VisitDiscontinuationLink
                         visitId={visit.id}
                         patientName={visit.patient.fullName}
                         buttonClassName="min-h-10"
@@ -695,16 +725,17 @@ export default async function ReceptionPage({
                         <VisitStatusPill status={visit.status} />
                       </Td>
                       <Td>
-                        {isActiveVisitStatus(visit.status) ? (
+                        {isActiveVisitStatus(visit.status) &&
+                        canRecordDiscontinuation ? (
                           <>
                             <div className="lg:hidden">
-                              <VisitLeftForm
+                              <VisitDiscontinuationLink
                                 visitId={visit.id}
                                 patientName={visit.patient.fullName}
                               />
                             </div>
                             <DesktopRowActions label={`Acciones de ${visit.patient.fullName}`}>
-                              <VisitLeftForm
+                              <VisitDiscontinuationLink
                                 visitId={visit.id}
                                 patientName={visit.patient.fullName}
                                 buttonClassName="w-full justify-start"

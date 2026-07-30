@@ -87,6 +87,8 @@ La suite contiene 11 archivos y cubre:
 - Leads publicos e internos legacy, preservados sin UI operativa.
 - Funnel de recepcion, pacientes, visitas y dashboard.
 - Flujo flexible y bloqueo de reapertura de visitas cerradas.
+- Abandono detallado, pendientes conservados, trabajo bloqueado y seguimiento
+  de recuperación sujeto a consentimiento.
 - Consulta clinica, enfermeria y estudios.
 - Ventas, pagos y caja.
 - Inventario, rollback por stock insuficiente y alertas.

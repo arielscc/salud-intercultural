@@ -33,17 +33,24 @@ export const createVisitSchema = z.object({
   note: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional())
 });
 
-export const updateVisitStatusSchema = z.object({
-  visitId: z.string().min(1),
-  status: visitStatusSchema,
-  area: routeAreaSchema,
-  note: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional())
-});
+export const updateVisitStatusSchema = z
+  .object({
+    visitId: z.string().min(1),
+    status: visitStatusSchema,
+    area: routeAreaSchema,
+    note: z.preprocess(
+      emptyToUndefined,
+      z.string().trim().max(500).optional()
+    )
+  })
+  .refine((value) => value.status !== "left_without_care", {
+    message: "Use the detailed discontinuation workflow.",
+    path: ["status"]
+  });
 
 export const visitFlowSchema = z.object({
   visitId: z.string().min(1),
   flow: z.enum([
-    "left",
     "complete",
     "to_consultation",
     "to_nursing",

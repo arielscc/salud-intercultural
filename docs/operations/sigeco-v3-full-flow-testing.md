@@ -246,15 +246,24 @@ Ruta: `/sigeco/administracion` -> abrir el pendiente de Julia.
 
 Usa la PRIMERA visita de Julia (la de `Dolor de cabeza fuerte`, que sigue activa) y una tercera llegada rapida:
 
-### Abandono (Se retiro)
+### Abandono (No continuará)
 
-1. En `Recepcion -> Hoy`, la fila de la primera visita de Julia tiene el boton rojo `Se retiro`. Pulsalo.
-2. Esperado: la visita sale de la lista activa de inmediato; el KPI `Abandonos hoy` sube en 1.
-3. Abre el detalle de esa visita: estado `Abandono atencion`, historial con nota automatica `Se retiro en recepcion` (indica DONDE abandono) y sin tarjeta de acciones rapidas ni formulario de derivacion.
+1. En `Recepción -> Hoy`, pulsa `No continuará` en la primera visita de
+   Julia. La acción abre el detalle de la visita; no la cierra todavía.
+2. En el formulario `No continuará`, elige `Tiempo de espera`, marca
+   `Consulta` como pendiente y agrega la nota `Esperó 40 minutos`.
+3. Confirma el registro. Esperado: la visita sale de la lista activa, el KPI
+   `Abandonos hoy` sube en 1 y el detalle muestra el punto, área, motivo,
+   responsable, fecha, nota y pendiente.
+4. Abre `/sigeco/recepcion/abandonos`. Esperado: la visita aparece bajo
+   `Tiempo de espera`.
+
+El seguimiento de recuperación es opcional. Solo debe crearse si se marca la
+opción y Julia tiene consentimiento vigente para seguimiento.
 
 ### Error intencional G — actuar sobre visita cerrada
 
-1. Con la visita abandonada abierta, edita la URL agregando `?error=cerrada` para ver el aviso (o reintenta una accion desde una pestana vieja si tienes una abierta).
+1. Con la visita abandonada abierta, edita la URL agregando `?error=cerrada` para ver el aviso (o reintenta una acción desde una pestaña vieja si tienes una abierta).
 2. Esperado: banner "Esta visita ya esta cerrada; no se aplico la accion." La base ademas bloquea cualquier reapertura server-side (`ClosedVisitTransitionError`).
 
 ### Salida directa desde consulta

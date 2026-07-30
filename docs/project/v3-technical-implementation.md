@@ -166,6 +166,33 @@ La asignación clínica busca Recepción/Marlen; el rol técnico `seguimiento`
 queda limitado a `domain=administrative`. La guía completa vive en
 [Tipos y resultados de seguimiento](../operations/follow-up-classification.md).
 
+### Abandono, Bloqueo Y Pendientes
+
+`VisitDiscontinuation` registra un único evento por visita con:
+
+- `fromStatus` y `area`: punto exacto de salida;
+- `reason`: motivo normalizado;
+- `pendingTypes`: fotografía de consulta, estudio, aplicación, cobro, entrega
+  o seguimiento todavía pendientes;
+- `recordedById` y `occurredAt`: responsable y fecha;
+- `followUpTaskId`: recuperación relacionada cuando existe.
+
+`recordVisitDiscontinuation` usa una transacción serializable. Combina lo
+seleccionado por el empleado con pendientes detectados en órdenes, estudios,
+ventas, entregas y seguimientos. Después bloquea `VisitWorkItem` y
+`ClinicalOrder` abiertos, cierra la ruta como `left_without_care`, crea el
+evento y, si se solicitó y existe consentimiento vigente, crea una tarea
+`treatment_recovery` para Recepción/Marlen.
+
+El flujo general rechaza el valor heredado `left`; así ninguna acción puede
+crear un abandono sin motivo. Los permisos `visit_discontinuations_read` y
+`visit_discontinuations_write` separan revisión y operación. Dirección puede
+leer `/sigeco/recepcion/abandonos`, pero solo las áreas operativas registran el
+evento.
+
+La guía completa vive en
+[Abandono, bloqueo y pendientes](../operations/visit-discontinuations.md).
+
 ### Ventas E Inventario
 
 `createSaleRecord` calcula subtotal, descuento, total, pago y saldo en servidor. Si existe un item inventariable, el descuento de stock ocurre dentro de la misma transaccion.
@@ -279,6 +306,7 @@ Contratos criticos cubiertos:
 - Ventas, pagos y caja.
 - Stock, rollback y alertas.
 - Tipos, resultados, roles y escalamiento de seguimientos; dashboard.
+- Motivo, punto de salida, bloqueo y pendientes de visitas interrumpidas.
 - Auditoría append-only, usuarios, roles y sesiones.
 - Adjuntos clínicos privados, idempotencia y acceso temporal.
 - Detección normalizada, cola, alias y fusión transaccional de pacientes.

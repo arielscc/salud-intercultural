@@ -55,7 +55,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "attribution_manage",
     "patient_duplicates_read",
     "patient_duplicates_review",
-    "patient_duplicates_merge"
+    "patient_duplicates_merge",
+    "visit_discontinuations_read",
+    "visit_discontinuations_write"
   ],
   direccion: [
     "internal_access",
@@ -73,7 +75,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "attachments_read",
     "patient_consents_read",
     "attribution_manage",
-    "patient_duplicates_read"
+    "patient_duplicates_read",
+    "visit_discontinuations_read"
   ],
   medico: [
     "internal_access",
@@ -90,7 +93,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "attachments_write",
     "followups_read",
     "followups_write",
-    "patient_consents_read"
+    "patient_consents_read",
+    "visit_discontinuations_read",
+    "visit_discontinuations_write"
   ],
   recepcion: [
     "internal_access",
@@ -107,7 +112,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_consents_read",
     "patient_consents_write",
     "patient_duplicates_read",
-    "patient_duplicates_review"
+    "patient_duplicates_review",
+    "visit_discontinuations_read",
+    "visit_discontinuations_write"
   ],
   captacion: ["internal_access"],
   administracion: [
@@ -123,7 +130,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "followups_write",
     "inventory_read",
     "inventory_write",
-    "patient_consents_read"
+    "patient_consents_read",
+    "visit_discontinuations_read",
+    "visit_discontinuations_write"
   ],
   enfermeria: [
     "internal_access",
@@ -136,7 +145,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "studies_write",
     "attachments_read",
     "attachments_write",
-    "patient_consents_read"
+    "patient_consents_read",
+    "visit_discontinuations_read",
+    "visit_discontinuations_write"
   ],
   seguimiento: [
     "internal_access",

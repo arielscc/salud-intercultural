@@ -17,6 +17,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Consentimientos | En progreso | Cinco finalidades, historial y bloqueo implementados localmente; producción espera aprobación expresa de textos. |
 | Resultado de propuestas | En progreso | El médico registra la decisión; aceptación crea una instrucción, no una venta automática. |
 | Clasificación de seguimientos | En progreso | Tipo, prioridad, responsable y resultado separados; llamadas médicas escaladas al médico. |
+| Abandono y pendientes | En progreso | Punto, motivo, área y pendientes conservados; tareas abiertas quedan bloqueadas y recuperables. |
 
 ## Fuentes Canonicas
 
@@ -56,7 +57,9 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Funnel de cuatro pasos con solo nombre, telefono y motivo obligatorios.
 - Creacion o actualizacion de paciente y apertura de visita en una transaccion.
 - Padron de pacientes, ficha permanente y edicion.
-- Visitas activas, detalle, historial, ruta y abandono en un toque.
+- Visitas activas, detalle, historial y ruta completa.
+- “No continuará” con motivo obligatorio, pendientes persistentes y reporte
+  por causa.
 - Consentimientos separados por finalidad, canales, versión y forma de confirmación.
 
 ### Consentimientos Y Contacto
@@ -117,6 +120,18 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Advertencia cuando el paciente prefiere no recibir contacto.
 - Llamadas y WhatsApp disponibles en móvil según consentimiento.
 
+### Abandono Y Pendientes
+
+- Abandono, cancelación y atención completada son cierres diferentes.
+- El abandono conserva el estado y área donde se detuvo la visita.
+- Motivo, usuario, fecha, nota y pendientes quedan registrados.
+- Tareas y órdenes abiertas pasan a bloqueadas; no desaparecen ni se presentan
+  como terminadas.
+- El seguimiento de recuperación solo se crea con consentimiento vigente y se
+  asigna a Recepción/Marlen.
+- Recepción, Médico, Enfermería y Administración pueden usar “No continuará”.
+- Dirección dispone de un reporte por motivo, fecha y pendiente.
+
 ### Dashboard
 
 - Pacientes unicos del dia.
@@ -146,6 +161,7 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 | `/sigeco/recepcion/nuevo` | Funnel de llegada. |
 | `/sigeco/recepcion/duplicados` | Cola de posibles fichas duplicadas. |
 | `/sigeco/recepcion/duplicados/[candidateId]` | Comparación y simulación de fusión. |
+| `/sigeco/recepcion/abandonos` | Reporte de abandono, punto de salida y pendientes. |
 | `/sigeco/recepcion/pacientes/[id]` | Ficha y edicion del paciente. |
 | `/sigeco/recepcion/visitas/[id]` | Ruta e historial de la visita. |
 | `/sigeco/consultas` | Bandeja y atencion medica. |

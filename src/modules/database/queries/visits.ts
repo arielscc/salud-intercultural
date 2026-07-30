@@ -238,6 +238,22 @@ export async function getVisitById(id: string) {
         statusHistory: {
           orderBy: { createdAt: "desc" }
         },
+        discontinuation: {
+          include: {
+            recordedBy: {
+              select: { id: true, name: true, email: true }
+            },
+            followUpTask: {
+              select: {
+                id: true,
+                status: true,
+                assignedTo: {
+                  select: { id: true, name: true, email: true }
+                }
+              }
+            }
+          }
+        },
         workItems: {
           orderBy: { createdAt: "desc" }
         }
@@ -359,6 +375,9 @@ export async function updateVisitRouteStatus(
   input: UpdateVisitRouteStatusInput
 ) {
   return withDatabaseError("updateVisitRouteStatus", async () => {
+    if (input.status === "left_without_care") {
+      throw new Error("VISIT_DISCONTINUATION_DETAILS_REQUIRED");
+    }
     const result = await prisma.$transaction((tx) =>
       updateVisitRouteStatusInTransaction(tx, input)
     );

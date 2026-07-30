@@ -59,6 +59,8 @@ enum InternalPermission {
   patient_duplicates_read
   patient_duplicates_review
   patient_duplicates_merge
+  visit_discontinuations_read
+  visit_discontinuations_write
 }
 
 enum AuditResult {
@@ -245,6 +247,25 @@ enum VisitStatus {
   completed
   left_without_care
   cancelled
+}
+
+enum VisitDiscontinuationReason {
+  wait
+  cost
+  rejection
+  emergency
+  missing_supply
+  referral
+  other
+}
+
+enum VisitPendingType {
+  consultation
+  study
+  application
+  payment
+  delivery
+  follow_up
 }
 
 enum VisitIntakeType {
@@ -482,6 +503,7 @@ model InternalUser {
   reviewedDuplicateCandidates PatientDuplicateCandidate[]     @relation("PatientDuplicateCandidateReviewedBy")
   performedPatientMerges      PatientMerge[]                  @relation("PatientMergePerformedBy")
   treatmentProposalOutcomes   TreatmentProposalOutcome[]
+  recordedDiscontinuations    VisitDiscontinuation[]          @relation("VisitDiscontinuationRecordedBy")
 
   @@index([role])
   @@index([active])
@@ -731,7 +753,7 @@ model PatientAlias {
   phone                    String
   secondaryPhone           String?
   normalizedPhone          String
-  normalizedSecondaryPhone String
+  normalizedSecondaryPhone String    @default("")
   birthDate                DateTime?
   createdAt                DateTime  @default(now())
   patient                  Patient   @relation("PatientAliasCanonical", fields: [patientId], references: [id], onDelete: Restrict)
@@ -837,6 +859,7 @@ model Visit {
   clinicalAttachments       ClinicalAttachment[]
   attribution               VisitAttribution?
   treatmentProposalOutcomes TreatmentProposalOutcome[]
+  discontinuation           VisitDiscontinuation?
 
   @@index([patientId])
   @@index([status, checkedInAt])
@@ -844,6 +867,30 @@ model Visit {
   @@index([originCountry, checkedInAt])
   @@index([createdById])
   @@index([checkedInAt])
+}
+
+/// Cierre específico cuando el paciente no continúa una visita.
+/// Conserva el punto de salida y una fotografía de lo que quedó pendiente.
+model VisitDiscontinuation {
+  id             String                     @id @default(cuid())
+  visitId        String                     @unique
+  fromStatus     VisitStatus
+  area           PatientRouteArea
+  reason         VisitDiscontinuationReason
+  pendingTypes   VisitPendingType[]         @default([])
+  note           String?
+  recordedById   String?
+  followUpTaskId String?                    @unique
+  occurredAt     DateTime                   @default(now())
+  createdAt      DateTime                   @default(now())
+  visit          Visit                      @relation(fields: [visitId], references: [id], onDelete: Restrict)
+  recordedBy     InternalUser?              @relation("VisitDiscontinuationRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  followUpTask   FollowUpTask?              @relation(fields: [followUpTaskId], references: [id], onDelete: SetNull)
+
+  @@index([reason, occurredAt])
+  @@index([area, occurredAt])
+  @@index([recordedById, occurredAt])
+  @@index([occurredAt])
 }
 
 model CaptureSource {
@@ -856,7 +903,7 @@ model CaptureSource {
   receptionSelectable Boolean                 @default(true)
   sortOrder           Int                     @default(100)
   createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
+  updatedAt           DateTime                @default(now()) @updatedAt
   campaigns           CaptureCampaign[]
   attributionTouches  VisitAttributionTouch[]
 
@@ -876,7 +923,7 @@ model CaptureCampaign {
   startsAt      DateTime?
   endsAt        DateTime?
   createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
+  updatedAt     DateTime               @default(now()) @updatedAt
   source        CaptureSource          @relation(fields: [sourceId], references: [id], onDelete: Restrict)
   attributions  VisitAttribution[]
 
@@ -1541,6 +1588,7 @@ model FollowUpTask {
   attempts                 FollowUpAttempt[]
   statusHistory            FollowUpStatusHistory[]
   treatmentProposalOutcome TreatmentProposalOutcome?
+  visitDiscontinuation     VisitDiscontinuation?
 
   @@index([leadId])
   @@index([patientId])

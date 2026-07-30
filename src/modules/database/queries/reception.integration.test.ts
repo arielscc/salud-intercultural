@@ -13,6 +13,7 @@ import {
   getVisits,
   updateVisitRouteStatus
 } from "@/modules/database/queries/visits";
+import { recordVisitDiscontinuation } from "@/modules/database/queries/visit-discontinuations";
 
 const habitualOrigin = {
   city: "El Alto",
@@ -33,6 +34,7 @@ const reportedAttribution = {
 };
 
 async function cleanReceptionData() {
+  await prisma.visitDiscontinuation.deleteMany();
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.lead.deleteMany();
@@ -336,11 +338,12 @@ describe("reception intake integration", () => {
       attribution: reportedAttribution
     });
 
-    await updateVisitRouteStatus({
+    await recordVisitDiscontinuation({
       visitId: second.visit.id,
-      userId: user.id,
-      status: "left_without_care",
-      area: "recepcion",
+      recordedById: user.id,
+      reason: "wait",
+      pendingTypes: ["consultation"],
+      createFollowUp: false,
       note: "Se retiró en recepción"
     });
 

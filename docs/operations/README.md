@@ -45,6 +45,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 30. [Actualización de bandejas operativas](./operational-queue-refresh.md)
 31. [Resultado de la propuesta de tratamiento](./treatment-proposal-outcomes.md)
 32. [Tipos y resultados de seguimiento](./follow-up-classification.md)
+33. [Abandono, bloqueo y pendientes](./visit-discontinuations.md)
 
 ## Flujo recomendado
 

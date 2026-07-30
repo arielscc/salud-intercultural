@@ -8,6 +8,7 @@ import { PaidStudyOrderDialog } from "@/components/internal/PaidStudyOrderDialog
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { TreatmentProposalOutcomeForm } from "@/components/internal/treatment-proposals/TreatmentProposalOutcomeForm";
+import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
@@ -84,6 +85,10 @@ export default async function ConsultationDetailPage({
   const proposalSale =
     latestProposalOutcome?.administrationOrder?.workItem?.sales[0];
   const canWriteClinical = roleHasPermission(user.role, "clinical_write");
+  const canRecordDiscontinuation = roleHasPermission(
+    user.role,
+    "visit_discontinuations_write"
+  );
   const followUpConsentGranted =
     visit.patient.consents[0]?.decision === "granted";
   const canRecordProposal =
@@ -411,6 +416,16 @@ export default async function ConsultationDetailPage({
                   Se va — cerrar visita
                 </SubmitButton>
               </ConfirmForm>
+              {canRecordDiscontinuation ? (
+                <VisitDiscontinuationForm
+                  visitId={visit.id}
+                  patientName={visit.patient.fullName}
+                  defaultPendingTypes={
+                    visit.clinicalConsultation ? [] : ["consultation"]
+                  }
+                  compact
+                />
+              ) : null}
             </div>
           </Card>
         ) : null}

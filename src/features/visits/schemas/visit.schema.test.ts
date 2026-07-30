@@ -46,4 +46,17 @@ describe("visit schemas", () => {
       visitFlowSchema.parse({ visitId: "visit_1", flow: "to_consultation" })
     ).toMatchObject({ visitId: "visit_1", flow: "to_consultation" });
   });
+
+  it("requires the detailed discontinuation action for abandonment", () => {
+    expect(
+      visitFlowSchema.safeParse({ visitId: "visit_1", flow: "left" }).success
+    ).toBe(false);
+    expect(
+      updateVisitStatusSchema.safeParse({
+        visitId: "visit_1",
+        status: "left_without_care",
+        area: "recepcion"
+      }).success
+    ).toBe(false);
+  });
 });

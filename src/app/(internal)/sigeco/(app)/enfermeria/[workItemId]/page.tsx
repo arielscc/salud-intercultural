@@ -10,6 +10,7 @@ import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection"
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
+import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import {
   createNursingApplicationAction,
@@ -21,6 +22,8 @@ import {
 import { nursingWorkItemStatusLabels } from "@/features/nursing/labels";
 import { createStudyAction } from "@/features/studies/actions";
 import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
+import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { getNursingWorkItemById } from "@/modules/database/queries/nursing";
 import { requirePermission } from "@/modules/permissions";
 
@@ -36,7 +39,7 @@ type NursingWorkItemPageProps = {
 };
 
 export default async function NursingWorkItemPage({ params, searchParams }: NursingWorkItemPageProps) {
-  await requirePermission("nursing_read");
+  const user = await requirePermission("nursing_read");
   const { workItemId } = await params;
   const query = await searchParams;
   const item = await getNursingWorkItemById(workItemId);
@@ -48,6 +51,10 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
   const applicationOrderTypes = ["nursing_application", "serum", "medication"];
   const studyOrders = item.clinicalOrders.filter((entry) => entry.type === "study");
   const studiesCompleted = studyOrders.length > 0 && studyOrders.every((entry) => entry.status === "completed");
+  const canRecordDiscontinuation = roleHasPermission(
+    user.role,
+    "visit_discontinuations_write"
+  );
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -245,6 +252,32 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
           meta={patient.phone}
           status={<VisitStatusPill status={item.visit.status} />}
         />
+        {isActiveVisitStatus(item.visit.status) &&
+        canRecordDiscontinuation ? (
+          <Card className="max-sm:order-4">
+            <CardHeader
+              title="No continuará"
+              description="Guarda el motivo y bloquea lo que quedó sin realizar."
+            />
+            <VisitDiscontinuationForm
+              visitId={item.visit.id}
+              patientName={patient.fullName}
+              defaultPendingTypes={[
+                ...(studyOrders.some(
+                  (studyOrder) => studyOrder.status !== "completed"
+                )
+                  ? (["study"] as const)
+                  : []),
+                ...(item.clinicalOrders.some((clinicalOrder) =>
+                  applicationOrderTypes.includes(clinicalOrder.type)
+                ) && item.status !== "completed"
+                  ? (["application"] as const)
+                  : [])
+              ]}
+              compact
+            />
+          </Card>
+        ) : null}
         <Card className="max-sm:order-5">
           {query.error === "estudios-incompletos" ? (
             <p className="mb-3 rounded-[7px] bg-warning/10 p-3 text-sm text-warning">Registra el resultado de todos los estudios antes de devolver al paciente.</p>

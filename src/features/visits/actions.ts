@@ -10,7 +10,6 @@ import {
   updateVisitRouteStatus
 } from "@/modules/database/queries/visits";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
-import { routeAreaLabels } from "@/features/patients/labels";
 import {
   createVisitSchema,
   isActiveVisitStatus,
@@ -58,7 +57,7 @@ export async function createVisitAction(formData: FormData) {
 /*
  * Flujo flexible V3.7: el paciente puede retirarse en cualquier punto, y tras
  * la consulta puede pasar a enfermeria, a administracion o salir directo.
- * En "left" el area se conserva para dejar rastro de donde abandono.
+ * El abandono detallado se registra por la acción específica de la Tarea 16.
  */
 export async function applyVisitFlowAction(formData: FormData) {
   const visitId = String(formData.get("visitId") ?? "");
@@ -92,11 +91,6 @@ export async function applyVisitFlowAction(formData: FormData) {
         typeof flow,
         { status: VisitStatus; area: PatientRouteArea; note: string }
       > = {
-        left: {
-          status: "left_without_care",
-          area: currentArea,
-          note: note ?? `Se retiró en ${routeAreaLabels[currentArea].toLowerCase()}`
-        },
         complete: { status: "completed", area: "cierre", note: note ?? "Visita cerrada" },
         to_consultation: {
           status: "in_consultation",
