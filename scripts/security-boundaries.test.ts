@@ -126,6 +126,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   logoutInternalUser: null,
   requireInternalUserPasswordChangeAction: "users_manage",
   recordPatientConsentAction: "patient_consents_write",
+  recordTreatmentProposalOutcomeAction: "clinical_write",
   returnStudiesToDoctorAction: "nursing_write",
   revokeManagedInternalUserSessionsAction: "users_manage",
   revokeOwnInternalSessionAction: "internal_access",

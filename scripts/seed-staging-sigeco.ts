@@ -96,9 +96,10 @@ async function seedQaUsers(basePassword: string, domain: string) {
 
 async function seedQaQueues(users: Map<InternalRole, string>) {
   const receptionUserId = users.get("recepcion");
+  const doctorUserId = users.get("medico");
 
-  if (!receptionUserId) {
-    throw new Error("The reception QA account was not created.");
+  if (!receptionUserId || !doctorUserId) {
+    throw new Error("The reception and doctor QA accounts must exist.");
   }
 
   for (const [index, fixture] of qaPatientFixtures.entries()) {
@@ -259,6 +260,26 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         visitId
       }
     });
+
+    if (fixture.area === "medico") {
+      await prisma.clinicalConsultation.upsert({
+        where: { visitId },
+        update: {
+          doctorId: doctorUserId,
+          motive: fixture.reason,
+          treatmentPlanText:
+            "[QA] Propuesta sintética para validar el resultado del tratamiento."
+        },
+        create: {
+          doctorId: doctorUserId,
+          motive: fixture.reason,
+          patientId: patient.id,
+          treatmentPlanText:
+            "[QA] Propuesta sintética para validar el resultado del tratamiento.",
+          visitId
+        }
+      });
+    }
 
     await prisma.visitWorkItem.upsert({
       where: { id: `qa_work_item_${fixture.area}` },

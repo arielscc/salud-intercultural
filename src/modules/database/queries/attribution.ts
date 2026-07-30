@@ -262,8 +262,10 @@ export async function getCaptureAttributionReport(input: {
         visit: {
           select: {
             patientId: true,
-            clinicalConsultation: {
-              select: { treatmentPlanText: true }
+            treatmentProposalOutcomes: {
+              where: { supersededBy: null },
+              select: { id: true, status: true },
+              take: 1
             },
             sales: {
               select: {
@@ -305,9 +307,11 @@ export async function getCaptureAttributionReport(input: {
     >();
 
     for (const attribution of attributions) {
-      const hasProposal = Boolean(
-        attribution.visit.clinicalConsultation?.treatmentPlanText?.trim()
-      );
+      const currentOutcome =
+        attribution.visit.treatmentProposalOutcomes[0];
+      const hasProposal =
+        Boolean(currentOutcome) &&
+        currentOutcome.status !== "not_applicable";
       const sales = attribution.visit.sales;
 
       for (const touch of attribution.touches) {
@@ -379,10 +383,15 @@ export async function getCaptureAttributionReport(input: {
       totals: {
         arrivals: attributions.length,
         patients: uniquePatients,
-        proposals: attributions.filter((attribution) =>
-          Boolean(
-            attribution.visit.clinicalConsultation?.treatmentPlanText?.trim()
-          )
+        proposals: attributions.filter(
+          (attribution) => {
+            const currentOutcome =
+              attribution.visit.treatmentProposalOutcomes[0];
+            return (
+              Boolean(currentOutcome) &&
+              currentOutcome.status !== "not_applicable"
+            );
+          }
         ).length,
         sales: uniqueSales.size,
         soldCents: Array.from(uniqueSales.values()).reduce(

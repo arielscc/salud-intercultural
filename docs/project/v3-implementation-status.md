@@ -15,6 +15,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | QA final V3.7 | Completado localmente | Matriz de roles, flujo de abandono, 17 pantallas activas a 390px, sitio publico y CMS. |
 | Publicacion remota | Pendiente | Requiere promocion controlada `develop -> staging -> main`. |
 | Consentimientos | En progreso | Cinco finalidades, historial y bloqueo implementados localmente; producción espera aprobación expresa de textos. |
+| Resultado de propuestas | En progreso | El médico registra la decisión; aceptación crea una instrucción, no una venta automática. |
 
 ## Fuentes Canonicas
 
@@ -71,6 +72,11 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 
 - Contexto de recepcion prellenado sin volver a pedir el motivo.
 - Diagnosticos, hallazgos, plan, indicaciones, receta y evolucion.
+- Resultado append-only de la propuesta con motivo, médico, visita y fecha.
+- Una aceptación crea una orden explícita para Administración; la venta y el
+  pago se registran después.
+- `Necesita tiempo` genera trabajo para Recepción/Marlen únicamente con
+  consentimiento vigente.
 - Ordenes para enfermeria, administracion o seguimiento.
 - Salida flexible hacia enfermeria, administracion o cierre directo.
 
@@ -118,7 +124,7 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Facebook se pregunta de forma general.
 - Cuenta social, campaña y tráfico orgánico o pagado solo se completan mediante
   códigos verificables.
-- Reporte agregado por fecha, ciudad y departamento con llegadas, planes,
+- Reporte agregado por fecha, ciudad y departamento con llegadas, propuestas,
   ventas e ingresos cobrados.
 - Catálogo administrable por Dirección y super administrador.
 
@@ -213,5 +219,5 @@ El orden anterior fue reemplazado por la numeración vigente:
 2. Tarea 2: staging aislado.
 3. Tarea 3: auditoria append-only.
 4. Tareas 4-8: accesos, privacidad, adjuntos, recuperacion e incidentes.
-5. Cerrar integración y QA acumulados de las Tareas 9-13 y continuar con la
-   Tarea 14 de [tasks.md](./sigeco-mejoras-integrales/tasks.md).
+5. Cerrar integración y QA acumulados de las Tareas 9-14 y continuar con la
+   Tarea 15 de [tasks.md](./sigeco-mejoras-integrales/tasks.md).

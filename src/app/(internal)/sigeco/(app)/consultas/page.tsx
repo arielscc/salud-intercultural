@@ -4,6 +4,7 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
+import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import {
   RecordItem,
@@ -15,7 +16,9 @@ import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { formatDateTime } from "@/lib/dates";
 import { getConsultationVisits } from "@/modules/database/queries/clinical-care";
+import { getTreatmentProposalOutcomeSummary } from "@/modules/database/queries/treatment-proposals";
 import { requirePermission } from "@/modules/permissions";
+import { CheckCircle2, Clock3, Percent, XCircle } from "lucide-react";
 
 const emptyConsultationsMessage = (
   <>
@@ -28,7 +31,10 @@ const emptyConsultationsMessage = (
 
 export default async function ConsultationsPage() {
   await requirePermission("clinical_read");
-  const visits = await getConsultationVisits({ pageSize: 30 });
+  const [visits, proposalSummary] = await Promise.all([
+    getConsultationVisits({ pageSize: 30 }),
+    getTreatmentProposalOutcomeSummary()
+  ]);
 
   return (
     <div className="grid gap-4">
@@ -38,6 +44,33 @@ export default async function ConsultationsPage() {
         queueKey="consultations"
         serverUpdatedAt={new Date().toISOString()}
       />
+
+      <section className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        <KpiCard
+          icon={CheckCircle2}
+          label="Aceptados este mes"
+          value={proposalSummary.accepted}
+          compactMobile
+        />
+        <KpiCard
+          icon={XCircle}
+          label="Rechazados este mes"
+          value={proposalSummary.rejected}
+          compactMobile
+        />
+        <KpiCard
+          icon={Clock3}
+          label="Necesitan tiempo"
+          value={proposalSummary.needs_time}
+          compactMobile
+        />
+        <KpiCard
+          icon={Percent}
+          label="Aceptación decidida"
+          value={`${proposalSummary.acceptanceRate}%`}
+          compactMobile
+        />
+      </section>
 
       <DesktopTableToolbar count={`${visits.length} pacientes en atención`} />
 

@@ -36,6 +36,11 @@ type ConfirmFormProps = Omit<React.ComponentPropsWithoutRef<"form">, "action"> &
   confirmTitle: string;
   confirmDescription: string;
   confirmLabel: string;
+  confirmWhen?: {
+    field: string;
+    equals: string;
+  };
+  confirmAtAllWidths?: boolean;
 };
 
 export function ConfirmForm({
@@ -44,6 +49,8 @@ export function ConfirmForm({
   confirmTitle,
   confirmDescription,
   confirmLabel,
+  confirmWhen,
+  confirmAtAllWidths = false,
   children,
   ...props
 }: ConfirmFormProps) {
@@ -73,10 +80,17 @@ export function ConfirmForm({
       confirmedRef.current = false;
       return;
     }
+    if (
+      confirmWhen &&
+      new FormData(event.currentTarget).get(confirmWhen.field) !==
+        confirmWhen.equals
+    ) {
+      return;
+    }
     const mobile = window.matchMedia("(max-width: 639px)").matches;
     const desktop = window.matchMedia("(min-width: 1024px)").matches;
 
-    if (mobile || desktop) {
+    if (mobile || desktop || confirmAtAllWidths) {
       event.preventDefault();
       returnFocusRef.current = document.activeElement as HTMLElement | null;
       setConfirmationMode(mobile ? "mobile" : "desktop");

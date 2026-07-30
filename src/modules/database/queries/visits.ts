@@ -261,87 +261,107 @@ export async function getVisitFlowState(id: string) {
   });
 }
 
-export async function updateVisitRouteStatus(input: {
+export type UpdateVisitRouteStatusInput = {
   visitId: string;
   userId?: string;
   status: VisitStatus;
   area: PatientRouteArea;
   note?: string;
-}) {
-  return withDatabaseError("updateVisitRouteStatus", async () => {
-    return prisma.$transaction(async (tx) => {
-      const existing = await tx.visit.findUniqueOrThrow({
-        where: { id: input.visitId },
-        include: { route: true }
-      });
+  workItemTitle?: string;
+  workItemDescription?: string;
+};
 
-      if (["completed", "left_without_care", "cancelled"].includes(existing.status)) {
-        throw new ClosedVisitTransitionError(input.visitId);
+export async function updateVisitRouteStatusInTransaction(
+  tx: Prisma.TransactionClient,
+  input: UpdateVisitRouteStatusInput
+) {
+  const existing = await tx.visit.findUniqueOrThrow({
+    where: { id: input.visitId },
+    include: { route: true }
+  });
+
+  if (
+    ["completed", "left_without_care", "cancelled"].includes(existing.status)
+  ) {
+    throw new ClosedVisitTransitionError(input.visitId);
+  }
+
+  const now = new Date();
+  const isClosed = ["completed", "left_without_care", "cancelled"].includes(
+    input.status
+  );
+
+  const visit = await tx.visit.update({
+    where: { id: input.visitId },
+    data: {
+      status: input.status,
+      completedAt: input.status === "completed" ? now : undefined,
+      cancelledAt: input.status === "cancelled" ? now : undefined
+    }
+  });
+
+  await tx.visitStatusHistory.create({
+    data: {
+      visitId: input.visitId,
+      userId: input.userId,
+      fromStatus: existing.status,
+      toStatus: input.status,
+      note: input.note
+    }
+  });
+
+  if (existing.route) {
+    await tx.patientRouteStep.updateMany({
+      where: {
+        routeId: existing.route.id,
+        endedAt: null
+      },
+      data: {
+        endedAt: now
       }
-
-      const now = new Date();
-      const isClosed = ["completed", "left_without_care", "cancelled"].includes(input.status);
-
-      const visit = await tx.visit.update({
-        where: { id: input.visitId },
-        data: {
-          status: input.status,
-          completedAt: input.status === "completed" ? now : undefined,
-          cancelledAt: input.status === "cancelled" ? now : undefined
-        }
-      });
-
-      await tx.visitStatusHistory.create({
-        data: {
-          visitId: input.visitId,
-          userId: input.userId,
-          fromStatus: existing.status,
-          toStatus: input.status,
-          note: input.note
-        }
-      });
-
-      if (existing.route) {
-        await tx.patientRouteStep.updateMany({
-          where: {
-            routeId: existing.route.id,
-            endedAt: null
-          },
-          data: {
-            endedAt: now
-          }
-        });
-
-        await tx.patientRoute.update({
-          where: { id: existing.route.id },
-          data: {
-            currentArea: input.area,
-            active: !isClosed
-          }
-        });
-
-        await tx.patientRouteStep.create({
-          data: {
-            routeId: existing.route.id,
-            area: input.area,
-            status: input.status,
-            note: input.note
-          }
-        });
-      }
-
-      await tx.visitWorkItem.create({
-        data: {
-          visitId: input.visitId,
-          createdById: input.userId,
-          area: input.area,
-          status: isClosed ? "completed" : "pending",
-          title: isClosed ? "Visita cerrada" : "Paciente derivado",
-          description: input.note
-        }
-      });
-
-      return visit;
     });
+
+    await tx.patientRoute.update({
+      where: { id: existing.route.id },
+      data: {
+        currentArea: input.area,
+        active: !isClosed
+      }
+    });
+
+    await tx.patientRouteStep.create({
+      data: {
+        routeId: existing.route.id,
+        area: input.area,
+        status: input.status,
+        note: input.note
+      }
+    });
+  }
+
+  const workItem = await tx.visitWorkItem.create({
+    data: {
+      visitId: input.visitId,
+      createdById: input.userId,
+      area: input.area,
+      status: isClosed ? "completed" : "pending",
+      title:
+        input.workItemTitle ??
+        (isClosed ? "Visita cerrada" : "Paciente derivado"),
+      description: input.workItemDescription ?? input.note
+    }
+  });
+
+  return { visit, workItem };
+}
+
+export async function updateVisitRouteStatus(
+  input: UpdateVisitRouteStatusInput
+) {
+  return withDatabaseError("updateVisitRouteStatus", async () => {
+    const result = await prisma.$transaction((tx) =>
+      updateVisitRouteStatusInTransaction(tx, input)
+    );
+    return result.visit;
   });
 }

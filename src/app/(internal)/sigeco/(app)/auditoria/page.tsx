@@ -43,6 +43,8 @@ const actionLabels: Record<string, string> = {
   "visit.status.update": "Cambió el estado de una visita",
   "clinical.consultation.save": "Guardó una consulta",
   "clinical.consultation.view": "Consultó una atención clínica",
+  "treatment_proposal.outcome.record":
+    "Registró el resultado de una propuesta de tratamiento",
   "clinical.order.create": "Creó una orden clínica",
   "clinical.paid_study_order.create": "Solicitó estudios desde consulta",
   "reception.paid_study_order.create": "Solicitó estudios desde recepción",
@@ -87,6 +89,7 @@ const entityLabels: Record<string, string> = {
   patient: "Paciente",
   patient_duplicate_candidate: "Posible duplicado",
   visit: "Visita",
+  treatment_proposal_outcome: "Resultado de propuesta",
   clinical_order: "Orden clínica",
   work_item: "Tarea interna",
   vital_signs: "Signos vitales",

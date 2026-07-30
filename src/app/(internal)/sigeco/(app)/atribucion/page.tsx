@@ -153,7 +153,7 @@ export default async function AttributionPage({
         />
         <KpiCard
           icon={Megaphone}
-          label="Planes propuestos"
+          label="Propuestas registradas"
           value={report.totals.proposals}
           compactMobile
         />
@@ -191,7 +191,7 @@ export default async function AttributionPage({
             >
               <span>{source.assistedArrivals} llegadas influenciadas</span>
               <span>
-                {source.proposals} planes · {source.sales} ventas
+                {source.proposals} propuestas · {source.sales} ventas
               </span>
               <span className="font-semibold tabular-nums text-text">
                 {formatMoney(source.collectedCents)} cobrados
@@ -211,7 +211,7 @@ export default async function AttributionPage({
                 <Th>Fuente</Th>
                 <Th className="text-right">Llegadas principales</Th>
                 <Th className="text-right">Influenciadas</Th>
-                <Th className="text-right">Planes</Th>
+                <Th className="text-right">Propuestas</Th>
                 <Th className="text-right">Ventas</Th>
                 <Th className="text-right">Vendido</Th>
                 <Th className="text-right">Cobrado</Th>
@@ -631,11 +631,12 @@ export default async function AttributionPage({
 
       <Card>
         <p className="text-xs leading-relaxed text-muted">
-          “Planes propuestos” usa el plan de tratamiento registrado por el
-          médico. Los ingresos corresponden a pagos cobrados, no al saldo
-          todavía pendiente. Una fuente de apoyo puede aparecer como
-          influenciada, pero ventas e ingresos se asignan únicamente a la
-          fuente principal para evitar sumarlos dos veces.
+          “Propuestas registradas” usa el resultado explícito guardado por el
+          médico y excluye los casos donde no aplicaba proponer tratamiento.
+          Los ingresos corresponden a pagos cobrados, no al saldo todavía
+          pendiente. Una fuente de apoyo puede aparecer como influenciada, pero
+          ventas e ingresos se asignan únicamente a la fuente principal para
+          evitar sumarlos dos veces.
         </p>
       </Card>
     </div>

@@ -45,7 +45,7 @@ export async function getAdministrationWorkItems(input: PaginationInput = {}) {
       include: {
         createdBy: true,
         clinicalOrders: {
-          include: { doctor: true },
+          include: { doctor: true, treatmentProposalOutcome: true },
           orderBy: { createdAt: "desc" }
         },
         visit: {
@@ -80,7 +80,7 @@ export async function getLatestPendingAdministrationWorkItem() {
       include: {
         createdBy: true,
         clinicalOrders: {
-          include: { doctor: true },
+          include: { doctor: true, treatmentProposalOutcome: true },
           orderBy: { createdAt: "desc" }
         },
         visit: { include: { patient: true, route: true } },
@@ -101,7 +101,7 @@ export async function getAdministrationWorkItemById(id: string) {
       include: {
         createdBy: true,
         clinicalOrders: {
-          include: { doctor: true },
+          include: { doctor: true, treatmentProposalOutcome: true },
           orderBy: { createdAt: "desc" }
         },
         visit: {

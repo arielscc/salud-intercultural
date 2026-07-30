@@ -1,7 +1,7 @@
 # Fuentes De Captación Y Atribución
 
 Esta guía explica cómo registrar de manera simple dónde conoció el paciente a
-la clínica y cómo comparar ese origen con llegadas, planes de tratamiento,
+la clínica y cómo comparar ese origen con llegadas, propuestas de tratamiento,
 ventas e ingresos.
 
 ## Lo Que Debe Preguntar Recepción
@@ -80,7 +80,7 @@ Muestra:
 
 - llegadas;
 - pacientes distintos;
-- planes de tratamiento registrados por el médico;
+- propuestas con resultado explícito registrado por el médico;
 - ventas;
 - monto vendido;
 - ingresos realmente cobrados;
@@ -92,6 +92,9 @@ evitar sumarlos dos veces. Una fuente de apoyo sí aparece en la columna de
 llegadas influenciadas.
 
 El reporte es agregado: no muestra diagnósticos ni detalles clínicos.
+`No aplica` no cuenta como una propuesta. Los planes históricos anteriores a
+esta captura se conservan como `Sin decisión`, porque un texto no demuestra una
+aceptación.
 
 ## Catálogo Administrable
 
@@ -125,4 +128,3 @@ Antes de staging se debe:
 Producción no debe actualizarse sin autorización expresa. Antes de hacerlo se
 deben revisar la migración Prisma, el cambio de Payload, los códigos públicos y
 el reporte con datos de staging.
-

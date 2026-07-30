@@ -27,6 +27,7 @@ Arquitectura vigente de Sigeco despues de la simplificacion V3.7.
 - Usuarios y sesiones internas.
 - Pacientes, visitas, rutas y tareas entre areas.
 - Consulta, diagnosticos, recetas y evoluciones.
+- Resultado y versiones de propuestas de tratamiento.
 - Enfermeria, estudios y adjuntos modelados.
 - Ventas, pagos, caja e inventario.
 - Seguimientos e historial operativo.
@@ -119,6 +120,27 @@ Una vez cerrada, la visita no admite nuevas transiciones. La invariante vive en 
 La consulta lee directamente el contexto de `Visit` y `Patient`: motivo, duracion, tipo de visita, atencion previa, estudios, edad, alergias, antecedentes y medicacion. El motivo no se solicita de nuevo.
 
 Receta, evolucion y ordenes usan secciones colapsables. Una orden crea de forma persistente un `VisitWorkItem` para el area destino.
+
+### Resultado De La Propuesta
+
+`TreatmentProposalOutcome` conserva una secuencia append-only por consulta. El
+resultado vigente es el evento que no fue reemplazado. Los índices parciales
+impiden dos eventos iniciales y dos aceptaciones para la misma consulta; un
+trigger de PostgreSQL bloquea edición y borrado.
+
+`recordTreatmentProposalOutcome` usa una transacción serializable. Cuando el
+paciente acepta, cambia la ruta a Administración, crea `VisitWorkItem` y
+`ClinicalOrder`, y después inserta el resultado enlazado. No invoca
+`createSaleRecord`: Administración continúa siendo responsable de registrar los
+conceptos vendidos y sus pagos.
+
+Cuando el resultado es `needs_time`, se consulta el último `PatientConsent` de
+seguimiento. Solo una decisión concedida permite crear `FollowUpTask`; se
+prefiere un usuario activo de Recepción llamado Marlen y nunca se asigna
+automáticamente a Comunicación.
+
+La guía operativa vive en
+[Resultado de la propuesta de tratamiento](../operations/treatment-proposal-outcomes.md).
 
 ### Ventas E Inventario
 
@@ -237,6 +259,7 @@ Contratos criticos cubiertos:
 - Adjuntos clínicos privados, idempotencia y acceso temporal.
 - Detección normalizada, cola, alias y fusión transaccional de pacientes.
 - Intervalos, pausas y protección de formularios en bandejas operativas.
+- Validación del resultado, motivos permitidos y límite de permiso clínico.
 
 ## Deploy
 

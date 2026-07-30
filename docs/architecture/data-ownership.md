@@ -24,6 +24,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Leads | Payload | Payload Admin | Activo | Collection `lead-submissions`; sin modelo Prisma duplicado. |
 | Atribución de llegadas y ventas | Prisma | SIGECO | Activo | Catálogo, campañas y fotografía histórica por visita; Payload solo entrega evidencia del formulario previo. |
 | Identidad, duplicados y alias de pacientes | Prisma | SIGECO | Activo | La ficha anterior se archiva y redirige; la fusión transaccional conserva historia y evidencia. |
+| Resultado de propuestas de tratamiento | Prisma | SIGECO, Médico y Administración | Activo | Decisión append-only; una aceptación crea una orden, no una venta ni un pago automáticos. |
 | Configuracion global | Payload | Payload Admin | Activo | Global `site-settings`; config estatica solo fallback. |
 | Home editable | Payload | Payload Admin | Activo | Global `home-content`; `src/data/home.ts` queda como fallback/seed. |
 | Media | Payload | Payload Admin | Activo | Storage local o Vercel Blob segun ambiente. |

@@ -8,6 +8,7 @@ import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
@@ -52,6 +53,7 @@ export default async function AdministrationWorkItemPage({
 
   const patient = item.visit.patient;
   const order = item.clinicalOrders[0];
+  const proposalOutcome = order?.treatmentProposalOutcome;
   const generatedSale = item.sales[0];
   const isPaidStudyOrder = Boolean(generatedSale && item.clinicalOrders.some((entry) => entry.type === "study"));
 
@@ -91,12 +93,25 @@ export default async function AdministrationWorkItemPage({
             <VisitStatusPill status={item.visit.status} />
           </div>
           <div className="mt-4 rounded-[9px] border border-border bg-background p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-              Pendiente administrativo
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                Pendiente administrativo
+              </p>
+              {proposalOutcome ? (
+                <Chip tone="success" dot>
+                  Aceptado por el paciente
+                </Chip>
+              ) : null}
+            </div>
             <p className="mt-0.5 text-sm font-semibold text-text">{order?.title ?? item.title}</p>
             {order?.details ?? item.description ? (
               <p className="mt-1 text-sm text-muted">{order?.details ?? item.description}</p>
+            ) : null}
+            {proposalOutcome ? (
+              <p className="mt-2 text-xs text-muted">
+                Instrucción confirmada por el médico. La venta todavía debe
+                registrarse en esta pantalla.
+              </p>
             ) : null}
           </div>
         </Card>

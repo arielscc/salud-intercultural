@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-13 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-14 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las veinte migraciones actuales están
-aplicadas en desarrollo. Falta validar las ocho
+anteriores están en staging y las veintiuna migraciones actuales están
+aplicadas en desarrollo. Falta validar las nueve
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8.
@@ -26,8 +26,8 @@ funcionamiento del gate de la Tarea 8.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 16 |
-| En progreso | 12 |
+| Pendiente | 15 |
+| En progreso | 13 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -59,7 +59,7 @@ funcionamiento del gate de la Tarea 8.
 | 11 | Fuentes de captación | P1 | En progreso | 9-10 |
 | 12 | Duplicados y fusión | P1 | En progreso | 3-5 |
 | 13 | Actualización de bandejas | P1 | En progreso | 1-5 |
-| 14 | Resultado de propuesta | P1 | Pendiente | 3, 4, 9 |
+| 14 | Resultado de propuesta | P1 | En progreso | 3, 4, 9 |
 | 15 | Tipos de seguimiento | P1 | Pendiente | 9, 14 |
 | 16 | Abandono, bloqueo y pendientes | P1 | Pendiente | 13, 15 |
 | 17 | Correcciones y firma clínica | P1 | Pendiente | 3-5 |
@@ -118,6 +118,12 @@ Estado de las tareas de la base segura:
   formularios y menor frecuencia móvil implementados en las bandejas de
   Recepción, Consulta, Enfermería y Administración. Pendiente QA acumulado,
   medición del piloto y validación del recorrido en staging.
+- **Tarea 14 — Resultado de la propuesta de tratamiento:** decisión append-only
+  del médico, motivos, confirmación móvil, instrucción explícita para
+  Administración, relación con venta y pago, seguimiento consentido para
+  Recepción/Marlen e indicadores mensuales implementados en desarrollo local.
+  Pendiente integración acumulada, QA de gstack y validación por roles en
+  staging.
 
 Para terminar la Tarea 1:
 
@@ -143,6 +149,8 @@ Blob clínico privado y las credenciales separadas aprobadas.
 - `tasks.md` es la única fuente de tareas activas.
 - Este archivo es la única fuente de estado y avance.
 - El médico cierra la propuesta del tratamiento.
+- Una aceptación crea una instrucción para Administración, pero la venta y el
+  pago se registran después y no se inventan automáticamente.
 - Administración controla Caja, gastos, compras e inventario.
 - Marlen realiza seguimiento de pacientes en tratamiento.
 - Yazmin conserva solo comunicación y apoyo para la llegada.

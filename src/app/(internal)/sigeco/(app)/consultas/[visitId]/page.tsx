@@ -7,7 +7,9 @@ import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { PaidStudyOrderDialog } from "@/components/internal/PaidStudyOrderDialog";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
+import { TreatmentProposalOutcomeForm } from "@/components/internal/treatment-proposals/TreatmentProposalOutcomeForm";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
+import { Chip } from "@/components/internal/ui/Chip";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
@@ -19,11 +21,16 @@ import {
   saveClinicalConsultationAction
 } from "@/features/clinical-care/actions";
 import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { symptomDurationUnitLabels, visitIntakeTypeLabels } from "@/features/reception/labels";
 import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
+import {
+  treatmentProposalOutcomeReasonLabels,
+  treatmentProposalOutcomeStatusLabels
+} from "@/features/treatment-proposals/labels";
+import { formatMoney } from "@/features/sales/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
-import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { formatDateTime } from "@/lib/dates";
 import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
 import { requirePermission } from "@/modules/permissions";
@@ -37,6 +44,7 @@ const targetAreaOptions = (["enfermeria", "administracion", "seguimiento"] as Pa
 
 type ConsultationDetailPageProps = {
   params: Promise<{ visitId: string }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
 function calculatePatientAge(birthDate: Date | null) {
@@ -53,9 +61,12 @@ function yesNoLabel(value: boolean | null) {
   return value ? "Sí" : "No";
 }
 
-export default async function ConsultationDetailPage({ params }: ConsultationDetailPageProps) {
-  await requirePermission("clinical_read");
-  const { visitId } = await params;
+export default async function ConsultationDetailPage({
+  params,
+  searchParams
+}: ConsultationDetailPageProps) {
+  const user = await requirePermission("clinical_read");
+  const [{ visitId }, query] = await Promise.all([params, searchParams]);
   const visit = await getClinicalVisitById(visitId);
 
   if (!visit) notFound();
@@ -69,11 +80,34 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
       ? `${visit.symptomDurationValue} ${symptomDurationUnitLabels[visit.symptomDurationUnit].toLocaleLowerCase("es-BO")}`
       : "Sin registro";
   const consultationMotive = visit.clinicalConsultation?.motive ?? visit.reason ?? "Sin motivo registrado";
+  const latestProposalOutcome = visit.treatmentProposalOutcomes[0];
+  const proposalSale =
+    latestProposalOutcome?.administrationOrder?.workItem?.sales[0];
+  const canWriteClinical = roleHasPermission(user.role, "clinical_write");
+  const followUpConsentGranted =
+    visit.patient.consents[0]?.decision === "granted";
+  const canRecordProposal =
+    canWriteClinical &&
+    visit.status === "in_consultation" &&
+    Boolean(visit.clinicalConsultation) &&
+    latestProposalOutcome?.status !== "accepted";
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
       <MobileBackLink href="/sigeco/consultas" label="Volver a Consulta" />
       <div className="grid gap-4 max-sm:contents">
+        {query.error ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error max-sm:order-1"
+            role="alert"
+          >
+            {query.error === "resultado-invalido"
+              ? "Revisa el resultado, el motivo y la instrucción para Administración."
+              : query.error === "resultado-cerrado"
+                ? "La propuesta aceptada ya fue confirmada y no puede enviarse nuevamente."
+                : "La visita ya no está disponible para registrar esta decisión."}
+          </div>
+        ) : null}
         <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -221,22 +255,148 @@ export default async function ConsultationDetailPage({ params }: ConsultationDet
           meta={visit.patient.phone}
           status={<VisitStatusPill status={visit.status} />}
         />
-        {isActiveVisitStatus(visit.status) ? (
-          <Card className="max-sm:order-2">
+
+        <Card className="max-sm:order-2">
+          <CardHeader
+            title="Resultado de la propuesta"
+            description="El médico registra la respuesta después de explicar el tratamiento."
+          />
+
+          {latestProposalOutcome ? (
+            <div className="mb-4 rounded-[9px] border border-border bg-background p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Chip
+                  tone={
+                    latestProposalOutcome.status === "accepted"
+                      ? "success"
+                      : latestProposalOutcome.status === "rejected"
+                        ? "warning"
+                        : "neutral"
+                  }
+                  dot
+                >
+                  {
+                    treatmentProposalOutcomeStatusLabels[
+                      latestProposalOutcome.status
+                    ]
+                  }
+                </Chip>
+                <span className="text-xs tabular-nums text-muted">
+                  {formatDateTime(latestProposalOutcome.decidedAt)}
+                </span>
+              </div>
+              <p className="mt-2 text-sm font-semibold text-text">
+                {
+                  treatmentProposalOutcomeReasonLabels[
+                    latestProposalOutcome.reason
+                  ]
+                }
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                Registrado por{" "}
+                {latestProposalOutcome.doctor?.name ??
+                  latestProposalOutcome.doctor?.email ??
+                  "Médico"}
+              </p>
+              {latestProposalOutcome.note ? (
+                <p className="mt-2 text-sm text-muted">
+                  {latestProposalOutcome.note}
+                </p>
+              ) : null}
+
+              {latestProposalOutcome.administrationOrder?.workItem ? (
+                <div className="mt-3 border-t border-border pt-3 text-sm">
+                  <a
+                    href={`/sigeco/administracion/${latestProposalOutcome.administrationOrder.workItem.id}`}
+                    className="font-semibold text-primary-dark hover:underline"
+                  >
+                    Ver instrucción enviada a Administración
+                  </a>
+                  <p className="mt-1 text-muted">
+                    {proposalSale
+                      ? `Venta ${formatMoney(proposalSale.totalCents)} · Cobrado ${formatMoney(proposalSale.paidCents)} · Saldo ${formatMoney(proposalSale.balanceCents)}`
+                      : "Todavía no se registró una venta."}
+                  </p>
+                </div>
+              ) : null}
+
+              {latestProposalOutcome.status === "needs_time" ? (
+                <p className="mt-3 border-t border-border pt-3 text-sm text-muted">
+                  {latestProposalOutcome.followUpTask
+                    ? "Seguimiento creado para Recepción/Marlen."
+                    : "No se creó seguimiento porque no había consentimiento vigente."}
+                </p>
+              ) : null}
+
+              {visit.treatmentProposalOutcomes.length > 1 ? (
+                <details className="mt-3 border-t border-border pt-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-primary-dark">
+                    Ver decisiones anteriores
+                  </summary>
+                  <div className="mt-2 grid gap-2">
+                    {visit.treatmentProposalOutcomes
+                      .slice(1)
+                      .map((outcome) => (
+                        <div
+                          key={outcome.id}
+                          className="rounded-[7px] border border-border px-3 py-2 text-sm"
+                        >
+                          <div className="flex flex-wrap justify-between gap-2">
+                            <span className="font-semibold text-text">
+                              {
+                                treatmentProposalOutcomeStatusLabels[
+                                  outcome.status
+                                ]
+                              }
+                            </span>
+                            <span className="text-xs tabular-nums text-muted">
+                              {formatDateTime(outcome.decidedAt)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-muted">
+                            {
+                              treatmentProposalOutcomeReasonLabels[
+                                outcome.reason
+                              ]
+                            }
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </details>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mb-4 text-sm text-muted">
+              Todavía no se registró qué decidió el paciente.
+            </p>
+          )}
+
+          {canRecordProposal ? (
+            <TreatmentProposalOutcomeForm
+              visitId={visit.id}
+              followUpConsentGranted={followUpConsentGranted}
+            />
+          ) : latestProposalOutcome?.status === "accepted" ? (
+            <p className="text-sm text-muted">
+              La decisión aceptada quedó cerrada después de enviar la
+              instrucción a Administración.
+            </p>
+          ) : !visit.clinicalConsultation ? (
+            <p className="text-sm text-warning">
+              Guarda primero la consulta y el plan explicado al paciente.
+            </p>
+          ) : null}
+        </Card>
+
+        {visit.status === "in_consultation" ? (
+          <Card className="max-sm:order-3">
             <CardHeader
               title="Salida del paciente"
               description="Al terminar la consulta el paciente puede seguir a otra área o irse."
             />
             <div className="grid gap-2">
               <PaidStudyOrderDialog visitId={visit.id} action={createPaidStudyOrderAction} />
-              <NoticeForm action={applyVisitFlowAction} notice="Paciente enviado a administración">
-                <input type="hidden" name="visitId" value={visit.id} />
-                <input type="hidden" name="flow" value="to_administration" />
-                <input type="hidden" name="note" value="Pasa a administración tras la consulta" />
-                <SubmitButton variant="outline" className="w-full">
-                  Enviar a administración
-                </SubmitButton>
-              </NoticeForm>
               <ConfirmForm
                 action={applyVisitFlowAction}
                 notice="Visita cerrada"

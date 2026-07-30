@@ -51,7 +51,15 @@ export async function getClinicalVisitById(visitId: string) {
     return prisma.visit.findUnique({
       where: { id: visitId },
       include: {
-        patient: true,
+        patient: {
+          include: {
+            consents: {
+              where: { purpose: "follow_up" },
+              orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+              take: 1
+            }
+          }
+        },
         route: {
           include: {
             steps: {
@@ -115,6 +123,25 @@ export async function getClinicalVisitById(visitId: string) {
         },
         workItems: {
           orderBy: { createdAt: "desc" }
+        },
+        treatmentProposalOutcomes: {
+          orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+          include: {
+            doctor: true,
+            administrationOrder: {
+              include: {
+                workItem: {
+                  include: {
+                    sales: {
+                      include: { payments: true },
+                      orderBy: { createdAt: "desc" }
+                    }
+                  }
+                }
+              }
+            },
+            followUpTask: true
+          }
         }
       }
     });
