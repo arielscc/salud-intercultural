@@ -48,6 +48,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 33. [Abandono, bloqueo y pendientes](./visit-discontinuations.md)
 34. [Correcciones, cierre y firma clínica](./clinical-record-versioning.md)
 35. [Caja, egresos y cierre diario](./cash-sessions-expenses-close.md)
+36. [Catálogo de productos y proveedores](./product-catalog-suppliers.md)
 
 ## Flujo recomendado
 

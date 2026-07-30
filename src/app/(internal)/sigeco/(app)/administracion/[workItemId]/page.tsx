@@ -48,7 +48,7 @@ export default async function AdministrationWorkItemPage({
   const query = await searchParams;
   const [item, inventoryItems] = await Promise.all([
     getAdministrationWorkItemById(workItemId),
-    getInventoryItems({ pageSize: 100 })
+    getInventoryItems({ pageSize: 100, status: "active", usage: "sale" })
   ]);
 
   if (!item) notFound();
@@ -85,6 +85,14 @@ export default async function AdministrationWorkItemPage({
             role="alert"
           >
             Revisa los datos de la venta. La descripción, cantidad y precio son obligatorios.
+          </div>
+        ) : null}
+        {query.error === "unavailable-product" ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+          >
+            El producto ya no está activo o no está habilitado para venta. Elige otro producto.
           </div>
         ) : null}
         {query.error === "cash-session-required" ? (
@@ -194,7 +202,8 @@ export default async function AdministrationWorkItemPage({
                   <option value="">No descontar inventario</option>
                   {inventoryItems.map((inventoryItem) => (
                     <option key={inventoryItem.id} value={inventoryItem.id}>
-                      {inventoryItem.name} · Stock {inventoryItem.currentStock}
+                      {inventoryItem.name} · Stock {inventoryItem.currentStock} · Bs{" "}
+                      {(inventoryItem.salePriceCents / 100).toFixed(2)}
                     </option>
                   ))}
                 </select>

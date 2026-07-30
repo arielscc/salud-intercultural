@@ -32,6 +32,12 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/administracion/[workItemId]/page.tsx": [
     "sales_read"
   ],
+  "src/app/(internal)/sigeco/(app)/administracion/caja/page.tsx": [
+    "cash_sessions_read"
+  ],
+  "src/app/(internal)/sigeco/(app)/administracion/caja/cierres/[sessionId]/page.tsx": [
+    "cash_sessions_read"
+  ],
   "src/app/(internal)/sigeco/(app)/administracion/page.tsx": ["sales_read"],
   "src/app/(internal)/sigeco/(app)/administracion/ventas/[saleId]/page.tsx": [
     "sales_read"
@@ -52,7 +58,25 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/inventario/[itemId]/page.tsx": [
     "inventory_read"
   ],
+  "src/app/(internal)/sigeco/(app)/inventario/[itemId]/editar/page.tsx": [
+    "inventory_write"
+  ],
+  "src/app/(internal)/sigeco/(app)/inventario/nuevo/page.tsx": [
+    "inventory_write"
+  ],
   "src/app/(internal)/sigeco/(app)/inventario/page.tsx": ["inventory_read"],
+  "src/app/(internal)/sigeco/(app)/inventario/proveedores/page.tsx": [
+    "suppliers_read"
+  ],
+  "src/app/(internal)/sigeco/(app)/inventario/proveedores/nuevo/page.tsx": [
+    "suppliers_write"
+  ],
+  "src/app/(internal)/sigeco/(app)/inventario/proveedores/[supplierId]/page.tsx": [
+    "suppliers_read"
+  ],
+  "src/app/(internal)/sigeco/(app)/inventario/proveedores/[supplierId]/editar/page.tsx": [
+    "suppliers_write"
+  ],
   "src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx": ["visits_create"],
   "src/app/(internal)/sigeco/(app)/recepcion/abandonos/page.tsx": [
     "visit_discontinuations_read"
@@ -104,6 +128,7 @@ const legacyRedirectPages = [
 const actionPermissions: Record<string, InternalPermission | null> = {
   addInventoryEntryAction: "inventory_write",
   applyVisitFlowAction: "visits_update",
+  approveCashSessionCloseAction: "cash_sessions_approve",
   changeOwnInternalPasswordAction: "internal_access",
   correctClinicalConsultationAction: "clinical_correct",
   createClinicalOrderAction: "clinical_write",
@@ -119,6 +144,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createManagedInternalUserAction: "users_manage",
   createNursingApplicationAction: "nursing_write",
   createNursingNoteAction: "nursing_write",
+  createOtherCashExpenseAction: "cash_movements_create",
   createPaidStudyOrderAction: "clinical_write",
   createPatientAction: "patients_create",
   dismissPatientDuplicateAction: "patient_duplicates_review",
@@ -126,17 +152,23 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createPaymentAction: "payments_write",
   createReceptionPaidStudyOrderAction: "visits_update",
   createSaleAction: "sales_write",
+  createStaffCashExpenseAction: "cash_movements_create",
   createStudyAction: "studies_write",
+  createSupplierAction: "suppliers_write",
+  createUrgentPurchaseExpenseAction: "cash_movements_create",
   createVitalSignsAction: "nursing_write",
   createVisitAction: "visits_create",
   loginInternalUser: null,
   mergePatientDuplicateAction: "patient_duplicates_merge",
   logoutInternalUser: null,
+  openCashSessionAction: "cash_sessions_open",
   requireInternalUserPasswordChangeAction: "users_manage",
   recordPatientConsentAction: "patient_consents_write",
   recordVisitDiscontinuationAction: "visit_discontinuations_write",
   recordTreatmentProposalOutcomeAction: "clinical_write",
+  requestCashSessionCloseAction: "cash_sessions_close",
   returnStudiesToDoctorAction: "nursing_write",
+  reverseCashMovementAction: "cash_movements_reverse",
   revokeManagedInternalUserSessionsAction: "users_manage",
   revokeOwnInternalSessionAction: "internal_access",
   saveClinicalConsultationAction: "clinical_write",
@@ -144,12 +176,17 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   sendPaidStudiesToNursingAction: "visits_update",
   submitReceptionIntakeAction: "visits_create",
   setCaptureCampaignActiveAction: "attribution_manage",
+  setInventoryItemStatusAction: "inventory_write",
+  setSupplierStatusAction: "suppliers_write",
   unlockManagedInternalUserAction: "users_manage",
   updateLeadStatusAction: "leads_update",
   updateManagedInternalUserAccessAction: "users_manage",
   updateCaptureSourceAction: "attribution_manage",
+  updateInventoryItemAction: "inventory_write",
+  updateInventoryItemSuppliersAction: "suppliers_write",
   updateNursingWorkItemAction: "nursing_write",
   updateReceptionPatientAction: "patients_update",
+  updateSupplierAction: "suppliers_write",
   updateVisitStatusAction: "visits_update"
 };
 
@@ -162,6 +199,11 @@ const clinicalAttachmentRoutePermissions: Record<string, InternalPermission> = {
     "attachments_read",
   "src/app/(internal)/sigeco/api/clinical-attachments/[attachmentId]/content/route.ts":
     "attachments_read"
+};
+
+const cashReceiptRoutePermissions: Record<string, InternalPermission> = {
+  "src/app/(internal)/sigeco/api/cash-receipts/[expenseId]/route.ts":
+    "cash_sessions_read"
 };
 
 function exportedActionSegments(file: string) {
@@ -299,7 +341,8 @@ describe("SIGECO permission and privacy boundaries", () => {
       ...Object.values(actionPermissions).filter(
         (permission): permission is InternalPermission => Boolean(permission)
       ),
-      ...Object.values(clinicalAttachmentRoutePermissions)
+      ...Object.values(clinicalAttachmentRoutePermissions),
+      ...Object.values(cashReceiptRoutePermissions)
     ]);
 
     for (const permission of permissions) {
@@ -334,6 +377,16 @@ describe("SIGECO permission and privacy boundaries", () => {
     )) {
       expect(source(file), `${file} must enforce ${permission}`).toContain(
         `permission: "${permission}"`
+      );
+    }
+
+    for (const [file, permission] of Object.entries(cashReceiptRoutePermissions)) {
+      const contents = source(file);
+      expect(contents, `${file} must authenticate`).toContain(
+        "getCurrentInternalUser()"
+      );
+      expect(contents, `${file} must enforce ${permission}`).toContain(
+        `roleHasPermission(user.role, "${permission}")`
       );
     }
   });
@@ -385,7 +438,7 @@ describe("SIGECO permission and privacy boundaries", () => {
 
     for (const file of routeFiles) {
       expect(readFileSync(file, "utf8"), `${file} needs a server guard`).toMatch(
-        /(?:requirePermission\("[a-z_]+"\)|requireClinicalAttachmentApiAccess)/
+        /(?:requirePermission\("[a-z_]+"\)|requireClinicalAttachmentApiAccess|roleHasPermission\(user\.role,\s*"[a-z_]+"\))/
       );
     }
   });

@@ -293,6 +293,32 @@ servir el contenido.
 La operación completa vive en
 [Caja, egresos y cierre diario](../operations/cash-sessions-expenses-close.md).
 
+### Catálogo De Productos Y Proveedores
+
+`InventoryItem` conserva la ficha vigente, disponibilidad, precio de venta,
+costo referencial y una revisión optimista. `InventoryItemCatalogVersion`
+fotografía cada alta, edición, cambio de estado o cambio de proveedores.
+
+`InventoryItemSupplier` permite varias alternativas y una restricción parcial
+admite como máximo un proveedor preferido activo por producto. `Supplier`
+conserva la ficha vigente y `SupplierVersion` su historial.
+
+La base impide modificar el código interno, borrar productos, proveedores o
+asociaciones y editar o borrar versiones. Los registros maestros se desactivan.
+Los códigos, SKU y nombres de proveedor se comparan sin distinguir mayúsculas.
+
+Administración modifica catálogo y proveedores; Dirección lee costos y
+contactos; Médico y Enfermería solo ven disponibilidad activa. El selector de
+ventas muestra productos activos aptos para venta y la transacción valida
+nuevamente ese contrato antes de descontar stock.
+
+El costo referencial pertenece a la ficha vigente. Los costos reales de compra
+se guardarán por línea y recepción en la Tarea 20 para que una edición del
+catálogo no reescriba el pasado.
+
+La operación completa vive en
+[Catálogo de productos y proveedores](../operations/product-catalog-suppliers.md).
+
 ### Consentimientos
 
 `PatientConsent` registra eventos independientes para seguimiento,

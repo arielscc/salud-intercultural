@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import { createPaymentRecord, createSaleRecord } from "@/modules/database/queries/sales";
-import { findInsufficientStockError } from "@/modules/database/queries/inventory";
+import {
+  findInsufficientStockError,
+  findInventoryCatalogError
+} from "@/modules/database/queries/inventory";
 import { findCashWorkflowError } from "@/modules/database/queries/cash";
 import {
   hasPaidStudyFlowError,
@@ -74,11 +77,14 @@ export async function createSaleAction(formData: FormData) {
           redirect(`${target}?error=cash-session-required`);
         }
         const stockError = findInsufficientStockError(error);
-        if (!stockError) throw error;
-
         const target = parsed.data.workItemId
           ? `/sigeco/administracion/${parsed.data.workItemId}`
           : "/sigeco/administracion";
+        const catalogError = findInventoryCatalogError(error);
+        if (catalogError?.code === "inactive-item" || catalogError?.code === "not-for-sale") {
+          redirect(`${target}?error=unavailable-product`);
+        }
+        if (!stockError) throw error;
         redirect(`${target}?error=insufficient-stock`);
       }
 

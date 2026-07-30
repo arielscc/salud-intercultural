@@ -28,6 +28,8 @@ Control de avance: [progress.md](./progress.md)
 - [Caja, egresos y cierre diario](../../operations/cash-sessions-expenses-close.md)
 - [Reporte de la Tarea 18](../task-reports/2026-07-30-tarea-18-caja-dinero-personal-gastos-cierre.md)
 - [Reporte de inventario](../task-reports/2026-05-30-v3-6-inventario.md)
+- [Catálogo de productos y proveedores](../../operations/product-catalog-suppliers.md)
+- [Reporte de la Tarea 19](../task-reports/2026-07-30-tarea-19-catalogo-productos-proveedores.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
 
@@ -43,12 +45,15 @@ Control de avance: [progress.md](./progress.md)
 
 SIGECO ya registra pacientes, visitas, consultas, ruta entre áreas, ventas,
 pagos, sesiones y movimientos de Caja, egresos, conciliaciones, productos,
-movimientos de inventario, alertas y seguimientos.
+proveedores, versiones del catálogo, asociaciones múltiples, movimientos de
+inventario, alertas y seguimientos.
 
 - Un cobro exige una Caja abierta y genera `Payment` y `CashMovement`.
 - Los egresos guardan personas, autorización, motivo y detalle estructurado.
 - Una venta inventariable descuenta stock.
 - Las entradas y ajustes generan `InventoryMovement`.
+- Los cambios de productos y proveedores crean versiones y no reutilizan el
+  código interno.
 - Los montos se almacenan en centavos.
 - Una venta no puede dejar stock negativo.
 

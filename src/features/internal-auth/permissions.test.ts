@@ -134,9 +134,17 @@ describe("internal role permissions", () => {
   it("scopes inventory adjustments to authorized roles", () => {
     expect(roleHasPermission("administracion", "inventory_read")).toBe(true);
     expect(roleHasPermission("administracion", "inventory_write")).toBe(true);
+    expect(roleHasPermission("administracion", "inventory_cost_read")).toBe(true);
+    expect(roleHasPermission("administracion", "suppliers_write")).toBe(true);
     expect(roleHasPermission("administracion", "inventory_adjust")).toBe(false);
     expect(roleHasPermission("direccion", "inventory_read")).toBe(true);
+    expect(roleHasPermission("direccion", "inventory_cost_read")).toBe(true);
+    expect(roleHasPermission("direccion", "suppliers_read")).toBe(true);
+    expect(roleHasPermission("direccion", "suppliers_write")).toBe(false);
     expect(roleHasPermission("direccion", "inventory_adjust")).toBe(false);
+    expect(roleHasPermission("medico", "inventory_read")).toBe(true);
+    expect(roleHasPermission("enfermeria", "inventory_read")).toBe(true);
+    expect(roleHasPermission("seguimiento", "inventory_read")).toBe(false);
     expect(roleHasPermission("super_admin", "inventory_adjust")).toBe(true);
   });
 

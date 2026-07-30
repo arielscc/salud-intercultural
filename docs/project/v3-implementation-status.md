@@ -108,6 +108,10 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 
 - Ventas, pagos, saldos y movimientos de caja.
 - Productos inventariables y descuento transaccional de stock.
+- Catálogo administrable con categoría, uso, precio, costo referencial,
+  activación y versiones.
+- Proveedores con contacto, asociaciones múltiples y uno preferido.
+- Costos y contactos visibles por permisos; disponibilidad clínica sin costos.
 - Rollback total y error visible cuando el stock es insuficiente.
 - Entradas, ajustes autorizados y alertas de stock bajo.
 
@@ -230,7 +234,7 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
 2. Medición del piloto de bandejas antes de evaluar SSE o WebSocket.
 3. Formatos imprimibles de receta y comprobante, si la clinica los requiere.
 4. Reglas aprobadas para automatizar seguimientos.
-5. Flujo de proveedores y compras.
+5. Flujo de compras, recepciones, lotes y costos históricos.
 6. Reasignacion de usuarios `captacion` en cada ambiente.
 
 ### Plataforma

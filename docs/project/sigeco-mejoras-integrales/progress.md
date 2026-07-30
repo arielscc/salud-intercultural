@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-18 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-19 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,20 +16,22 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las veintiséis migraciones actuales están
-aplicadas en desarrollo. Falta validar las catorce
+anteriores están en staging y las veintisiete migraciones actuales están
+aplicadas en desarrollo. Falta validar las quince
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
 apertura, egresos estructurados, conciliación por canal, cierre y correcciones
 compensatorias.
+El catálogo y los proveedores ya se administran desde SIGECO con versiones,
+costos separados, asociaciones múltiples y permisos por rol.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 11 |
-| En progreso | 17 |
+| Pendiente | 10 |
+| En progreso | 18 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -66,7 +68,7 @@ compensatorias.
 | 16 | Abandono, bloqueo y pendientes | P1 | En progreso | 13, 15 |
 | 17 | Correcciones y firma clínica | P1 | En progreso | 3-5 |
 | 18 | Caja, dinero al personal, gastos y cierre | P0 | En progreso | 3-5, 8 |
-| 19 | Catálogo y proveedores | P0 | Pendiente | 3-5, 18 |
+| 19 | Catálogo y proveedores | P0 | En progreso | 3-5, 18 |
 | 20 | Compras, recepciones, lotes y stock | P0 | Pendiente | 18-19 |
 | 21 | Recetas y comprobantes | P1 | Pendiente | 17-20 |
 | 22 | Reporte del recorrido completo | P1 | Pendiente | 9-21 |
@@ -149,6 +151,13 @@ Estado de las tareas de la base segura:
   imprimible y correcciones compensatorias implementados en desarrollo local.
   Pendiente integración acumulada, QA web/móvil, validación por roles y
   decisiones productivas de Dirección.
+- **Tarea 19 — Catálogo de productos y proveedores:** productos con categoría,
+  uso, precio, costo referencial, stock mínimo, estado y versiones;
+  proveedores con contacto, asociaciones múltiples y uno preferido
+  implementados en desarrollo local. El código no cambia ni se reutiliza,
+  Dirección revisa costos, Médico y Enfermería solo disponibilidad y
+  Seguimiento/Yazmin no accede. Pendiente integración acumulada, QA web/móvil,
+  revisión de datos reales y validación por roles en staging.
 
 Para terminar la Tarea 1:
 
@@ -924,6 +933,55 @@ Responsables: Administración y Dirección para revisión.
 - No aplicar la migración en producción sin autorización expresa.
 
 **Commit sugerido:** `feat(sigeco): add expenses and daily cash close`
+
+## 2026-07-30 — Tarea 19 — Catálogo De Productos Y Proveedores
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Administración y Dirección para revisión.
+
+### Resultado
+
+- Productos con categoría, unidad, uso, precio, costo referencial, stock
+  mínimo y estado.
+- Catálogo con búsqueda, filtros, alta rápida y edición guiada responsive.
+- Código interno único, normalizado, inmutable y no reutilizable.
+- Proveedores con empresa, contacto, teléfonos, correo, dirección y notas.
+- Varios proveedores por producto y como máximo uno preferido.
+- Productos y proveedores se desactivan sin borrar historia.
+- Cada cambio conserva versión, responsable, fecha y motivo.
+- Administración modifica; Dirección revisa costos y proveedores; Médico y
+  Enfermería solo disponibilidad activa; Seguimiento/Yazmin no accede.
+- Ventas solo utiliza productos activos y habilitados para venta.
+
+### Archivos Y Migraciones
+
+- Modelo, permisos, schemas, acciones y consultas de catálogo y proveedores.
+- Pantallas responsive de catálogo, producto, proveedores e historial.
+- Migración local `20260730181717_product_catalog_suppliers`, con conversión
+  conservadora del proveedor anterior y versiones iniciales.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Prisma format, validate, generate y migración local aprobados; 27 migraciones
+  al día.
+- TypeScript y lint aprobados.
+- 4 archivos y 32 pruebas enfocadas aprobados.
+- La cobertura de integración quedó ampliada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración, build y QA gstack en el cierre acumulado.
+- Validar Administración, Dirección, Médico y Enfermería en staging.
+- Revisar categorías, unidades, precios, costos y proveedores reales.
+- Confirmar costos históricos de compra durante la Tarea 20.
+- Probar alta y edición en teléfonos reales.
+- No aplicar la migración en producción sin autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): manage products and suppliers`
 
 ## Cómo Actualizar El Progreso
 

@@ -55,6 +55,9 @@ enum InternalPermission {
   inventory_read
   inventory_write
   inventory_adjust
+  inventory_cost_read
+  suppliers_read
+  suppliers_write
   reports_read
   audit_read
   users_manage
@@ -517,6 +520,12 @@ enum InventoryAlertStatus {
   resolved
 }
 
+enum InventoryItemUsage {
+  sale
+  internal_use
+  both
+}
+
 model InternalUser {
   id                          String                          @id @default(cuid())
   email                       String                          @unique
@@ -574,6 +583,8 @@ model InternalUser {
   followUpStatusChanges       FollowUpStatusHistory[]
   inventoryMovements          InventoryMovement[]
   inventoryAdjustments        InventoryAdjustment[]
+  inventoryCatalogVersions    InventoryItemCatalogVersion[]   @relation("InventoryCatalogVersionChangedBy")
+  supplierVersions            SupplierVersion[]               @relation("SupplierVersionChangedBy")
   auditEvents                 AuditEvent[]
   uploadedAttachments         ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
   deletedAttachments          ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
@@ -1893,41 +1904,120 @@ model FollowUpTemplate {
 }
 
 model Supplier {
-  id        String          @id @default(cuid())
-  name      String
-  phone     String?
-  notes     String?
-  active    Boolean         @default(true)
-  createdAt DateTime        @default(now())
-  items     InventoryItem[]
+  id          String                  @id @default(cuid())
+  name        String
+  contactName String?
+  phone       String?
+  whatsapp    String?
+  email       String?
+  address     String?
+  notes       String?
+  active      Boolean                 @default(true)
+  revision    Int                     @default(1)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  itemLinks   InventoryItemSupplier[]
+  versions    SupplierVersion[]
 
   @@index([name])
   @@index([active])
 }
 
 model InventoryItem {
-  id           String                @id @default(cuid())
-  supplierId   String?
-  sku          String?               @unique
-  internalCode String                @unique
-  name         String
-  description  String?
-  unit         String                @default("unidad")
-  currentStock Int                   @default(0)
-  minimumStock Int                   @default(0)
-  active       Boolean               @default(true)
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
-  supplier     Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  saleItems    SaleItem[]
-  movements    InventoryMovement[]
-  adjustments  InventoryAdjustment[]
-  alerts       InventoryAlert[]
+  id                 String                        @id @default(cuid())
+  sku                String?                       @unique
+  internalCode       String                        @unique
+  name               String
+  description        String?
+  category           String                        @default("Sin categoría")
+  unit               String                        @default("unidad")
+  usage              InventoryItemUsage            @default(both)
+  salePriceCents     Int                           @default(0)
+  referenceCostCents Int                           @default(0)
+  currentStock       Int                           @default(0)
+  minimumStock       Int                           @default(0)
+  active             Boolean                       @default(true)
+  revision           Int                           @default(1)
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  saleItems          SaleItem[]
+  movements          InventoryMovement[]
+  adjustments        InventoryAdjustment[]
+  alerts             InventoryAlert[]
+  supplierLinks      InventoryItemSupplier[]
+  catalogVersions    InventoryItemCatalogVersion[]
 
-  @@index([supplierId])
   @@index([name])
+  @@index([category])
+  @@index([usage])
   @@index([active])
   @@index([currentStock])
+}
+
+model InventoryItemSupplier {
+  id         String        @id @default(cuid())
+  itemId     String
+  supplierId String
+  preferred  Boolean       @default(false)
+  active     Boolean       @default(true)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  item       InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  supplier   Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  @@unique([itemId, supplierId])
+  @@index([itemId, active])
+  @@index([supplierId, active])
+}
+
+model InventoryItemCatalogVersion {
+  id                 String             @id @default(cuid())
+  itemId             String
+  version            Int
+  sku                String?
+  internalCode       String
+  name               String
+  description        String?
+  category           String
+  unit               String
+  usage              InventoryItemUsage
+  salePriceCents     Int
+  referenceCostCents Int
+  minimumStock       Int
+  active             Boolean
+  supplierSnapshot   Json?
+  changedById        String?
+  changeReason       String
+  createdAt          DateTime           @default(now())
+  item               InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  changedBy          InternalUser?      @relation("InventoryCatalogVersionChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@unique([itemId, version])
+  @@index([itemId, createdAt])
+  @@index([changedById])
+}
+
+model SupplierVersion {
+  id           String        @id @default(cuid())
+  supplierId   String
+  version      Int
+  name         String
+  contactName  String?
+  phone        String?
+  whatsapp     String?
+  email        String?
+  address      String?
+  notes        String?
+  active       Boolean
+  changedById  String?
+  changeReason String
+  createdAt    DateTime      @default(now())
+  supplier     Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  changedBy    InternalUser? @relation("SupplierVersionChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@unique([supplierId, version])
+  @@index([supplierId, createdAt])
+  @@index([changedById])
 }
 
 model InventoryMovement {

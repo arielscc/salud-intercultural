@@ -4,45 +4,261 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   addInventoryEntryRecord,
+  createSupplierRecord,
   createInventoryAdjustmentRecord,
-  createInventoryItemRecord
+  createInventoryItemRecord,
+  findInventoryCatalogError,
+  setInventoryItemStatusRecord,
+  setSupplierStatusRecord,
+  updateInventoryItemRecord,
+  updateInventoryItemSuppliersRecord,
+  updateSupplierRecord
 } from "@/modules/database/queries/inventory";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import {
   createInventoryItemSchema,
+  createSupplierSchema,
+  inventoryItemStatusSchema,
+  inventoryItemSuppliersSchema,
+  inventoryMoneyToCents,
   inventoryAdjustmentSchema,
-  inventoryEntrySchema
+  inventoryEntrySchema,
+  supplierStatusSchema,
+  updateInventoryItemSchema,
+  updateSupplierSchema
 } from "@/features/inventory/schemas/inventory.schema";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
 }
 
+function redirectCatalogError(error: unknown, pathname: string): never {
+  const catalogError = findInventoryCatalogError(error);
+  if (catalogError) {
+    redirect(`${pathname}?error=${catalogError.code}`);
+  }
+  throw error;
+}
+
 export async function createInventoryItemAction(formData: FormData) {
-  const item = await runAuditedAction(
-    {
-      permission: "inventory_write",
-      action: "inventory.item.create",
-      entityType: "inventory_item"
-    },
-    async (user) => {
-      const parsed = createInventoryItemSchema.safeParse(parseFormData(formData));
+  let item;
+  try {
+    item = await runAuditedAction(
+      {
+        permission: "inventory_write",
+        action: "inventory.item.create",
+        entityType: "inventory_item"
+      },
+      async (user) => {
+        const parsed = createInventoryItemSchema.safeParse(parseFormData(formData));
 
-      if (!parsed.success) {
-        redirect("/sigeco/inventario?error=invalid-item");
+        if (!parsed.success) {
+          redirect("/sigeco/inventario/nuevo?error=invalid-item");
+        }
+
+        const created = await createInventoryItemRecord({
+          ...parsed.data,
+          salePriceCents: inventoryMoneyToCents(parsed.data.salePrice),
+          referenceCostCents: inventoryMoneyToCents(parsed.data.referenceCost),
+          userId: user.id
+        });
+        return auditedResult(created, { entityId: created.id });
       }
-
-      const created = await createInventoryItemRecord({
-        ...parsed.data,
-        userId: user.id
-      });
-      return auditedResult(created, { entityId: created.id });
-    }
-  );
+    );
+  } catch (error) {
+    redirectCatalogError(error, "/sigeco/inventario/nuevo");
+  }
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/inventario");
   redirect(`/sigeco/inventario/${item.id}?aviso=producto-creado`);
+}
+
+export async function updateInventoryItemAction(formData: FormData) {
+  const itemId = String(formData.get("itemId") ?? "");
+  try {
+    await runAuditedAction(
+      {
+        permission: "inventory_write",
+        action: "inventory.item.update",
+        entityType: "inventory_item",
+        entityId: itemId || undefined
+      },
+      async (user) => {
+        const parsed = updateInventoryItemSchema.safeParse(parseFormData(formData));
+        if (!parsed.success) {
+          redirect(`/sigeco/inventario/${itemId}/editar?error=invalid-item`);
+        }
+        const updated = await updateInventoryItemRecord({
+          ...parsed.data,
+          salePriceCents: inventoryMoneyToCents(parsed.data.salePrice),
+          referenceCostCents: inventoryMoneyToCents(parsed.data.referenceCost),
+          userId: user.id
+        });
+        return auditedResult(updated, {
+          entityId: updated.id,
+          context: { revision: updated.revision }
+        });
+      }
+    );
+  } catch (error) {
+    redirectCatalogError(error, `/sigeco/inventario/${itemId}/editar`);
+  }
+
+  revalidatePath("/sigeco/inventario");
+  revalidatePath(`/sigeco/inventario/${itemId}`);
+  redirect(`/sigeco/inventario/${itemId}?aviso=producto-actualizado`);
+}
+
+export async function setInventoryItemStatusAction(formData: FormData) {
+  const itemId = String(formData.get("itemId") ?? "");
+  try {
+    await runAuditedAction(
+      {
+        permission: "inventory_write",
+        action: "inventory.item.status.update",
+        entityType: "inventory_item",
+        entityId: itemId || undefined
+      },
+      async (user) => {
+        const parsed = inventoryItemStatusSchema.safeParse(parseFormData(formData));
+        if (!parsed.success) redirect(`/sigeco/inventario/${itemId}?error=invalid-status`);
+        const updated = await setInventoryItemStatusRecord({ ...parsed.data, userId: user.id });
+        return auditedResult(updated, {
+          entityId: updated.id,
+          context: { active: updated.active, revision: updated.revision }
+        });
+      }
+    );
+  } catch (error) {
+    redirectCatalogError(error, `/sigeco/inventario/${itemId}`);
+  }
+
+  revalidatePath("/sigeco/inventario");
+  revalidatePath(`/sigeco/inventario/${itemId}`);
+  redirect(`/sigeco/inventario/${itemId}?aviso=estado-producto-actualizado`);
+}
+
+export async function updateInventoryItemSuppliersAction(formData: FormData) {
+  const itemId = String(formData.get("itemId") ?? "");
+  const raw = {
+    ...parseFormData(formData),
+    supplierIds: formData.getAll("supplierIds").map(String)
+  };
+  try {
+    await runAuditedAction(
+      {
+        permission: "suppliers_write",
+        action: "inventory.item.suppliers.update",
+        entityType: "inventory_item",
+        entityId: itemId || undefined
+      },
+      async (user) => {
+        const parsed = inventoryItemSuppliersSchema.safeParse(raw);
+        if (!parsed.success) redirect(`/sigeco/inventario/${itemId}?error=invalid-suppliers`);
+        const updated = await updateInventoryItemSuppliersRecord({
+          ...parsed.data,
+          userId: user.id
+        });
+        return auditedResult(updated, {
+          entityId: updated.id,
+          context: { supplierCount: parsed.data.supplierIds.length }
+        });
+      }
+    );
+  } catch (error) {
+    redirectCatalogError(error, `/sigeco/inventario/${itemId}`);
+  }
+
+  revalidatePath("/sigeco/inventario");
+  revalidatePath(`/sigeco/inventario/${itemId}`);
+  redirect(`/sigeco/inventario/${itemId}?aviso=proveedores-actualizados`);
+}
+
+export async function createSupplierAction(formData: FormData) {
+  let supplier;
+  try {
+    supplier = await runAuditedAction(
+      {
+        permission: "suppliers_write",
+        action: "inventory.supplier.create",
+        entityType: "supplier"
+      },
+      async (user) => {
+        const parsed = createSupplierSchema.safeParse(parseFormData(formData));
+        if (!parsed.success) redirect("/sigeco/inventario/proveedores/nuevo?error=invalid-supplier");
+        const created = await createSupplierRecord({ ...parsed.data, userId: user.id });
+        return auditedResult(created, { entityId: created.id });
+      }
+    );
+  } catch (error) {
+    redirectCatalogError(error, "/sigeco/inventario/proveedores/nuevo");
+  }
+
+  revalidatePath("/sigeco/inventario/proveedores");
+  redirect(`/sigeco/inventario/proveedores/${supplier.id}?aviso=proveedor-creado`);
+}
+
+export async function updateSupplierAction(formData: FormData) {
+  const supplierId = String(formData.get("supplierId") ?? "");
+  try {
+    await runAuditedAction(
+      {
+        permission: "suppliers_write",
+        action: "inventory.supplier.update",
+        entityType: "supplier",
+        entityId: supplierId || undefined
+      },
+      async (user) => {
+        const parsed = updateSupplierSchema.safeParse(parseFormData(formData));
+        if (!parsed.success) {
+          redirect(`/sigeco/inventario/proveedores/${supplierId}/editar?error=invalid-supplier`);
+        }
+        const updated = await updateSupplierRecord({ ...parsed.data, userId: user.id });
+        return auditedResult(updated, {
+          entityId: updated.id,
+          context: { revision: updated.revision }
+        });
+      }
+    );
+  } catch (error) {
+    redirectCatalogError(error, `/sigeco/inventario/proveedores/${supplierId}/editar`);
+  }
+
+  revalidatePath("/sigeco/inventario/proveedores");
+  revalidatePath(`/sigeco/inventario/proveedores/${supplierId}`);
+  redirect(`/sigeco/inventario/proveedores/${supplierId}?aviso=proveedor-actualizado`);
+}
+
+export async function setSupplierStatusAction(formData: FormData) {
+  const supplierId = String(formData.get("supplierId") ?? "");
+  try {
+    await runAuditedAction(
+      {
+        permission: "suppliers_write",
+        action: "inventory.supplier.status.update",
+        entityType: "supplier",
+        entityId: supplierId || undefined
+      },
+      async (user) => {
+        const parsed = supplierStatusSchema.safeParse(parseFormData(formData));
+        if (!parsed.success) {
+          redirect(`/sigeco/inventario/proveedores/${supplierId}?error=invalid-status`);
+        }
+        const updated = await setSupplierStatusRecord({ ...parsed.data, userId: user.id });
+        return auditedResult(updated, {
+          entityId: updated.id,
+          context: { active: updated.active, revision: updated.revision }
+        });
+      }
+    );
+  } catch (error) {
+    redirectCatalogError(error, `/sigeco/inventario/proveedores/${supplierId}`);
+  }
+
+  revalidatePath("/sigeco/inventario/proveedores");
+  revalidatePath(`/sigeco/inventario/proveedores/${supplierId}`);
+  redirect(`/sigeco/inventario/proveedores/${supplierId}?aviso=estado-proveedor-actualizado`);
 }
 
 export async function addInventoryEntryAction(formData: FormData) {

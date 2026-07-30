@@ -81,6 +81,43 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
     ];
   }
 
+  if (moduleSegment === "inventario" && section === "nuevo") {
+    return [
+      { label: "Catálogo", href: "/sigeco/inventario" },
+      { label: "Nuevo producto" }
+    ];
+  }
+
+  if (moduleSegment === "inventario" && section === "proveedores") {
+    const items: BreadcrumbItem[] = [
+      { label: "Catálogo", href: "/sigeco/inventario" },
+      { label: "Proveedores", href: "/sigeco/inventario/proveedores" }
+    ];
+    if (id === "nuevo") items.push({ label: "Nuevo proveedor" });
+    else if (id && action === "editar") {
+      items.push({
+        label: "Detalle",
+        href: `/sigeco/inventario/proveedores/${id}`
+      });
+      items.push({ label: "Editar" });
+    } else if (id) items.push({ label: "Detalle" });
+    else items[1] = { label: "Proveedores" };
+    return items;
+  }
+
+  if (moduleSegment === "inventario" && section) {
+    return id === "editar"
+      ? [
+          { label: "Catálogo", href: "/sigeco/inventario" },
+          { label: "Producto", href: `/sigeco/inventario/${section}` },
+          { label: "Editar" }
+        ]
+      : [
+          { label: "Catálogo", href: "/sigeco/inventario" },
+          { label: "Producto" }
+        ];
+  }
+
   const detailModules: Record<string, { label: string; href: string; detail: string }> = {
     consultas: { label: "Consulta", href: "/sigeco/consultas", detail: "Atención" },
     enfermeria: { label: "Enfermería", href: "/sigeco/enfermeria", detail: "Tarea" },
@@ -88,8 +125,7 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
       label: "Seguimiento",
       href: "/sigeco/seguimientos",
       detail: "Contacto"
-    },
-    inventario: { label: "Inventario", href: "/sigeco/inventario", detail: "Producto" }
+    }
   };
   const detailModule = detailModules[moduleSegment];
 

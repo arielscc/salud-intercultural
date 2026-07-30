@@ -27,8 +27,9 @@ async function cleanSales() {
   await prisma.payment.deleteMany();
   await prisma.saleItem.deleteMany();
   await prisma.sale.deleteMany();
-  await prisma.inventoryItem.deleteMany();
-  await prisma.supplier.deleteMany();
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "InventoryItemCatalogVersion", "SupplierVersion", "InventoryItemSupplier", "InventoryItem", "Supplier" CASCADE'
+  );
   await prisma.nursingWorkItemResult.deleteMany();
   await prisma.nursingApplication.deleteMany();
   await prisma.nursingNote.deleteMany();
