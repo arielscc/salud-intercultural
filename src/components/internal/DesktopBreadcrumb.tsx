@@ -88,6 +88,13 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
     ];
   }
 
+  if (moduleSegment === "inventario" && section === "lotes") {
+    return [
+      { label: "Catálogo", href: "/sigeco/inventario" },
+      { label: "Lotes y vencimientos" }
+    ];
+  }
+
   if (moduleSegment === "inventario" && section === "proveedores") {
     const items: BreadcrumbItem[] = [
       { label: "Catálogo", href: "/sigeco/inventario" },
@@ -115,6 +122,26 @@ function getBreadcrumbItems(pathname: string): BreadcrumbItem[] | null {
       : [
           { label: "Catálogo", href: "/sigeco/inventario" },
           { label: "Producto" }
+        ];
+  }
+
+  if (moduleSegment === "compras") {
+    if (!section) return [{ label: "Compras" }];
+    if (section === "nueva") {
+      return [
+        { label: "Compras", href: "/sigeco/compras" },
+        { label: "Nueva compra" }
+      ];
+    }
+    return action === "recibir"
+      ? [
+          { label: "Compras", href: "/sigeco/compras" },
+          { label: "Detalle", href: `/sigeco/compras/${section}` },
+          { label: "Recibir productos" }
+        ]
+      : [
+          { label: "Compras", href: "/sigeco/compras" },
+          { label: "Detalle" }
         ];
   }
 

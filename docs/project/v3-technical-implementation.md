@@ -313,11 +313,36 @@ ventas muestra productos activos aptos para venta y la transacción valida
 nuevamente ese contrato antes de descontar stock.
 
 El costo referencial pertenece a la ficha vigente. Los costos reales de compra
-se guardarán por línea y recepción en la Tarea 20 para que una edición del
-catálogo no reescriba el pasado.
+se guardan por línea y recepción para que una edición del catálogo no
+reescriba el pasado.
 
 La operación completa vive en
 [Catálogo de productos y proveedores](../operations/product-catalog-suppliers.md).
+
+### Compras, Recepciones, Lotes Y Stock
+
+`Purchase` conserva la orden y su estado; `PurchaseLine` fotografía
+descripción, unidad, cantidad y costo acordado. `PurchasePayment` enlaza cada
+pago real con `CashSession` y `CashMovement`. Una compra a crédito no crea pago
+y una compra urgente reutiliza el movimiento del egreso existente.
+
+`PurchaseReceipt` conserva quién, cuándo, dónde y con qué documento recibió.
+Cada `PurchaseReceiptLine` crea un `InventoryLot` y un único
+`InventoryMovement` de entrada. Cantidades y constraints impiden recibir más
+de lo pedido; claves de idempotencia y relaciones únicas impiden aplicar dos
+veces la recepción.
+
+Las salidas de venta distribuyen existencias por FEFO entre lotes vigentes.
+`InventoryLotAdjustment` registra daño, merma, vencimiento, devolución o
+corrección, con autorización de Dirección y movimiento compensatorio. Los
+eventos financieros, recepciones, documentos, movimientos y ajustes son
+append-only.
+
+`PurchaseDocument` guarda metadata y SHA-256 en Prisma; el contenido usa
+storage privado, autorización server-side y `no-store`. Payload no participa.
+
+La operación completa vive en
+[Compras, recepciones, lotes y stock](../operations/purchases-receipts-batches-stock.md).
 
 ### Consentimientos
 

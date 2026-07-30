@@ -39,6 +39,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-30 | [Tarea 17: correcciones, cierre y firma clínica](./2026-07-30-tarea-17-correcciones-cierre-firma-clinica.md) | Finaliza consultas con autor y conserva cada corrección como una nueva versión comparable. |
 | 2026-07-30 | [Tarea 18: Caja, dinero al personal, gastos y cierre](./2026-07-30-tarea-18-caja-dinero-personal-gastos-cierre.md) | Abre y concilia Caja, registra egresos estructurados y corrige mediante movimientos compensatorios. |
 | 2026-07-30 | [Tarea 19: catálogo de productos y proveedores](./2026-07-30-tarea-19-catalogo-productos-proveedores.md) | Versiona productos y proveedores, protege códigos y separa costos, disponibilidad y permisos. |
+| 2026-07-30 | [Tarea 20: compras, recepciones, lotes y stock](./2026-07-30-tarea-20-compras-recepciones-lotes-stock.md) | Enlaza orden, pago, recepción, lote y movimiento sin duplicar dinero ni stock. |
 
 ## Relacion Con Estado V3
 

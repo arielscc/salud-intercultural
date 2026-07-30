@@ -13,7 +13,7 @@ import {
 } from "@/features/cash/labels";
 import { defaultCashBranch } from "@/features/cash/policy";
 import { formatMoney } from "@/features/sales/labels";
-import { formatDate, formatDateTime } from "@/lib/dates";
+import { formatDateOnly, formatDateTime } from "@/lib/dates";
 import { getCashSessionCloseReport } from "@/modules/database/queries/cash";
 import { requirePermission } from "@/modules/permissions";
 
@@ -63,7 +63,7 @@ export default async function CashCloseReportPage({
               {session.registerName} · {defaultCashBranch.name}
             </p>
             <p className="mt-1 text-sm text-muted print:text-black">
-              {formatDate(session.businessDate)} ·{" "}
+              {formatDateOnly(session.businessDate)} ·{" "}
               {cashShiftLabels[session.shift]}
             </p>
           </div>

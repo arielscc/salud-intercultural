@@ -30,6 +30,8 @@ Control de avance: [progress.md](./progress.md)
 - [Reporte de inventario](../task-reports/2026-05-30-v3-6-inventario.md)
 - [Catálogo de productos y proveedores](../../operations/product-catalog-suppliers.md)
 - [Reporte de la Tarea 19](../task-reports/2026-07-30-tarea-19-catalogo-productos-proveedores.md)
+- [Compras, recepciones, lotes y stock](../../operations/purchases-receipts-batches-stock.md)
+- [Reporte de la Tarea 20](../task-reports/2026-07-30-tarea-20-compras-recepciones-lotes-stock.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
 
@@ -40,18 +42,23 @@ Control de avance: [progress.md](./progress.md)
 - [Queries de sesiones, egresos y cierre](../../../src/modules/database/queries/cash.ts)
 - [Queries de inventario](../../../src/modules/database/queries/inventory.ts)
 - [Actions de inventario](../../../src/features/inventory/actions.ts)
+- [Queries de compras y lotes](../../../src/modules/database/queries/purchases.ts)
+- [Actions de compras y recepciones](../../../src/features/purchases/actions.ts)
 
 ## Qué Existe Actualmente
 
 SIGECO ya registra pacientes, visitas, consultas, ruta entre áreas, ventas,
 pagos, sesiones y movimientos de Caja, egresos, conciliaciones, productos,
-proveedores, versiones del catálogo, asociaciones múltiples, movimientos de
-inventario, alertas y seguimientos.
+proveedores, versiones del catálogo, asociaciones múltiples, compras, pagos a
+proveedores, recepciones parciales, lotes, movimientos de inventario, alertas y
+seguimientos.
 
 - Un cobro exige una Caja abierta y genera `Payment` y `CashMovement`.
 - Los egresos guardan personas, autorización, motivo y detalle estructurado.
 - Una venta inventariable descuenta stock.
 - Las entradas y ajustes generan `InventoryMovement`.
+- Una compra no aumenta stock; una recepción confirmada crea el lote y su
+  entrada una sola vez.
 - Los cambios de productos y proveedores crean versiones y no reutilizan el
   código interno.
 - Los montos se almacenan en centavos.

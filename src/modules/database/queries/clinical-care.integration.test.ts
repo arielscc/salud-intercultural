@@ -19,8 +19,9 @@ import {
 } from "@/modules/database/queries/clinical-records";
 
 async function cleanClinicalCare() {
-  await prisma.inventoryMovement.deleteMany();
-  await prisma.inventoryAdjustment.deleteMany();
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "PurchaseDocument", "InventoryLotAdjustment", "PurchaseReceiptLine", "InventoryMovement", "InventoryAdjustment", "InventoryLot", "PurchaseReceipt", "PurchasePayment", "PurchaseLine", "Purchase" CASCADE'
+  );
   await prisma.inventoryAlert.deleteMany();
   await prisma.followUpStatusHistory.deleteMany();
   await prisma.followUpAttempt.deleteMany();

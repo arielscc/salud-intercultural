@@ -51,6 +51,16 @@ const pagePermissions: Record<string, InternalPermission[]> = {
     "clinical_read"
   ],
   "src/app/(internal)/sigeco/(app)/consultas/page.tsx": ["clinical_read"],
+  "src/app/(internal)/sigeco/(app)/compras/page.tsx": ["purchases_read"],
+  "src/app/(internal)/sigeco/(app)/compras/nueva/page.tsx": [
+    "purchases_write"
+  ],
+  "src/app/(internal)/sigeco/(app)/compras/[purchaseId]/page.tsx": [
+    "purchases_read"
+  ],
+  "src/app/(internal)/sigeco/(app)/compras/[purchaseId]/recibir/page.tsx": [
+    "purchase_receipts_write"
+  ],
   "src/app/(internal)/sigeco/(app)/enfermeria/[workItemId]/page.tsx": [
     "nursing_read"
   ],
@@ -63,6 +73,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   ],
   "src/app/(internal)/sigeco/(app)/inventario/nuevo/page.tsx": [
     "inventory_write"
+  ],
+  "src/app/(internal)/sigeco/(app)/inventario/lotes/page.tsx": [
+    "inventory_read"
   ],
   "src/app/(internal)/sigeco/(app)/inventario/page.tsx": ["inventory_read"],
   "src/app/(internal)/sigeco/(app)/inventario/proveedores/page.tsx": [
@@ -138,6 +151,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createFollowUpTaskAction: "followups_write",
   createInternalLeadAction: "leads_create",
   createInventoryAdjustmentAction: "inventory_adjust",
+  createInventoryLotAdjustmentAction: "inventory_lot_adjust",
   createInventoryItemAction: "inventory_write",
   createLeadContactAttemptAction: "leads_contact",
   createLeadReminderAction: "leads_reminder",
@@ -147,8 +161,11 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createOtherCashExpenseAction: "cash_movements_create",
   createPaidStudyOrderAction: "clinical_write",
   createPatientAction: "patients_create",
+  createPurchaseAction: "purchases_write",
+  createPurchaseReceiptAction: "purchase_receipts_write",
   dismissPatientDuplicateAction: "patient_duplicates_review",
   finalizeClinicalConsultationAction: "clinical_finalize",
+  confirmPurchaseAction: "purchases_write",
   createPaymentAction: "payments_write",
   createReceptionPaidStudyOrderAction: "visits_update",
   createSaleAction: "sales_write",
@@ -164,6 +181,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   openCashSessionAction: "cash_sessions_open",
   requireInternalUserPasswordChangeAction: "users_manage",
   recordPatientConsentAction: "patient_consents_write",
+  recordPurchasePaymentAction: "purchases_write",
   recordVisitDiscontinuationAction: "visit_discontinuations_write",
   recordTreatmentProposalOutcomeAction: "clinical_write",
   requestCashSessionCloseAction: "cash_sessions_close",
@@ -176,6 +194,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   sendPaidStudiesToNursingAction: "visits_update",
   submitReceptionIntakeAction: "visits_create",
   setCaptureCampaignActiveAction: "attribution_manage",
+  cancelPurchaseAction: "purchases_write",
   setInventoryItemStatusAction: "inventory_write",
   setSupplierStatusAction: "suppliers_write",
   unlockManagedInternalUserAction: "users_manage",
@@ -204,6 +223,11 @@ const clinicalAttachmentRoutePermissions: Record<string, InternalPermission> = {
 const cashReceiptRoutePermissions: Record<string, InternalPermission> = {
   "src/app/(internal)/sigeco/api/cash-receipts/[expenseId]/route.ts":
     "cash_sessions_read"
+};
+
+const purchaseDocumentRoutePermissions: Record<string, InternalPermission> = {
+  "src/app/(internal)/sigeco/api/purchase-documents/[documentId]/route.ts":
+    "purchases_read"
 };
 
 function exportedActionSegments(file: string) {
@@ -342,7 +366,8 @@ describe("SIGECO permission and privacy boundaries", () => {
         (permission): permission is InternalPermission => Boolean(permission)
       ),
       ...Object.values(clinicalAttachmentRoutePermissions),
-      ...Object.values(cashReceiptRoutePermissions)
+      ...Object.values(cashReceiptRoutePermissions),
+      ...Object.values(purchaseDocumentRoutePermissions)
     ]);
 
     for (const permission of permissions) {
@@ -381,6 +406,18 @@ describe("SIGECO permission and privacy boundaries", () => {
     }
 
     for (const [file, permission] of Object.entries(cashReceiptRoutePermissions)) {
+      const contents = source(file);
+      expect(contents, `${file} must authenticate`).toContain(
+        "getCurrentInternalUser()"
+      );
+      expect(contents, `${file} must enforce ${permission}`).toContain(
+        `roleHasPermission(user.role, "${permission}")`
+      );
+    }
+
+    for (const [file, permission] of Object.entries(
+      purchaseDocumentRoutePermissions
+    )) {
       const contents = source(file);
       expect(contents, `${file} must authenticate`).toContain(
         "getCurrentInternalUser()"

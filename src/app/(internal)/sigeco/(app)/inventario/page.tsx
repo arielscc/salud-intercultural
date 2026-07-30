@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { Bell, Boxes, Plus, Search, TriangleAlert, Truck } from "lucide-react";
+import {
+  Bell,
+  Boxes,
+  Layers3,
+  Plus,
+  Search,
+  ShoppingCart,
+  TriangleAlert,
+  Truck
+} from "lucide-react";
 import { internalInputClassName } from "@/components/internal/Field";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -50,6 +59,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const canWrite = roleHasPermission(user.role, "inventory_write");
   const canReadCosts = roleHasPermission(user.role, "inventory_cost_read");
   const canReadSuppliers = roleHasPermission(user.role, "suppliers_read");
+  const canReadPurchases = roleHasPermission(user.role, "purchases_read");
   const selectedUsage =
     params.uso === "sale" ||
     params.uso === "internal_use" ||
@@ -83,6 +93,16 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         description="Productos, disponibilidad, precios y reposición."
         actions={
           <>
+            <Link className={actionClassName} href="/sigeco/inventario/lotes">
+              <Layers3 size={16} aria-hidden="true" />
+              Lotes y vencimientos
+            </Link>
+            {canReadPurchases ? (
+              <Link className={actionClassName} href="/sigeco/compras">
+                <ShoppingCart size={16} aria-hidden="true" />
+                Compras
+              </Link>
+            ) : null}
             {canReadSuppliers ? (
               <Link className={actionClassName} href="/sigeco/inventario/proveedores">
                 <Truck size={16} aria-hidden="true" />

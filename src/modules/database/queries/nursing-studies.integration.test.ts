@@ -14,8 +14,9 @@ import { createStudyRecord, getStudiesForVisit } from "@/modules/database/querie
 import { createVisitRecord, updateVisitRouteStatus } from "@/modules/database/queries/visits";
 
 async function cleanNursingStudies() {
-  await prisma.inventoryMovement.deleteMany();
-  await prisma.inventoryAdjustment.deleteMany();
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "PurchaseDocument", "InventoryLotAdjustment", "PurchaseReceiptLine", "InventoryMovement", "InventoryAdjustment", "InventoryLot", "PurchaseReceipt", "PurchasePayment", "PurchaseLine", "Purchase" CASCADE'
+  );
   await prisma.inventoryAlert.deleteMany();
   await prisma.followUpStatusHistory.deleteMany();
   await prisma.followUpAttempt.deleteMany();

@@ -49,6 +49,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 34. [Correcciones, cierre y firma clínica](./clinical-record-versioning.md)
 35. [Caja, egresos y cierre diario](./cash-sessions-expenses-close.md)
 36. [Catálogo de productos y proveedores](./product-catalog-suppliers.md)
+37. [Compras, recepciones, lotes y stock](./purchases-receipts-batches-stock.md)
 
 ## Flujo recomendado
 

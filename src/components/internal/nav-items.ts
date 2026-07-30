@@ -5,6 +5,7 @@ import {
   Home,
   PhoneCall,
   Receipt,
+  ShoppingCart,
   ShieldCheck,
   Stethoscope,
   UserCog,
@@ -34,6 +35,7 @@ export const sigecoNavItems: SigecoNavItem[] = [
     permission: "followups_read"
   },
   { href: "/sigeco/inventario", label: "Inventario", icon: Boxes, permission: "inventory_read" },
+  { href: "/sigeco/compras", label: "Compras", icon: ShoppingCart, permission: "purchases_read" },
   {
     href: "/sigeco/atribucion",
     label: "Captación",

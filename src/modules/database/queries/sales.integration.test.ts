@@ -14,8 +14,9 @@ import { openCashSession } from "@/modules/database/queries/cash";
 import { createVisitRecord } from "@/modules/database/queries/visits";
 
 async function cleanSales() {
-  await prisma.inventoryMovement.deleteMany();
-  await prisma.inventoryAdjustment.deleteMany();
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "PurchaseDocument", "InventoryLotAdjustment", "PurchaseReceiptLine", "InventoryMovement", "InventoryAdjustment", "InventoryLot", "PurchaseReceipt", "PurchasePayment", "PurchaseLine", "Purchase" CASCADE'
+  );
   await prisma.inventoryAlert.deleteMany();
   await prisma.followUpStatusHistory.deleteMany();
   await prisma.followUpAttempt.deleteMany();

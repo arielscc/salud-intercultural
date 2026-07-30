@@ -3,6 +3,7 @@ import type {
   InventoryMovementType,
   Prisma
 } from "@/generated/prisma/client";
+import { todayDatabaseDate } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 
@@ -234,11 +235,20 @@ export async function applyInventoryMovement(
     userId?: string;
     saleId?: string;
     saleItemId?: string;
+    purchaseId?: string;
+    purchaseLineId?: string;
+    receiptId?: string;
+    receiptLineId?: string;
+    lotId?: string;
+    lotAdjustmentId?: string;
+    branchCode?: string;
+    locationCode?: string;
     type: InventoryMovementType;
     quantityDelta: number;
     reason: string;
   }
 ) {
+  await tx.$queryRaw`SELECT "id" FROM "InventoryItem" WHERE "id" = ${input.itemId} FOR UPDATE`;
   const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
 
   if (!item.active) throw new InventoryCatalogError("inactive-item");
@@ -251,6 +261,99 @@ export async function applyInventoryMovement(
     throw new InsufficientStockError(item.name, item.currentStock, Math.abs(input.quantityDelta));
   }
 
+  if (input.type === "automatic_sale_exit" && input.quantityDelta < 0) {
+    const today = todayDatabaseDate();
+    const allLotStock = await tx.inventoryLot.aggregate({
+      where: {
+        itemId: input.itemId,
+        currentQuantity: { gt: 0 }
+      },
+      _sum: { currentQuantity: true }
+    });
+    const lots = await tx.inventoryLot.findMany({
+      where: {
+        itemId: input.itemId,
+        active: true,
+        currentQuantity: { gt: 0 },
+        OR: [{ expirationDate: null }, { expirationDate: { gte: today } }]
+      },
+      orderBy: [
+        { expirationDate: { sort: "asc", nulls: "last" } },
+        { createdAt: "asc" }
+      ]
+    });
+    let remaining = Math.abs(input.quantityDelta);
+    const validLotStock = lots.reduce(
+      (sum, lot) => sum + lot.currentQuantity,
+      0
+    );
+    const legacyStock = Math.max(
+      0,
+      item.currentStock - (allLotStock._sum.currentQuantity ?? 0)
+    );
+    const usableStock = validLotStock + legacyStock;
+    if (remaining > usableStock) {
+      throw new InsufficientStockError(item.name, usableStock, remaining);
+    }
+    let runningStock = item.currentStock;
+    let lastMovement = null;
+
+    for (const lot of lots) {
+      if (remaining === 0) break;
+      const quantity = Math.min(lot.currentQuantity, remaining);
+      await tx.inventoryLot.update({
+        where: { id: lot.id },
+        data: {
+          currentQuantity: { decrement: quantity },
+          active: lot.currentQuantity - quantity > 0
+        }
+      });
+      runningStock -= quantity;
+      lastMovement = await tx.inventoryMovement.create({
+        data: {
+          itemId: input.itemId,
+          saleId: input.saleId,
+          saleItemId: input.saleItemId,
+          lotId: lot.id,
+          purchaseId: lot.purchaseId,
+          purchaseLineId: lot.purchaseLineId,
+          receiptId: lot.receiptId,
+          userId: input.userId,
+          type: input.type,
+          quantityDelta: -quantity,
+          stockAfter: runningStock,
+          branchCode: lot.branchCode,
+          locationCode: lot.locationCode,
+          reason: `${input.reason} · FEFO ${lot.internalLotCode}`
+        }
+      });
+      remaining -= quantity;
+    }
+
+    if (remaining > 0) {
+      runningStock -= remaining;
+      lastMovement = await tx.inventoryMovement.create({
+        data: {
+          itemId: input.itemId,
+          saleId: input.saleId,
+          saleItemId: input.saleItemId,
+          userId: input.userId,
+          type: input.type,
+          quantityDelta: -remaining,
+          stockAfter: runningStock,
+          reason: `${input.reason} · stock anterior sin lote`
+        }
+      });
+    }
+
+    await tx.inventoryItem.update({
+      where: { id: input.itemId },
+      data: { currentStock: stockAfter }
+    });
+    await syncLowStockAlert(tx, input.itemId);
+    return lastMovement!;
+  }
+
   await tx.inventoryItem.update({
     where: { id: input.itemId },
     data: { currentStock: stockAfter }
@@ -261,10 +364,18 @@ export async function applyInventoryMovement(
       itemId: input.itemId,
       saleId: input.saleId,
       saleItemId: input.saleItemId,
+      purchaseId: input.purchaseId,
+      purchaseLineId: input.purchaseLineId,
+      receiptId: input.receiptId,
+      receiptLineId: input.receiptLineId,
+      lotId: input.lotId,
+      lotAdjustmentId: input.lotAdjustmentId,
       userId: input.userId,
       type: input.type,
       quantityDelta: input.quantityDelta,
       stockAfter,
+      branchCode: input.branchCode,
+      locationCode: input.locationCode,
       reason: input.reason
     }
   });
@@ -663,7 +774,11 @@ export async function getInventoryItemById(id: string) {
         },
         alerts: { orderBy: { createdAt: "desc" }, take: 8 },
         movements: {
-          include: { user: true },
+          include: {
+            user: true,
+            purchase: { select: { id: true, purchaseNumber: true } },
+            lot: { select: { id: true, internalLotCode: true, batchNumber: true } }
+          },
           orderBy: { createdAt: "desc" },
           take: 30
         }

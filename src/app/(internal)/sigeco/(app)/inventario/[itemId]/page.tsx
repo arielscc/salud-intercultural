@@ -55,6 +55,7 @@ export default async function InventoryItemPage({
   const canAdjust = roleHasPermission(user.role, "inventory_adjust");
   const canReadCosts = roleHasPermission(user.role, "inventory_cost_read");
   const canReadSuppliers = roleHasPermission(user.role, "suppliers_read");
+  const canReadPurchases = roleHasPermission(user.role, "purchases_read");
   const canWriteSuppliers = roleHasPermission(user.role, "suppliers_write");
   if (!item.active && !canWrite && !canReadCosts) notFound();
 
@@ -92,6 +93,12 @@ export default async function InventoryItemPage({
               Editar catálogo
             </Link>
           ) : null}
+          <Link
+            className={linkClassName}
+            href={`/sigeco/inventario/lotes?item=${item.id}`}
+          >
+            Ver lotes
+          </Link>
         </div>
       </div>
 
@@ -180,6 +187,19 @@ export default async function InventoryItemPage({
                 >
                   <span>Stock después {movement.stockAfter}</span>
                   <span>{formatDateTime(movement.createdAt)} · {movement.reason}</span>
+                  {movement.purchase && canReadPurchases ? (
+                    <span>
+                      <Link
+                        className="font-semibold text-primary-dark"
+                        href={`/sigeco/compras/${movement.purchase.id}`}
+                      >
+                        {movement.purchase.purchaseNumber}
+                      </Link>
+                      {movement.lot
+                        ? ` · lote ${movement.lot.batchNumber ?? movement.lot.internalLotCode}`
+                        : ""}
+                    </span>
+                  ) : null}
                 </RecordItem>
               ))}
               {item.movements.length === 0 ? (
@@ -195,6 +215,7 @@ export default async function InventoryItemPage({
                     <Th className="text-right">Stock después</Th>
                     <Th>Fecha</Th>
                     <Th>Motivo</Th>
+                    <Th>Origen</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -207,6 +228,21 @@ export default async function InventoryItemPage({
                       <Td className="text-right tabular-nums">{movement.stockAfter}</Td>
                       <Td>{formatDateTime(movement.createdAt)}</Td>
                       <Td>{movement.reason}</Td>
+                      <Td>
+                        {movement.purchase && canReadPurchases ? (
+                          <Link
+                            className="font-semibold text-primary-dark hover:underline"
+                            href={`/sigeco/compras/${movement.purchase.id}`}
+                          >
+                            {movement.purchase.purchaseNumber}
+                            {movement.lot
+                              ? ` · ${movement.lot.batchNumber ?? movement.lot.internalLotCode}`
+                              : ""}
+                          </Link>
+                        ) : (
+                          "Movimiento anterior"
+                        )}
+                      </Td>
                     </Tr>
                   ))}
                 </tbody>

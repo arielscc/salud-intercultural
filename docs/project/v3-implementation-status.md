@@ -19,6 +19,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Clasificación de seguimientos | En progreso | Tipo, prioridad, responsable y resultado separados; llamadas médicas escaladas al médico. |
 | Abandono y pendientes | En progreso | Punto, motivo, área y pendientes conservados; tareas abiertas quedan bloqueadas y recuperables. |
 | Versiones y firma clínica | En progreso | Borrador, cierre, autor y correcciones comparables implementados en desarrollo local. |
+| Compras y lotes | En progreso | Compra, pago, recepción parcial, costo histórico, lote y stock enlazados localmente. |
 
 ## Fuentes Canonicas
 
@@ -114,6 +115,10 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Costos y contactos visibles por permisos; disponibilidad clínica sin costos.
 - Rollback total y error visible cuando el stock es insuficiente.
 - Entradas, ajustes autorizados y alertas de stock bajo.
+- Compras en borrador y confirmadas, pagos reales y saldos a crédito.
+- Recepciones parciales idempotentes con lotes, vencimientos y costos
+  históricos.
+- FEFO excluye vencidos; daños, mermas y devoluciones requieren autorización.
 
 ### Seguimiento
 
@@ -178,6 +183,8 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 | `/sigeco/administracion` | Ventas, cobros y pendientes. |
 | `/sigeco/seguimientos` | Tareas de contacto posterior. |
 | `/sigeco/inventario` | Productos, stock, entradas y ajustes. |
+| `/sigeco/inventario/lotes` | Lotes, vencimientos, FEFO y ajustes autorizados. |
+| `/sigeco/compras` | Compras, pagos, recepciones y trazabilidad de stock. |
 | `/sigeco/atribucion` | Comparación de fuentes, cuentas, ventas e ingresos. |
 
 Las rutas antiguas de pacientes y visitas solo existen como redirects de compatibilidad hacia Recepcion. El modulo interno de leads fue retirado; sus modelos y datos historicos permanecen sin UI.
@@ -234,7 +241,7 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
 2. Medición del piloto de bandejas antes de evaluar SSE o WebSocket.
 3. Formatos imprimibles de receta y comprobante, si la clinica los requiere.
 4. Reglas aprobadas para automatizar seguimientos.
-5. Flujo de compras, recepciones, lotes y costos históricos.
+5. Validación acumulada del flujo de compras, recepciones y lotes en staging.
 6. Reasignacion de usuarios `captacion` en cada ambiente.
 
 ### Plataforma

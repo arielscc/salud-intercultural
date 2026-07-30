@@ -50,7 +50,7 @@ import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { formatMoney } from "@/features/sales/labels";
 import { cn } from "@/lib/cn";
 import {
-  formatDate,
+  formatDateOnly,
   formatDateTime,
   todayDateOnly
 } from "@/lib/dates";
@@ -308,7 +308,7 @@ export default async function CashControlPage({
                   </Chip>
                 </div>
                 <p className="mt-1 text-sm text-muted">
-                  {defaultCashBranch.name} · {formatDate(session.businessDate)} ·{" "}
+                  {defaultCashBranch.name} · {formatDateOnly(session.businessDate)} ·{" "}
                   {cashShiftLabels[session.shift]}
                 </p>
                 <p className="mt-1 text-xs text-muted">
@@ -1095,7 +1095,7 @@ export default async function CashControlPage({
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-text">
-                  {item.registerName} · {formatDate(item.businessDate)}
+                  {item.registerName} · {formatDateOnly(item.businessDate)}
                 </p>
                 <p className="truncate text-xs text-muted">
                   {personName(item.responsible)} ·{" "}

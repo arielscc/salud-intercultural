@@ -25,6 +25,12 @@ export function formatDate(date: Date) {
   return format(inAppZone(date), "d MMM yyyy", { locale: es });
 }
 
+/** "13 jul 2026" para columnas PostgreSQL DATE, sin convertir zona horaria. */
+export function formatDateOnly(date: Date) {
+  const parsed = parse(date.toISOString().slice(0, 10), "yyyy-MM-dd", new Date());
+  return format(parsed, "d MMM yyyy", { locale: es });
+}
+
 /** "14:30" */
 export function formatTime(date: Date) {
   return format(inAppZone(date), "HH:mm", { locale: es });
@@ -49,6 +55,11 @@ export function toDateOnlyString(date: Date | null | undefined) {
 /** Fecha actual en Bolivia como "yyyy-MM-dd", para campos de día operativo. */
 export function todayDateOnly(date: Date = new Date()) {
   return format(inAppZone(date), "yyyy-MM-dd");
+}
+
+/** Fecha boliviana actual representada como PostgreSQL DATE para filtros Prisma. */
+export function todayDatabaseDate(date: Date = new Date()) {
+  return new Date(`${todayDateOnly(date)}T00:00:00.000Z`);
 }
 
 /** Limites del dia boliviano que contiene `date`, como instantes UTC. */

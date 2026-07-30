@@ -58,6 +58,10 @@ enum InternalPermission {
   inventory_cost_read
   suppliers_read
   suppliers_write
+  purchases_read
+  purchases_write
+  purchase_receipts_write
+  inventory_lot_adjust
   reports_read
   audit_read
   users_manage
@@ -510,8 +514,12 @@ enum FollowUpResult {
 
 enum InventoryMovementType {
   entry
+  purchase_receipt
   automatic_sale_exit
   authorized_manual_adjustment
+  lot_adjustment
+  supplier_return
+  patient_return
   correction
 }
 
@@ -524,6 +532,35 @@ enum InventoryItemUsage {
   sale
   internal_use
   both
+}
+
+enum PurchaseStatus {
+  draft
+  confirmed
+  partially_received
+  received
+  cancelled
+}
+
+enum PurchasePaymentMethod {
+  cash
+  transfer
+  credit
+  other
+}
+
+enum InventoryLotAdjustmentKind {
+  damage
+  waste
+  expired
+  supplier_return
+  patient_return
+  correction
+}
+
+enum PurchaseDocumentKind {
+  purchase
+  receipt
 }
 
 model InternalUser {
@@ -585,6 +622,15 @@ model InternalUser {
   inventoryAdjustments        InventoryAdjustment[]
   inventoryCatalogVersions    InventoryItemCatalogVersion[]   @relation("InventoryCatalogVersionChangedBy")
   supplierVersions            SupplierVersion[]               @relation("SupplierVersionChangedBy")
+  createdPurchases            Purchase[]                      @relation("PurchaseCreatedBy")
+  confirmedPurchases          Purchase[]                      @relation("PurchaseConfirmedBy")
+  cancelledPurchases          Purchase[]                      @relation("PurchaseCancelledBy")
+  recordedPurchasePayments    PurchasePayment[]               @relation("PurchasePaymentRecordedBy")
+  recordedPurchaseReceipts    PurchaseReceipt[]               @relation("PurchaseReceiptRecordedBy")
+  receivedPurchaseReceipts    PurchaseReceipt[]               @relation("PurchaseReceiptReceivedBy")
+  inventoryLotAdjustments     InventoryLotAdjustment[]        @relation("InventoryLotAdjustmentRecordedBy")
+  authorizedLotAdjustments    InventoryLotAdjustment[]        @relation("InventoryLotAdjustmentAuthorizedBy")
+  uploadedPurchaseDocuments   PurchaseDocument[]              @relation("PurchaseDocumentUploadedBy")
   auditEvents                 AuditEvent[]
   uploadedAttachments         ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
   deletedAttachments          ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
@@ -1655,7 +1701,7 @@ model DeliveredProduct {
 }
 
 model CashMovement {
-  id                 String           @id @default(cuid())
+  id                 String            @id @default(cuid())
   cashSessionId      String?
   saleId             String?
   paymentId          String?
@@ -1664,25 +1710,26 @@ model CashMovement {
   userId             String?
   authorizedById     String?
   originalMovementId String?
-  idempotencyKey     String?          @unique
-  type               CashMovementType @default(income)
-  channel            CashChannel      @default(cash)
+  idempotencyKey     String?           @unique
+  type               CashMovementType  @default(income)
+  channel            CashChannel       @default(cash)
   amountCents        Int
   description        String
   reason             String?
   note               String?
-  occurredAt         DateTime         @default(now())
-  createdAt          DateTime         @default(now())
-  cashSession        CashSession?     @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
-  sale               Sale?            @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  payment            Payment?         @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  patient            Patient?         @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  visit              Visit?           @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  user               InternalUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  authorizedBy       InternalUser?    @relation("CashMovementAuthorizedBy", fields: [authorizedById], references: [id], onDelete: SetNull)
-  originalMovement   CashMovement?    @relation("CashMovementCorrections", fields: [originalMovementId], references: [id], onDelete: Restrict)
-  corrections        CashMovement[]   @relation("CashMovementCorrections")
+  occurredAt         DateTime          @default(now())
+  createdAt          DateTime          @default(now())
+  cashSession        CashSession?      @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+  sale               Sale?             @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  payment            Payment?          @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  patient            Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  visit              Visit?            @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  user               InternalUser?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  authorizedBy       InternalUser?     @relation("CashMovementAuthorizedBy", fields: [authorizedById], references: [id], onDelete: SetNull)
+  originalMovement   CashMovement?     @relation("CashMovementCorrections", fields: [originalMovementId], references: [id], onDelete: Restrict)
+  corrections        CashMovement[]    @relation("CashMovementCorrections")
   expense            CashExpense?
+  purchasePayments   PurchasePayment[]
 
   @@index([cashSessionId, occurredAt])
   @@index([saleId])
@@ -1726,6 +1773,7 @@ model CashSession {
   closedBy           InternalUser?               @relation("CashSessionClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
   movements          CashMovement[]
   expenses           CashExpense[]
+  purchasePayments   PurchasePayment[]
   reconciliations    CashSessionReconciliation[]
 
   @@index([status, openedAt])
@@ -1785,6 +1833,7 @@ model CashExpense {
   requestedBy            InternalUser?                    @relation("CashExpenseRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
   receivedBy             InternalUser?                    @relation("CashExpenseReceivedBy", fields: [receivedById], references: [id], onDelete: Restrict)
   beneficiaries          CashExpenseBeneficiary[]
+  purchase               Purchase?
 
   @@index([cashSessionId, occurredAt])
   @@index([kind, category, occurredAt])
@@ -1918,6 +1967,8 @@ model Supplier {
   updatedAt   DateTime                @updatedAt
   itemLinks   InventoryItemSupplier[]
   versions    SupplierVersion[]
+  purchases   Purchase[]
+  lots        InventoryLot[]
 
   @@index([name])
   @@index([active])
@@ -1946,6 +1997,10 @@ model InventoryItem {
   alerts             InventoryAlert[]
   supplierLinks      InventoryItemSupplier[]
   catalogVersions    InventoryItemCatalogVersion[]
+  purchaseLines      PurchaseLine[]
+  receiptLines       PurchaseReceiptLine[]
+  lots               InventoryLot[]
+  lotAdjustments     InventoryLotAdjustment[]
 
   @@index([name])
   @@index([category])
@@ -2020,25 +2075,256 @@ model SupplierVersion {
   @@index([changedById])
 }
 
+model Purchase {
+  id                    String                @id @default(cuid())
+  purchaseNumber        String                @unique
+  supplierId            String
+  sourceCashExpenseId   String?               @unique
+  createdById           String
+  confirmedById         String?
+  cancelledById         String?
+  branchCode            String
+  purchaseDate          DateTime              @db.Date
+  documentNumber        String?
+  currency              String                @default("BOB")
+  status                PurchaseStatus        @default(draft)
+  intendedPaymentMethod PurchasePaymentMethod @default(credit)
+  totalCents            Int
+  notes                 String?
+  revision              Int                   @default(1)
+  idempotencyKey        String                @unique
+  confirmedAt           DateTime?
+  cancelledAt           DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  supplier              Supplier              @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  sourceCashExpense     CashExpense?          @relation(fields: [sourceCashExpenseId], references: [id], onDelete: Restrict)
+  createdBy             InternalUser          @relation("PurchaseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  confirmedBy           InternalUser?         @relation("PurchaseConfirmedBy", fields: [confirmedById], references: [id], onDelete: Restrict)
+  cancelledBy           InternalUser?         @relation("PurchaseCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  lines                 PurchaseLine[]
+  payments              PurchasePayment[]
+  receipts              PurchaseReceipt[]
+  lots                  InventoryLot[]
+  movements             InventoryMovement[]
+  documents             PurchaseDocument[]
+
+  @@index([supplierId, purchaseDate])
+  @@index([status, purchaseDate])
+  @@index([branchCode, purchaseDate])
+  @@index([createdById])
+}
+
+model PurchaseLine {
+  id               String                @id @default(cuid())
+  purchaseId       String
+  itemId           String
+  description      String
+  unit             String
+  orderedQuantity  Int
+  receivedQuantity Int                   @default(0)
+  unitCostCents    Int
+  subtotalCents    Int
+  createdAt        DateTime              @default(now())
+  purchase         Purchase              @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  item             InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  receiptLines     PurchaseReceiptLine[]
+  lots             InventoryLot[]
+  movements        InventoryMovement[]
+
+  @@index([purchaseId])
+  @@index([itemId])
+}
+
+model PurchasePayment {
+  id             String                @id @default(cuid())
+  purchaseId     String
+  cashSessionId  String?
+  cashMovementId String?               @unique
+  recordedById   String
+  method         PurchasePaymentMethod
+  amountCents    Int
+  reference      String?
+  idempotencyKey String                @unique
+  paidAt         DateTime              @default(now())
+  createdAt      DateTime              @default(now())
+  purchase       Purchase              @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  cashSession    CashSession?          @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+  cashMovement   CashMovement?         @relation(fields: [cashMovementId], references: [id], onDelete: Restrict)
+  recordedBy     InternalUser          @relation("PurchasePaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([purchaseId, paidAt])
+  @@index([cashSessionId])
+  @@index([recordedById])
+}
+
+model PurchaseReceipt {
+  id             String                @id @default(cuid())
+  receiptNumber  String                @unique
+  purchaseId     String
+  recordedById   String
+  receivedById   String
+  branchCode     String
+  locationCode   String
+  documentNumber String?
+  receivedAt     DateTime
+  notes          String?
+  idempotencyKey String                @unique
+  createdAt      DateTime              @default(now())
+  purchase       Purchase              @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  recordedBy     InternalUser          @relation("PurchaseReceiptRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  receivedBy     InternalUser          @relation("PurchaseReceiptReceivedBy", fields: [receivedById], references: [id], onDelete: Restrict)
+  lines          PurchaseReceiptLine[]
+  lots           InventoryLot[]
+  movements      InventoryMovement[]
+  documents      PurchaseDocument[]
+
+  @@index([purchaseId, receivedAt])
+  @@index([branchCode, locationCode, receivedAt])
+  @@index([recordedById])
+  @@index([receivedById])
+}
+
+model PurchaseReceiptLine {
+  id             String             @id @default(cuid())
+  receiptId      String
+  purchaseLineId String
+  itemId         String
+  lotId          String             @unique
+  quantity       Int
+  unitCostCents  Int
+  subtotalCents  Int
+  createdAt      DateTime           @default(now())
+  receipt        PurchaseReceipt    @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  purchaseLine   PurchaseLine       @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
+  item           InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  lot            InventoryLot       @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  inventoryEntry InventoryMovement?
+
+  @@index([receiptId])
+  @@index([purchaseLineId])
+  @@index([itemId])
+}
+
+model InventoryLot {
+  id               String                   @id @default(cuid())
+  internalLotCode  String                   @unique
+  itemId           String
+  supplierId       String
+  purchaseId       String
+  purchaseLineId   String
+  receiptId        String
+  batchNumber      String?
+  expirationDate   DateTime?                @db.Date
+  branchCode       String
+  locationCode     String
+  receivedQuantity Int
+  currentQuantity  Int
+  unitCostCents    Int
+  active           Boolean                  @default(true)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  item             InventoryItem            @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  supplier         Supplier                 @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchase         Purchase                 @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchaseLine     PurchaseLine             @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
+  receipt          PurchaseReceipt          @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  receiptLine      PurchaseReceiptLine?
+  movements        InventoryMovement[]
+  adjustments      InventoryLotAdjustment[]
+
+  @@index([itemId, branchCode, locationCode, expirationDate])
+  @@index([supplierId])
+  @@index([purchaseId])
+  @@index([receiptId])
+  @@index([batchNumber])
+  @@index([active, expirationDate])
+}
+
+model InventoryLotAdjustment {
+  id             String                     @id @default(cuid())
+  itemId         String
+  lotId          String
+  recordedById   String
+  authorizedById String
+  kind           InventoryLotAdjustmentKind
+  quantity       Int
+  stockDelta     Int
+  restocked      Boolean                    @default(false)
+  reason         String
+  idempotencyKey String                     @unique
+  createdAt      DateTime                   @default(now())
+  item           InventoryItem              @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  lot            InventoryLot               @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  recordedBy     InternalUser               @relation("InventoryLotAdjustmentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  authorizedBy   InternalUser               @relation("InventoryLotAdjustmentAuthorizedBy", fields: [authorizedById], references: [id], onDelete: Restrict)
+  movement       InventoryMovement?
+
+  @@index([itemId, createdAt])
+  @@index([lotId, createdAt])
+  @@index([recordedById])
+  @@index([authorizedById])
+}
+
+model PurchaseDocument {
+  id             String                          @id @default(cuid())
+  purchaseId     String
+  receiptId      String?
+  uploadedById   String
+  kind           PurchaseDocumentKind
+  storageKey     String                          @unique
+  storageDriver  ClinicalAttachmentStorageDriver
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  checksumSha256 String
+  createdAt      DateTime                        @default(now())
+  purchase       Purchase                        @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  receipt        PurchaseReceipt?                @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  uploadedBy     InternalUser                    @relation("PurchaseDocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([purchaseId, createdAt])
+  @@index([receiptId])
+  @@index([uploadedById])
+}
+
 model InventoryMovement {
-  id            String                @id @default(cuid())
-  itemId        String
-  saleId        String?
-  saleItemId    String?
-  userId        String?
-  type          InventoryMovementType
-  quantityDelta Int
-  stockAfter    Int
-  reason        String
-  createdAt     DateTime              @default(now())
-  item          InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  sale          Sale?                 @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  saleItem      SaleItem?             @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
-  user          InternalUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id              String                  @id @default(cuid())
+  itemId          String
+  saleId          String?
+  saleItemId      String?
+  purchaseId      String?
+  purchaseLineId  String?
+  receiptId       String?
+  receiptLineId   String?                 @unique
+  lotId           String?
+  lotAdjustmentId String?                 @unique
+  userId          String?
+  type            InventoryMovementType
+  quantityDelta   Int
+  stockAfter      Int
+  branchCode      String?
+  locationCode    String?
+  reason          String
+  createdAt       DateTime                @default(now())
+  item            InventoryItem           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  sale            Sale?                   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  saleItem        SaleItem?               @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+  purchase        Purchase?               @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchaseLine    PurchaseLine?           @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
+  receipt         PurchaseReceipt?        @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  receiptLine     PurchaseReceiptLine?    @relation(fields: [receiptLineId], references: [id], onDelete: Restrict)
+  lot             InventoryLot?           @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  lotAdjustment   InventoryLotAdjustment? @relation(fields: [lotAdjustmentId], references: [id], onDelete: Restrict)
+  user            InternalUser?           @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([itemId])
   @@index([saleId])
   @@index([saleItemId])
+  @@index([purchaseId])
+  @@index([purchaseLineId])
+  @@index([receiptId])
+  @@index([lotId])
   @@index([userId])
   @@index([type, createdAt])
 }

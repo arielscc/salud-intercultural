@@ -32,7 +32,13 @@ const noticeMessages: Record<string, string> = {
   "cash-close-pending": "Cierre enviado a Dirección",
   "cash-session-closed": "Caja cerrada y conciliada",
   "cash-close-approved": "Diferencia aprobada y Caja cerrada",
-  "cash-correction-created": "Corrección registrada"
+  "cash-correction-created": "Corrección registrada",
+  "compra-creada": "Borrador de compra creado",
+  "compra-confirmada": "Compra confirmada",
+  "pago-compra-registrado": "Pago de compra registrado",
+  "recepcion-registrada": "Recepción y stock registrados",
+  "compra-anulada": "Compra anulada",
+  "lote-ajustado": "Ajuste de lote registrado"
 };
 
 export function ActionNotice() {

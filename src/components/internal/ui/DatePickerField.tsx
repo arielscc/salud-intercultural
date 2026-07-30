@@ -32,13 +32,17 @@ export function DatePickerField({
   onChange,
   placeholder = "Selecciona una fecha",
   disabled,
-  fromYear = 1900
+  fromYear = 1900,
+  toYear,
+  disableFuture = true
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   fromYear?: number;
+  toYear?: number;
+  disableFuture?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const selected = parseDateValue(value);
@@ -67,8 +71,8 @@ export function DatePickerField({
           selected={selected}
           defaultMonth={selected}
           startMonth={new Date(fromYear, 0)}
-          endMonth={new Date()}
-          disabled={{ after: new Date() }}
+          endMonth={toYear ? new Date(toYear, 11) : new Date()}
+          disabled={disableFuture ? { after: new Date() } : undefined}
           onSelect={(date) => {
             onChange(date ? format(date, DATE_VALUE_FORMAT) : "");
             setOpen(false);

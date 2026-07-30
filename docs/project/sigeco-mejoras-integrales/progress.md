@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-19 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-20 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las veintisiete migraciones actuales están
-aplicadas en desarrollo. Falta validar las quince
+anteriores están en staging y las veintiocho migraciones actuales están
+aplicadas en desarrollo. Falta validar las dieciséis
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -25,13 +25,15 @@ apertura, egresos estructurados, conciliación por canal, cierre y correcciones
 compensatorias.
 El catálogo y los proveedores ya se administran desde SIGECO con versiones,
 costos separados, asociaciones múltiples y permisos por rol.
+Compras, pagos a proveedores, recepciones parciales, lotes, vencimientos y
+movimientos de stock ya son trazables en desarrollo local.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 10 |
-| En progreso | 18 |
+| Pendiente | 9 |
+| En progreso | 19 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -69,7 +71,7 @@ costos separados, asociaciones múltiples y permisos por rol.
 | 17 | Correcciones y firma clínica | P1 | En progreso | 3-5 |
 | 18 | Caja, dinero al personal, gastos y cierre | P0 | En progreso | 3-5, 8 |
 | 19 | Catálogo y proveedores | P0 | En progreso | 3-5, 18 |
-| 20 | Compras, recepciones, lotes y stock | P0 | Pendiente | 18-19 |
+| 20 | Compras, recepciones, lotes y stock | P0 | En progreso | 18-19 |
 | 21 | Recetas y comprobantes | P1 | Pendiente | 17-20 |
 | 22 | Reporte del recorrido completo | P1 | Pendiente | 9-21 |
 | 23 | Tiempo por área | P1 | Pendiente | 13, 16, 22 |
@@ -158,6 +160,11 @@ Estado de las tareas de la base segura:
   Dirección revisa costos, Médico y Enfermería solo disponibilidad y
   Seguimiento/Yazmin no accede. Pendiente integración acumulada, QA web/móvil,
   revisión de datos reales y validación por roles en staging.
+- **Tarea 20 — Compras, recepciones, lotes y stock:** orden, pago, egreso,
+  recepción parcial, lote, costo histórico, vencimiento y kardex enlazados en
+  desarrollo local. Crédito no reduce Caja hasta pagar, una compra urgente no
+  duplica el egreso y FEFO excluye lotes vencidos. Pendiente integración
+  acumulada, QA web/móvil, datos reales y validación por roles en staging.
 
 Para terminar la Tarea 1:
 
@@ -982,6 +989,51 @@ Responsables: Administración y Dirección para revisión.
 - No aplicar la migración en producción sin autorización expresa.
 
 **Commit sugerido:** `feat(sigeco): manage products and suppliers`
+
+## 2026-07-30 — Tarea 20 — Compras, Recepciones, Lotes Y Stock
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Administración; Dirección autoriza ajustes y revisa.
+
+### Resultado
+
+- Compras con proveedor, sucursal, documento, pago previsto, líneas y estados.
+- Pago real enlazado con Caja; crédito sin salida anticipada y compras urgentes
+  sin egreso duplicado.
+- Recepciones parciales idempotentes con responsable, ubicación, documento,
+  costo, lote y vencimiento.
+- Entrada de stock única por línea recibida y comparación pedido/recibido.
+- FEFO para salidas automáticas, sin usar lotes vencidos.
+- Mermas, daños, vencimientos, devoluciones y correcciones autorizadas.
+- Kardex enlazado a compra, recepción y lote; historia protegida contra borrado.
+- Documentos privados con permiso, `no-store` y checksum.
+- Formularios responsive con cámara y componentes globales de fecha.
+
+### Archivos Y Migraciones
+
+- Modelo, permisos, schemas, actions, consultas y almacenamiento privado.
+- Pantallas de compras, detalle, recepción y lotes.
+- Migración local `20260730192059_purchases_receipts_batches_stock`.
+- Guía operativa y reporte de cambios.
+
+### Validación
+
+- Prisma generate y TypeScript aprobados; 28 migraciones locales al día.
+- 2 archivos y 10 pruebas enfocadas aprobados.
+- Pruebas de integración ampliadas, reservadas para el cierre acumulado.
+- `git diff --check` aprobado.
+
+### Pendientes
+
+- Ejecutar lint, integración, build y QA gstack en el cierre acumulado.
+- Probar cámara y operación completa en teléfonos reales.
+- Validar roles y datos reales en staging.
+- No aplicar la migración en producción sin aviso y autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): add purchases batches and stock receipts`
 
 ## Cómo Actualizar El Progreso
 

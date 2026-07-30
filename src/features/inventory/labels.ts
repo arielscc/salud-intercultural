@@ -6,8 +6,12 @@ import type {
 
 export const inventoryMovementTypeLabels: Record<InventoryMovementType, string> = {
   entry: "Entrada",
+  purchase_receipt: "Recepción de compra",
   automatic_sale_exit: "Salida por venta",
   authorized_manual_adjustment: "Ajuste autorizado",
+  lot_adjustment: "Ajuste de lote",
+  supplier_return: "Devolución a proveedor",
+  patient_return: "Devolución de paciente",
   correction: "Corrección"
 };
 
