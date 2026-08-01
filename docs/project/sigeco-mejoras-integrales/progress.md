@@ -1,6 +1,6 @@
 # Progress — Mejoras Integrales De SIGECO
 
-Última actualización: 2026-07-30.
+Última actualización: 2026-08-01.
 
 Plan de ejecución: [tasks.md](./tasks.md)
 
@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-23 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-24 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las treinta y dos migraciones actuales están
-aplicadas en desarrollo. Falta validar las veinte
+anteriores están en staging y las treinta y tres migraciones actuales están
+aplicadas en desarrollo. Falta validar las veintiuna
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -33,13 +33,15 @@ El recorrido completo ya puede reconciliar llegada, consulta, propuesta,
 venta, cobro, seguimiento y retorno sin duplicar una visita entre áreas.
 Los tiempos de Recepción, Consulta, Enfermería y Administración ya separan
 espera, atención y bloqueo mediante eventos inmutables.
+Los recordatorios de evolución, retorno y recuperación ya se preparan con
+reglas versionadas, consentimiento, horario, idempotencia y aprobación humana.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 6 |
-| En progreso | 22 |
+| Pendiente | 5 |
+| En progreso | 23 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -81,7 +83,7 @@ espera, atención y bloqueo mediante eventos inmutables.
 | 21 | Recetas y comprobantes | P1 | En progreso | 17-20 |
 | 22 | Reporte del recorrido completo | P1 | En progreso | 9-21 |
 | 23 | Tiempo por área | P1 | En progreso | 13, 16, 22 |
-| 24 | Recordatorios supervisados | P1 | Pendiente | 9, 15 |
+| 24 | Recordatorios supervisados | P1 | En progreso | 9, 15 |
 | 25 | Encuestas y reclamos | P2 | Pendiente | 9, 24, piloto manual |
 | 26 | Móvil y conectividad lenta | P1 | Pendiente | 2, 5, 13, 18, 20 |
 | 27 | Integración Payload-SIGECO | P2 | Pendiente | 3, 5, 9, 11, 22 |
@@ -186,6 +188,12 @@ Estado de las tareas de la base segura:
   atención, bloqueo, promedio, mediana, P75, P90, franjas horarias y aviso
   móvil implementados en desarrollo local. Pendiente integración acumulada,
   QA web/móvil, medición del umbral y validación por roles en staging.
+- **Tarea 24 — Recordatorios automatizados y supervisados:** reglas y
+  plantillas versionadas, detección idempotente, horario boliviano, revisión
+  humana, doble comprobación de consentimiento, fallos y reintentos
+  implementados en desarrollo local. Ningún contacto sale automáticamente.
+  Pendiente integración acumulada, QA web/móvil, configuración de las tres
+  reglas reales y validación por roles en staging.
 
 Para terminar la Tarea 1:
 
@@ -231,6 +239,8 @@ Blob clínico privado y las credenciales separadas aprobadas.
   pulsa “Iniciar atención” para que el tiempo provenga de un evento real.
 - Los recorridos anteriores a la Tarea 23 conservan su duración total, pero no
   se usan para inventar espera o atención.
+- Una regla de recordatorio solo prepara trabajo. Marlen aprueba antes de crear
+  la tarea y el contacto real conserva su intento y resultado en Seguimientos.
 - Web y móvil responsive usan las mismas reglas y permisos.
 - El Alto debe estabilizarse antes de activar Cochabamba.
 - Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
@@ -1221,6 +1231,54 @@ Responsable: Dirección revisa; cada área registra su propia atención.
 - No aplicar migraciones ni publicar en producción sin aviso y autorización.
 
 **Commit sugerido:** `feat(sigeco): measure time by area`
+
+## 2026-08-01 — Tarea 24 — Recordatorios Automatizados Y Supervisados
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Marlen revisa; Dirección configura reglas.
+
+### Resultado
+
+- Reglas con versiones inmutables para evolución, retorno y recuperación.
+- Evento, tipo, canal, demora, período, horario, días, plantilla, estado y
+  responsable explícitos.
+- Detección idempotente por regla y evento de origen.
+- Vista previa y aprobación humana antes de crear `FollowUpTask`.
+- Consentimiento y canal comprobados al detectar y al aprobar.
+- Horario calculado en `America/La_Paz`.
+- Bloqueos, fallos, descartes y reintentos visibles con historia append-only.
+- Acciones responsive para preparar, aprobar, reprogramar y continuar al
+  contacto y resultado existentes.
+
+### Archivos Y Migración
+
+- Modelo, permisos, policy, schemas, actions, queries, UI y pruebas.
+- Ruta `/sigeco/seguimientos/recordatorios` enlazada desde Seguimientos.
+- Migración local `20260801090000_supervised_reminders`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local confirmado; comunicaciones bloqueadas.
+- Staging y producción no fueron modificados.
+- Prisma format, validate, generate y 33 migraciones locales al día.
+- TypeScript y lint enfocado aprobados.
+- Política, permisos y seguridad: 3 archivos y 33 pruebas aprobadas.
+- Integración transaccional escrita y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack al cierre
+  acumulado.
+- Configurar con Dirección las reglas reales y confirmar la cuenta de Marlen.
+- Validar permisos, textos, horarios y móvil en staging.
+- No aplicar la migración ni activar reglas en producción sin aviso y
+  autorización.
+
+**Commit sugerido:** `feat(sigeco): automate supervised reminders`
 
 ## Cómo Actualizar El Progreso
 

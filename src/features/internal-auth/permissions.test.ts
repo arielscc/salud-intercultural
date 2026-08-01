@@ -107,6 +107,26 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("recepcion", "sales_write")).toBe(false);
   });
 
+  it("separates reminder configuration from daily human review", () => {
+    expect(roleHasPermission("super_admin", "reminder_rules_manage")).toBe(true);
+    expect(roleHasPermission("super_admin", "reminders_review")).toBe(true);
+    expect(roleHasPermission("direccion", "reminder_rules_manage")).toBe(true);
+    expect(roleHasPermission("direccion", "reminders_review")).toBe(false);
+    expect(roleHasPermission("recepcion", "reminder_rules_manage")).toBe(false);
+    expect(roleHasPermission("recepcion", "reminders_review")).toBe(true);
+
+    for (const role of [
+      "medico",
+      "administracion",
+      "enfermeria",
+      "seguimiento",
+      "captacion"
+    ] as const) {
+      expect(roleHasPermission(role, "reminder_rules_manage")).toBe(false);
+      expect(roleHasPermission(role, "reminders_review")).toBe(false);
+    }
+  });
+
   it("retires captacion to internal access only until users are reassigned", () => {
     expect(roleHasPermission("captacion", "internal_access")).toBe(true);
     expect(roleHasPermission("captacion", "patients_read")).toBe(false);

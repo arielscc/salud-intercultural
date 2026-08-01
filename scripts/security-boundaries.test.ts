@@ -134,6 +134,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/seguimientos/page.tsx": [
     "followups_read"
   ],
+  "src/app/(internal)/sigeco/(app)/seguimientos/recordatorios/page.tsx": [
+    "followups_read"
+  ],
   "src/app/(internal)/sigeco/(app)/usuarios/[userId]/page.tsx": [
     "users_manage"
   ],
@@ -184,6 +187,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   finalizeClinicalConsultationAction: "clinical_finalize",
   generateInternalReceiptDocumentAction: "sales_write",
   generatePrescriptionDocumentAction: "clinical_write",
+  generateReminderCandidatesAction: "reminders_review",
   confirmPurchaseAction: "purchases_write",
   createPaymentAction: "payments_write",
   createReceptionPaidStudyOrderAction: "visits_update",
@@ -207,9 +211,11 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   requestCashSessionCloseAction: "cash_sessions_close",
   returnStudiesToDoctorAction: "nursing_write",
   reverseCashMovementAction: "cash_movements_reverse",
+  reviewReminderCandidateAction: "reminders_review",
   revokeManagedInternalUserSessionsAction: "users_manage",
   revokeOwnInternalSessionAction: "internal_access",
   saveClinicalConsultationAction: "clinical_write",
+  saveReminderRuleVersionAction: "reminder_rules_manage",
   searchReceptionPatientsAction: "patients_read",
   sendPaidStudiesToNursingAction: "visits_update",
   submitReceptionIntakeAction: "visits_create",
@@ -474,7 +480,7 @@ describe("SIGECO permission and privacy boundaries", () => {
 
   it("does not expose clinical queries to Payload, marketing or analytics", () => {
     const protectedQueryImport =
-      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:area-times|clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patient-journey|patients|reception|sales|studies|visits))/;
+      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:area-times|clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patient-journey|patients|reception|sales|studies|supervised-reminders|visits))/;
     const publicRoots = [
       "src/payload",
       "src/features/analytics",

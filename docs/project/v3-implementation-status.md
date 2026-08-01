@@ -17,6 +17,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Consentimientos | En progreso | Cinco finalidades, historial y bloqueo implementados localmente; producción espera aprobación expresa de textos. |
 | Resultado de propuestas | En progreso | El médico registra la decisión; aceptación crea una instrucción, no una venta automática. |
 | Clasificación de seguimientos | En progreso | Tipo, prioridad, responsable y resultado separados; llamadas médicas escaladas al médico. |
+| Recordatorios supervisados | En progreso | Reglas versionadas preparan candidatos idempotentes; Marlen aprueba antes de crear el contacto. |
 | Abandono y pendientes | En progreso | Punto, motivo, área y pendientes conservados; tareas abiertas quedan bloqueadas y recuperables. |
 | Versiones y firma clínica | En progreso | Borrador, cierre, autor y correcciones comparables implementados en desarrollo local. |
 | Compras y lotes | En progreso | Compra, pago, recepción parcial, costo histórico, lote y stock enlazados localmente. |
@@ -134,6 +135,15 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Advertencia cuando el paciente prefiere no recibir contacto.
 - Llamadas y WhatsApp disponibles en móvil según consentimiento.
 
+### Recordatorios Supervisados
+
+- Reglas de evolución, retorno y recuperación por evento y fecha.
+- Plantillas, estado, canal, horario y responsable conservados por versión.
+- Una clave estable evita repetir candidatos o tareas.
+- El consentimiento se valida al preparar y nuevamente al aprobar.
+- Recepción/Marlen aprueba cada candidato; no existe envío automático.
+- Fallos y reintentos permanecen visibles y conservan historia.
+
 ### Abandono Y Pendientes
 
 - Abandono, cancelación y atención completada son cierres diferentes.
@@ -182,6 +192,7 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 | `/sigeco/enfermeria` | Tareas, signos, aplicaciones y estudios. |
 | `/sigeco/administracion` | Ventas, cobros y pendientes. |
 | `/sigeco/seguimientos` | Tareas de contacto posterior. |
+| `/sigeco/seguimientos/recordatorios` | Reglas, vistas previas, bloqueos, fallos y aprobación humana. |
 | `/sigeco/inventario` | Productos, stock, entradas y ajustes. |
 | `/sigeco/inventario/lotes` | Lotes, vencimientos, FEFO y ajustes autorizados. |
 | `/sigeco/compras` | Compras, pagos, recepciones y trazabilidad de stock. |
@@ -241,7 +252,8 @@ Estos pendientes fueron convertidos en tareas consecutivas dentro de [Tasks de m
 2. Medición del piloto de bandejas antes de evaluar SSE o WebSocket.
 3. Validación acumulada en staging de recetas, comprobantes, recorrido completo
    y tiempos por área ya implementados localmente.
-4. Reglas aprobadas para automatizar seguimientos.
+4. Configuración y aprobación de las tres reglas reales de recordatorios en
+   staging; la implementación local ya está disponible.
 5. Validación acumulada del flujo de compras, recepciones y lotes en staging.
 6. Reasignacion de usuarios `captacion` en cada ambiente.
 

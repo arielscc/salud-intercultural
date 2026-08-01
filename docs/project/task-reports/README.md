@@ -43,6 +43,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-30 | [Tarea 21: recetas y comprobantes versionados](./2026-07-30-tarea-21-recetas-comprobantes-versionados.md) | Emite documentos inmutables desde la receta, venta y pagos vigentes. |
 | 2026-07-30 | [Tarea 22: reporte del recorrido completo](./2026-07-30-tarea-22-reporte-recorrido-completo.md) | Reconcilia llegada, consulta, propuesta, venta, cobro, seguimiento y retorno por visita. |
 | 2026-07-30 | [Tarea 23: tiempo de atención por área](./2026-07-30-tarea-23-tiempo-atencion-area.md) | Separa espera, atención y bloqueo mediante eventos inmutables y percentiles. |
+| 2026-08-01 | [Tarea 24: recordatorios automatizados y supervisados](./2026-08-01-tarea-24-recordatorios-supervisados.md) | Prepara contactos idempotentes con reglas versionadas, consentimiento y aprobación humana. |
 
 ## Relacion Con Estado V3
 

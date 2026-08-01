@@ -28,6 +28,7 @@ Leyenda: `L` lectura, `E` escritura, `F` finalización, `C` corrección,
 | Estudios | L/E | L | L | — | — | L/E | — |
 | Ventas y cobros | L/E | L | — | — | L/E | — | — |
 | Seguimientos | L/E | L | L/E | L/E | L/E | — | L/E |
+| Recordatorios supervisados | L/E | L/E reglas | — | L/E revisión | — | — | — |
 | Inventario | L/E/A | L | — | — | L/E | — | — |
 | Reportes | L | L | — | — | — | — | — |
 | Auditoría | L | L | — | — | — | — | — |
@@ -45,6 +46,11 @@ Médico atiende la relación clínica y las llamadas médicas; Recepción/Marlen
 atiende evolución, retorno y recuperación de tratamiento; Administración y el
 rol técnico Seguimiento trabajan únicamente la relación administrativa. Esta
 separación también se valida en el servidor.
+
+En Recordatorios, Dirección configura reglas pero no aprueba contactos.
+Recepción/Marlen revisa candidatos, pero no cambia reglas. El super
+administrador puede realizar ambas acciones para soporte técnico. La aprobación
+vuelve a comprobar el consentimiento antes de crear el seguimiento.
 
 En abandono y pendientes, la escritura solo registra que una visita activa no
 continuará. No permite reabrirla ni eliminar órdenes o tareas pendientes.

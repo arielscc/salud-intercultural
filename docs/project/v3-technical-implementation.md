@@ -168,6 +168,30 @@ La asignación clínica busca Recepción/Marlen; el rol técnico `seguimiento`
 queda limitado a `domain=administrative`. La guía completa vive en
 [Tipos y resultados de seguimiento](../operations/follow-up-classification.md).
 
+### Recordatorios Automatizados Y Supervisados
+
+`SupervisedReminderRule` conserva una identidad estable y apunta a una
+`SupervisedReminderRuleVersion` activa. Cada cambio crea otra versión; un
+trigger bloquea `UPDATE` y `DELETE` sobre la historia. Dirección administra
+reglas con `reminder_rules_manage` y Recepción revisa candidatos con
+`reminders_review`.
+
+`generateSupervisedReminderCandidates` consulta eventos compatibles:
+`Visit.completedAt`, `TreatmentProposalOutcome` aceptado o
+`VisitDiscontinuation`. La clave `regla:evento:origen` no contiene la versión,
+por lo que una nueva plantilla no duplica el mismo trabajo. La fecha se ajusta
+al horario y días permitidos en `America/La_Paz`.
+
+Cada `SupervisedReminderCandidate` conserva la vista previa, regla exacta,
+origen, canal, fecha, bloqueo, error y reintento. La generación no envía nada.
+Al aprobar, el servidor vuelve a leer el consentimiento vigente y crea como
+máximo una `FollowUpTask` mediante una relación única. El contacto y resultado
+real continúan en `FollowUpAttempt`.
+
+`SupervisedReminderReviewEvent` registra aprobación, bloqueo, descarte, fallo o
+reintento como eventos append-only. La guía vive en
+[Recordatorios automatizados y supervisados](../operations/supervised-reminders.md).
+
 ### Abandono, Bloqueo Y Pendientes
 
 `VisitDiscontinuation` registra un único evento por visita con:

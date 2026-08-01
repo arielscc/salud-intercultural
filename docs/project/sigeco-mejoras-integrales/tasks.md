@@ -38,6 +38,8 @@ Control de avance: [progress.md](./progress.md)
 - [Reporte de la Tarea 22](../task-reports/2026-07-30-tarea-22-reporte-recorrido-completo.md)
 - [Tiempo de atención por área](../../operations/area-service-times.md)
 - [Reporte de la Tarea 23](../task-reports/2026-07-30-tarea-23-tiempo-atencion-area.md)
+- [Recordatorios automatizados y supervisados](../../operations/supervised-reminders.md)
+- [Reporte de la Tarea 24](../task-reports/2026-08-01-tarea-24-recordatorios-supervisados.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
 
@@ -57,6 +59,9 @@ Control de avance: [progress.md](./progress.md)
 - [Fórmulas del recorrido](../../../src/features/patient-journey/report.ts)
 - [Query de tiempos por área](../../../src/modules/database/queries/area-times.ts)
 - [Fórmulas de tiempos por área](../../../src/features/area-times/report.ts)
+- [Queries de recordatorios supervisados](../../../src/modules/database/queries/supervised-reminders.ts)
+- [Política de reglas, horarios e idempotencia](../../../src/features/supervised-reminders/policy.ts)
+- [Actions de reglas y revisión](../../../src/features/supervised-reminders/actions.ts)
 
 ## Qué Existe Actualmente
 

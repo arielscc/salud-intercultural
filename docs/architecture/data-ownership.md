@@ -26,6 +26,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Identidad, duplicados y alias de pacientes | Prisma | SIGECO | Activo | La ficha anterior se archiva y redirige; la fusión transaccional conserva historia y evidencia. |
 | Resultado de propuestas de tratamiento | Prisma | SIGECO, Médico y Administración | Activo | Decisión append-only; una aceptación crea una orden, no una venta ni un pago automáticos. |
 | Clasificación y resultado de seguimientos | Prisma | SIGECO, Recepción/Marlen y Médico | Activo | Tipo, relación, prioridad, responsable y resultado separados; llamadas médicas no se cierran como trabajo administrativo. |
+| Reglas y candidatos de recordatorios supervisados | Prisma | SIGECO, Dirección y Recepción/Marlen | Activo | Reglas versionadas y revisiones append-only; la generación idempotente no contacta ni crea una tarea sin aprobación humana. |
 | Abandono y pendientes de visita | Prisma | SIGECO, áreas operativas y Dirección | Activo | Conserva punto, área, motivo, responsable y pendientes; las tareas abiertas quedan bloqueadas, no eliminadas. |
 | Versiones y firma interna de consultas | Prisma | SIGECO, Médico y Dirección | Activo | La consulta vigente es una proyección; cada borrador, cierre o corrección conserva una fotografía histórica. |
 | Recetas y comprobantes emitidos | Prisma | SIGECO, Médico, Administración y Dirección | Activo | `GeneratedDocument` fotografía la fuente clínica o financiera; PDF es derivado privado y Payload no conserva copia editable. |

@@ -122,7 +122,18 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
 
   return (
     <div className="grid gap-4">
-      <PageHeader title="Seguimientos" description="Bandeja diaria" />
+      <PageHeader
+        title="Seguimientos"
+        description="Bandeja diaria"
+        actions={
+          <Link
+            href="/sigeco/seguimientos/recordatorios"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Recordatorios supervisados
+          </Link>
+        }
+      />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <KpiCard

@@ -53,6 +53,8 @@ enum InternalPermission {
   cash_sessions_approve
   followups_read
   followups_write
+  reminder_rules_manage
+  reminders_review
   inventory_read
   inventory_write
   inventory_adjust
@@ -523,6 +525,33 @@ enum FollowUpResult {
   other
 }
 
+enum SupervisedReminderEvent {
+  visit_completed
+  treatment_accepted
+  visit_discontinued
+}
+
+enum SupervisedReminderChannel {
+  call
+  whatsapp
+}
+
+enum SupervisedReminderCandidateStatus {
+  pending_review
+  approved
+  blocked
+  dismissed
+  failed
+}
+
+enum SupervisedReminderReviewResult {
+  approved
+  blocked
+  dismissed
+  failed
+  retry_scheduled
+}
+
 enum InventoryMovementType {
   entry
   purchase_receipt
@@ -634,6 +663,10 @@ model InternalUser {
   createdFollowUps               FollowUpTask[]                  @relation("FollowUpCreatedBy")
   followUpAttempts               FollowUpAttempt[]
   followUpStatusChanges          FollowUpStatusHistory[]
+  ownedReminderRuleVersions      SupervisedReminderRuleVersion[] @relation("ReminderRuleOwner")
+  createdReminderRuleVersions    SupervisedReminderRuleVersion[] @relation("ReminderRuleCreatedBy")
+  reviewedReminderCandidates     SupervisedReminderCandidate[]   @relation("ReminderCandidateReviewedBy")
+  reminderReviewEvents           SupervisedReminderReviewEvent[]
   inventoryMovements             InventoryMovement[]
   inventoryAdjustments           InventoryAdjustment[]
   inventoryCatalogVersions       InventoryItemCatalogVersion[]   @relation("InventoryCatalogVersionChangedBy")
@@ -789,35 +822,35 @@ model LeadStatusHistory {
 }
 
 model Patient {
-  id                       String                      @id @default(cuid())
-  internalCode             String                      @unique
+  id                       String                        @id @default(cuid())
+  internalCode             String                        @unique
   fullName                 String
   phone                    String
   secondaryPhone           String?
   birthDate                DateTime?
-  gender                   PatientGender               @default(unknown)
+  gender                   PatientGender                 @default(unknown)
   city                     String?
   department               String?
   country                  String?
   address                  String?
-  captureSource            PatientCaptureSource        @default(other)
-  captureSources           PatientCaptureSource[]      @default([])
+  captureSource            PatientCaptureSource          @default(other)
+  captureSources           PatientCaptureSource[]        @default([])
   firstVisitAt             DateTime?
   generalObservations      String?
   allergies                String?
   relevantHistory          String?
   currentMedication        String?
-  followUpPreference       FollowUpContactPreference   @default(unknown)
-  status                   PatientStatus               @default(active)
-  normalizedName           String                      @default("")
-  normalizedPhone          String                      @default("")
-  normalizedSecondaryPhone String                      @default("")
+  followUpPreference       FollowUpContactPreference     @default(unknown)
+  status                   PatientStatus                 @default(active)
+  normalizedName           String                        @default("")
+  normalizedPhone          String                        @default("")
+  normalizedSecondaryPhone String                        @default("")
   mergedIntoId             String?
-  createdAt                DateTime                    @default(now())
-  updatedAt                DateTime                    @updatedAt
-  mergedInto               Patient?                    @relation("PatientMergeRedirect", fields: [mergedIntoId], references: [id], onDelete: Restrict)
-  mergedPatients           Patient[]                   @relation("PatientMergeRedirect")
-  convertedLeads           Lead[]                      @relation("LeadConvertedPatient")
+  createdAt                DateTime                      @default(now())
+  updatedAt                DateTime                      @updatedAt
+  mergedInto               Patient?                      @relation("PatientMergeRedirect", fields: [mergedIntoId], references: [id], onDelete: Restrict)
+  mergedPatients           Patient[]                     @relation("PatientMergeRedirect")
+  convertedLeads           Lead[]                        @relation("LeadConvertedPatient")
   contacts                 PatientContact[]
   notes                    PatientNote[]
   visits                   Visit[]
@@ -838,13 +871,14 @@ model Patient {
   clinicalAttachments      ClinicalAttachment[]
   consents                 PatientConsent[]
   visitAttributions        VisitAttribution[]
-  duplicateCandidatesA     PatientDuplicateCandidate[] @relation("PatientDuplicateCandidateA")
-  duplicateCandidatesB     PatientDuplicateCandidate[] @relation("PatientDuplicateCandidateB")
-  mergesReceived           PatientMerge[]              @relation("PatientMergeTarget")
-  mergeAsSource            PatientMerge?               @relation("PatientMergeSource")
-  aliases                  PatientAlias[]              @relation("PatientAliasCanonical")
-  aliasAsSource            PatientAlias?               @relation("PatientAliasSource")
+  duplicateCandidatesA     PatientDuplicateCandidate[]   @relation("PatientDuplicateCandidateA")
+  duplicateCandidatesB     PatientDuplicateCandidate[]   @relation("PatientDuplicateCandidateB")
+  mergesReceived           PatientMerge[]                @relation("PatientMergeTarget")
+  mergeAsSource            PatientMerge?                 @relation("PatientMergeSource")
+  aliases                  PatientAlias[]                @relation("PatientAliasCanonical")
+  aliasAsSource            PatientAlias?                 @relation("PatientAliasSource")
   generatedDocuments       GeneratedDocument[]
+  reminderCandidates       SupervisedReminderCandidate[]
 
   @@index([fullName])
   @@index([phone])
@@ -976,29 +1010,29 @@ model PatientNote {
 }
 
 model Visit {
-  id                        String                     @id @default(cuid())
+  id                        String                        @id @default(cuid())
   patientId                 String
-  branchCode                String                     @default("el-alto")
-  isTestData                Boolean                    @default(false)
-  status                    VisitStatus                @default(in_reception)
+  branchCode                String                        @default("el-alto")
+  isTestData                Boolean                       @default(false)
+  status                    VisitStatus                   @default(in_reception)
   reason                    String?
-  intakeType                VisitIntakeType            @default(first_visit)
+  intakeType                VisitIntakeType               @default(first_visit)
   symptomDurationValue      Int?
   symptomDurationUnit       SymptomDurationUnit?
   previouslyTreated         Boolean?
-  bringsStudies             Boolean                    @default(false)
-  originCity                String                     @default("No informado")
+  bringsStudies             Boolean                       @default(false)
+  originCity                String                        @default("No informado")
   originDepartment          String?
-  originCountry             String                     @default("No informado")
-  originMatchesPatient      Boolean                    @default(true)
+  originCountry             String                        @default("No informado")
+  originMatchesPatient      Boolean                       @default(true)
   createdById               String?
-  checkedInAt               DateTime                   @default(now())
+  checkedInAt               DateTime                      @default(now())
   completedAt               DateTime?
   cancelledAt               DateTime?
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
-  patient                   Patient                    @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  createdBy                 InternalUser?              @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt                 DateTime                      @default(now())
+  updatedAt                 DateTime                      @updatedAt
+  patient                   Patient                       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  createdBy                 InternalUser?                 @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   checkIn                   ReceptionCheckIn?
   route                     PatientRoute?
   statusHistory             VisitStatusHistory[]
@@ -1023,6 +1057,7 @@ model Visit {
   discontinuation           VisitDiscontinuation?
   generatedDocuments        GeneratedDocument[]
   areaTimeEvents            VisitAreaTimeEvent[]
+  reminderCandidates        SupervisedReminderCandidate[]
 
   @@index([patientId])
   @@index([branchCode, checkedInAt])
@@ -1975,41 +2010,43 @@ model CashExpenseBeneficiary {
 }
 
 model FollowUpTask {
-  id                       String                    @id @default(cuid())
-  leadId                   String?
-  patientId                String?
-  visitId                  String?
-  saleId                   String?
-  clinicalOrderId          String?
-  workItemId               String?
-  assignedToId             String?
-  createdById              String?
-  escalatedFromTaskId      String?                   @unique
-  type                     FollowUpType              @default(administrative)
-  domain                   FollowUpDomain            @default(administrative)
-  priority                 FollowUpPriority          @default(normal)
-  status                   FollowUpStatus            @default(pending)
-  result                   FollowUpResult?
-  title                    String
-  notes                    String?
-  dueAt                    DateTime
-  completedAt              DateTime?
-  createdAt                DateTime                  @default(now())
-  updatedAt                DateTime                  @updatedAt
-  lead                     Lead?                     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  patient                  Patient?                  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  visit                    Visit?                    @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  sale                     Sale?                     @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  clinicalOrder            ClinicalOrder?            @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
-  workItem                 VisitWorkItem?            @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  assignedTo               InternalUser?             @relation("FollowUpAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdBy                InternalUser?             @relation("FollowUpCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  escalatedFromTask        FollowUpTask?             @relation("FollowUpEscalation", fields: [escalatedFromTaskId], references: [id], onDelete: SetNull)
-  escalatedToTask          FollowUpTask?             @relation("FollowUpEscalation")
-  attempts                 FollowUpAttempt[]
-  statusHistory            FollowUpStatusHistory[]
-  treatmentProposalOutcome TreatmentProposalOutcome?
-  visitDiscontinuation     VisitDiscontinuation?
+  id                            String                       @id @default(cuid())
+  leadId                        String?
+  patientId                     String?
+  visitId                       String?
+  saleId                        String?
+  clinicalOrderId               String?
+  workItemId                    String?
+  assignedToId                  String?
+  createdById                   String?
+  escalatedFromTaskId           String?                      @unique
+  type                          FollowUpType                 @default(administrative)
+  domain                        FollowUpDomain               @default(administrative)
+  priority                      FollowUpPriority             @default(normal)
+  status                        FollowUpStatus               @default(pending)
+  result                        FollowUpResult?
+  title                         String
+  notes                         String?
+  dueAt                         DateTime
+  completedAt                   DateTime?
+  createdAt                     DateTime                     @default(now())
+  updatedAt                     DateTime                     @updatedAt
+  lead                          Lead?                        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  patient                       Patient?                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  visit                         Visit?                       @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  sale                          Sale?                        @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  clinicalOrder                 ClinicalOrder?               @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
+  workItem                      VisitWorkItem?               @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  assignedTo                    InternalUser?                @relation("FollowUpAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy                     InternalUser?                @relation("FollowUpCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  escalatedFromTask             FollowUpTask?                @relation("FollowUpEscalation", fields: [escalatedFromTaskId], references: [id], onDelete: SetNull)
+  escalatedToTask               FollowUpTask?                @relation("FollowUpEscalation")
+  attempts                      FollowUpAttempt[]
+  statusHistory                 FollowUpStatusHistory[]
+  treatmentProposalOutcome      TreatmentProposalOutcome?
+  visitDiscontinuation          VisitDiscontinuation?
+  supervisedReminderCandidateId String?                      @unique
+  supervisedReminderCandidate   SupervisedReminderCandidate? @relation(fields: [supervisedReminderCandidateId], references: [id], onDelete: SetNull)
 
   @@index([leadId])
   @@index([patientId])
@@ -2069,6 +2106,100 @@ model FollowUpTemplate {
   createdAt DateTime @default(now())
 
   @@index([active])
+}
+
+/// Identidad estable de una regla. La configuración activa siempre apunta a
+/// una versión inmutable, por lo que editar o activar crea historia nueva.
+model SupervisedReminderRule {
+  id              String                          @id @default(cuid())
+  key             String                          @unique
+  activeVersionId String?                         @unique
+  createdAt       DateTime                        @default(now())
+  updatedAt       DateTime                        @updatedAt
+  activeVersion   SupervisedReminderRuleVersion?  @relation("ActiveReminderRuleVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  versions        SupervisedReminderRuleVersion[] @relation("ReminderRuleVersions")
+
+  @@index([createdAt])
+}
+
+model SupervisedReminderRuleVersion {
+  id                String                        @id @default(cuid())
+  ruleId            String
+  version           Int
+  name              String
+  enabled           Boolean                       @default(false)
+  event             SupervisedReminderEvent
+  followUpType      FollowUpType
+  channel           SupervisedReminderChannel
+  templateBody      String
+  delayDays         Int                           @default(1)
+  lookbackDays      Int                           @default(30)
+  windowStartMinute Int                           @default(540)
+  windowEndMinute   Int                           @default(1080)
+  weekdays          Int[]                         @default([1, 2, 3, 4, 5, 6])
+  ownerId           String
+  createdById       String?
+  createdAt         DateTime                      @default(now())
+  rule              SupervisedReminderRule        @relation("ReminderRuleVersions", fields: [ruleId], references: [id], onDelete: Restrict)
+  activeForRule     SupervisedReminderRule?       @relation("ActiveReminderRuleVersion")
+  owner             InternalUser                  @relation("ReminderRuleOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy         InternalUser?                 @relation("ReminderRuleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  candidates        SupervisedReminderCandidate[]
+
+  @@unique([ruleId, version])
+  @@index([event, enabled, createdAt])
+  @@index([ownerId])
+}
+
+model SupervisedReminderCandidate {
+  id               String                            @id @default(cuid())
+  deduplicationKey String                            @unique
+  ruleVersionId    String
+  patientId        String
+  visitId          String?
+  sourceEvent      SupervisedReminderEvent
+  sourceId         String
+  sourceOccurredAt DateTime
+  scheduledFor     DateTime
+  channel          SupervisedReminderChannel
+  renderedBody     String
+  status           SupervisedReminderCandidateStatus @default(pending_review)
+  blockReason      String?
+  reviewedById     String?
+  reviewedAt       DateTime?
+  retryAt          DateTime?
+  lastErrorCode    String?
+  createdAt        DateTime                          @default(now())
+  updatedAt        DateTime                          @updatedAt
+  ruleVersion      SupervisedReminderRuleVersion     @relation(fields: [ruleVersionId], references: [id], onDelete: Restrict)
+  patient          Patient                           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit            Visit?                            @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  reviewedBy       InternalUser?                     @relation("ReminderCandidateReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  task             FollowUpTask?
+  reviewEvents     SupervisedReminderReviewEvent[]
+
+  @@index([status, scheduledFor])
+  @@index([patientId, createdAt])
+  @@index([visitId, createdAt])
+  @@index([sourceEvent, sourceOccurredAt])
+  @@index([ruleVersionId])
+}
+
+model SupervisedReminderReviewEvent {
+  id          String                         @id @default(cuid())
+  candidateId String
+  userId      String?
+  result      SupervisedReminderReviewResult
+  note        String?
+  errorCode   String?
+  retryAt     DateTime?
+  createdAt   DateTime                       @default(now())
+  candidate   SupervisedReminderCandidate    @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+  user        InternalUser?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId, createdAt])
+  @@index([result, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Supplier {
