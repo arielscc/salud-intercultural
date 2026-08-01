@@ -28,7 +28,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-29 | [Tarea 6: adjuntos clínicos seguros](./2026-07-29-tarea-6-adjuntos-clinicos-seguros.md) | Guarda documentos privados con validación, permisos temporales y auditoría. |
 | 2026-07-29 | [Tarea 7: backup y restauración comprobada](./2026-07-29-tarea-7-backup-restauracion-comprobada.md) | Cifra y restaura conjuntamente PostgreSQL y adjuntos en un entorno local aislado. |
 | 2026-07-29 | [Tarea 8: respuesta a incidentes y gate de seguridad](./2026-07-29-tarea-8-respuesta-incidentes-gate-seguridad.md) | Prueba contención, auditoría y recuperación sin confundir el pase local con la aprobación productiva. |
-| 2026-07-29 | [Tarea 9: consentimientos y preferencias de contacto](./2026-07-29-tarea-9-consentimientos-preferencias-contacto.md) | Separa cinco finalidades, conserva la prueba exacta y bloquea contactos sin autorización vigente. |
+| 2026-07-29 | [Tarea 9: consentimientos y preferencias de contacto](./2026-07-29-tarea-9-consentimientos-preferencias-contacto.md) | Separa finalidades, conserva la prueba exacta y bloquea contactos sin autorización vigente; T25 agregó la sexta. |
 | 2026-07-29 | [Tarea 10: departamento y procedencia geográfica](./2026-07-29-tarea-10-departamento-procedencia-geografica.md) | Separa residencia y origen de visita, normaliza lugares y permite medir Cochabamba. |
 | 2026-07-29 | [Tarea 11: fuentes de captación y atribución](./2026-07-29-tarea-11-fuentes-captacion-atribucion.md) | Conserva fuentes por llegada y compara cuentas verificadas, ventas e ingresos. |
 | 2026-07-29 | [Tarea 12: duplicados y fusión de pacientes](./2026-07-29-tarea-12-duplicados-fusion-pacientes.md) | Detecta coincidencias y reúne expedientes sin borrar la ficha anterior. |
@@ -44,6 +44,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-07-30 | [Tarea 22: reporte del recorrido completo](./2026-07-30-tarea-22-reporte-recorrido-completo.md) | Reconcilia llegada, consulta, propuesta, venta, cobro, seguimiento y retorno por visita. |
 | 2026-07-30 | [Tarea 23: tiempo de atención por área](./2026-07-30-tarea-23-tiempo-atencion-area.md) | Separa espera, atención y bloqueo mediante eventos inmutables y percentiles. |
 | 2026-08-01 | [Tarea 24: recordatorios automatizados y supervisados](./2026-08-01-tarea-24-recordatorios-supervisados.md) | Prepara contactos idempotentes con reglas versionadas, consentimiento y aprobación humana. |
+| 2026-08-01 | [Tarea 25: encuestas y reclamos](./2026-08-01-tarea-25-encuestas-reclamos.md) | Recibe opiniones mediante enlaces privados y separa reclamos críticos con responsable y plazo. |
 
 ## Relacion Con Estado V3
 

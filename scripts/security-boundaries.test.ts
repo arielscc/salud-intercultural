@@ -99,6 +99,7 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/inventario/proveedores/[supplierId]/editar/page.tsx": [
     "suppliers_write"
   ],
+  "src/app/(internal)/sigeco/(app)/opiniones/page.tsx": ["feedback_read"],
   "src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx": ["visits_create"],
   "src/app/(internal)/sigeco/(app)/recepcion/abandonos/page.tsx": [
     "visit_discontinuations_read"
@@ -162,6 +163,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   approveCashSessionCloseAction: "cash_sessions_approve",
   changeOwnInternalPasswordAction: "internal_access",
   configureProfessionalProfileAction: "documents_configure",
+  cancelFeedbackRequestAction: "feedback_manage",
   correctClinicalConsultationAction: "clinical_correct",
   correctPrescriptionAction: "clinical_correct",
   createClinicalOrderAction: "clinical_write",
@@ -169,6 +171,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createCaptureSourceAction: "attribution_manage",
   createFollowUpAttemptAction: "followups_write",
   createFollowUpTaskAction: "followups_write",
+  createFeedbackRequestAction: "feedback_manage",
   createInternalLeadAction: "leads_create",
   createInventoryAdjustmentAction: "inventory_adjust",
   createInventoryLotAdjustmentAction: "inventory_lot_adjust",
@@ -227,6 +230,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   updateLeadStatusAction: "leads_update",
   updateManagedInternalUserAccessAction: "users_manage",
   updateCaptureSourceAction: "attribution_manage",
+  updateFeedbackCaseAction: "feedback_manage",
   updateInventoryItemAction: "inventory_write",
   updateInventoryItemSuppliersAction: "suppliers_write",
   updateNursingWorkItemAction: "nursing_write",
@@ -480,7 +484,7 @@ describe("SIGECO permission and privacy boundaries", () => {
 
   it("does not expose clinical queries to Payload, marketing or analytics", () => {
     const protectedQueryImport =
-      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:area-times|clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patient-journey|patients|reception|sales|studies|supervised-reminders|visits))/;
+      /@\/modules\/(?:clinical-attachments|generated-documents|database\/queries\/(?:area-times|clinical-care|follow-ups|internal-users|inventory|nursing|paid-studies|patient-feedback|patient-journey|patients|reception|sales|studies|supervised-reminders|visits))/;
     const publicRoots = [
       "src/payload",
       "src/features/analytics",
@@ -506,6 +510,20 @@ describe("SIGECO permission and privacy boundaries", () => {
     expect(analytics).not.toMatch(
       /\b(?:patient|diagnosis|prescription|clinical|phone|email|fullName)\b/i
     );
+  });
+
+  it("keeps the public feedback endpoint behind a narrow no-store facade", () => {
+    const route = source("src/app/api/encuesta/route.ts");
+    const facade = source("src/modules/patient-feedback/public.ts");
+    const page = source(
+      "src/app/(feedback)/encuesta/[token]/page.tsx"
+    );
+
+    expect(route).toContain("submitPublicPatientFeedback");
+    expect(route).not.toContain("prisma.");
+    expect(route).toContain('"Cache-Control": "private, no-store');
+    expect(facade).not.toMatch(/fullName|phone|owner|internalNote/);
+    expect(page).not.toMatch(/fullName|phone|owner|classification|severity/);
   });
 
   it("requires a server permission on future file or export route handlers", () => {

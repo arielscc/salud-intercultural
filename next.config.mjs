@@ -47,6 +47,10 @@ const nextConfig = {
       {
         source: "/api/:path*",
         headers: privateRouteHeaders
+      },
+      {
+        source: "/encuesta/:path*",
+        headers: privateRouteHeaders
       }
     ];
   },

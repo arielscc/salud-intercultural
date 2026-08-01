@@ -15,6 +15,7 @@ Cada finalidad se pregunta y registra por separado:
 | Educación | Enviar información general de salud | Diagnosticar, tratar o promocionar |
 | Promociones | Enviar campañas y novedades comerciales | Seguimiento clínico o testimonios |
 | Imagen o voz | Usar testimonio, imagen o voz para contenido | Llamar o escribir al paciente |
+| Encuesta sobre la atención | Pedir una opinión breve sobre la atención | Publicar testimonios, promociones o seguimiento clínico |
 
 Una respuesta afirmativa nunca se extiende automáticamente a otra finalidad.
 
@@ -89,19 +90,23 @@ no se pregunta ni se edita en Recepción.
 
 ## Producción Bloqueada
 
-La versión `v1` está aprobada únicamente para desarrollo y staging. Antes de
+La versión `v2` está aprobada únicamente para desarrollo y staging. Esta
+versión conserva las cinco finalidades anteriores y agrega el consentimiento
+específico para encuestas de la Tarea 25. Antes de
 producción se debe:
 
-1. revisar los cinco textos con Dirección;
+1. revisar los seis textos con Dirección;
 2. realizar la revisión legal o profesional que Dirección considere necesaria;
 3. confirmar por escrito que se autoriza exactamente la versión `v1`;
-4. configurar `PATIENT_CONSENT_PRODUCTION_TEXT_VERSION=v1`;
+4. configurar `PATIENT_CONSENT_PRODUCTION_TEXT_VERSION=v2`;
 5. volver a ejecutar el gate, la migración y el QA de roles en staging.
 
 Sin esa variable exacta, la validación del ambiente productivo falla y el
 servidor tampoco permite registrar consentimientos.
 
-Cambiar un texto exige una versión nueva. Nunca se modifica el texto guardado
+Las decisiones históricas `v1` conservan su texto exacto y siguen siendo
+válidas para la finalidad que el paciente autorizó. Cambiar un texto exige una
+versión nueva. Nunca se modifica el texto guardado
 en decisiones anteriores.
 
 ## Validación

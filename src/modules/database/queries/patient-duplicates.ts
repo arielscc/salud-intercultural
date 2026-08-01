@@ -422,7 +422,9 @@ export async function mergeDuplicatePatients(input: {
               captureIds("deliveredProducts", tx.deliveredProduct.findMany({ where: { patientId: source.id }, select: { id: true } })),
               captureIds("cashMovements", tx.cashMovement.findMany({ where: { patientId: source.id }, select: { id: true } })),
               captureIds("followUpTasks", tx.followUpTask.findMany({ where: { patientId: source.id }, select: { id: true } })),
-              captureIds("consents", tx.patientConsent.findMany({ where: { patientId: source.id }, select: { id: true } }))
+              captureIds("consents", tx.patientConsent.findMany({ where: { patientId: source.id }, select: { id: true } })),
+              captureIds("reminderCandidates", tx.supervisedReminderCandidate.findMany({ where: { patientId: source.id }, select: { id: true } })),
+              captureIds("feedbackRequests", tx.patientFeedbackRequest.findMany({ where: { patientId: source.id }, select: { id: true } }))
             ]
           )
         );
@@ -578,6 +580,20 @@ export async function mergeDuplicatePatients(input: {
         await move(
           "consents",
           tx.patientConsent.updateMany({
+            where: { patientId: source.id },
+            data: { patientId: target.id }
+          })
+        );
+        await move(
+          "reminderCandidates",
+          tx.supervisedReminderCandidate.updateMany({
+            where: { patientId: source.id },
+            data: { patientId: target.id }
+          })
+        );
+        await move(
+          "feedbackRequests",
+          tx.patientFeedbackRequest.updateMany({
             where: { patientId: source.id },
             data: { patientId: target.id }
           })

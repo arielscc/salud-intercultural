@@ -55,6 +55,8 @@ enum InternalPermission {
   followups_write
   reminder_rules_manage
   reminders_review
+  feedback_read
+  feedback_manage
   inventory_read
   inventory_write
   inventory_adjust
@@ -236,6 +238,7 @@ enum PatientConsentPurpose {
   education
   promotions
   image_voice
+  feedback
 }
 
 enum PatientConsentDecision {
@@ -552,6 +555,62 @@ enum SupervisedReminderReviewResult {
   retry_scheduled
 }
 
+enum FeedbackRequestStatus {
+  open
+  submitted
+  cancelled
+}
+
+enum FeedbackDeliveryChannel {
+  in_person
+  whatsapp
+}
+
+enum PatientFeedbackKind {
+  survey
+  comment
+  complaint
+}
+
+enum PatientFeedbackArea {
+  reception
+  clinical_care
+  nursing
+  administration
+  communication
+  facilities
+  other
+}
+
+enum FeedbackClassification {
+  general
+  service
+  clinical_safety
+}
+
+enum FeedbackSeverity {
+  standard
+  priority
+  critical
+}
+
+enum FeedbackCaseStatus {
+  new
+  reviewing
+  awaiting_patient
+  resolved
+  closed
+}
+
+enum FeedbackCaseEventType {
+  submitted
+  assigned
+  classified
+  status_changed
+  note
+  deadline_changed
+}
+
 enum InventoryMovementType {
   entry
   purchase_receipt
@@ -667,6 +726,10 @@ model InternalUser {
   createdReminderRuleVersions    SupervisedReminderRuleVersion[] @relation("ReminderRuleCreatedBy")
   reviewedReminderCandidates     SupervisedReminderCandidate[]   @relation("ReminderCandidateReviewedBy")
   reminderReviewEvents           SupervisedReminderReviewEvent[]
+  ownedFeedbackRequests          PatientFeedbackRequest[]        @relation("FeedbackRequestOwner")
+  createdFeedbackRequests        PatientFeedbackRequest[]        @relation("FeedbackRequestCreatedBy")
+  ownedFeedbackCases             PatientFeedbackCase[]           @relation("FeedbackCaseOwner")
+  feedbackCaseEvents             PatientFeedbackCaseEvent[]
   inventoryMovements             InventoryMovement[]
   inventoryAdjustments           InventoryAdjustment[]
   inventoryCatalogVersions       InventoryItemCatalogVersion[]   @relation("InventoryCatalogVersionChangedBy")
@@ -879,6 +942,8 @@ model Patient {
   aliasAsSource            PatientAlias?                 @relation("PatientAliasSource")
   generatedDocuments       GeneratedDocument[]
   reminderCandidates       SupervisedReminderCandidate[]
+  feedbackRequests         PatientFeedbackRequest[]
+  feedbackSubmissions      PatientFeedback[]
 
   @@index([fullName])
   @@index([phone])
@@ -1058,6 +1123,8 @@ model Visit {
   generatedDocuments        GeneratedDocument[]
   areaTimeEvents            VisitAreaTimeEvent[]
   reminderCandidates        SupervisedReminderCandidate[]
+  feedbackRequests          PatientFeedbackRequest[]
+  feedbackSubmission        PatientFeedback?
 
   @@index([patientId])
   @@index([branchCode, checkedInAt])
@@ -2200,6 +2267,106 @@ model SupervisedReminderReviewEvent {
   @@index([candidateId, createdAt])
   @@index([result, createdAt])
   @@index([userId, createdAt])
+}
+
+/// Invitación manual del piloto. El token original nunca se guarda: solo su
+/// SHA-256. Generar otro enlace para la misma visita invalida el anterior.
+model PatientFeedbackRequest {
+  id                   String                  @id @default(cuid())
+  patientId            String
+  visitId              String
+  ownerId              String
+  createdById          String?
+  tokenHash            String                  @unique
+  status               FeedbackRequestStatus   @default(open)
+  deliveryChannel      FeedbackDeliveryChannel @default(in_person)
+  questionnaireVersion String                  @default("v1")
+  expiresAt            DateTime
+  submittedAt          DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  patient              Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit                Visit                   @relation(fields: [visitId], references: [id], onDelete: Restrict)
+  owner                InternalUser            @relation("FeedbackRequestOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy            InternalUser?           @relation("FeedbackRequestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  feedback             PatientFeedback?
+
+  @@index([status, expiresAt])
+  @@index([patientId, createdAt])
+  @@index([visitId, status])
+  @@index([ownerId, status])
+}
+
+/// Respuesta exacta enviada por el paciente. Es append-only y no constituye
+/// autorización para publicar un testimonio.
+model PatientFeedback {
+  id             String                 @id @default(cuid())
+  requestId      String                 @unique
+  patientId      String
+  visitId        String                 @unique
+  rating         Int
+  kind           PatientFeedbackKind
+  area           PatientFeedbackArea
+  comment        String?
+  healthRiskFlag Boolean                @default(false)
+  submittedAt    DateTime               @default(now())
+  request        PatientFeedbackRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  patient        Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit          Visit                  @relation(fields: [visitId], references: [id], onDelete: Restrict)
+  case           PatientFeedbackCase?
+
+  @@index([kind, submittedAt])
+  @@index([area, submittedAt])
+  @@index([rating, submittedAt])
+  @@index([patientId, submittedAt])
+}
+
+/// Proyección operativa que Dirección puede mover. La respuesta del paciente
+/// permanece intacta y cada cambio interno agrega un evento separado.
+model PatientFeedbackCase {
+  id             String                     @id @default(cuid())
+  feedbackId     String                     @unique
+  ownerId        String
+  classification FeedbackClassification
+  severity       FeedbackSeverity
+  status         FeedbackCaseStatus         @default(new)
+  responseDueAt  DateTime?
+  resolvedAt     DateTime?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  feedback       PatientFeedback            @relation(fields: [feedbackId], references: [id], onDelete: Restrict)
+  owner          InternalUser               @relation("FeedbackCaseOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  events         PatientFeedbackCaseEvent[]
+
+  @@index([status, responseDueAt])
+  @@index([severity, status, createdAt])
+  @@index([classification, createdAt])
+  @@index([ownerId, status])
+}
+
+model PatientFeedbackCaseEvent {
+  id                 String                  @id @default(cuid())
+  caseId             String
+  actorId            String?
+  type               FeedbackCaseEventType
+  fromStatus         FeedbackCaseStatus?
+  toStatus           FeedbackCaseStatus?
+  fromClassification FeedbackClassification?
+  toClassification   FeedbackClassification?
+  fromSeverity       FeedbackSeverity?
+  toSeverity         FeedbackSeverity?
+  fromOwnerId        String?
+  toOwnerId          String?
+  responseDueAt      DateTime?
+  note               String?
+  createdAt          DateTime                @default(now())
+  case               PatientFeedbackCase     @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  actor              InternalUser?           @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([caseId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([type, createdAt])
 }
 
 model Supplier {

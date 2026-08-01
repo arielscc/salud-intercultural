@@ -40,6 +40,8 @@ Control de avance: [progress.md](./progress.md)
 - [Reporte de la Tarea 23](../task-reports/2026-07-30-tarea-23-tiempo-atencion-area.md)
 - [Recordatorios automatizados y supervisados](../../operations/supervised-reminders.md)
 - [Reporte de la Tarea 24](../task-reports/2026-08-01-tarea-24-recordatorios-supervisados.md)
+- [Encuestas, opiniones y reclamos](../../operations/patient-feedback-complaints.md)
+- [Reporte de la Tarea 25](../task-reports/2026-08-01-tarea-25-encuestas-reclamos.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
 
@@ -62,6 +64,9 @@ Control de avance: [progress.md](./progress.md)
 - [Queries de recordatorios supervisados](../../../src/modules/database/queries/supervised-reminders.ts)
 - [Política de reglas, horarios e idempotencia](../../../src/features/supervised-reminders/policy.ts)
 - [Actions de reglas y revisión](../../../src/features/supervised-reminders/actions.ts)
+- [Queries de encuestas y reclamos](../../../src/modules/database/queries/patient-feedback.ts)
+- [Política de clasificación y plazos](../../../src/features/patient-feedback/policy.ts)
+- [Fachada pública de encuestas](../../../src/modules/patient-feedback/public.ts)
 
 ## Qué Existe Actualmente
 

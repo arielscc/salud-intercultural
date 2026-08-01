@@ -29,6 +29,7 @@ Leyenda: `L` lectura, `E` escritura, `F` finalización, `C` corrección,
 | Ventas y cobros | L/E | L | — | — | L/E | — | — |
 | Seguimientos | L/E | L | L/E | L/E | L/E | — | L/E |
 | Recordatorios supervisados | L/E | L/E reglas | — | L/E revisión | — | — | — |
+| Encuestas y reclamos | L/E | L/E | — | — | — | — | — |
 | Inventario | L/E/A | L | — | — | L/E | — | — |
 | Reportes | L | L | — | — | — | — | — |
 | Auditoría | L | L | — | — | — | — | — |
@@ -51,6 +52,11 @@ En Recordatorios, Dirección configura reglas pero no aprueba contactos.
 Recepción/Marlen revisa candidatos, pero no cambia reglas. El super
 administrador puede realizar ambas acciones para soporte técnico. La aprobación
 vuelve a comprobar el consentimiento antes de crear el seguimiento.
+
+En Encuestas y reclamos, Dirección y el super administrador crean enlaces,
+leen respuestas, asignan responsables y registran decisiones internas. Los
+demás roles no ven la bandeja. El paciente solo accede a una fachada pública
+que omite todos los datos internos.
 
 En abandono y pendientes, la escritura solo registra que una visita activa no
 continuará. No permite reabrirla ni eliminar órdenes o tareas pendientes.

@@ -6,9 +6,9 @@ import {
 } from "@/features/patient-consents/texts";
 
 describe("patient consent text approval gate", () => {
-  it("keeps the five approved development texts versioned", () => {
-    expect(Object.keys(patientConsentTexts)).toHaveLength(5);
-    expect(PATIENT_CONSENT_TEXT_VERSION).toBe("v1");
+  it("keeps the six development texts versioned", () => {
+    expect(Object.keys(patientConsentTexts)).toHaveLength(6);
+    expect(PATIENT_CONSENT_TEXT_VERSION).toBe("v2");
   });
 
   it("allows local and staging without authorizing production", () => {
@@ -26,7 +26,7 @@ describe("patient consent text approval gate", () => {
     ).not.toThrow();
   });
 
-  it("blocks production until Dirección explicitly approves version v1", () => {
+  it("blocks production until Dirección explicitly approves version v2", () => {
     const production = {
       APP_ENV: "production",
       NEXT_PUBLIC_APP_ENV: "production"
@@ -38,7 +38,7 @@ describe("patient consent text approval gate", () => {
     expect(() =>
       assertPatientConsentTextsEnabled({
         ...production,
-        PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v1"
+        PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v2"
       })
     ).not.toThrow();
   });

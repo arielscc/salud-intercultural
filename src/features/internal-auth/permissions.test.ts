@@ -127,6 +127,24 @@ describe("internal role permissions", () => {
     }
   });
 
+  it("reserves feedback links, complaints and internal notes for Direction", () => {
+    for (const role of ["super_admin", "direccion"] as const) {
+      expect(roleHasPermission(role, "feedback_read")).toBe(true);
+      expect(roleHasPermission(role, "feedback_manage")).toBe(true);
+    }
+    for (const role of [
+      "medico",
+      "recepcion",
+      "administracion",
+      "enfermeria",
+      "seguimiento",
+      "captacion"
+    ] as const) {
+      expect(roleHasPermission(role, "feedback_read")).toBe(false);
+      expect(roleHasPermission(role, "feedback_manage")).toBe(false);
+    }
+  });
+
   it("retires captacion to internal access only until users are reassigned", () => {
     expect(roleHasPermission("captacion", "internal_access")).toBe(true);
     expect(roleHasPermission("captacion", "patients_read")).toBe(false);

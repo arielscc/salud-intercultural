@@ -6,6 +6,7 @@ import {
   HeartPulse,
   Home,
   PhoneCall,
+  MessageSquareText,
   Receipt,
   ShoppingCart,
   ShieldCheck,
@@ -36,6 +37,12 @@ export const sigecoNavItems: SigecoNavItem[] = [
     label: "Seguimiento",
     icon: PhoneCall,
     permission: "followups_read"
+  },
+  {
+    href: "/sigeco/opiniones",
+    label: "Opiniones",
+    icon: MessageSquareText,
+    permission: "feedback_read"
   },
   { href: "/sigeco/inventario", label: "Inventario", icon: Boxes, permission: "inventory_read" },
   { href: "/sigeco/compras", label: "Compras", icon: ShoppingCart, permission: "purchases_read" },

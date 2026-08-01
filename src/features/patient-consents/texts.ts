@@ -4,14 +4,15 @@ import type {
 } from "@/generated/prisma/client";
 import { resolveDeploymentEnvironment } from "@/lib/deployment-environment";
 
-export const PATIENT_CONSENT_TEXT_VERSION = "v1";
+export const PATIENT_CONSENT_TEXT_VERSION = "v2";
 
 export const patientConsentPurposeLabels: Record<PatientConsentPurpose, string> = {
   follow_up: "Seguimiento del tratamiento",
   reminders: "Recordatorios de atención",
   education: "Información educativa",
   promotions: "Promociones y novedades",
-  image_voice: "Uso de imagen o voz"
+  image_voice: "Uso de imagen o voz",
+  feedback: "Encuesta sobre la atención"
 };
 
 export const patientConsentTexts: Record<PatientConsentPurpose, string> = {
@@ -24,7 +25,9 @@ export const patientConsentTexts: Record<PatientConsentPurpose, string> = {
   promotions:
     "Autorizo a la clínica a enviarme promociones, campañas y novedades comerciales.",
   image_voice:
-    "Autorizo voluntariamente el uso de mi imagen o voz en testimonios y contenido de la clínica para redes sociales y material informativo. Puedo retirar mi autorización para usos futuros."
+    "Autorizo voluntariamente el uso de mi imagen o voz en testimonios y contenido de la clínica para redes sociales y material informativo. Puedo retirar mi autorización para usos futuros.",
+  feedback:
+    "Autorizo a la clínica a contactarme para pedirme una opinión o encuesta breve sobre la atención recibida. Entiendo que mi respuesta no será publicada como testimonio sin otra autorización específica."
 };
 
 export const patientContactChannelLabels: Record<PatientContactChannel, string> = {
@@ -45,7 +48,7 @@ export function assertPatientConsentTextsEnabled(
       PATIENT_CONSENT_TEXT_VERSION
   ) {
     throw new Error(
-      "Los textos de consentimiento todavía no están autorizados para producción. Dirección debe aprobarlos antes de configurar PATIENT_CONSENT_PRODUCTION_TEXT_VERSION=v1."
+      `Los textos de consentimiento todavía no están autorizados para producción. Dirección debe aprobarlos antes de configurar PATIENT_CONSENT_PRODUCTION_TEXT_VERSION=${PATIENT_CONSENT_TEXT_VERSION}.`
     );
   }
 }

@@ -44,10 +44,10 @@ Dirección aprobó la versión `v1` para desarrollo y staging. El sistema guarda
 una copia exacta del texto en cada decisión, por lo que una versión futura no
 reescribe el pasado.
 
-La aprobación para producción está pendiente por instrucción expresa de
-Dirección. El ambiente productivo no pasa su validación sin
-`PATIENT_CONSENT_PRODUCTION_TEXT_VERSION=v1`, y la operación vuelve a comprobar
-la misma condición.
+La aprobación para producción quedó pendiente por instrucción expresa de
+Dirección. La Tarea 25 agregó después el sexto texto: el gate actual exige
+`PATIENT_CONSENT_PRODUCTION_TEXT_VERSION=v2`, únicamente después de su
+aprobación.
 
 ## Base De Datos
 
@@ -92,7 +92,7 @@ y se utilizaron un paciente y una tarea identificados como QA en desarrollo.
 - Ejecutar integración cuando el usuario autorice expresamente reiniciar la
   base exclusiva de test.
 - Probar los roles Recepción, Dirección y Seguimiento en staging.
-- Revisar los cinco textos antes de producción y recibir autorización expresa
+- Revisar los seis textos vigentes antes de producción y recibir autorización expresa
   de Dirección.
 - Configurar la variable productiva solo después de esa aprobación.
 
@@ -108,3 +108,11 @@ datos personales, clínicos, imagen o voz.
 ## Commit Sugerido
 
 `feat(sigeco): separate patient consents`
+
+## Actualización Posterior — Tarea 25
+
+La Tarea 25 agregó una sexta finalidad para pedir encuestas sobre la atención.
+Por ello, `v1` queda como versión histórica de los cinco textos originales y
+la versión vigente de desarrollo/staging pasa a `v2`. Producción debe continuar
+bloqueada hasta que Dirección apruebe los seis textos y configure exactamente
+`PATIENT_CONSENT_PRODUCTION_TEXT_VERSION=v2`.

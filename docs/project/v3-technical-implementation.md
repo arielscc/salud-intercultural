@@ -192,6 +192,28 @@ real continúan en `FollowUpAttempt`.
 reintento como eventos append-only. La guía vive en
 [Recordatorios automatizados y supervisados](../operations/supervised-reminders.md).
 
+### Encuestas Y Reclamos
+
+`PatientFeedbackRequest` conserva visita, responsable, canal, versión de
+cuestionario y vencimiento. El token de 32 bytes se devuelve una sola vez; la
+base guarda solamente SHA-256. Un índice parcial permite un único enlace
+abierto por visita y rotarlo invalida el anterior.
+
+La ruta pública usa una fachada mínima. No devuelve paciente, visita,
+responsable, clasificación o notas y vive en un root layout sin analytics.
+`PatientFeedback` guarda la respuesta append-only y posee relación única con
+la visita para impedir respuestas duplicadas.
+
+`classifyPatientFeedback` crea una `PatientFeedbackCase`: una señal de posible
+riesgo en salud queda `clinical_safety/critical` con cuatro horas; un reclamo
+común queda prioritario con 24 horas; una opinión que requiere revisión usa 48
+horas. Una encuesta positiva sin comentario se cierra sin inventar un reclamo.
+
+Dirección modifica la proyección del caso con `feedback_manage`. Cada cambio
+de responsable, clasificación, estado, plazo o nota agrega un
+`PatientFeedbackCaseEvent` append-only. Payload no participa. La guía vive en
+[Encuestas, opiniones y reclamos](../operations/patient-feedback-complaints.md).
+
 ### Abandono, Bloqueo Y Pendientes
 
 `VisitDiscontinuation` registra un único evento por visita con:

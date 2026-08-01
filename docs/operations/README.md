@@ -54,6 +54,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 39. [Reporte del recorrido completo](./patient-journey-report.md)
 40. [Tiempo de atención por área](./area-service-times.md)
 41. [Recordatorios automatizados y supervisados](./supervised-reminders.md)
+42. [Encuestas, opiniones y reclamos](./patient-feedback-complaints.md)
 
 ## Flujo recomendado
 

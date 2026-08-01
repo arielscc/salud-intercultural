@@ -6,7 +6,7 @@ const base = {
   purpose: "follow_up",
   decision: "granted",
   captureMethod: "in_person_verbal",
-  textVersion: "v1"
+  textVersion: "v2"
 };
 
 describe("record patient consent schema", () => {
@@ -36,6 +36,16 @@ describe("record patient consent schema", () => {
         contactChannels: ["whatsapp"]
       }).success
     ).toBe(false);
+  });
+
+  it("treats feedback as an independent contact purpose", () => {
+    expect(
+      recordPatientConsentSchema.safeParse({
+        ...base,
+        purpose: "feedback",
+        contactChannels: ["whatsapp"]
+      }).success
+    ).toBe(true);
   });
 
   it("rejects a manipulated or obsolete text version", () => {

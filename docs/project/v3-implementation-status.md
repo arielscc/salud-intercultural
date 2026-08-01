@@ -18,6 +18,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Resultado de propuestas | En progreso | El médico registra la decisión; aceptación crea una instrucción, no una venta automática. |
 | Clasificación de seguimientos | En progreso | Tipo, prioridad, responsable y resultado separados; llamadas médicas escaladas al médico. |
 | Recordatorios supervisados | En progreso | Reglas versionadas preparan candidatos idempotentes; Marlen aprueba antes de crear el contacto. |
+| Encuestas y reclamos | En progreso | Piloto manual con enlace privado, casos críticos, responsable, plazo y tendencias. |
 | Abandono y pendientes | En progreso | Punto, motivo, área y pendientes conservados; tareas abiertas quedan bloqueadas y recuperables. |
 | Versiones y firma clínica | En progreso | Borrador, cierre, autor y correcciones comparables implementados en desarrollo local. |
 | Compras y lotes | En progreso | Compra, pago, recepción parcial, costo histórico, lote y stock enlazados localmente. |
@@ -144,6 +145,16 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - Recepción/Marlen aprueba cada candidato; no existe envío automático.
 - Fallos y reintentos permanecen visibles y conservan historia.
 
+### Encuestas Y Reclamos
+
+- Dirección crea manualmente un enlace privado por visita.
+- El paciente responde sin ver datos internos, clasificación o responsable.
+- Encuesta, comentario, reclamo y posible incidente clínico son distintos.
+- Casos críticos, prioritarios y normales poseen plazo y responsable.
+- Respuesta e historia interna son append-only.
+- La versión `v2` agrega consentimiento específico para encuestas.
+- Una respuesta nunca se copia a Payload ni se publica como testimonio.
+
 ### Abandono Y Pendientes
 
 - Abandono, cancelación y atención completada son cierres diferentes.
@@ -193,6 +204,8 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 | `/sigeco/administracion` | Ventas, cobros y pendientes. |
 | `/sigeco/seguimientos` | Tareas de contacto posterior. |
 | `/sigeco/seguimientos/recordatorios` | Reglas, vistas previas, bloqueos, fallos y aprobación humana. |
+| `/sigeco/opiniones` | Piloto, reclamos, plazos, responsables y tendencias. |
+| `/encuesta/[token]` | Formulario privado y corto para el paciente. |
 | `/sigeco/inventario` | Productos, stock, entradas y ajustes. |
 | `/sigeco/inventario/lotes` | Lotes, vencimientos, FEFO y ajustes autorizados. |
 | `/sigeco/compras` | Compras, pagos, recepciones y trazabilidad de stock. |

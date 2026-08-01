@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-24 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-25 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las treinta y tres migraciones actuales están
-aplicadas en desarrollo. Falta validar las veintiuna
+anteriores están en staging y las treinta y cuatro migraciones actuales están
+aplicadas en desarrollo. Falta validar las veintidós
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -35,13 +35,15 @@ Los tiempos de Recepción, Consulta, Enfermería y Administración ya separan
 espera, atención y bloqueo mediante eventos inmutables.
 Los recordatorios de evolución, retorno y recuperación ya se preparan con
 reglas versionadas, consentimiento, horario, idempotencia y aprobación humana.
+El piloto manual de encuestas ya separa opinión, reclamo y posible incidente
+clínico, con enlace privado, responsable, plazo y tendencias.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 5 |
-| En progreso | 23 |
+| Pendiente | 4 |
+| En progreso | 24 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -84,7 +86,7 @@ reglas versionadas, consentimiento, horario, idempotencia y aprobación humana.
 | 22 | Reporte del recorrido completo | P1 | En progreso | 9-21 |
 | 23 | Tiempo por área | P1 | En progreso | 13, 16, 22 |
 | 24 | Recordatorios supervisados | P1 | En progreso | 9, 15 |
-| 25 | Encuestas y reclamos | P2 | Pendiente | 9, 24, piloto manual |
+| 25 | Encuestas y reclamos | P2 | En progreso | 9, 24, piloto manual |
 | 26 | Móvil y conectividad lenta | P1 | Pendiente | 2, 5, 13, 18, 20 |
 | 27 | Integración Payload-SIGECO | P2 | Pendiente | 3, 5, 9, 11, 22 |
 | 28 | Multi-sucursal | P1 | Pendiente | 10, 18-20, 22, 26 |
@@ -110,7 +112,7 @@ Estado de las tareas de la base segura:
   simulacro, gate técnico y aprobación de Dirección documentados. Producción
   sigue bloqueada por cinco evidencias remotas o humanas.
 - **Tarea 9 — Consentimientos y preferencias de contacto:** modelo append-only,
-  cinco finalidades, permisos, historial, retiro y bloqueo de Seguimiento
+  seis finalidades, permisos, historial, retiro y bloqueo de Seguimiento
   implementados en desarrollo. Pendiente ejecutar integración con autorización,
   QA por roles en staging y aprobación expresa de los textos para producción.
 - **Tarea 10 — Departamento y procedencia geográfica:** procedencia habitual,
@@ -194,6 +196,12 @@ Estado de las tareas de la base segura:
   implementados en desarrollo local. Ningún contacto sale automáticamente.
   Pendiente integración acumulada, QA web/móvil, configuración de las tres
   reglas reales y validación por roles en staging.
+- **Tarea 25 — Encuestas y reclamos:** enlaces privados manuales, formulario
+  corto, sexto consentimiento, separación de reclamos críticos, plazos,
+  responsables, historia y tendencias implementados en desarrollo local. No
+  existe automatización ni publicación de testimonios. Pendiente completar el
+  piloto, aprobar preguntas y textos `v2`, ejecutar QA acumulado y validar en
+  staging.
 
 Para terminar la Tarea 1:
 
@@ -241,6 +249,8 @@ Blob clínico privado y las credenciales separadas aprobadas.
   se usan para inventar espera o atención.
 - Una regla de recordatorio solo prepara trabajo. Marlen aprueba antes de crear
   la tarea y el contacto real conserva su intento y resultado en Seguimientos.
+- Las encuestas permanecen manuales hasta cerrar el piloto. Una calificación o
+  comentario nunca se publica ni se convierte automáticamente en testimonio.
 - Web y móvil responsive usan las mismas reglas y permisos.
 - El Alto debe estabilizarse antes de activar Cochabamba.
 - Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
@@ -263,7 +273,8 @@ Blob clínico privado y las credenciales separadas aprobadas.
 
 ### Consentimientos
 
-- La versión `v1` está aprobada para desarrollo y staging.
+- La versión `v2`, ampliada por la Tarea 25 para encuestas, está aprobada solo
+  para desarrollo y staging.
 - Antes de producción, Dirección debe revisar y autorizar expresamente la
   versión exacta; hasta entonces el gate productivo permanece cerrado.
 
@@ -1279,6 +1290,55 @@ Responsable: Marlen revisa; Dirección configura reglas.
   autorización.
 
 **Commit sugerido:** `feat(sigeco): automate supervised reminders`
+
+## 2026-08-01 — Tarea 25 — Encuestas Y Reclamos
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección.
+
+### Resultado
+
+- Piloto manual sin cron ni conexión a recordatorios automáticos.
+- Enlace aleatorio guardado solo como SHA-256, con vencimiento, cancelación y
+  rotación por visita.
+- Formulario corto sin información interna ni herramientas de analytics.
+- Encuesta, comentario, reclamo y posible incidente clínico separados.
+- Plazos iniciales de 4, 24 o 48 horas según prioridad.
+- Responsable, estado, clasificación, prioridad y notas internas trazables.
+- Respuesta y eventos internos protegidos como append-only.
+- Tendencias de 90 días por tipo, área y calificación.
+- Sexto consentimiento específico para encuestas; versión vigente `v2`.
+- Cero integración con Payload o publicación automática de testimonios.
+
+### Archivos Y Migración
+
+- Modelo, permisos, policy, schemas, actions, queries, fachada pública, API y
+  UI responsive.
+- Rutas `/sigeco/opiniones` y `/encuesta/[token]`.
+- Migración local `20260801120000_feedback_complaints`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local confirmado; staging y producción no fueron modificados.
+- Prisma format, validate, generate y 34 migraciones locales al día.
+- TypeScript y lint enfocado aprobados.
+- Políticas, schemas, consentimientos, ambiente, permisos y seguridad: 7
+  archivos y 68 pruebas aprobadas.
+- Integración transaccional escrita y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Completar el piloto manual y aprobar preguntas, responsables y plazos.
+- Aprobar expresamente los seis textos de consentimiento `v2`.
+- Ejecutar integración completa, lint global, build y QA gstack acumulado.
+- Validar móvil, roles y ausencia de analytics en staging.
+- No migrar ni habilitar producción sin aviso y autorización.
+
+**Commit sugerido:** `feat(sigeco): add feedback and complaints`
 
 ## Cómo Actualizar El Progreso
 

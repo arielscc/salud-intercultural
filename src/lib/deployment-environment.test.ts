@@ -177,7 +177,7 @@ describe("deployment environment isolation", () => {
     expect(
       assertEnvironmentIsolation({
         ...productionEnvironment,
-        PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v1"
+        PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v2"
       }).environment
     ).toBe("production");
   });
@@ -186,7 +186,7 @@ describe("deployment environment isolation", () => {
     expect(() =>
       assertEnvironmentIsolation({
         ...productionEnvironment,
-        PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v1",
+        PATIENT_CONSENT_PRODUCTION_TEXT_VERSION: "v2",
         CASH_CLOSE_APPROVAL_THRESHOLD_CENTS: ""
       })
     ).toThrow(/CASH_CLOSE_APPROVAL_THRESHOLD_CENTS/);

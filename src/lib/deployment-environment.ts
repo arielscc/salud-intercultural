@@ -298,9 +298,9 @@ function assertProductionIsolation(values: EnvironmentVariables) {
   requireExactValue(values, "STORAGE_ENVIRONMENT", "production");
   requireExactValue(values, "EXTERNAL_COMMUNICATIONS_MODE", "enabled");
 
-  if (clean(values.PATIENT_CONSENT_PRODUCTION_TEXT_VERSION) !== "v1") {
+  if (clean(values.PATIENT_CONSENT_PRODUCTION_TEXT_VERSION) !== "v2") {
     throw new Error(
-      'Production remains blocked until Dirección approves the patient consent texts and PATIENT_CONSENT_PRODUCTION_TEXT_VERSION is explicitly set to "v1".'
+      'Production remains blocked until Dirección approves the patient consent texts and PATIENT_CONSENT_PRODUCTION_TEXT_VERSION is explicitly set to "v2".'
     );
   }
 
