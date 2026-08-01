@@ -3,8 +3,8 @@ import { normalizeCampaignCode } from "@/features/attribution/catalog";
 import { createLeadSchema, sanitizeLeadInput } from "@/features/leads/schemas/lead.schema";
 import { env } from "@/lib/env";
 import { isStagingEnvironment } from "@/lib/deployment-environment";
-import { findActiveCaptureCampaignByCode } from "@/modules/database/queries/attribution";
 import { createLeadRecord } from "@/modules/database/queries/leads";
+import { findActivePayloadCampaignByCode } from "@/modules/payload-sigeco/payload-campaigns";
 
 type RateLimitEntry = {
   count: number;
@@ -112,15 +112,15 @@ export async function POST(request: Request) {
 
   try {
     const campaign = input.campaignCode
-      ? await findActiveCaptureCampaignByCode(
+      ? await findActivePayloadCampaignByCode(
           normalizeCampaignCode(input.campaignCode)
-        )
+        ).catch(() => null)
       : null;
     const lead = await createLeadRecord({
       ...input,
-      campaignCode: campaign?.code,
+      campaignCode: campaign?.code ?? input.campaignCode,
       attributedAccount:
-        campaign?.accountLabel ?? campaign?.source.internalLabel,
+        campaign?.accountLabel ?? campaign?.sourceCode,
       attributionTrafficType:
         campaign?.trafficType ?? "unidentified",
       status: "new"

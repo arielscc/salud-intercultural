@@ -22,7 +22,8 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Testimonios | Payload | Payload Admin | Activo | `src/data/testimonials.ts` queda como fallback/seed. |
 | FAQs | Payload | Payload Admin | Activo | `src/data/faqs.ts` queda como fallback/seed. |
 | Leads | Payload | Payload Admin | Activo | Collection `lead-submissions`; sin modelo Prisma duplicado. |
-| Atribución de llegadas y ventas | Prisma | SIGECO | Activo | Catálogo, campañas y fotografía histórica por visita; Payload solo entrega evidencia del formulario previo. |
+| Campañas de marketing | Payload | Payload Admin | Activo | Collection `marketing-campaigns`; SIGECO conserva una copia técnica no editable para enlazar la historia. |
+| Atribución de llegadas y ventas | Prisma | SIGECO | Activo | Fuentes, fotografía histórica por visita y métricas; Payload entrega identificadores y solo recibe agregados aprobados. |
 | Identidad, duplicados y alias de pacientes | Prisma | SIGECO | Activo | La ficha anterior se archiva y redirige; la fusión transaccional conserva historia y evidencia. |
 | Resultado de propuestas de tratamiento | Prisma | SIGECO, Médico y Administración | Activo | Decisión append-only; una aceptación crea una orden, no una venta ni un pago automáticos. |
 | Clasificación y resultado de seguimientos | Prisma | SIGECO, Recepción/Marlen y Médico | Activo | Tipo, relación, prioridad, responsable y resultado separados; llamadas médicas no se cierran como trabajo administrativo. |
@@ -68,6 +69,7 @@ Ejemplos actuales:
 - `testimonials`
 - `faqs`
 - `lead-submissions`
+- `marketing-campaigns`
 - `site-settings`
 - `home-content`
 - `media`

@@ -1179,20 +1179,24 @@ model CaptureSource {
 }
 
 model CaptureCampaign {
-  id            String                 @id @default(cuid())
-  code          String                 @unique
-  name          String
-  sourceId      String
-  accountLabel  String?
-  accountHandle String?
-  trafficType   AttributionTrafficType @default(unidentified)
-  active        Boolean                @default(true)
-  startsAt      DateTime?
-  endsAt        DateTime?
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @default(now()) @updatedAt
-  source        CaptureSource          @relation(fields: [sourceId], references: [id], onDelete: Restrict)
-  attributions  VisitAttribution[]
+  id                String                 @id @default(cuid())
+  code              String                 @unique
+  name              String
+  sourceId          String
+  accountLabel      String?
+  accountHandle     String?
+  trafficType       AttributionTrafficType @default(unidentified)
+  active            Boolean                @default(true)
+  startsAt          DateTime?
+  endsAt            DateTime?
+  payloadCampaignId String?                @unique
+  payloadUpdatedAt  DateTime?
+  syncedAt          DateTime?
+  managedByPayload  Boolean                @default(false)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @default(now()) @updatedAt
+  source            CaptureSource          @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  attributions      VisitAttribution[]
 
   @@index([sourceId, active])
   @@index([active, startsAt, endsAt])

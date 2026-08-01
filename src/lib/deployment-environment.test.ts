@@ -5,7 +5,8 @@ import {
   resolveBlobReadWriteToken,
   resolveClinicalAttachmentStorage,
   resolveDeploymentEnvironment,
-  resolvePayloadSecret
+  resolvePayloadSecret,
+  resolvePayloadSigecoIntegrationSecret
 } from "@/lib/deployment-environment";
 
 const stagingEnvironment = {
@@ -19,6 +20,8 @@ const stagingEnvironment = {
   DATABASE_URL: "postgresql://staging_user:secret@db.example.net/salud_intercultural_staging",
   PAYLOAD_DB_SCHEMA: "payload_staging",
   PAYLOAD_SECRET: "staging-payload-secret-32-characters-minimum",
+  PAYLOAD_SIGECO_INTEGRATION_SECRET:
+    "staging-integration-secret-32-characters-minimum",
   STAGING_BLOB_READ_WRITE_TOKEN: "synthetic-staging-token",
   CLINICAL_FILES_STORAGE_DRIVER: "vercel-blob",
   STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN: "synthetic-private-clinical-token",
@@ -38,6 +41,8 @@ const productionEnvironment = {
   DATABASE_URL: "postgresql://production_user:secret@db.example.net/salud_intercultural",
   PAYLOAD_DB_SCHEMA: "payload",
   PAYLOAD_SECRET: "production-payload-secret-32-characters-minimum",
+  PAYLOAD_SIGECO_INTEGRATION_SECRET:
+    "production-integration-secret-32-characters-minimum",
   BLOB_READ_WRITE_TOKEN: "synthetic-production-editorial-token",
   CLINICAL_FILES_STORAGE_DRIVER: "vercel-blob",
   CLINICAL_BLOB_READ_WRITE_TOKEN: "synthetic-production-clinical-token",
@@ -125,6 +130,8 @@ describe("deployment environment isolation", () => {
     ["missing Payload secret", { PAYLOAD_SECRET: "" }],
     ["short Payload secret", { PAYLOAD_SECRET: "too-short" }],
     ["placeholder Payload secret", { PAYLOAD_SECRET: "development-secret-that-is-long-enough" }],
+    ["missing integration secret", { PAYLOAD_SIGECO_INTEGRATION_SECRET: "" }],
+    ["shared integration secret", { PAYLOAD_SIGECO_INTEGRATION_SECRET: stagingEnvironment.PAYLOAD_SECRET }],
     ["real communications", { EXTERNAL_COMMUNICATIONS_MODE: "enabled" }],
     ["production analytics", { NEXT_PUBLIC_GA_ID: "G-TEST123" }],
     ["wrong database marker", { DATABASE_ENVIRONMENT: "production" }]
@@ -168,6 +175,9 @@ describe("deployment environment isolation", () => {
         PAYLOAD_SECRET: ""
       })
     ).toThrow(/32 characters/);
+    expect(
+      resolvePayloadSigecoIntegrationSecret({ APP_ENV: "local" })
+    ).toBe("local-payload-sigeco-integration-secret-only");
   });
 
   it("blocks production until the consent text version is explicitly approved", () => {

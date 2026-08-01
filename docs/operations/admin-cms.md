@@ -35,6 +35,7 @@ Variables relacionadas:
 PAYLOAD_SECRET=""
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
 PAYLOAD_DB_SCHEMA="payload"
+PAYLOAD_SIGECO_INTEGRATION_SECRET=""
 ADMIN_EMAIL=""
 ADMIN_PASSWORD=""
 ADMIN_SESSION_SECONDS="28800"
@@ -53,6 +54,7 @@ Notas:
 Los endpoints REST y GraphQL de Payload respetan las reglas de acceso declaradas en collections y globals:
 
 - `lead-submissions`: lectura, creacion y actualizacion para `admin` o `editor`; eliminacion solo `admin`.
+- `marketing-campaigns`: lectura, creación y actualización para `admin` o `editor`; eliminación solo `admin`.
 - `users`: lectura para usuarios autenticados; creacion, actualizacion y eliminacion solo `admin`.
 - Contenido publico: lectura publica solo de registros activos; lectura completa para usuarios autenticados.
 - `site-settings`: lectura publica controlada; actualizacion para `admin` o `editor`.
@@ -68,6 +70,7 @@ El GraphQL Playground requiere sesion admin valida y redirige a `/admin/login` c
 - `pages`: paginas publicas base y SEO editable.
 - `media`: imagenes y videos.
 - `lead-submissions`: leads recibidos.
+- `marketing-campaigns`: códigos, cuentas, tráfico y vigencia de campañas.
 - `users`: usuarios del admin.
 
 ## Globals

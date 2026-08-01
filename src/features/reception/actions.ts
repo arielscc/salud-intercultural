@@ -21,7 +21,7 @@ import {
   toPatientEditRecord,
   toReceptionIntakeRecord
 } from "@/features/reception/schemas/intake.schema";
-import { resolveAttributionEvidence } from "@/features/attribution/evidence";
+import { resolveAttributionEvidenceSafely } from "@/features/attribution/evidence";
 
 export async function searchReceptionPatientsAction(query: string) {
   await requirePermission("patients_read");
@@ -58,11 +58,16 @@ export async function submitReceptionIntakeAction(formData: FormData) {
       }
 
       const record = toReceptionIntakeRecord(parsed.data);
-      const evidence = await resolveAttributionEvidence(
+      const evidenceResolution = await resolveAttributionEvidenceSafely(
         record.attribution.evidenceCode
       );
+      const evidence = evidenceResolution.evidence;
+      const pendingEvidenceCode =
+        evidenceResolution.status === "unavailable"
+          ? record.attribution.evidenceCode
+          : undefined;
 
-      if (record.attribution.evidenceCode && !evidence) {
+      if (evidenceResolution.status === "not_found") {
         redirect("/sigeco/recepcion/nuevo?error=invalid-attribution");
       }
       assertAuditedPermission(
@@ -88,33 +93,55 @@ export async function submitReceptionIntakeAction(formData: FormData) {
           primarySourceCode: record.attribution.primarySourceCode,
           supportSourceCodes: record.attribution.supportSourceCodes,
           campaignId: evidence?.campaignId,
-          evidenceKind: evidence?.evidenceKind,
-          externalEvidenceCode: evidence?.externalEvidenceCode
+          evidenceKind:
+            evidence?.evidenceKind ??
+            (pendingEvidenceCode
+              ? /^WEB-/i.test(pendingEvidenceCode)
+                ? "web_form"
+                : "campaign_link"
+              : undefined),
+          externalEvidenceCode:
+            evidence?.externalEvidenceCode ?? pendingEvidenceCode
         },
         userId: user.id
       });
-      return auditedResult(created, {
-        entityId: created.visit.id,
-        context: {
-          patientId: created.patientId,
-          patientRecord: record.patientId ? "existing" : "new",
-          originCity: record.visit.originCity,
-          originDepartment: record.visit.originDepartment,
-          originCountry: record.visit.originCountry,
-          originMatchesPatient: record.visit.originMatchesPatient,
-          primaryCaptureSource: record.attribution.primarySourceCode,
-          supportCaptureSources: record.attribution.supportSourceCodes,
-          campaignCode: evidence?.campaignCode,
-          evidenceKind: evidence?.evidenceKind
+      return auditedResult(
+        {
+          ...created,
+          attributionPending: evidenceResolution.status === "unavailable"
+        },
+        {
+          entityId: created.visit.id,
+          context: {
+            patientId: created.patientId,
+            patientRecord: record.patientId ? "existing" : "new",
+            originCity: record.visit.originCity,
+            originDepartment: record.visit.originDepartment,
+            originCountry: record.visit.originCountry,
+            originMatchesPatient: record.visit.originMatchesPatient,
+            primaryCaptureSource: record.attribution.primarySourceCode,
+            supportCaptureSources: record.attribution.supportSourceCodes,
+            campaignCode: evidence?.campaignCode ?? pendingEvidenceCode,
+            evidenceKind:
+              evidence?.evidenceKind ??
+              (pendingEvidenceCode ? "integration_pending" : undefined),
+            attributionPending: evidenceResolution.status === "unavailable"
+          }
         }
-      });
+      );
     }
   );
 
   revalidatePath("/sigeco");
   revalidatePath("/sigeco/recepcion");
   revalidatePath(`/sigeco/recepcion/pacientes/${result.patientId}`);
-  redirect(`/sigeco/recepcion/visitas/${result.visit.id}?aviso=llegada-registrada`);
+  redirect(
+    `/sigeco/recepcion/visitas/${result.visit.id}?aviso=${
+      result.attributionPending
+        ? "llegada-registrada-atribucion-pendiente"
+        : "llegada-registrada"
+    }`
+  );
 }
 
 export async function updateReceptionPatientAction(formData: FormData) {

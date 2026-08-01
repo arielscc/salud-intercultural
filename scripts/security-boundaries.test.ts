@@ -168,7 +168,6 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   correctClinicalConsultationAction: "clinical_correct",
   correctPrescriptionAction: "clinical_correct",
   createClinicalOrderAction: "clinical_write",
-  createCaptureCampaignAction: "attribution_manage",
   createCaptureSourceAction: "attribution_manage",
   createFollowUpAttemptAction: "followups_write",
   createFollowUpTaskAction: "followups_write",
@@ -223,7 +222,6 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   searchReceptionPatientsAction: "patients_read",
   sendPaidStudiesToNursingAction: "visits_update",
   submitReceptionIntakeAction: "visits_create",
-  setCaptureCampaignActiveAction: "attribution_manage",
   cancelPurchaseAction: "purchases_write",
   setInventoryItemStatusAction: "inventory_write",
   setSupplierStatusAction: "suppliers_write",
@@ -510,6 +508,33 @@ describe("SIGECO permission and privacy boundaries", () => {
       .join("\n");
     expect(analytics).not.toMatch(
       /\b(?:patient|diagnosis|prescription|clinical|phone|email|fullName)\b/i
+    );
+  });
+
+  it("keeps the Payload-SIGECO contract aggregate and independently authenticated", () => {
+    const campaignRoute = source(
+      "src/app/api/integrations/payload-sigeco/campaigns/route.ts"
+    );
+    const metricsRoute = source(
+      "src/app/api/integrations/payload-sigeco/metrics/route.ts"
+    );
+    const metrics = source("src/modules/payload-sigeco/metrics.ts");
+    const attributionPage = source(
+      "src/app/(internal)/sigeco/(app)/atribucion/page.tsx"
+    );
+
+    expect(campaignRoute).toContain("authorizePayloadSigecoRequest(request)");
+    expect(metricsRoute).toContain("authorizePayloadSigecoRequest(request)");
+    expect(campaignRoute).toContain("PAYLOAD_SIGECO_MAX_BODY_BYTES");
+    expect(metricsRoute).toContain("payloadMetricsQuerySchema");
+    expect(metrics).not.toMatch(
+      /fullName|phone|email|diagnos|clinical|prescription|visitId|patientId/i
+    );
+    expect(attributionPage).not.toMatch(
+      /createCaptureCampaignAction|setCaptureCampaignActiveAction/
+    );
+    expect(attributionPage).toContain(
+      "/admin/collections/marketing-campaigns"
     );
   });
 

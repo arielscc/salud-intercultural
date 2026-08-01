@@ -46,6 +46,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-01 | [Tarea 24: recordatorios automatizados y supervisados](./2026-08-01-tarea-24-recordatorios-supervisados.md) | Prepara contactos idempotentes con reglas versionadas, consentimiento y aprobación humana. |
 | 2026-08-01 | [Tarea 25: encuestas y reclamos](./2026-08-01-tarea-25-encuestas-reclamos.md) | Recibe opiniones mediante enlaces privados y separa reclamos críticos con responsable y plazo. |
 | 2026-08-01 | [Tarea 26: móvil y conectividad lenta](./2026-08-01-tarea-26-movil-conectividad-lenta.md) | Evita duplicados al reintentar, protege formularios sin conexión y define contingencia segura. |
+| 2026-08-01 | [Tarea 27: integración segura Payload-SIGECO](./2026-08-01-tarea-27-integracion-payload-sigeco.md) | Deja campañas en Payload, atribución operativa en SIGECO y comparte únicamente métricas agregadas. |
 
 ## Relacion Con Estado V3
 

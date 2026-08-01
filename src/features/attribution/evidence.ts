@@ -1,8 +1,11 @@
-import config from "@payload-config";
-import { getPayload } from "payload";
 import type { AttributionEvidenceKind } from "@/generated/prisma/client";
 import { normalizeCampaignCode } from "@/features/attribution/catalog";
 import { findActiveCaptureCampaignByCode } from "@/modules/database/queries/attribution";
+import { syncPayloadCampaignToSigeco } from "@/modules/payload-sigeco/campaign-sync";
+import {
+  findActivePayloadCampaignByCode,
+  findPayloadLeadCampaignCode
+} from "@/modules/payload-sigeco/payload-campaigns";
 
 export type ResolvedAttributionEvidence = {
   campaignId: string;
@@ -13,6 +16,12 @@ export type ResolvedAttributionEvidence = {
   accountLabel: string | null;
   accountHandle: string | null;
 };
+
+export type AttributionEvidenceResolution =
+  | { status: "none"; evidence: null }
+  | { status: "resolved"; evidence: ResolvedAttributionEvidence }
+  | { status: "not_found"; evidence: null }
+  | { status: "unavailable"; evidence: null };
 
 export async function resolveAttributionEvidence(
   rawCode: string | undefined
@@ -25,30 +34,46 @@ export async function resolveAttributionEvidence(
   let evidenceKind: AttributionEvidenceKind = "campaign_link";
 
   if (webLeadMatch) {
-    const payload = await getPayload({ config });
-    const lead = await payload
-      .findByID({
-        collection: "lead-submissions",
-        id: webLeadMatch[1],
-        overrideAccess: true
-      })
-      .catch(() => null);
-
-    if (!lead) return null;
-    campaignCode = normalizeCampaignCode(lead.campaignCode ?? "WEB-FORM");
+    const leadCampaignCode = await findPayloadLeadCampaignCode(webLeadMatch[1]);
+    if (leadCampaignCode === null) return null;
+    campaignCode = normalizeCampaignCode(leadCampaignCode || "WEB-FORM");
     evidenceKind = "web_form";
   }
 
-  const campaign = await findActiveCaptureCampaignByCode(campaignCode);
+  const payloadCampaign = await findActivePayloadCampaignByCode(campaignCode);
+  const legacyCampaign = payloadCampaign
+    ? null
+    : await findActiveCaptureCampaignByCode(campaignCode);
+  const campaign = payloadCampaign
+    ? (await syncPayloadCampaignToSigeco(payloadCampaign)).campaign
+    : legacyCampaign;
   if (!campaign) return null;
+
+  const sourceCode = payloadCampaign?.sourceCode ?? legacyCampaign?.source.code;
+  if (!sourceCode) return null;
 
   return {
     campaignId: campaign.id,
     campaignCode: campaign.code,
-    sourceCode: campaign.source.code,
+    sourceCode,
     evidenceKind,
     externalEvidenceCode: cleaned.slice(0, 120),
     accountLabel: campaign.accountLabel,
     accountHandle: campaign.accountHandle
   };
+}
+
+export async function resolveAttributionEvidenceSafely(
+  rawCode: string | undefined
+): Promise<AttributionEvidenceResolution> {
+  if (!rawCode?.trim()) return { status: "none", evidence: null };
+
+  try {
+    const evidence = await resolveAttributionEvidence(rawCode);
+    return evidence
+      ? { status: "resolved", evidence }
+      : { status: "not_found", evidence: null };
+  } catch {
+    return { status: "unavailable", evidence: null };
+  }
 }

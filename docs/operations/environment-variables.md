@@ -43,6 +43,7 @@ Estas variables no deben exponerse al navegador.
 | `PAYLOAD_SECRET` | Si | valor aleatorio de 32+ caracteres | Firma de tokens y sesiones de Payload. Staging y producción no arrancan sin un valor fuerte. |
 | `PAYLOAD_PUBLIC_SERVER_URL` | Si | `http://localhost:3000` | URL base que Payload usa para resolver servidor/admin. |
 | `PAYLOAD_DB_SCHEMA` | Si | `payload` | Schema de Postgres usado por Payload. |
+| `PAYLOAD_SIGECO_INTEGRATION_SECRET` | Staging y producción | valor aleatorio exclusivo de 32+ caracteres | Autentica el contrato técnico Payload-SIGECO; nunca debe coincidir con `PAYLOAD_SECRET`. |
 | `BLOB_READ_WRITE_TOKEN` | Produccion; opcional en local | token generado por Vercel Blob | Store productivo o storage Blob opcional de desarrollo. Staging no lo utiliza. |
 | `STAGING_BLOB_READ_WRITE_TOKEN` | Solo staging | token generado con el prefijo `STAGING_BLOB` | Store exclusivo para media QA de staging. |
 | `CLINICAL_FILES_STORAGE_DRIVER` | Sí | `local` o `vercel-blob` | Storage de adjuntos clínicos; local/test usan disco privado y despliegues usan Blob privado. |
@@ -109,6 +110,7 @@ DATABASE_URL="postgresql://salud_intercultural:salud_intercultural@localhost:543
 PAYLOAD_SECRET="local-development-secret-change-me"
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
 PAYLOAD_DB_SCHEMA="payload"
+PAYLOAD_SIGECO_INTEGRATION_SECRET="local-integration-secret-change-me-32"
 STORAGE_ENVIRONMENT="local"
 BLOB_READ_WRITE_TOKEN=""
 CLINICAL_FILES_STORAGE_DRIVER="local"
@@ -189,6 +191,7 @@ PAYLOAD_PUBLIC_SERVER_URL="https://staging.saludintercultural.com"
 DATABASE_ENVIRONMENT="staging"
 DATABASE_URL="postgresql://STAGING_USER:STAGING_PASSWORD@STAGING_HOST/salud_intercultural_staging?sslmode=require"
 PAYLOAD_DB_SCHEMA="payload_staging"
+PAYLOAD_SIGECO_INTEGRATION_SECRET="TOKEN_EXCLUSIVO_DE_INTEGRACION_STAGING"
 STORAGE_ENVIRONMENT="staging"
 STAGING_BLOB_READ_WRITE_TOKEN="TOKEN_EXCLUSIVO_DE_STAGING"
 CLINICAL_FILES_STORAGE_DRIVER="vercel-blob"
@@ -223,6 +226,7 @@ PAYLOAD_PUBLIC_SERVER_URL="https://saludintercultural.com"
 DATABASE_ENVIRONMENT="production"
 DATABASE_URL="postgresql://PROD_USER:PROD_PASSWORD@PROD_HOST/PROD_DB?sslmode=require"
 PAYLOAD_DB_SCHEMA="payload"
+PAYLOAD_SIGECO_INTEGRATION_SECRET="TOKEN_EXCLUSIVO_DE_INTEGRACION_PRODUCCION"
 STORAGE_ENVIRONMENT="production"
 CLINICAL_FILES_STORAGE_DRIVER="vercel-blob"
 CLINICAL_BLOB_READ_WRITE_TOKEN="TOKEN_DE_STORE_CLINICO_PRIVADO_PRODUCCION"
@@ -270,13 +274,14 @@ Preview/Staging branch: staging
 3. Verificar `NEXT_PUBLIC_SITE_URL` y `PAYLOAD_PUBLIC_SERVER_URL` con el dominio del ambiente.
 4. Verificar `PAYLOAD_SECRET`; usar 32+ caracteres en produccion.
 5. Verificar `DATABASE_URL`, `PAYLOAD_DB_SCHEMA` y migraciones.
-6. Verificar `BLOB_READ_WRITE_TOKEN` en produccion y `STAGING_BLOB_READ_WRITE_TOKEN` en staging.
-7. Verificar el token del Blob Store clínico privado y confirmar que no
+6. Verificar que `PAYLOAD_SIGECO_INTEGRATION_SECRET` sea exclusivo del ambiente y diferente de `PAYLOAD_SECRET`.
+7. Verificar `BLOB_READ_WRITE_TOKEN` en produccion y `STAGING_BLOB_READ_WRITE_TOKEN` en staging.
+8. Verificar el token del Blob Store clínico privado y confirmar que no
    coincide con el store editorial.
-8. Verificar `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CALL_PHONE`, email y Maps.
-8. Verificar `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID` y `GOOGLE_SITE_VERIFICATION` si aplican.
-9. Ejecutar `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build`.
-10. Revisar logs de Vercel: Build Logs, Runtime Logs y Function Logs de `/api/leads` y Payload.
+9. Verificar `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CALL_PHONE`, email y Maps.
+10. Verificar `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID` y `GOOGLE_SITE_VERIFICATION` si aplican.
+11. Ejecutar `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build`.
+12. Revisar logs de Vercel: Build Logs, Runtime Logs y Function Logs de `/api/leads` y Payload.
 
 ## Validacion Con Zod
 
@@ -287,6 +292,7 @@ La validacion esta centralizada en `src/lib/env.ts`.
 - `envSchema` combina ambas.
 - Los strings vacios se tratan como variables no configuradas para evitar errores con campos opcionales.
 - `PAYLOAD_SECRET` se valida con minimo tecnico de 12 caracteres; operativamente se recomiendan 32+ en produccion.
+- `PAYLOAD_SIGECO_INTEGRATION_SECRET` exige 32+ caracteres y no puede reutilizar `PAYLOAD_SECRET` en staging o producción.
 - GA4, Meta Pixel, emails, telefonos y URLs tienen validaciones de formato.
 - `ADMIN_PASSWORD` se valida operacionalmente en el flujo de seed para no bloquear builds publicos.
 

@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-26 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-27 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las treinta y cinco migraciones actuales están
-aplicadas en desarrollo. Falta validar las veintitrés
+anteriores están en staging y las treinta y seis migraciones actuales están
+aplicadas en desarrollo. Falta validar las veinticuatro
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -39,13 +39,16 @@ El piloto manual de encuestas ya separa opinión, reclamo y posible incidente
 clínico, con enlace privado, responsable, plazo y tendencias.
 Los formularios críticos ya detienen envíos sin conexión y llegada, venta,
 pago, Caja, compras y stock reutilizan claves para no duplicar operaciones.
+Payload ya conserva las campañas editables; SIGECO recibe identificadores,
+mantiene una copia técnica y solo devuelve métricas agregadas con supresión de
+grupos pequeños.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 3 |
-| En progreso | 25 |
+| Pendiente | 2 |
+| En progreso | 26 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -90,7 +93,7 @@ pago, Caja, compras y stock reutilizan claves para no duplicar operaciones.
 | 24 | Recordatorios supervisados | P1 | En progreso | 9, 15 |
 | 25 | Encuestas y reclamos | P2 | En progreso | 9, 24, piloto manual |
 | 26 | Móvil y conectividad lenta | P1 | En progreso | 2, 5, 13, 18, 20 |
-| 27 | Integración Payload-SIGECO | P2 | Pendiente | 3, 5, 9, 11, 22 |
+| 27 | Integración Payload-SIGECO | P2 | En progreso | 3, 5, 9, 11, 22 |
 | 28 | Multi-sucursal | P1 | Pendiente | 10, 18-20, 22, 26 |
 | 29 | Piloto completo con personal | P0 | Pendiente | Módulos del despliegue |
 
@@ -210,6 +213,11 @@ Estado de las tareas de la base segura:
   en desarrollo local. Historia clínica y adjuntos no se cachean. Pendiente
   integración acumulada, simulación real de red, dispositivos físicos y QA
   gstack al cierre.
+- **Tarea 27 — Integración segura Payload-SIGECO:** campañas editables en
+  Payload, copia técnica idempotente en SIGECO, contrato autenticado, métricas
+  agregadas con supresión y respaldo manual implementados en desarrollo local.
+  Pendiente integración acumulada, caída simulada y validación por roles en
+  staging.
 
 Para terminar la Tarea 1:
 
@@ -263,6 +271,10 @@ Blob clínico privado y las credenciales separadas aprobadas.
   revisa y vuelve a guardar con la misma clave de idempotencia.
 - Solo la compra administrativa admite borrador local; nunca pacientes,
   historia clínica, adjuntos o archivos.
+- Payload es la fuente editable de campañas. SIGECO conserva una copia técnica
+  para atribución y nunca devuelve registros individuales a Marketing.
+- Una falla de Payload no bloquea la llegada: se conserva la fuente manual y la
+  campaña exacta queda pendiente de conciliación.
 - Web y móvil responsive usan las mismas reglas y permisos.
 - El Alto debe estabilizarse antes de activar Cochabamba.
 - Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
@@ -1402,6 +1414,57 @@ Responsable: equipo técnico.
 - No migrar ni habilitar producción sin aviso y autorización.
 
 **Commit sugerido:** `feat(sigeco): improve mobile resilience`
+
+## 2026-08-01 — Tarea 27 — Integración Segura Payload-SIGECO
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Marketing y TI.
+
+### Resultado
+
+- Payload conserva campañas editables en `marketing-campaigns`.
+- SIGECO mantiene una copia técnica idempotente para enlazar las llegadas.
+- Crear, activar o desactivar campañas dejó de ser una operación de SIGECO.
+- Contrato privado con token exclusivo, 16 KB por campaña, 60 solicitudes por
+  minuto y períodos máximos de 366 días.
+- Solo salen período, código y totales agregados; grupos menores a cinco se
+  suprimen.
+- La sincronización y las exportaciones importantes quedan auditadas.
+- Una caída de Payload no bloquea el registro de la llegada ni obliga a
+  repetirla; se conserva la fuente manual.
+
+### Archivos Y Migración
+
+- Collection Payload `src/payload/collections/MarketingCampaigns.ts`.
+- Contratos, autenticación, sincronización y métricas en
+  `src/modules/payload-sigeco`.
+- APIs privadas bajo `src/app/api/integrations/payload-sigeco`.
+- Migración local `20260801170000_payload_sigeco_campaign_ownership`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local; staging y producción no fueron modificados.
+- Prisma format, validate, generate y 36 migraciones locales al día.
+- Tipos de Payload regenerados y seed idempotente aprobado.
+- TypeScript y lint enfocado aprobados.
+- Contrato, autenticación, supresión, fallback y seguridad: 10 archivos y 67
+  pruebas aprobadas.
+- Cuatro campañas institucionales verificadas como enlazadas a Payload.
+- Integración de reintentos ampliada y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack acumulado.
+- Configurar un token exclusivo y aplicar migración/seed en staging.
+- Simular caída, reintentos y conciliación con Marketing y Recepción.
+- Confirmar el umbral mínimo de cinco con Dirección.
+- No migrar ni habilitar producción sin aviso y autorización.
+
+**Commit sugerido:** `feat(sigeco): integrate campaign attribution safely`
 
 ## Cómo Actualizar El Progreso
 

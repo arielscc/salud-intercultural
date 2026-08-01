@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { persistedLead, validLeadInput } from "../../../../tests/fixtures/leads";
 import { createLeadRecord } from "@/modules/database/queries/leads";
-import { findActiveCaptureCampaignByCode } from "@/modules/database/queries/attribution";
+import { findActivePayloadCampaignByCode } from "@/modules/payload-sigeco/payload-campaigns";
 import { POST } from "@/app/api/leads/route";
 
 vi.mock("@/modules/database/queries/leads", () => ({
   createLeadRecord: vi.fn()
 }));
-vi.mock("@/modules/database/queries/attribution", () => ({
-  findActiveCaptureCampaignByCode: vi.fn()
+vi.mock("@/modules/payload-sigeco/payload-campaigns", () => ({
+  findActivePayloadCampaignByCode: vi.fn()
 }));
 
 const createLeadRecordMock = vi.mocked(createLeadRecord);
-const findCampaignMock = vi.mocked(findActiveCaptureCampaignByCode);
+const findCampaignMock = vi.mocked(findActivePayloadCampaignByCode);
 
 function createJsonRequest(body: unknown, headers?: HeadersInit) {
   return new Request("http://localhost:3000/api/leads", {
@@ -87,30 +87,17 @@ describe("POST /api/leads", () => {
   it("uses a configured campaign to identify account and traffic automatically", async () => {
     createLeadRecordMock.mockResolvedValue(persistedLead);
     findCampaignMock.mockResolvedValue({
-      id: "campaign-tiktok-doctor",
+      externalId: "1",
+      revision: new Date().toISOString(),
       code: "TIKTOK-DR",
       name: "Contenido del doctor",
-      sourceId: "capture-tiktok",
+      sourceCode: "tiktok",
       accountLabel: "TikTok del Dr. Franco",
       accountHandle: "@clinicademedicinanatural",
       trafficType: "organic",
       active: true,
       startsAt: null,
-      endsAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      source: {
-        id: "capture-tiktok",
-        code: "tiktok",
-        patientLabel: "TikTok",
-        internalLabel: "TikTok",
-        category: "social",
-        active: true,
-        receptionSelectable: true,
-        sortOrder: 20,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+      endsAt: null
     });
 
     const response = await POST(
@@ -178,6 +165,23 @@ describe("POST /api/leads", () => {
       ok: false,
       message: "No pudimos registrar la consulta. Inténtalo nuevamente."
     });
+  });
+
+  it("keeps the lead when campaign lookup is temporarily unavailable", async () => {
+    createLeadRecordMock.mockResolvedValue(persistedLead);
+    findCampaignMock.mockRejectedValue(new Error("integration unavailable"));
+
+    const response = await POST(
+      createJsonRequest({ ...validLeadInput, campaignCode: "TIKTOK-DR" })
+    );
+
+    expect(response.status).toBe(201);
+    expect(createLeadRecordMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignCode: "TIKTOK-DR",
+        attributionTrafficType: "unidentified"
+      })
+    );
   });
 
   it("rejects real-looking contact data in staging", async () => {

@@ -3,18 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
-  createCaptureCampaignSchema,
   createCaptureSourceSchema,
   updateCaptureSourceSchema
 } from "@/features/attribution/schemas/attribution.schema";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import {
-  createCaptureCampaignRecord,
   createCaptureSourceRecord,
-  setCaptureCampaignActiveRecord,
   updateCaptureSourceRecord
 } from "@/modules/database/queries/attribution";
-import { dateOnlyRange } from "@/lib/dates";
 
 function formValues(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -74,67 +70,4 @@ export async function updateCaptureSourceAction(formData: FormData) {
   revalidatePath("/sigeco/atribucion");
   revalidatePath("/sigeco/recepcion/nuevo");
   redirect("/sigeco/atribucion?aviso=fuente-actualizada");
-}
-
-export async function createCaptureCampaignAction(formData: FormData) {
-  const campaign = await runAuditedAction(
-    {
-      permission: "attribution_manage",
-      action: "attribution.campaign.create",
-      entityType: "capture_campaign"
-    },
-    async () => {
-      const values = formValues(formData);
-      const campaignRange = dateOnlyRange(
-        String(values.startsAt ?? ""),
-        String(values.endsAt ?? "")
-      );
-      const parsed = createCaptureCampaignSchema.safeParse({
-        ...values,
-        startsAt: campaignRange.start,
-        endsAt: campaignRange.end
-      });
-      if (!parsed.success) redirect("/sigeco/atribucion?error=campana-invalida");
-      const created = await createCaptureCampaignRecord(parsed.data);
-      return auditedResult(created, {
-        entityId: created.id,
-        context: {
-          code: created.code,
-          sourceId: created.sourceId,
-          trafficType: created.trafficType
-        }
-      });
-    }
-  );
-
-  revalidatePath("/sigeco/atribucion");
-  redirect(`/sigeco/atribucion?aviso=campana-creada&campana=${campaign.id}`);
-}
-
-export async function setCaptureCampaignActiveAction(formData: FormData) {
-  const campaignId = String(formData.get("campaignId") ?? "");
-  const active = formData.get("active") === "true";
-
-  await runAuditedAction(
-    {
-      permission: "attribution_manage",
-      action: "attribution.campaign.access.update",
-      entityType: "capture_campaign",
-      entityId: campaignId || undefined
-    },
-    async () => {
-      if (!campaignId) redirect("/sigeco/atribucion?error=campana-invalida");
-      const updated = await setCaptureCampaignActiveRecord({
-        campaignId,
-        active
-      });
-      return auditedResult(updated, {
-        entityId: updated.id,
-        context: { code: updated.code, active: updated.active }
-      });
-    }
-  );
-
-  revalidatePath("/sigeco/atribucion");
-  redirect("/sigeco/atribucion?aviso=campana-actualizada");
 }

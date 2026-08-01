@@ -67,6 +67,10 @@ export const privateEnvSchema = z.object({
   ),
   PAYLOAD_PUBLIC_SERVER_URL: optionalUrl,
   PAYLOAD_DB_SCHEMA: z.preprocess(emptyToUndefined, z.string().default("payload")),
+  PAYLOAD_SIGECO_INTEGRATION_SECRET: z.preprocess(
+    emptyToUndefined,
+    z.string().min(32, "PAYLOAD_SIGECO_INTEGRATION_SECRET must contain at least 32 characters.").optional()
+  ),
   BLOB_READ_WRITE_TOKEN: optionalString,
   STAGING_BLOB_READ_WRITE_TOKEN: optionalString,
   CLINICAL_FILES_STORAGE_DRIVER: z.preprocess(

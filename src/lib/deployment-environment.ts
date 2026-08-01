@@ -27,6 +27,8 @@ export type ClinicalAttachmentStorageConfig =
 const productionHost = "saludintercultural.com";
 const stagingHost = "staging.saludintercultural.com";
 const localPayloadSecret = "development-payload-secret";
+const localPayloadSigecoSecret =
+  "local-payload-sigeco-integration-secret-only";
 
 function clean(value: string | undefined) {
   const normalized = value?.trim();
@@ -145,6 +147,37 @@ export function resolvePayloadSecret(
   }
 
   return clean(values.PAYLOAD_SECRET) ?? localPayloadSecret;
+}
+
+export function resolvePayloadSigecoIntegrationSecret(
+  values: EnvironmentVariables = process.env
+) {
+  const environment = resolveDeploymentEnvironment(values);
+  const secret = clean(values.PAYLOAD_SIGECO_INTEGRATION_SECRET);
+
+  if (environment === "staging" || environment === "production") {
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        "PAYLOAD_SIGECO_INTEGRATION_SECRET must contain at least 32 characters in staging and production."
+      );
+    }
+    if (secret === clean(values.PAYLOAD_SECRET)) {
+      throw new Error(
+        "PAYLOAD_SIGECO_INTEGRATION_SECRET must not reuse PAYLOAD_SECRET."
+      );
+    }
+    if (
+      /development|local|example|change.?me|placeholder|ci-only|test-only/i.test(
+        secret
+      )
+    ) {
+      throw new Error(
+        "PAYLOAD_SIGECO_INTEGRATION_SECRET must not use a development or placeholder value in staging or production."
+      );
+    }
+  }
+
+  return secret ?? localPayloadSigecoSecret;
 }
 
 function parseDeploymentEnvironment(
@@ -288,6 +321,7 @@ function assertStagingIsolation(values: EnvironmentVariables) {
 
   resolveClinicalAttachmentStorage(values);
   assertStrongPayloadSecret(values);
+  resolvePayloadSigecoIntegrationSecret(values);
   assertNoAnalytics(values);
 }
 
@@ -333,6 +367,7 @@ function assertProductionIsolation(values: EnvironmentVariables) {
 
   resolveClinicalAttachmentStorage(values);
   assertStrongPayloadSecret(values);
+  resolvePayloadSigecoIntegrationSecret(values);
 }
 
 export function resolveDeploymentEnvironment(

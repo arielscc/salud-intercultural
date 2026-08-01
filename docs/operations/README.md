@@ -56,6 +56,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 41. [Recordatorios automatizados y supervisados](./supervised-reminders.md)
 42. [Encuestas, opiniones y reclamos](./patient-feedback-complaints.md)
 43. [Móvil y conectividad lenta](./mobile-slow-connectivity.md)
+44. [Integración segura Payload-SIGECO](./payload-sigeco-integration.md)
 
 ## Flujo recomendado
 

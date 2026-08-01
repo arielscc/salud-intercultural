@@ -1,5 +1,8 @@
 # Reporte De Cambios — Tarea 11: Fuentes De Captación Y Atribución
 
+> Actualización: la Tarea 27 trasladó la edición de campañas a Payload. La
+> fuente y la fotografía histórica por llegada permanecen en SIGECO.
+
 ## Fecha
 
 2026-07-29.

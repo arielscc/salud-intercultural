@@ -18,6 +18,7 @@ Configurar `.env` antes de ejecutar seeds:
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require"
 PAYLOAD_SECRET="un-string-largo-seguro"
+PAYLOAD_SIGECO_INTEGRATION_SECRET="otro-secreto-exclusivo-de-32-caracteres"
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
 PAYLOAD_DB_SCHEMA="payload"
 ```
@@ -67,6 +68,7 @@ Primero valida el aislamiento, luego carga Payload y finalmente crea las cuentas
 `pnpm seed` carga en Payload CMS:
 
 - Usuario admin opcional desde variables de entorno.
+- Campañas institucionales y su copia técnica de atribución en SIGECO.
 - Servicios.
 - Tratamientos y problemas frecuentes.
 - Equipo.

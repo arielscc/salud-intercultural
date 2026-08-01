@@ -56,6 +56,11 @@ export function ActionNotice() {
     if (aviso === "compra-creada") {
       clearSigecoSessionKey(PURCHASE_SAFE_DRAFT_KEY);
     }
+    if (aviso === "llegada-registrada-atribucion-pendiente") {
+      toast.warning(
+        "Llegada registrada. La campaña quedó pendiente porque Payload no respondió."
+      );
+    }
     const message = noticeMessages[aviso];
     if (message) toast.success(message);
     const params = new URLSearchParams(searchParams);

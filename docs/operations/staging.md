@@ -69,6 +69,7 @@ el store público de media ni el store clínico de producción.
 Generar valores nuevos para:
 
 - `PAYLOAD_SECRET`;
+- `PAYLOAD_SIGECO_INTEGRATION_SECRET`, distinto de `PAYLOAD_SECRET`;
 - administrador QA de Payload;
 - `STAGING_QA_PASSWORD`;
 - PostgreSQL;

@@ -21,6 +21,7 @@ Arquitectura vigente de Sigeco despues de la simplificacion V3.7.
 - Servicios, tratamientos, equipo, testimonios y FAQs.
 - Media editorial.
 - Formulario publico y `lead-submissions` del sitio web.
+- Campañas y enlaces de marketing en `marketing-campaigns`.
 
 ### Prisma
 
@@ -32,6 +33,18 @@ Arquitectura vigente de Sigeco despues de la simplificacion V3.7.
 - Enfermeria, estudios y adjuntos modelados.
 - Ventas, pagos, caja e inventario.
 - Seguimientos e historial operativo.
+- Copia técnica de campañas, atribución por visita y reportes internos.
+
+### Contrato Payload-SIGECO
+
+Payload edita la campaña y SIGECO la refleja de forma idempotente mediante un
+identificador externo y una revisión. El contrato usa un token exclusivo,
+rechaza campos desconocidos y no comparte pacientes ni clínica. La respuesta a
+Marketing contiene únicamente totales agregados por período y campaña; grupos
+menores a cinco se ocultan. Si Payload no responde durante una llegada,
+Recepción continúa con la fuente manual y la campaña queda pendiente, sin
+repetir al paciente o la visita. La operación está documentada en [Integración
+segura Payload-SIGECO](../operations/payload-sigeco-integration.md).
 
 Los modelos internos legacy de leads permanecen para preservar datos historicos, pero no tienen ruta, navegacion ni permisos activos en Sigeco.
 

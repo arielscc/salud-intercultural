@@ -2,17 +2,43 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/modules/database";
 import { getCaptureAttributionReport } from "@/modules/database/queries/attribution";
 import { createReceptionIntake } from "@/modules/database/queries/reception";
+import { syncPayloadCampaignToSigeco } from "@/modules/payload-sigeco/campaign-sync";
 
 async function cleanAttributionFixtures() {
   await prisma.sale.deleteMany();
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
+  await prisma.captureCampaign.deleteMany({
+    where: { code: "TEST-PAYLOAD-SYNC" }
+  });
 }
 
 beforeEach(cleanAttributionFixtures);
 afterEach(cleanAttributionFixtures);
 
 describe("capture attribution integration", () => {
+  it("retries the same Payload revision without duplicating a campaign", async () => {
+    const snapshot = {
+      externalId: "integration-campaign-27",
+      revision: "2026-08-01T12:00:00.000Z",
+      code: "TEST-PAYLOAD-SYNC",
+      name: "Campaña sintética",
+      sourceCode: "tiktok",
+      trafficType: "paid" as const,
+      active: true
+    };
+
+    const first = await syncPayloadCampaignToSigeco(snapshot);
+    const retry = await syncPayloadCampaignToSigeco(snapshot);
+
+    expect(retry.campaign.id).toBe(first.campaign.id);
+    expect(
+      await prisma.captureCampaign.count({
+        where: { payloadCampaignId: snapshot.externalId }
+      })
+    ).toBe(1);
+  });
+
   it("compares primary, support, verified account, sales and collected income", async () => {
     const campaign = await prisma.captureCampaign.findUniqueOrThrow({
       where: { code: "TIKTOK-DR" }

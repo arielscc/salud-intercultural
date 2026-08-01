@@ -54,6 +54,10 @@ cuenta y el tipo de tráfico. Si el código no existe, la llegada no se guarda
 hasta corregirlo. No existe un selector manual de “orgánico” o “pagado” para
 Recepción.
 
+Si Payload está temporalmente caído, la llegada sí se registra con la fuente
+manual y el código queda pendiente de conciliación. No se vuelve a crear la
+visita.
+
 Cuando no hay evidencia, el detalle interno queda como **No identificado**.
 
 ## Enlaces Y Formularios
@@ -96,7 +100,7 @@ El reporte es agregado: no muestra diagnósticos ni detalles clínicos.
 esta captura se conservan como `Sin decisión`, porque un texto no demuestra una
 aceptación.
 
-## Catálogo Administrable
+## Catálogos Administrables
 
 Dirección y el super administrador pueden:
 
@@ -105,16 +109,24 @@ Dirección y el super administrador pueden:
 - cambiar el nombre interno;
 - ordenar las opciones;
 - mostrar u ocultar una opción en Recepción;
-- desactivar una fuente sin borrar su historial;
-- crear campañas con cuenta, código y tipo de tráfico;
-- activar o desactivar campañas.
+- desactivar una fuente sin borrar su historial.
+
+Marketing administra en Payload:
+
+- campañas con cuenta, código y tipo de tráfico;
+- vigencia y estado activo.
+
+SIGECO muestra una copia técnica sincronizada que no se edita. El contrato y
+los límites de privacidad se explican en [Integración segura
+Payload-SIGECO](./payload-sigeco-integration.md).
 
 Desactivar no elimina visitas anteriores.
 
 ## Ambientes
 
-La migración `20260729210000_capture_attribution` está aplicada únicamente en
-desarrollo local.
+Las migraciones `20260729210000_capture_attribution` y
+`20260801170000_payload_sigeco_campaign_ownership` están aplicadas únicamente
+en desarrollo local.
 
 Antes de staging se debe:
 

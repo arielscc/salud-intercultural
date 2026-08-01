@@ -102,6 +102,15 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           </p>
         </div>
       ) : null}
+      {query.aviso === "llegada-registrada-atribucion-pendiente" ? (
+        <div className="rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-warning">La llegada quedó registrada.</p>
+          <p className="mt-1 text-muted">
+            Payload no respondió y la campaña quedó pendiente. La fuente indicada
+            por el paciente se conservó; no vuelvas a registrar la llegada.
+          </p>
+        </div>
+      ) : null}
       {query.aviso === "abandono-registrado" ? (
         <div className="rounded-[9px] bg-primary/10 px-4 py-3 text-sm text-primary-dark">
           <p className="font-semibold">El abandono quedó registrado.</p>

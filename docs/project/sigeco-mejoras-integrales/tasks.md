@@ -927,6 +927,14 @@ Registrar una compra no aumenta stock. El stock cambia al confirmar la recepció
 - Ningún dato clínico regresa a Payload.
 - Un fallo no impide registrar la llegada.
 
+**Implementación y operación:**
+
+- [Integración segura Payload-SIGECO](../../operations/payload-sigeco-integration.md).
+- [Ownership de datos](../../architecture/data-ownership.md).
+- [Reporte de la Tarea 27](../task-reports/2026-08-01-tarea-27-integracion-payload-sigeco.md).
+- Contratos en `src/modules/payload-sigeco` y rutas privadas en
+  `src/app/api/integrations/payload-sigeco`.
+
 **Commit sugerido:** `feat(sigeco): integrate campaign attribution safely`
 
 ---

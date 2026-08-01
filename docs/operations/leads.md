@@ -13,7 +13,7 @@ Payload es la fuente de verdad para leads. La coleccion operativa es `lead-submi
 5. Se aplica rate limit por IP y telefono.
 6. Se persiste en Payload con `createLeadRecord`.
 7. Si el enlace incluye `camp` y etiquetas UTM, el API conserva la evidencia y
-   resuelve la cuenta mediante el catálogo activo de SIGECO.
+   resuelve la cuenta mediante la campaña activa de Payload.
 8. El API devuelve un código `WEB-ID` que puede continuar en el mensaje de
    WhatsApp.
 9. El lead aparece en `/admin` dentro de `lead-submissions`.
@@ -60,8 +60,12 @@ Ruta directa:
 
 La tabla Prisma legacy `public."Lead"` fue eliminada. `/api/leads` persiste en Payload.
 
-El catálogo de fuentes y campañas vive en Prisma. Los contactos anteriores a
-la llegada continúan en Payload; no se reactiva un módulo de leads en SIGECO.
+Las campañas editables y los contactos anteriores a la llegada viven en
+Payload. SIGECO conserva fuentes operativas y una copia técnica de cada campaña
+usada en atribución; no se reactiva un módulo de leads en SIGECO.
+
+El límite completo se documenta en [Integración segura
+Payload-SIGECO](./payload-sigeco-integration.md).
 
 ## API
 

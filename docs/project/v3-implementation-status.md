@@ -9,7 +9,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Area | Estado | Resultado actual |
 | --- | --- | --- |
 | Sitio publico | Estable | Paginas publicas, SEO, analytics y formulario de contacto. |
-| Payload CMS | Estable | Contenido editorial, media, servicios, equipo, testimonios y FAQs. |
+| Payload CMS | Estable | Contenido editorial, media, servicios, equipo, testimonios, FAQs y campañas de marketing. |
 | Sigeco V3.7 | Implementado localmente | Operacion clinica y administrativa centrada en paciente y visita. |
 | Sistema visual Marea | Implementado | Shell responsive, tablas de trabajo y tokens aislados del sitio publico. |
 | QA final V3.7 | Completado localmente | Matriz de roles, flujo de abandono, 17 pantallas activas a 390px, sitio publico y CMS. |
@@ -20,6 +20,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Recordatorios supervisados | En progreso | Reglas versionadas preparan candidatos idempotentes; Marlen aprueba antes de crear el contacto. |
 | Encuestas y reclamos | En progreso | Piloto manual con enlace privado, casos críticos, responsable, plazo y tendencias. |
 | Móvil y conectividad lenta | En progreso | Bloqueo offline, reintentos idempotentes, borrador seguro y contingencia implementados localmente. |
+| Integración Payload-SIGECO | En progreso | Campañas en Payload, copia técnica en SIGECO y métricas agregadas con privacidad implementadas localmente. |
 | Abandono y pendientes | En progreso | Punto, motivo, área y pendientes conservados; tareas abiertas quedan bloqueadas y recuperables. |
 | Versiones y firma clínica | En progreso | Borrador, cierre, autor y correcciones comparables implementados en desarrollo local. |
 | Compras y lotes | En progreso | Compra, pago, recepción parcial, costo histórico, lote y stock enlazados localmente. |

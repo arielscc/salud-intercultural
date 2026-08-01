@@ -155,8 +155,8 @@ vive en [Móvil y conectividad lenta](./mobile-slow-connectivity.md).
 | Superficie | Datos permitidos | Datos prohibidos |
 | --- | --- | --- |
 | Sitio y analytics | Ruta pública, origen del formulario, fuente y evento | Nombre, teléfono, email, paciente, diagnóstico o tratamiento |
-| Payload | Contenido, media editorial, configuración y leads públicos | Pacientes, visitas, consulta, receta, cobros e historia clínica |
-| SIGECO | Datos operativos y clínicos según el rol | Envío automático a analytics o collections editoriales |
+| Payload | Contenido, campañas, media editorial, configuración y leads públicos | Pacientes, visitas, consulta, receta, cobros e historia clínica |
+| SIGECO | Datos operativos y clínicos según el rol; métricas agregadas aprobadas | Registros individuales enviados a analytics o collections editoriales |
 
 Los datos de un formulario público pueden permanecer como lead en Payload.
 Solo se convierten en paciente dentro del flujo protegido de SIGECO.
@@ -171,6 +171,7 @@ ignorados por Git.
 | --- | --- | --- | --- |
 | `DATABASE_URL` | Local, test, staging y producción | Equipo técnico; Dirección autoriza producción | Incidente, salida de una persona con acceso, cambio de proveedor o revisión semestral |
 | `PAYLOAD_SECRET` | Todos; 32+ caracteres en staging y producción | Equipo técnico | Incidente, acceso no autorizado o revisión semestral |
+| `PAYLOAD_SIGECO_INTEGRATION_SECRET` | Todos; exclusivo por ambiente | Equipo técnico | Incidente, error de alcance, cambio del consumidor o revisión semestral |
 | `BLOB_READ_WRITE_TOKEN` | Producción | Equipo técnico | Incidente, cambio de store o revisión semestral |
 | `STAGING_BLOB_READ_WRITE_TOKEN` | Staging | Equipo técnico | Incidente, reinicio del store o revisión semestral |
 | `CLINICAL_BLOB_READ_WRITE_TOKEN` | Producción | Equipo técnico; Dirección autoriza acceso | Incidente, cambio del store privado o revisión semestral |

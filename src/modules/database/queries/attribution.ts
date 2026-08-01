@@ -82,33 +82,6 @@ export async function updateCaptureSourceRecord(input: {
   });
 }
 
-export async function createCaptureCampaignRecord(input: {
-  code: string;
-  name: string;
-  sourceId: string;
-  accountLabel?: string;
-  accountHandle?: string;
-  trafficType: AttributionTrafficType;
-  startsAt?: Date;
-  endsAt?: Date;
-}) {
-  return withDatabaseError("createCaptureCampaignRecord", async () => {
-    return prisma.captureCampaign.create({ data: input });
-  });
-}
-
-export async function setCaptureCampaignActiveRecord(input: {
-  campaignId: string;
-  active: boolean;
-}) {
-  return withDatabaseError("setCaptureCampaignActiveRecord", async () => {
-    return prisma.captureCampaign.update({
-      where: { id: input.campaignId },
-      data: { active: input.active }
-    });
-  });
-}
-
 export async function findActiveCaptureCampaignByCode(
   code: string,
   now = new Date()

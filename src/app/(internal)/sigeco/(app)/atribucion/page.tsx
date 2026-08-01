@@ -5,9 +5,10 @@ import {
   MousePointerClick,
   UsersRound
 } from "lucide-react";
+import Link from "next/link";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { SubmitButton } from "@/components/internal/SubmitButton";
-import { Button } from "@/components/internal/ui/Button";
+import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
@@ -20,14 +21,11 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import {
-  createCaptureCampaignAction,
   createCaptureSourceAction,
-  setCaptureCampaignActiveAction,
   updateCaptureSourceAction
 } from "@/features/attribution/actions";
 import {
   attributionTrafficTypeLabels,
-  attributionTrafficTypeOptions,
   captureSourceCategoryOptions
 } from "@/features/attribution/catalog";
 import { boliviaDepartments } from "@/features/geography/origin";
@@ -402,93 +400,20 @@ export default async function AttributionPage({
 
           <Card className="grid gap-4">
             <CardHeader
-              title="Agregar campaña o enlace"
-              description="El código determina automáticamente la cuenta y el tipo de tráfico."
+              title="Campañas administradas en Payload"
+              description="Marketing edita allí los códigos, cuentas, fechas y tipo de tráfico. SIGECO conserva una copia técnica para relacionar llegadas."
               className="mb-0"
             />
-            <form action={createCaptureCampaignAction} className="grid gap-3 sm:grid-cols-2">
-              <Field label="Código">
-                <input
-                  className={internalInputClassName}
-                  name="code"
-                  placeholder="Ej. CBBA-JULIO"
-                  required
-                />
-              </Field>
-              <Field label="Fuente">
-                <select
-                  className={internalInputClassName}
-                  name="sourceId"
-                  defaultValue=""
-                  required
-                >
-                  <option value="" disabled>
-                    Selecciona
-                  </option>
-                  {sources
-                    .filter((source) => source.active)
-                    .map((source) => (
-                      <option key={source.id} value={source.id}>
-                        {source.internalLabel}
-                      </option>
-                    ))}
-                </select>
-              </Field>
-              <Field label="Nombre" className="sm:col-span-2">
-                <input
-                  className={internalInputClassName}
-                  name="name"
-                  placeholder="Ej. Campaña Cochabamba julio"
-                  required
-                />
-              </Field>
-              <Field label="Cuenta identificada">
-                <input
-                  className={internalInputClassName}
-                  name="accountLabel"
-                  placeholder="Ej. TikTok del Dr. Franco"
-                />
-              </Field>
-              <Field label="Usuario o cuenta">
-                <input
-                  className={internalInputClassName}
-                  name="accountHandle"
-                  placeholder="@cuenta"
-                />
-              </Field>
-              <Field label="Tipo">
-                <select
-                  className={internalInputClassName}
-                  name="trafficType"
-                  defaultValue="unidentified"
-                >
-                  {attributionTrafficTypeOptions.map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Inicio">
-                  <input
-                    className={internalInputClassName}
-                    type="date"
-                    name="startsAt"
-                  />
-                </Field>
-                <Field label="Final">
-                  <input
-                    className={internalInputClassName}
-                    type="date"
-                    name="endsAt"
-                  />
-                </Field>
-              </div>
-              <SubmitButton className="sm:col-span-2" pendingLabel="Guardando...">
-                Agregar campaña
-              </SubmitButton>
-            </form>
+            <p className="text-sm leading-6 text-muted">
+              Si la sincronización falla, la llegada se registra con la fuente
+              indicada por el paciente y la campaña puede conciliarse después.
+            </p>
+            <Link
+              href="/admin/collections/marketing-campaigns"
+              className={`${buttonVariants({ variant: "outline" })} w-full sm:w-fit`}
+            >
+              Abrir campañas en Payload
+            </Link>
           </Card>
 
           <Card className="p-0 lg:col-span-2">
@@ -600,21 +525,14 @@ export default async function AttributionPage({
                       {campaign._count.attributions} llegadas
                     </p>
                   </div>
-                  <form action={setCaptureCampaignActiveAction}>
-                    <input type="hidden" name="campaignId" value={campaign.id} />
-                    <input
-                      type="hidden"
-                      name="active"
-                      value={campaign.active ? "false" : "true"}
-                    />
-                    <SubmitButton
-                      size="sm"
-                      variant="outline"
-                      pendingLabel="Guardando..."
-                    >
-                      {campaign.active ? "Desactivar" : "Activar"}
-                    </SubmitButton>
-                  </form>
+                  <div className="flex flex-wrap gap-2">
+                    <Chip tone={campaign.active ? "success" : "neutral"}>
+                      {campaign.active ? "Activa" : "Inactiva"}
+                    </Chip>
+                    <Chip tone={campaign.managedByPayload ? "success" : "warning"}>
+                      {campaign.managedByPayload ? "Sincronizada" : "Registro anterior"}
+                    </Chip>
+                  </div>
                 </div>
               ))}
             </div>
@@ -624,7 +542,8 @@ export default async function AttributionPage({
         <Card>
           <p className="text-sm leading-relaxed text-muted">
             Dirección puede consultar los resultados. Solo las personas con
-            permiso de atribución pueden cambiar fuentes, campañas y enlaces.
+            permiso de atribución pueden cambiar fuentes. Marketing administra
+            campañas y enlaces desde Payload.
           </p>
         </Card>
       )}
