@@ -41,6 +41,7 @@ export function findCashWorkflowError(error: unknown): CashWorkflowError | null 
 }
 
 const cashSessionInclude = {
+  branch: { select: { code: true, name: true } },
   responsible: { select: { id: true, name: true, email: true } },
   openedBy: { select: { id: true, name: true, email: true } },
   closeRequestedBy: { select: { id: true, name: true, email: true } },
@@ -127,12 +128,13 @@ async function lockCashSession(
 }
 
 export async function getOpenCashSessionForOperation(
-  tx: Prisma.TransactionClient
+  tx: Prisma.TransactionClient,
+  branchCode: string
 ) {
   const sessions = await tx.$queryRaw<Array<{ id: string }>>`
     SELECT "id"
     FROM "CashSession"
-    WHERE "status" = 'open'
+    WHERE "status" = 'open' AND "branchCode" = ${branchCode}
     ORDER BY "openedAt" DESC
     LIMIT 2
     FOR UPDATE
@@ -168,10 +170,14 @@ async function assertAuthorizer(
   }
 }
 
-export async function getCashPersonnel() {
+export async function getCashPersonnel(branchCode?: string) {
   return withDatabaseError("getCashPersonnel", async () =>
     prisma.internalUser.findMany({
-      where: { active: true, role: { not: "captacion" } },
+      where: {
+        active: true,
+        role: { not: "captacion" },
+        branchAssignments: branchCode ? { some: { branchCode } } : undefined
+      },
       select: { id: true, name: true, email: true, role: true },
       orderBy: [{ name: "asc" }, { email: "asc" }]
     })
@@ -182,17 +188,21 @@ export async function getCashDashboard(input?: {
   sessionId?: string;
   type?: CashMovementType;
   channel?: CashChannel;
+  branchCode?: string;
 }) {
   return withDatabaseError("getCashDashboard", async () => {
     const activeSession = await prisma.cashSession.findFirst({
-      where: { status: { in: ["open", "pending_approval"] } },
+      where: {
+        branchCode: input?.branchCode,
+        status: { in: ["open", "pending_approval"] }
+      },
       select: { id: true, status: true },
       orderBy: { openedAt: "desc" }
     });
     const selectedSession =
       input?.sessionId
-        ? await prisma.cashSession.findUnique({
-            where: { id: input.sessionId },
+        ? await prisma.cashSession.findFirst({
+            where: { id: input.sessionId, branchCode: input.branchCode },
             include: cashSessionInclude
           })
         : await prisma.cashSession.findFirst({
@@ -202,6 +212,7 @@ export async function getCashDashboard(input?: {
           });
 
     const sessions = await prisma.cashSession.findMany({
+      where: { branchCode: input?.branchCode },
       select: {
         id: true,
         branchCode: true,
@@ -242,10 +253,10 @@ export async function getCashDashboard(input?: {
   });
 }
 
-export async function getCashSessionCloseReport(cashSessionId: string) {
+export async function getCashSessionCloseReport(cashSessionId: string, branchCode?: string) {
   return withDatabaseError("getCashSessionCloseReport", async () =>
-    prisma.cashSession.findUnique({
-      where: { id: cashSessionId },
+    prisma.cashSession.findFirst({
+      where: { id: cashSessionId, branchCode },
       include: cashSessionInclude
     })
   );
@@ -347,7 +358,7 @@ export async function createStaffCashExpense(input: {
       });
       if (reused) return reused;
 
-      await lockCashSession(tx, input.cashSessionId);
+      const session = await lockCashSession(tx, input.cashSessionId);
       const reusedAfterLock = await tx.cashExpense.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true, beneficiaries: true }
@@ -385,6 +396,7 @@ export async function createStaffCashExpense(input: {
 
       const movement = await tx.cashMovement.create({
         data: {
+          branchCode: session.branchCode,
           cashSessionId: input.cashSessionId,
           userId: input.registeredById,
           authorizedById: input.authorizedById,
@@ -464,7 +476,7 @@ export async function createUrgentPurchaseExpense(input: {
       });
       if (reused) return reused;
 
-      await lockCashSession(tx, input.cashSessionId);
+      const session = await lockCashSession(tx, input.cashSessionId);
       const reusedAfterLock = await tx.cashExpense.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true }
@@ -488,6 +500,7 @@ export async function createUrgentPurchaseExpense(input: {
 
       const movement = await tx.cashMovement.create({
         data: {
+          branchCode: session.branchCode,
           cashSessionId: input.cashSessionId,
           userId: input.registeredById,
           authorizedById: input.authorizedById,
@@ -558,7 +571,7 @@ export async function createOtherCashExpense(input: {
       if (input.amountCents <= 0) {
         throw new CashWorkflowError("invalid_amount");
       }
-      await lockCashSession(tx, input.cashSessionId);
+      const session = await lockCashSession(tx, input.cashSessionId);
       const reusedAfterLock = await tx.cashExpense.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true }
@@ -572,6 +585,7 @@ export async function createOtherCashExpense(input: {
 
       const movement = await tx.cashMovement.create({
         data: {
+          branchCode: session.branchCode,
           cashSessionId: input.cashSessionId,
           userId: input.registeredById,
           authorizedById: input.authorizedById,
@@ -720,7 +734,6 @@ export async function reverseCashMovement(input: {
       });
       if (reused) return reused;
 
-      const currentSession = await getOpenCashSessionForOperation(tx);
       await assertAuthorizer(tx, input.actorId);
       const reusedAfterLock = await tx.cashMovement.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
@@ -736,6 +749,7 @@ export async function reverseCashMovement(input: {
       ) {
         throw new CashWorkflowError("invalid_movement");
       }
+      const currentSession = await getOpenCashSessionForOperation(tx, original.branchCode);
       const correctedCents = original.corrections.reduce(
         (total, correction) => total + correction.amountCents,
         0
@@ -750,6 +764,7 @@ export async function reverseCashMovement(input: {
 
       const correction = await tx.cashMovement.create({
         data: {
+          branchCode: original.branchCode,
           cashSessionId: currentSession.id,
           saleId: original.saleId,
           patientId: original.patientId,

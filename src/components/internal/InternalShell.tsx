@@ -10,6 +10,7 @@ import { DesktopPatientSearch } from "@/components/internal/DesktopPatientSearch
 import { DesktopSidebarNav } from "@/components/internal/DesktopSidebarNav";
 import { MobileSidebar } from "@/components/internal/MobileSidebar";
 import { LogoutForm } from "@/components/internal/LogoutForm";
+import { BranchSelector } from "@/components/internal/BranchSelector";
 
 function formatToday() {
   const formatted = formatLongDate(new Date());
@@ -46,9 +47,19 @@ function UserBadge({ user }: { user: InternalUser }) {
 
 export function InternalShell({
   user,
+  branchContext,
   children
 }: {
   user: InternalUser;
+  branchContext: {
+    activeBranch: { code: string; name: string };
+    branches: Array<{
+      code: string;
+      name: string;
+      status: "active" | "preparation" | "inactive";
+      assigned: boolean;
+    }>;
+  };
   children: React.ReactNode;
 }) {
   return (
@@ -69,7 +80,12 @@ export function InternalShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="print-hidden flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
           <MobileSidebar role={user.role} userSlot={<UserBadge user={user} />} />
-          <p className="font-sora text-sm font-bold text-text lg:hidden">Sigeco</p>
+          <p className="hidden font-sora text-sm font-bold text-text sm:block lg:hidden">Sigeco</p>
+          <BranchSelector
+            key={branchContext.activeBranch.code}
+            activeCode={branchContext.activeBranch.code}
+            branches={branchContext.branches}
+          />
           {roleHasPermission(user.role, "patients_read") ? (
             <DesktopPatientSearch />
           ) : null}

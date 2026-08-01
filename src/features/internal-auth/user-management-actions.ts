@@ -27,6 +27,7 @@ import {
   updateInternalUserAccessSchema
 } from "@/features/internal-auth/schemas/user-management.schema";
 import { requireInternalSession } from "@/modules/permissions";
+import { replaceUserBranchAssignments } from "@/modules/database/queries/branches";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -105,6 +106,32 @@ export async function updateManagedInternalUserAccessAction(formData: FormData) 
   revalidatePath("/sigeco/usuarios");
   revalidatePath(`/sigeco/usuarios/${targetId}`);
   redirect(`/sigeco/usuarios/${targetId}?aviso=acceso-actualizado`);
+}
+
+export async function updateManagedInternalUserBranchesAction(formData: FormData) {
+  const targetId = String(formData.get("userId") ?? "");
+  const branchCodes = formData.getAll("branchCodes").map(String).filter(Boolean);
+  const defaultBranchCode = String(formData.get("defaultBranchCode") ?? "");
+  if (!targetId || !defaultBranchCode || branchCodes.length === 0) {
+    redirect(`/sigeco/usuarios/${targetId}?error=invalid-branches`);
+  }
+
+  await runAuditedAction(
+    {
+      permission: "users_manage",
+      action: "user.branches.update",
+      entityType: "internal_user",
+      entityId: targetId,
+      context: { branchCodes, defaultBranchCode }
+    },
+    async () => {
+      await replaceUserBranchAssignments({ userId: targetId, branchCodes, defaultBranchCode });
+      return auditedResult(targetId, { entityId: targetId });
+    }
+  );
+
+  revalidatePath(`/sigeco/usuarios/${targetId}`);
+  redirect(`/sigeco/usuarios/${targetId}?aviso=sucursales-actualizadas`);
 }
 
 export async function requireInternalUserPasswordChangeAction(formData: FormData) {
@@ -250,4 +277,3 @@ export async function changeOwnInternalPasswordAction(formData: FormData) {
       : "/sigeco/mi-cuenta?aviso=contrasena-actualizada"
   );
 }
-

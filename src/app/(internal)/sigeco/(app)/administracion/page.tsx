@@ -26,6 +26,7 @@ import {
 import { requirePermission } from "@/modules/permissions";
 import { ArrowRight, Banknote, CalendarDays, Clock } from "lucide-react";
 import Link from "next/link";
+import { getBranchContext } from "@/features/branches/context";
 
 const emptyAdministrationMessage = (
   <>
@@ -38,11 +39,12 @@ const emptyAdministrationMessage = (
 
 export default async function AdministrationPage() {
   const user = await requirePermission("sales_read");
+  const { activeBranch } = await getBranchContext(user);
   const isPersonalAdministrationAccount = user.role === "administracion";
   const [workItems, summary, priorityCollection] = await Promise.all([
-    getAdministrationWorkItems({ pageSize: 40 }),
-    getSalesSummary(),
-    getLatestPendingAdministrationWorkItem()
+    getAdministrationWorkItems({ pageSize: 40, branchCode: activeBranch.code }),
+    getSalesSummary(new Date(), activeBranch.code),
+    getLatestPendingAdministrationWorkItem(activeBranch.code)
   ]);
 
   const pendingBalance = summary.pendingSales._sum.balanceCents ?? 0;

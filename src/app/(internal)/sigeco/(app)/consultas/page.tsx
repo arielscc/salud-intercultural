@@ -19,6 +19,7 @@ import { getConsultationVisits } from "@/modules/database/queries/clinical-care"
 import { getTreatmentProposalOutcomeSummary } from "@/modules/database/queries/treatment-proposals";
 import { requirePermission } from "@/modules/permissions";
 import { CheckCircle2, Clock3, Percent, XCircle } from "lucide-react";
+import { getBranchContext } from "@/features/branches/context";
 
 const emptyConsultationsMessage = (
   <>
@@ -30,10 +31,11 @@ const emptyConsultationsMessage = (
 );
 
 export default async function ConsultationsPage() {
-  await requirePermission("clinical_read");
+  const user = await requirePermission("clinical_read");
+  const { activeBranch } = await getBranchContext(user);
   const [visits, proposalSummary] = await Promise.all([
-    getConsultationVisits({ pageSize: 30 }),
-    getTreatmentProposalOutcomeSummary()
+    getConsultationVisits({ pageSize: 30, branchCode: activeBranch.code }),
+    getTreatmentProposalOutcomeSummary(new Date(), activeBranch.code)
   ]);
 
   return (

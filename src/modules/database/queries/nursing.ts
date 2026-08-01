@@ -31,12 +31,15 @@ export type CreateNursingApplicationRecordInput = {
   notes?: string;
 };
 
-export async function getNursingWorkItems(input: PaginationInput = {}) {
+export async function getNursingWorkItems(
+  input: PaginationInput & { branchCode?: string } = {}
+) {
   const pagination = getPagination(input);
 
   return withDatabaseError("getNursingWorkItems", async () => {
     return prisma.visitWorkItem.findMany({
       where: {
+        visit: { branchCode: input.branchCode },
         area: "enfermeria",
         status: {
           in: ["pending", "acknowledged", "in_progress", "blocked"]

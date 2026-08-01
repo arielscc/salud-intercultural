@@ -31,6 +31,7 @@ import {
   purchaseReceiptLineSchema,
   purchaseReceiptSchema
 } from "@/features/purchases/schemas/purchase.schema";
+import { getBranchContext } from "@/features/branches/context";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -115,6 +116,10 @@ export async function createPurchaseAction(formData: FormData) {
         context: { lineCount: lines.length, hasDocument: Boolean(document) }
       },
       async (user) => {
+        const { activeBranch } = await getBranchContext(user);
+        if (parsed.data.branchCode !== activeBranch.code) {
+          redirect("/sigeco/compras/nueva?error=invalid-lines");
+        }
         const created = await createPurchaseDraftRecord({
           ...parsed.data,
           purchaseDate: new Date(`${parsed.data.purchaseDate}T12:00:00-04:00`),
@@ -283,6 +288,10 @@ export async function createPurchaseReceiptAction(formData: FormData) {
         context: { hasDocument: Boolean(document) }
       },
       async (user) => {
+        const { activeBranch } = await getBranchContext(user);
+        if (parsed.data.branchCode !== activeBranch.code) {
+          redirect(`/sigeco/compras/${purchaseId}/recibir?error=branch-mismatch`);
+        }
         const receipt = await createPurchaseReceiptRecord({
           ...parsed.data,
           receivedAt: new Date(`${parsed.data.receivedAt}:00-04:00`),

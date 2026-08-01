@@ -15,7 +15,7 @@ const localDateTime = z
 export const purchaseDraftSchema = z.object({
   supplierId: identifier,
   sourceCashExpenseId: optionalText,
-  branchCode: z.literal("el-alto"),
+  branchCode: z.string().trim().regex(/^[a-z0-9-]{2,80}$/),
   purchaseDate: z.string().date(),
   documentNumber: optionalText,
   currency: z.literal("BOB"),
@@ -56,7 +56,7 @@ export const cancelPurchaseSchema = z.object({
 
 export const purchaseReceiptSchema = z.object({
   purchaseId: identifier,
-  branchCode: z.literal("el-alto"),
+  branchCode: z.string().trim().regex(/^[a-z0-9-]{2,80}$/),
   locationCode: z.string().trim().min(2).max(100),
   documentNumber: optionalText,
   receivedAt: localDateTime,

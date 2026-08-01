@@ -31,6 +31,7 @@ import {
   storeCashReceipt
 } from "@/modules/cash-receipts/storage";
 import { validateClinicalFile } from "@/modules/clinical-attachments/validation";
+import { getBranchContext } from "@/features/branches/context";
 
 function fields(formData: FormData) {
   return Object.fromEntries(
@@ -72,6 +73,10 @@ export async function openCashSessionAction(formData: FormData) {
         }
       },
       async (user) => {
+        const { activeBranch } = await getBranchContext(user);
+        if (parsed.data.branchCode !== activeBranch.code) {
+          redirect("/sigeco/administracion/caja?error=cash-invalid-session");
+        }
         const session = await openCashSession({
           branchCode: parsed.data.branchCode,
           registerName: parsed.data.registerName,

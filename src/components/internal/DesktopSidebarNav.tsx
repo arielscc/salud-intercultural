@@ -23,6 +23,7 @@ const navGroups: Array<{ label?: string; hrefs: string[] }> = [
       "/sigeco/inventario",
       "/sigeco/compras",
       "/sigeco/atribucion",
+      "/sigeco/sucursales",
       "/sigeco/auditoria",
       "/sigeco/usuarios"
     ]

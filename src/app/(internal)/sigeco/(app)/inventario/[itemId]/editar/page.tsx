@@ -6,6 +6,7 @@ import { ProductCatalogForm } from "@/features/inventory/components/ProductCatal
 import { InventoryCatalogError } from "@/features/inventory/components/InventoryCatalogError";
 import { getInventoryItemById } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export default async function EditInventoryItemPage({
   params,
@@ -14,10 +15,11 @@ export default async function EditInventoryItemPage({
   params: Promise<{ itemId: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requirePermission("inventory_write");
+  const user = await requirePermission("inventory_write");
+  const { activeBranch } = await getBranchContext(user);
   const { itemId } = await params;
   const query = await searchParams;
-  const item = await getInventoryItemById(itemId);
+  const item = await getInventoryItemById(itemId, activeBranch.code);
   if (!item) notFound();
 
   return (

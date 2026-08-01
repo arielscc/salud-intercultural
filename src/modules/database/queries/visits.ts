@@ -54,6 +54,7 @@ export type CreateVisitRecordInput = {
   idempotencyKey?: string;
   patientId: string;
   userId?: string;
+  branchCode?: string;
   reason?: string;
   note?: string;
   intakeType?: VisitIntakeType;
@@ -83,6 +84,7 @@ export async function createVisitInTransaction(
       idempotencyKey: input.idempotencyKey,
       patientId: input.patientId,
       createdById: input.userId,
+      branchCode: input.branchCode,
       reason: input.reason,
       status: "in_reception",
       intakeType: input.intakeType,
@@ -175,6 +177,7 @@ export async function getVisits(
     checkedInTo?: Date;
     originCity?: string;
     originDepartment?: string;
+    branchCode?: string;
   } = {}
 ) {
   const pagination = getPagination(input);
@@ -182,6 +185,7 @@ export async function getVisits(
   return withDatabaseError("getVisits", async () => {
     return prisma.visit.findMany({
       where: {
+        branchCode: input.branchCode,
         status: input.status,
         checkedInAt:
           input.checkedInFrom || input.checkedInTo
@@ -235,10 +239,12 @@ export async function countVisits(input: {
   checkedInTo?: Date;
   originCity?: string;
   originDepartment?: string;
+  branchCode?: string;
 } = {}) {
   return withDatabaseError("countVisits", async () => {
     return prisma.visit.count({
       where: {
+        branchCode: input.branchCode,
         status: input.status,
         checkedInAt:
           input.checkedInFrom || input.checkedInTo

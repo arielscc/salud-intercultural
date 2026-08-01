@@ -22,6 +22,7 @@ import {
   toReceptionIntakeRecord
 } from "@/features/reception/schemas/intake.schema";
 import { resolveAttributionEvidenceSafely } from "@/features/attribution/evidence";
+import { getBranchContext } from "@/features/branches/context";
 
 export async function searchReceptionPatientsAction(query: string) {
   await requirePermission("patients_read");
@@ -47,6 +48,7 @@ export async function submitReceptionIntakeAction(formData: FormData) {
       entityType: "visit"
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       if (formData.get("funnelCompleted") !== "true") {
         redirect("/sigeco/recepcion/nuevo?error=incomplete-funnel");
       }
@@ -103,7 +105,8 @@ export async function submitReceptionIntakeAction(formData: FormData) {
           externalEvidenceCode:
             evidence?.externalEvidenceCode ?? pendingEvidenceCode
         },
-        userId: user.id
+        userId: user.id,
+        branchCode: activeBranch.code
       });
       return auditedResult(
         {

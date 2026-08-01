@@ -10,7 +10,8 @@ import {
   requireInternalUserPasswordChangeAction,
   revokeManagedInternalUserSessionsAction,
   unlockManagedInternalUserAction,
-  updateManagedInternalUserAccessAction
+  updateManagedInternalUserAccessAction,
+  updateManagedInternalUserBranchesAction
 } from "@/features/internal-auth/user-management-actions";
 import {
   assignableInternalRoles,
@@ -18,6 +19,7 @@ import {
 } from "@/features/internal-auth/permissions";
 import { formatDateTime } from "@/lib/dates";
 import { getManagedInternalUserById } from "@/modules/database/queries/internal-users";
+import { getConfigurableBranches } from "@/modules/database/queries/branches";
 import { requirePermission } from "@/modules/permissions";
 
 type UserDetailPageProps = {
@@ -31,6 +33,7 @@ const errorMessages: Record<string, string> = {
   self_deactivate: "No puedes desactivar tu propia cuenta.",
   last_super_admin: "No se puede quitar el acceso al último super administrador activo.",
   invalid_role: "El rol seleccionado no está permitido.",
+  "invalid-branches": "Asigna al menos una sucursal y elige una de ellas como predeterminada.",
   user_not_found: "El usuario ya no existe.",
   invalid: "No se pudo actualizar el acceso."
 };
@@ -38,7 +41,10 @@ const errorMessages: Record<string, string> = {
 export default async function UserDetailPage({ params, searchParams }: UserDetailPageProps) {
   const actor = await requirePermission("users_manage");
   const [{ userId }, query] = await Promise.all([params, searchParams]);
-  const user = await getManagedInternalUserById(userId);
+  const [user, branches] = await Promise.all([
+    getManagedInternalUserById(userId),
+    getConfigurableBranches()
+  ]);
   if (!user) notFound();
 
   return (
@@ -172,6 +178,60 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
             ) : null}
             <SubmitButton variant="outline" pendingLabel="Aplicando...">
               Guardar acceso
+            </SubmitButton>
+          </ConfirmForm>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Sucursales asignadas"
+            description="La sucursal predeterminada se usa al iniciar. Una sede en preparación no permite registrar operaciones reales."
+          />
+          <ConfirmForm
+            action={updateManagedInternalUserBranchesAction}
+            notice="Sucursales actualizadas"
+            confirmTitle="¿Actualizar las sucursales de esta persona?"
+            confirmDescription="Al cambiar de sede, sus colas, Caja e inventario se filtrarán por la sucursal activa."
+            confirmLabel="Guardar sucursales"
+            className="grid gap-3"
+          >
+            <input type="hidden" name="userId" value={user.id} />
+            <div className="grid gap-2">
+              {branches.map((branch) => {
+                const assignment = user.branchAssignments.find(
+                  (item) => item.branchCode === branch.code
+                );
+                return (
+                  <label key={branch.code} className="flex min-h-11 items-center gap-3 rounded-[9px] border border-border px-3.5 text-sm text-text">
+                    <input
+                      type="checkbox"
+                      name="branchCodes"
+                      value={branch.code}
+                      defaultChecked={Boolean(assignment)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span className="flex-1">{branch.name}</span>
+                    {branch.status === "preparation" ? <Chip tone="warning">En preparación</Chip> : null}
+                  </label>
+                );
+              })}
+            </div>
+            <Field label="Sucursal predeterminada">
+              <select
+                className={internalInputClassName}
+                name="defaultBranchCode"
+                defaultValue={
+                  user.branchAssignments.find((assignment) => assignment.isDefault)?.branchCode ?? "el-alto"
+                }
+                required
+              >
+                {branches.filter((branch) => branch.status === "active").map((branch) => (
+                  <option key={branch.code} value={branch.code}>{branch.name}</option>
+                ))}
+              </select>
+            </Field>
+            <SubmitButton variant="outline" pendingLabel="Guardando...">
+              Guardar sucursales
             </SubmitButton>
           </ConfirmForm>
         </Card>

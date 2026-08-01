@@ -82,7 +82,9 @@ function resolvePeriod(params: SearchParams) {
 }
 
 function branchLabel(value: string) {
-  return value === "el-alto" ? "El Alto" : value.replaceAll("-", " ");
+  if (value === "el-alto") return "El Alto";
+  if (value === "cochabamba") return "Cochabamba";
+  return value.replaceAll("-", " ");
 }
 
 function currentPhaseElapsedMs(

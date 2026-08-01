@@ -126,6 +126,7 @@ async function createPaidPurchasePayment(
   input: {
     purchaseId: string;
     purchaseNumber: string;
+    branchCode: string;
     cashSessionId: string;
     method: Exclude<PurchasePaymentMethod, "credit">;
     amountCents: number;
@@ -140,9 +141,13 @@ async function createPaidPurchasePayment(
   });
   if (reused) return reused;
 
-  await lockOpenCashSession(tx, input.cashSessionId);
+  const session = await lockOpenCashSession(tx, input.cashSessionId);
+  if (session.branchCode !== input.branchCode) {
+    throw new PurchaseWorkflowError("cash-session-not-open");
+  }
   const movement = await tx.cashMovement.create({
     data: {
+      branchCode: input.branchCode,
       cashSessionId: input.cashSessionId,
       userId: input.recordedById,
       idempotencyKey: `purchase-payment:${input.idempotencyKey}`,
@@ -159,6 +164,7 @@ async function createPaidPurchasePayment(
   return tx.purchasePayment.create({
     data: {
       purchaseId: input.purchaseId,
+      branchCode: input.branchCode,
       cashSessionId: input.cashSessionId,
       cashMovementId: movement.id,
       recordedById: input.recordedById,
@@ -332,6 +338,7 @@ export async function confirmPurchaseRecord(input: {
         await createPaidPurchasePayment(tx, {
           purchaseId: purchase.id,
           purchaseNumber: purchase.purchaseNumber,
+          branchCode: purchase.branchCode,
           cashSessionId: input.cashSessionId ?? "",
           method: purchase.intendedPaymentMethod,
           amountCents: purchase.totalCents,
@@ -383,7 +390,8 @@ export async function recordPurchasePayment(input: {
       }
       return createPaidPurchasePayment(tx, {
         ...input,
-        purchaseNumber: purchase.purchaseNumber
+        purchaseNumber: purchase.purchaseNumber,
+        branchCode: purchase.branchCode
       });
     })
   );
@@ -660,9 +668,11 @@ function purchaseWhere(input: {
   search?: string;
   status?: PurchaseStatus | "all";
   supplierId?: string;
+  branchCode?: string;
 }): Prisma.PurchaseWhereInput {
   const search = input.search?.trim();
   return {
+    branchCode: input.branchCode,
     status: input.status && input.status !== "all" ? input.status : undefined,
     supplierId: input.supplierId && input.supplierId !== "all" ? input.supplierId : undefined,
     OR: search
@@ -680,6 +690,7 @@ export async function getPurchases(
     search?: string;
     status?: PurchaseStatus | "all";
     supplierId?: string;
+    branchCode?: string;
   } = {}
 ) {
   const pagination = getPagination(input);
@@ -687,6 +698,7 @@ export async function getPurchases(
     prisma.purchase.findMany({
       where: purchaseWhere(input),
       include: {
+        branch: true,
         supplier: true,
         payments: {
           include: {
@@ -709,17 +721,19 @@ export async function countPurchases(input: {
   search?: string;
   status?: PurchaseStatus | "all";
   supplierId?: string;
+  branchCode?: string;
 } = {}) {
   return withDatabaseError("countPurchases", () =>
     prisma.purchase.count({ where: purchaseWhere(input) })
   );
 }
 
-export async function getPurchaseById(id: string) {
+export async function getPurchaseById(id: string, branchCode?: string) {
   return withDatabaseError("getPurchaseById", () =>
-    prisma.purchase.findUnique({
-      where: { id },
+    prisma.purchase.findFirst({
+      where: { id, branchCode },
       include: {
+        branch: true,
         supplier: true,
         sourceCashExpense: { include: { movement: true } },
         createdBy: true,
@@ -758,14 +772,14 @@ export async function getPurchaseById(id: string) {
   );
 }
 
-export async function getPurchaseSummary() {
+export async function getPurchaseSummary(branchCode?: string) {
   return withDatabaseError("getPurchaseSummary", async () => {
     const today = todayDatabaseDate();
     const [drafts, pendingReceipts, pendingPayments, expiringLots] = await Promise.all([
-      prisma.purchase.count({ where: { status: "draft" } }),
-      prisma.purchase.count({ where: { status: { in: ["confirmed", "partially_received"] } } }),
+      prisma.purchase.count({ where: { branchCode, status: "draft" } }),
+      prisma.purchase.count({ where: { branchCode, status: { in: ["confirmed", "partially_received"] } } }),
       prisma.purchase.findMany({
-        where: { status: { notIn: ["draft", "cancelled"] } },
+        where: { branchCode, status: { notIn: ["draft", "cancelled"] } },
         select: {
           totalCents: true,
           payments: {
@@ -782,6 +796,7 @@ export async function getPurchaseSummary() {
       }),
       prisma.inventoryLot.count({
         where: {
+          branchCode,
           active: true,
           currentQuantity: { gt: 0 },
           expirationDate: {
@@ -839,10 +854,10 @@ export async function getPurchaseFormItems() {
   );
 }
 
-export async function getOpenPurchaseCashSessions() {
+export async function getOpenPurchaseCashSessions(branchCode?: string) {
   return withDatabaseError("getOpenPurchaseCashSessions", () =>
     prisma.cashSession.findMany({
-      where: { status: "open" },
+      where: { branchCode, status: "open" },
       select: {
         id: true,
         registerName: true,
@@ -859,6 +874,7 @@ export async function getInventoryLots(
     search?: string;
     status?: "available" | "expiring" | "expired" | "empty" | "all";
     itemId?: string;
+    branchCode?: string;
   } = {}
 ) {
   const pagination = getPagination(input);
@@ -879,6 +895,7 @@ export async function getInventoryLots(
     prisma.inventoryLot.findMany({
       where: {
         ...statusWhere,
+        branchCode: input.branchCode,
         itemId: input.itemId,
         AND: search
           ? {
@@ -910,13 +927,14 @@ export async function getInventoryLots(
   );
 }
 
-export async function getFefoInventoryLotIds() {
+export async function getFefoInventoryLotIds(branchCode = "el-alto") {
   return withDatabaseError("getFefoInventoryLotIds", async () => {
     const today = todayDatabaseDate();
     const rows = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT DISTINCT ON ("itemId") "id"
       FROM "InventoryLot"
       WHERE "active" = true
+        AND "branchCode" = ${branchCode}
         AND "currentQuantity" > 0
         AND ("expirationDate" IS NULL OR "expirationDate" >= ${today})
       ORDER BY "itemId", "expirationDate" ASC NULLS LAST, "createdAt" ASC
@@ -929,6 +947,7 @@ export async function countInventoryLots(input: {
   search?: string;
   status?: "available" | "expiring" | "expired" | "empty" | "all";
   itemId?: string;
+  branchCode?: string;
 } = {}) {
   const today = todayDatabaseDate();
   const threshold = new Date(today.getTime() + 60 * 86_400_000);
@@ -953,6 +972,7 @@ export async function countInventoryLots(input: {
     prisma.inventoryLot.count({
       where: {
         ...statusWhere,
+        branchCode: input.branchCode,
         itemId: input.itemId,
         AND: search
           ? {

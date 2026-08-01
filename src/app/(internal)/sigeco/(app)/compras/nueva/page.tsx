@@ -11,13 +11,15 @@ import {
 } from "@/modules/database/queries/purchases";
 import { requirePermission } from "@/modules/permissions";
 import { createPurchaseAction } from "@/features/purchases/actions";
+import { getBranchContext } from "@/features/branches/context";
 
 export default async function NewPurchasePage({
   searchParams
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requirePermission("purchases_write");
+  const user = await requirePermission("purchases_write");
+  const { activeBranch } = await getBranchContext(user);
   const query = await searchParams;
   const [suppliers, items, urgentExpenses] = await Promise.all([
     getActiveSuppliers(),
@@ -41,6 +43,7 @@ export default async function NewPurchasePage({
           urgentExpenses={urgentExpenses}
           idempotencyKey={randomUUID()}
           defaultDate={todayDateOnly()}
+          branchCode={activeBranch.code}
         />
       ) : (
         <div className="rounded-[9px] border border-warning/30 bg-warning/10 p-4 text-sm text-warning">

@@ -27,6 +27,7 @@ import {
   updateInventoryItemSchema,
   updateSupplierSchema
 } from "@/features/inventory/schemas/inventory.schema";
+import { getBranchContext } from "@/features/branches/context";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -50,6 +51,7 @@ export async function createInventoryItemAction(formData: FormData) {
         entityType: "inventory_item"
       },
       async (user) => {
+        const { activeBranch } = await getBranchContext(user);
         const parsed = createInventoryItemSchema.safeParse(parseFormData(formData));
 
         if (!parsed.success) {
@@ -60,7 +62,8 @@ export async function createInventoryItemAction(formData: FormData) {
           ...parsed.data,
           salePriceCents: inventoryMoneyToCents(parsed.data.salePrice),
           referenceCostCents: inventoryMoneyToCents(parsed.data.referenceCost),
-          userId: user.id
+          userId: user.id,
+          branchCode: activeBranch.code
         });
         return auditedResult(created, { entityId: created.id });
       }
@@ -271,6 +274,7 @@ export async function addInventoryEntryAction(formData: FormData) {
       entityId: itemId || undefined
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = inventoryEntrySchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -279,7 +283,8 @@ export async function addInventoryEntryAction(formData: FormData) {
 
       const movement = await addInventoryEntryRecord({
         ...parsed.data,
-        userId: user.id
+        userId: user.id,
+        branchCode: activeBranch.code
       });
       return auditedResult(movement, {
         entityId: parsed.data.itemId,
@@ -303,6 +308,7 @@ export async function createInventoryAdjustmentAction(formData: FormData) {
       entityId: itemId || undefined
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = inventoryAdjustmentSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -311,7 +317,8 @@ export async function createInventoryAdjustmentAction(formData: FormData) {
 
       const adjustment = await createInventoryAdjustmentRecord({
         ...parsed.data,
-        userId: user.id
+        userId: user.id,
+        branchCode: activeBranch.code
       });
       return auditedResult(adjustment, {
         entityId: parsed.data.itemId,

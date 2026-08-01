@@ -18,6 +18,7 @@ import {
   createSaleSchema,
   moneyToCents
 } from "@/features/sales/schemas/sale.schema";
+import { getBranchContext } from "@/features/branches/context";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -37,6 +38,7 @@ export async function createSaleAction(formData: FormData) {
       }
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const rawInput = parseFormData(formData);
       const parsed = createSaleSchema.safeParse(rawInput);
 
@@ -58,6 +60,7 @@ export async function createSaleAction(formData: FormData) {
           visitId: parsed.data.visitId,
           workItemId: parsed.data.workItemId,
           createdById: user.id,
+          branchCode: activeBranch.code,
           itemType: parsed.data.itemType,
           inventoryItemId: parsed.data.inventoryItemId,
           description: parsed.data.description,
@@ -121,6 +124,7 @@ export async function createPaymentAction(formData: FormData) {
       context: { workItemId: workItemId || undefined }
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = createPaymentSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -138,7 +142,8 @@ export async function createPaymentAction(formData: FormData) {
           paymentMethodCode: parsed.data.paymentMethodCode,
           reference: parsed.data.reference,
           notes: parsed.data.notes,
-          paidAt: parsed.data.paidAt
+          paidAt: parsed.data.paidAt,
+          branchCode: activeBranch.code
         });
       } catch (error) {
         const cashError = findCashWorkflowError(error);

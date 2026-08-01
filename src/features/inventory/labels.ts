@@ -12,7 +12,9 @@ export const inventoryMovementTypeLabels: Record<InventoryMovementType, string> 
   lot_adjustment: "Ajuste de lote",
   supplier_return: "Devolución a proveedor",
   patient_return: "Devolución de paciente",
-  correction: "Corrección"
+  correction: "Corrección",
+  transfer_out: "Salida por traslado",
+  transfer_in: "Entrada por traslado"
 };
 
 export const inventoryAlertStatusLabels: Record<InventoryAlertStatus, string> = {

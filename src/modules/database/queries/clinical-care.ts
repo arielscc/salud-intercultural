@@ -8,13 +8,16 @@ export type {
   UpsertClinicalConsultationRecordInput
 } from "@/modules/database/queries/clinical-records";
 
-export async function getConsultationVisits(input: PaginationInput = {}) {
+export async function getConsultationVisits(
+  input: PaginationInput & { branchCode?: string } = {}
+) {
   const pagination = getPagination(input);
 
   return withDatabaseError("getConsultationVisits", async () => {
     return prisma.visit.findMany({
       where: {
-        status: "in_consultation"
+        status: "in_consultation",
+        branchCode: input.branchCode
       },
       include: {
         patient: true,

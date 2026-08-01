@@ -11,11 +11,11 @@ import {
   cashSessionStatusLabels,
   cashShiftLabels
 } from "@/features/cash/labels";
-import { defaultCashBranch } from "@/features/cash/policy";
 import { formatMoney } from "@/features/sales/labels";
 import { formatDateOnly, formatDateTime } from "@/lib/dates";
 import { getCashSessionCloseReport } from "@/modules/database/queries/cash";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 type CashCloseReportPageProps = {
   params: Promise<{ sessionId: string }>;
@@ -28,9 +28,10 @@ function personName(person: { name: string | null; email: string } | null) {
 export default async function CashCloseReportPage({
   params
 }: CashCloseReportPageProps) {
-  await requirePermission("cash_sessions_read");
+  const user = await requirePermission("cash_sessions_read");
+  const { activeBranch } = await getBranchContext(user);
   const { sessionId } = await params;
-  const session = await getCashSessionCloseReport(sessionId);
+  const session = await getCashSessionCloseReport(sessionId, activeBranch.code);
 
   if (!session || session.status === "open") notFound();
 
@@ -60,7 +61,7 @@ export default async function CashCloseReportPage({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="font-sora text-lg font-bold">
-              {session.registerName} · {defaultCashBranch.name}
+              {session.registerName} · {session.branch.name}
             </p>
             <p className="mt-1 text-sm text-muted print:text-black">
               {formatDateOnly(session.businessDate)} ·{" "}

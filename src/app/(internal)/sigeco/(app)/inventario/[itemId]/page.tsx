@@ -35,6 +35,7 @@ import {
 } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
+import { getBranchContext } from "@/features/branches/context";
 
 const linkClassName =
   "focus-ring inline-flex min-h-10 items-center justify-center rounded-[9px] border border-border px-3 text-sm font-semibold text-text hover:text-primary-dark";
@@ -47,9 +48,10 @@ export default async function InventoryItemPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requirePermission("inventory_read");
+  const { activeBranch } = await getBranchContext(user);
   const { itemId } = await params;
   const query = await searchParams;
-  const item = await getInventoryItemById(itemId);
+  const item = await getInventoryItemById(itemId, activeBranch.code);
   if (!item) notFound();
 
   const canWrite = roleHasPermission(user.role, "inventory_write");

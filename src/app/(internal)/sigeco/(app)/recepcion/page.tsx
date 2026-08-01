@@ -37,6 +37,7 @@ import {
 } from "@/modules/database/queries/patients";
 import { countVisits, getVisits } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 import { CircleOff, ScanSearch, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 
@@ -202,6 +203,7 @@ export default async function ReceptionPage({
     vista === "pacientes"
       ? await requirePermission("patients_read")
       : await requirePermission("visits_read");
+  const { activeBranch } = await getBranchContext(user);
   const canReadDuplicates = roleHasPermission(
     user.role,
     "patient_duplicates_read"
@@ -227,6 +229,7 @@ export default async function ReceptionPage({
           checkedInTo: dateRange.end,
           originCity: cityFilter,
           originDepartment: departmentFilter,
+          branchCode: activeBranch.code,
         }),
         countVisits({
           status: statusFilter,
@@ -235,6 +238,7 @@ export default async function ReceptionPage({
           checkedInTo: dateRange.end,
           originCity: cityFilter,
           originDepartment: departmentFilter,
+          branchCode: activeBranch.code,
         }),
       ])
       : null;

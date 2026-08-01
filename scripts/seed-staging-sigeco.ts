@@ -88,6 +88,16 @@ async function seedQaUsers(basePassword: string, domain: string) {
       }
     });
 
+    await prisma.internalUserBranch.updateMany({
+      where: { userId: user.id },
+      data: { isDefault: false }
+    });
+    await prisma.internalUserBranch.upsert({
+      where: { userId_branchCode: { userId: user.id, branchCode: "el-alto" } },
+      create: { userId: user.id, branchCode: "el-alto", isDefault: true },
+      update: { isDefault: true }
+    });
+
     users.set(role, user.id);
   }
 

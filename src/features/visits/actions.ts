@@ -17,6 +17,7 @@ import {
   updateVisitStatusSchema,
   visitFlowSchema
 } from "@/features/visits/schemas/visit.schema";
+import { getBranchContext } from "@/features/branches/context";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -32,6 +33,7 @@ export async function createVisitAction(formData: FormData) {
       context: { patientId: patientId || undefined }
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = createVisitSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -40,7 +42,8 @@ export async function createVisitAction(formData: FormData) {
 
       const created = await createVisitRecord({
         ...parsed.data,
-        userId: user.id
+        userId: user.id,
+        branchCode: activeBranch.code
       });
       return auditedResult(created, {
         entityId: created.id,

@@ -31,6 +31,7 @@ import {
   getPurchaseById
 } from "@/modules/database/queries/purchases";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 const noticeMessages: Record<string, string> = {
   "compra-creada": "El borrador fue creado. Todavía no movió dinero ni stock.",
@@ -52,11 +53,12 @@ export default async function PurchaseDetailPage({
   searchParams: Promise<{ error?: string; aviso?: string }>;
 }) {
   const user = await requirePermission("purchases_read");
+  const { activeBranch } = await getBranchContext(user);
   const { purchaseId } = await params;
   const query = await searchParams;
   const [purchase, openSessions] = await Promise.all([
-    getPurchaseById(purchaseId),
-    getOpenPurchaseCashSessions()
+    getPurchaseById(purchaseId, activeBranch.code),
+    getOpenPurchaseCashSessions(activeBranch.code)
   ]);
   if (!purchase) notFound();
 
@@ -114,7 +116,7 @@ export default async function PurchaseDetailPage({
           <dl className="grid gap-3 sm:grid-cols-3">
             <InfoRow label="Proveedor" value={purchase.supplier.name} />
             <InfoRow label="Documento" value={purchase.documentNumber ?? "Sin documento"} />
-            <InfoRow label="Sucursal" value={purchase.branchCode === "el-alto" ? "El Alto" : purchase.branchCode} />
+            <InfoRow label="Sucursal" value={purchase.branch.name} />
             <InfoRow label="Moneda" value={purchase.currency} />
             <InfoRow
               label="Pago previsto"

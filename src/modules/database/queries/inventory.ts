@@ -3,6 +3,7 @@ import type {
   InventoryMovementType,
   Prisma
 } from "@/generated/prisma/client";
+import { randomUUID } from "node:crypto";
 import { todayDatabaseDate } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
@@ -249,17 +250,32 @@ export async function applyInventoryMovement(
     reason: string;
   }
 ) {
+  const branchCode = input.branchCode ?? "el-alto";
   await tx.$queryRaw`SELECT "id" FROM "InventoryItem" WHERE "id" = ${input.itemId} FOR UPDATE`;
   const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+
+  await tx.branchInventoryBalance.upsert({
+    where: { itemId_branchCode: { itemId: input.itemId, branchCode } },
+    create: { itemId: input.itemId, branchCode, currentStock: 0 },
+    update: {}
+  });
+  await tx.$queryRaw`
+    SELECT "itemId" FROM "BranchInventoryBalance"
+    WHERE "itemId" = ${input.itemId} AND "branchCode" = ${branchCode}
+    FOR UPDATE
+  `;
+  const balance = await tx.branchInventoryBalance.findUniqueOrThrow({
+    where: { itemId_branchCode: { itemId: input.itemId, branchCode } }
+  });
 
   if (!item.active) throw new InventoryCatalogError("inactive-item");
   if (input.type === "automatic_sale_exit" && item.usage === "internal_use") {
     throw new InventoryCatalogError("not-for-sale");
   }
 
-  const stockAfter = item.currentStock + input.quantityDelta;
+  const stockAfter = balance.currentStock + input.quantityDelta;
   if (stockAfter < 0) {
-    throw new InsufficientStockError(item.name, item.currentStock, Math.abs(input.quantityDelta));
+    throw new InsufficientStockError(item.name, balance.currentStock, Math.abs(input.quantityDelta));
   }
 
   if (input.type === "automatic_sale_exit" && input.quantityDelta < 0) {
@@ -267,6 +283,7 @@ export async function applyInventoryMovement(
     const allLotStock = await tx.inventoryLot.aggregate({
       where: {
         itemId: input.itemId,
+        branchCode,
         currentQuantity: { gt: 0 }
       },
       _sum: { currentQuantity: true }
@@ -274,6 +291,7 @@ export async function applyInventoryMovement(
     const lots = await tx.inventoryLot.findMany({
       where: {
         itemId: input.itemId,
+        branchCode,
         active: true,
         currentQuantity: { gt: 0 },
         OR: [{ expirationDate: null }, { expirationDate: { gte: today } }]
@@ -290,13 +308,13 @@ export async function applyInventoryMovement(
     );
     const legacyStock = Math.max(
       0,
-      item.currentStock - (allLotStock._sum.currentQuantity ?? 0)
+      balance.currentStock - (allLotStock._sum.currentQuantity ?? 0)
     );
     const usableStock = validLotStock + legacyStock;
     if (remaining > usableStock) {
       throw new InsufficientStockError(item.name, usableStock, remaining);
     }
-    let runningStock = item.currentStock;
+    let runningStock = balance.currentStock;
     let lastMovement = null;
 
     for (const lot of lots) {
@@ -342,22 +360,31 @@ export async function applyInventoryMovement(
           type: input.type,
           quantityDelta: -remaining,
           stockAfter: runningStock,
+          branchCode,
           reason: `${input.reason} · stock anterior sin lote`
         }
       });
     }
 
+    await tx.branchInventoryBalance.update({
+      where: { itemId_branchCode: { itemId: input.itemId, branchCode } },
+      data: { currentStock: stockAfter }
+    });
     await tx.inventoryItem.update({
       where: { id: input.itemId },
-      data: { currentStock: stockAfter }
+      data: { currentStock: { increment: input.quantityDelta } }
     });
     await syncLowStockAlert(tx, input.itemId);
     return lastMovement!;
   }
 
+  await tx.branchInventoryBalance.update({
+    where: { itemId_branchCode: { itemId: input.itemId, branchCode } },
+    data: { currentStock: stockAfter }
+  });
   await tx.inventoryItem.update({
     where: { id: input.itemId },
-    data: { currentStock: stockAfter }
+    data: { currentStock: { increment: input.quantityDelta } }
   });
 
   const movement = await tx.inventoryMovement.create({
@@ -376,7 +403,7 @@ export async function applyInventoryMovement(
       type: input.type,
       quantityDelta: input.quantityDelta,
       stockAfter,
-      branchCode: input.branchCode,
+      branchCode,
       locationCode: input.locationCode,
       reason: input.reason
     }
@@ -399,6 +426,7 @@ export async function createInventoryItemRecord(input: {
   minimumStock?: number;
   initialStock?: number;
   userId?: string;
+  branchCode?: string;
 }) {
   return withDatabaseError("createInventoryItemRecord", async () =>
     prisma.$transaction(async (tx) => {
@@ -428,6 +456,7 @@ export async function createInventoryItemRecord(input: {
         await applyInventoryMovement(tx, {
           itemId: item.id,
           userId: input.userId,
+          branchCode: input.branchCode,
           type: "entry",
           quantityDelta: input.initialStock,
           reason: "Stock inicial"
@@ -669,6 +698,7 @@ export async function addInventoryEntryRecord(input: {
   idempotencyKey?: string;
   itemId: string;
   userId?: string;
+  branchCode?: string;
   quantity: number;
   reason: string;
 }) {
@@ -684,6 +714,7 @@ export async function addInventoryEntryRecord(input: {
         idempotencyKey: input.idempotencyKey,
         itemId: input.itemId,
         userId: input.userId,
+        branchCode: input.branchCode,
         type: "entry",
         quantityDelta: input.quantity,
         reason: input.reason
@@ -696,6 +727,7 @@ export async function createInventoryAdjustmentRecord(input: {
   idempotencyKey?: string;
   itemId: string;
   userId?: string;
+  branchCode?: string;
   quantityDelta: number;
   reason: string;
 }) {
@@ -711,6 +743,7 @@ export async function createInventoryAdjustmentRecord(input: {
         data: {
           itemId: input.itemId,
           userId: input.userId,
+          branchCode: input.branchCode,
           quantityDelta: input.quantityDelta,
           reason: input.reason
         }
@@ -719,10 +752,113 @@ export async function createInventoryAdjustmentRecord(input: {
         idempotencyKey: input.idempotencyKey,
         itemId: input.itemId,
         userId: input.userId,
+        branchCode: input.branchCode,
         type: "authorized_manual_adjustment",
         quantityDelta: input.quantityDelta,
         reason: input.reason
       });
+    })
+  );
+}
+
+export class InventoryTransferError extends Error {
+  constructor(
+    public readonly code:
+      | "same-branch"
+      | "branch-not-active"
+      | "invalid-quantity"
+  ) {
+    super(code);
+    this.name = "InventoryTransferError";
+  }
+}
+
+export async function createInventoryTransferRecord(input: {
+  itemId: string;
+  sourceBranchCode: string;
+  destinationBranchCode: string;
+  quantity: number;
+  reason: string;
+  createdById: string;
+  idempotencyKey: string;
+}) {
+  return withDatabaseError("createInventoryTransferRecord", () =>
+    prisma.$transaction(async (tx) => {
+      const reused = await tx.inventoryTransfer.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+        include: { sourceMovement: true, destinationMovement: true }
+      });
+      if (reused) return reused;
+      if (input.sourceBranchCode === input.destinationBranchCode) {
+        throw new InventoryTransferError("same-branch");
+      }
+      if (!Number.isSafeInteger(input.quantity) || input.quantity <= 0) {
+        throw new InventoryTransferError("invalid-quantity");
+      }
+
+      const branches = await tx.clinicBranch.findMany({
+        where: {
+          code: { in: [input.sourceBranchCode, input.destinationBranchCode] },
+          status: "active"
+        },
+        select: { code: true }
+      });
+      if (branches.length !== 2) {
+        throw new InventoryTransferError("branch-not-active");
+      }
+
+      const sourceMovement = await applyInventoryMovement(tx, {
+        idempotencyKey: `transfer-out:${input.idempotencyKey}`,
+        itemId: input.itemId,
+        userId: input.createdById,
+        branchCode: input.sourceBranchCode,
+        type: "transfer_out",
+        quantityDelta: -input.quantity,
+        reason: `Traslado a ${input.destinationBranchCode}: ${input.reason}`
+      });
+      const destinationMovement = await applyInventoryMovement(tx, {
+        idempotencyKey: `transfer-in:${input.idempotencyKey}`,
+        itemId: input.itemId,
+        userId: input.createdById,
+        branchCode: input.destinationBranchCode,
+        type: "transfer_in",
+        quantityDelta: input.quantity,
+        reason: `Traslado desde ${input.sourceBranchCode}: ${input.reason}`
+      });
+
+      return tx.inventoryTransfer.create({
+        data: {
+          transferNumber: `TR-${todayDatabaseDate().toISOString().slice(0, 10).replaceAll("-", "")}-${randomUUID().slice(0, 8).toUpperCase()}`,
+          itemId: input.itemId,
+          sourceBranchCode: input.sourceBranchCode,
+          destinationBranchCode: input.destinationBranchCode,
+          quantity: input.quantity,
+          reason: input.reason,
+          createdById: input.createdById,
+          sourceMovementId: sourceMovement.id,
+          destinationMovementId: destinationMovement.id,
+          idempotencyKey: input.idempotencyKey
+        },
+        include: { sourceMovement: true, destinationMovement: true }
+      });
+    })
+  );
+}
+
+export async function getInventoryTransfers(branchCode?: string) {
+  return withDatabaseError("getInventoryTransfers", () =>
+    prisma.inventoryTransfer.findMany({
+      where: branchCode
+        ? { OR: [{ sourceBranchCode: branchCode }, { destinationBranchCode: branchCode }] }
+        : undefined,
+      include: {
+        item: true,
+        sourceBranch: true,
+        destinationBranch: true,
+        createdBy: { select: { id: true, name: true, email: true } }
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50
     })
   );
 }
@@ -732,14 +868,19 @@ export type InventoryListInput = PaginationInput & {
   category?: string;
   usage?: InventoryItemUsage | "all";
   status?: "active" | "inactive" | "all";
+  branchCode?: string;
 };
 
 export async function getInventoryItems(input: InventoryListInput = {}) {
   const pagination = getPagination(input);
-  return withDatabaseError("getInventoryItems", () =>
-    prisma.inventoryItem.findMany({
+  return withDatabaseError("getInventoryItems", async () => {
+    const items = await prisma.inventoryItem.findMany({
       where: inventoryListWhere(input),
       include: {
+        branchBalances: {
+          where: { branchCode: input.branchCode ?? "el-alto" },
+          select: { currentStock: true }
+        },
         supplierLinks: {
           where: { active: true, supplier: { active: true } },
           include: { supplier: true },
@@ -754,8 +895,12 @@ export async function getInventoryItems(input: InventoryListInput = {}) {
       orderBy: [{ active: "desc" }, { name: "asc" }],
       skip: pagination.skip,
       take: pagination.take
-    })
-  );
+    });
+    return items.map((item) => ({
+      ...item,
+      currentStock: item.branchBalances[0]?.currentStock ?? 0
+    }));
+  });
 }
 
 export async function countInventoryItems(input: Omit<InventoryListInput, keyof PaginationInput> = {}) {
@@ -775,11 +920,15 @@ export async function getInventoryCategories() {
   });
 }
 
-export async function getInventoryItemById(id: string) {
-  return withDatabaseError("getInventoryItemById", () =>
-    prisma.inventoryItem.findUnique({
+export async function getInventoryItemById(id: string, branchCode = "el-alto") {
+  return withDatabaseError("getInventoryItemById", async () => {
+    const item = await prisma.inventoryItem.findUnique({
       where: { id },
       include: {
+        branchBalances: {
+          where: { branchCode },
+          select: { currentStock: true }
+        },
         supplierLinks: {
           where: { active: true },
           include: { supplier: true },
@@ -792,6 +941,7 @@ export async function getInventoryItemById(id: string) {
         },
         alerts: { orderBy: { createdAt: "desc" }, take: 8 },
         movements: {
+          where: { branchCode },
           include: {
             user: true,
             purchase: { select: { id: true, purchaseNumber: true } },
@@ -801,8 +951,11 @@ export async function getInventoryItemById(id: string) {
           take: 30
         }
       }
-    })
-  );
+    });
+    return item
+      ? { ...item, currentStock: item.branchBalances[0]?.currentStock ?? 0 }
+      : null;
+  });
 }
 
 export async function getSuppliers(
@@ -898,31 +1051,33 @@ export async function getSupplierById(id: string) {
   );
 }
 
-export async function getLowStockItems() {
-  return withDatabaseError("getLowStockItems", () =>
-    prisma.inventoryItem.findMany({
-      where: {
-        active: true,
-        currentStock: { lte: prisma.inventoryItem.fields.minimumStock }
-      },
-      orderBy: [{ currentStock: "asc" }, { name: "asc" }],
-      take: 50
-    })
-  );
+export async function getLowStockItems(branchCode = "el-alto") {
+  return withDatabaseError("getLowStockItems", async () => {
+    const balances = await prisma.branchInventoryBalance.findMany({
+      where: { branchCode, item: { active: true } },
+      include: { item: true },
+      orderBy: { currentStock: "asc" }
+    });
+    return balances
+      .filter((balance) => balance.currentStock <= balance.item.minimumStock)
+      .slice(0, 50)
+      .map((balance) => ({ ...balance.item, currentStock: balance.currentStock }));
+  });
 }
 
-export async function getInventorySummary() {
+export async function getInventorySummary(branchCode = "el-alto") {
   return withDatabaseError("getInventorySummary", async () => {
-    const [totalItems, lowStock, openAlerts] = await Promise.all([
+    const [totalItems, balances] = await Promise.all([
       prisma.inventoryItem.count({ where: { active: true } }),
-      prisma.inventoryItem.count({
-        where: {
-          active: true,
-          currentStock: { lte: prisma.inventoryItem.fields.minimumStock }
-        }
-      }),
-      prisma.inventoryAlert.count({ where: { status: "open" } })
+      prisma.branchInventoryBalance.findMany({
+        where: { branchCode, item: { active: true } },
+        select: { currentStock: true, item: { select: { minimumStock: true } } }
+      })
     ]);
+    const lowStock = balances.filter(
+      (balance) => balance.currentStock <= balance.item.minimumStock
+    ).length;
+    const openAlerts = lowStock;
     return { totalItems, lowStock, openAlerts };
   });
 }

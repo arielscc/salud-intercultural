@@ -29,7 +29,8 @@ export function PurchaseDraftForm({
   items,
   urgentExpenses,
   idempotencyKey,
-  defaultDate
+  defaultDate,
+  branchCode
 }: {
   action: (formData: FormData) => void | Promise<void>;
   suppliers: Option[];
@@ -37,6 +38,7 @@ export function PurchaseDraftForm({
   urgentExpenses: ExpenseOption[];
   idempotencyKey: string;
   defaultDate: string;
+  branchCode: string;
 }) {
   const [draft, setDraft] = useState<SafePurchaseDraft>({
     version: 1,
@@ -96,7 +98,7 @@ export function PurchaseDraftForm({
     <form action={action} className="grid gap-4" encType="multipart/form-data">
       <input type="hidden" name="idempotencyKey" value={draft.idempotencyKey} />
       <input type="hidden" name="purchaseDate" value={draft.purchaseDate} />
-      <input type="hidden" name="branchCode" value="el-alto" />
+      <input type="hidden" name="branchCode" value={branchCode} />
       <input type="hidden" name="currency" value="BOB" />
 
       <Card>

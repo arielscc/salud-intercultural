@@ -5,6 +5,7 @@ import { InternalShell } from "@/components/internal/InternalShell";
 import { ConnectivityGuard } from "@/components/internal/ConnectivityGuard";
 import { Toaster } from "@/components/ui/sonner";
 import { requireInternalUser } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,9 @@ export default async function SigecoAppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireInternalUser();
+  const branchContext = await getBranchContext(user);
   return (
-    <InternalShell user={user}>
+    <InternalShell user={user} branchContext={branchContext}>
       <ConnectivityGuard />
       <DesktopBreadcrumb />
       {children}

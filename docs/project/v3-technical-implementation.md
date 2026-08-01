@@ -591,6 +591,9 @@ Detener `next dev` antes de `next build`; ambos comparten `.next`. Las migracion
   [Respuesta a incidentes](../operations/incident-response.md). Dirección ya
   aprobó la implementación de la Tarea 8; la autorización de producción sigue
   separada y bloqueada.
-- Compras, recepciones, inventario completo, reportes y multi-sucursal.
+- Multi-sucursal preparada localmente: El Alto activa, Cochabamba en
+  preparación, selector validado, Caja y stock aislados, traslados enlazados y
+  consolidado exclusivo de Dirección. Ver
+  [Operación multi-sucursal](../operations/multi-branch-operations.md).
 
 El orden técnico y funcional vigente vive en [Tasks de mejoras integrales](./sigeco-mejoras-integrales/tasks.md). Su estado se controla únicamente en [Progress](./sigeco-mejoras-integrales/progress.md).

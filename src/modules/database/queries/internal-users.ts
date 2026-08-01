@@ -1,6 +1,7 @@
 import type { InternalRole } from "@/generated/prisma/client";
 import { assignableInternalRoles } from "@/features/internal-auth/permissions";
 import { prisma } from "@/modules/database";
+import { defaultBranchCode } from "@/features/branches/policy";
 
 export type InternalUserManagementErrorCode =
   | "EMAIL_EXISTS"
@@ -53,6 +54,7 @@ export async function getManagedInternalUsers() {
   const now = new Date();
   return prisma.internalUser.findMany({
     include: {
+      branchAssignments: { include: { branch: true } },
       _count: {
         select: {
           sessions: { where: { expiresAt: { gt: now } } }
@@ -67,6 +69,7 @@ export async function getManagedInternalUserById(userId: string) {
   return prisma.internalUser.findUnique({
     where: { id: userId },
     include: {
+      branchAssignments: { include: { branch: true }, orderBy: { isDefault: "desc" } },
       sessions: {
         where: { expiresAt: { gt: new Date() } },
         orderBy: { createdAt: "desc" }
@@ -102,7 +105,10 @@ export async function createManagedInternalUser(input: {
       role: input.role,
       passwordHash: input.passwordHash,
       active: true,
-      mustChangePassword: true
+      mustChangePassword: true,
+      branchAssignments: {
+        create: { branchCode: defaultBranchCode, isDefault: true }
+      }
     }
   });
 }

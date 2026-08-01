@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  ArrowLeftRight,
   Bell,
   Boxes,
   Layers3,
@@ -37,6 +38,7 @@ import {
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
+import { getBranchContext } from "@/features/branches/context";
 
 type InventoryPageProps = {
   searchParams: Promise<{
@@ -53,6 +55,7 @@ const actionClassName =
 
 export default async function InventoryPage({ searchParams }: InventoryPageProps) {
   const user = await requirePermission("inventory_read");
+  const { activeBranch } = await getBranchContext(user);
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = 40;
@@ -77,11 +80,12 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     search: params.q,
     category: params.categoria,
     usage: selectedUsage,
-    status: canWrite || canReadCosts ? selectedStatus : ("active" as const)
+    status: canWrite || canReadCosts ? selectedStatus : ("active" as const),
+    branchCode: activeBranch.code
   };
   const [items, summary, totalItems, categories] = await Promise.all([
     getInventoryItems({ ...filters, page, pageSize }),
-    getInventorySummary(),
+    getInventorySummary(activeBranch.code),
     countInventoryItems(filters),
     getInventoryCategories()
   ]);
@@ -97,6 +101,12 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
               <Layers3 size={16} aria-hidden="true" />
               Lotes y vencimientos
             </Link>
+            {canWrite ? (
+              <Link className={actionClassName} href="/sigeco/inventario/traslados">
+                <ArrowLeftRight size={16} aria-hidden="true" />
+                Traslados
+              </Link>
+            ) : null}
             {canReadPurchases ? (
               <Link className={actionClassName} href="/sigeco/compras">
                 <ShoppingCart size={16} aria-hidden="true" />

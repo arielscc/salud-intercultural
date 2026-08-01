@@ -8,6 +8,7 @@ import { PurchaseReceiptForm } from "@/features/purchases/components/PurchaseRec
 import { getCashPersonnel } from "@/modules/database/queries/cash";
 import { getPurchaseById } from "@/modules/database/queries/purchases";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export default async function ReceivePurchasePage({
   params,
@@ -16,14 +17,16 @@ export default async function ReceivePurchasePage({
   params: Promise<{ purchaseId: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requirePermission("purchase_receipts_write");
+  const user = await requirePermission("purchase_receipts_write");
+  const { activeBranch } = await getBranchContext(user);
   const { purchaseId } = await params;
   const query = await searchParams;
   const [purchase, people] = await Promise.all([
-    getPurchaseById(purchaseId),
-    getCashPersonnel()
+    getPurchaseById(purchaseId, activeBranch.code),
+    getCashPersonnel(activeBranch.code)
   ]);
   if (!purchase) notFound();
+  if (purchase.branchCode !== activeBranch.code) notFound();
   if (!["confirmed", "partially_received"].includes(purchase.status)) {
     redirect(`/sigeco/compras/${purchase.id}?error=invalid-status`);
   }
@@ -48,6 +51,7 @@ export default async function ReceivePurchasePage({
         lines={pendingLines}
         people={people}
         idempotencyKey={randomUUID()}
+        branchCode={activeBranch.code}
       />
     </div>
   );

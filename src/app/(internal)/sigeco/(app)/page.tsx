@@ -30,6 +30,7 @@ import { getFollowUpWorkSummary } from "@/modules/database/queries/follow-ups";
 import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getReceptionDashboardSummary } from "@/modules/database/queries/reception";
 import { requireInternalUser } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 import { cn } from "@/lib/cn";
 
 const emptyArrivalsMessage = (
@@ -51,6 +52,7 @@ const operationalAreas: PatientRouteArea[] = [
 
 export default async function SigecoDashboardPage() {
   const user = await requireInternalUser();
+  const { activeBranch } = await getBranchContext(user);
   const canSeeReception = roleHasPermission(user.role, "visits_read");
   const canSeePatients = roleHasPermission(user.role, "patients_read");
   const canSeeFollowUps = roleHasPermission(user.role, "followups_read");
@@ -58,9 +60,9 @@ export default async function SigecoDashboardPage() {
   const canRegisterArrival = roleHasPermission(user.role, "visits_create");
 
   const [receptionSummary, followUpSummary, inventorySummary] = await Promise.all([
-    canSeeReception ? getReceptionDashboardSummary() : null,
+    canSeeReception ? getReceptionDashboardSummary(new Date(), activeBranch.code) : null,
     canSeeFollowUps ? getFollowUpWorkSummary(undefined, user.role) : null,
-    canSeeInventory ? getInventorySummary() : null
+    canSeeInventory ? getInventorySummary(activeBranch.code) : null
   ]);
 
   return (

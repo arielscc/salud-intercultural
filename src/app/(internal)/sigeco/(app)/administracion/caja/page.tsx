@@ -42,7 +42,6 @@ import {
   cashShiftLabels
 } from "@/features/cash/labels";
 import {
-  defaultCashBranch,
   defaultCashRegisterName,
   getCashCloseApprovalThresholdCents
 } from "@/features/cash/policy";
@@ -59,6 +58,7 @@ import {
   getCashPersonnel
 } from "@/modules/database/queries/cash";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 type CashPageProps = {
   searchParams: Promise<{
@@ -124,6 +124,7 @@ export default async function CashControlPage({
   searchParams
 }: CashPageProps) {
   const user = await requirePermission("cash_sessions_read");
+  const { activeBranch } = await getBranchContext(user);
   const query = await searchParams;
   const selectedType = movementTypes.includes(query.type as CashMovementType)
     ? (query.type as CashMovementType)
@@ -135,9 +136,10 @@ export default async function CashControlPage({
     getCashDashboard({
       sessionId: query.session,
       type: selectedType,
-      channel: selectedChannel
+      channel: selectedChannel,
+      branchCode: activeBranch.code
     }),
-    getCashPersonnel()
+    getCashPersonnel(activeBranch.code)
   ]);
   const session = dashboard.session;
   const authorizers = personnel.filter(
@@ -205,7 +207,7 @@ export default async function CashControlPage({
             description="Registra quién será responsable y cuánto efectivo existe antes del primer cobro."
           />
           <form action={openCashSessionAction} className="grid gap-3">
-            <input type="hidden" name="branchCode" value={defaultCashBranch.code} />
+            <input type="hidden" name="branchCode" value={activeBranch.code} />
             <input
               type="hidden"
               name="idempotencyKey"
@@ -215,7 +217,7 @@ export default async function CashControlPage({
               <Field label="Sucursal">
                 <input
                   className={internalInputClassName}
-                  value={defaultCashBranch.name}
+                  value={activeBranch.name}
                   readOnly
                 />
               </Field>
@@ -308,7 +310,7 @@ export default async function CashControlPage({
                   </Chip>
                 </div>
                 <p className="mt-1 text-sm text-muted">
-                  {defaultCashBranch.name} · {formatDateOnly(session.businessDate)} ·{" "}
+                  {activeBranch.name} · {formatDateOnly(session.businessDate)} ·{" "}
                   {cashShiftLabels[session.shift]}
                 </p>
                 <p className="mt-1 text-xs text-muted">

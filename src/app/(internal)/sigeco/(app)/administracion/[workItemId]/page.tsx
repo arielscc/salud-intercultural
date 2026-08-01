@@ -32,6 +32,7 @@ import { getInventoryItems } from "@/modules/database/queries/inventory";
 import { getAdministrationWorkItemById } from "@/modules/database/queries/sales";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 const saleItemTypeOptions = Object.entries(saleItemTypeLabels) as Array<[SaleItemType, string]>;
 
@@ -47,14 +48,21 @@ export default async function AdministrationWorkItemPage({
   searchParams
 }: AdministrationWorkItemPageProps) {
   const user = await requirePermission("sales_read");
+  const { activeBranch } = await getBranchContext(user);
   const { workItemId } = await params;
   const query = await searchParams;
   const [item, inventoryItems] = await Promise.all([
     getAdministrationWorkItemById(workItemId),
-    getInventoryItems({ pageSize: 100, status: "active", usage: "sale" })
+    getInventoryItems({
+      pageSize: 100,
+      status: "active",
+      usage: "sale",
+      branchCode: activeBranch.code
+    })
   ]);
 
   if (!item) notFound();
+  if (item.visit.branchCode !== activeBranch.code) notFound();
   const areaTiming = await getVisitAreaTimingState(item.visit.id);
 
   const patient = item.visit.patient;

@@ -968,6 +968,14 @@ Registrar una compra no aumenta stock. El stock cambia al confirmar la recepció
 - Dirección ve consolidado y detalle.
 - Cochabamba se prueba con datos sintéticos.
 
+**Implementación y operación:**
+
+- [Operación multi-sucursal](../../operations/multi-branch-operations.md).
+- [Reporte de la Tarea 28](../task-reports/2026-08-01-tarea-28-multi-sucursal-el-alto-cochabamba.md).
+- Modelos `ClinicBranch`, `InternalUserBranch`, `BranchInventoryBalance` e
+  `InventoryTransfer` en Prisma.
+- Selector global en `src/components/internal/BranchSelector.tsx`.
+
 **Commit sugerido:** `feat(sigeco): support multi-branch operations`
 
 ## Tarea 29 — Piloto Completo Con El Personal

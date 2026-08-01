@@ -32,6 +32,15 @@ async function main() {
         passwordChangedAt: new Date()
       }
     });
+    await prisma.internalUserBranch.updateMany({
+      where: { userId: existing.id },
+      data: { isDefault: false }
+    });
+    await prisma.internalUserBranch.upsert({
+      where: { userId_branchCode: { userId: existing.id, branchCode: "el-alto" } },
+      create: { userId: existing.id, branchCode: "el-alto", isDefault: true },
+      update: { isDefault: true }
+    });
     console.log("Internal super administrator updated.");
     return;
   }
@@ -44,7 +53,10 @@ async function main() {
       active: true,
       mustChangePassword: false,
       passwordChangedAt: new Date(),
-      name: "Super Administrador"
+      name: "Super Administrador",
+      branchAssignments: {
+        create: { branchCode: "el-alto", isDefault: true }
+      }
     }
   });
 

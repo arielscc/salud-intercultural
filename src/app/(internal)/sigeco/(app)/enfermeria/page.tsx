@@ -15,6 +15,7 @@ import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { nursingWorkItemStatusLabels } from "@/features/nursing/labels";
 import { getNursingWorkItems } from "@/modules/database/queries/nursing";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 const emptyNursingMessage = (
   <>
@@ -28,8 +29,12 @@ const emptyNursingMessage = (
 );
 
 export default async function NursingWorkQueuePage() {
-  await requirePermission("nursing_read");
-  const workItems = await getNursingWorkItems({ pageSize: 40 });
+  const user = await requirePermission("nursing_read");
+  const { activeBranch } = await getBranchContext(user);
+  const workItems = await getNursingWorkItems({
+    pageSize: 40,
+    branchCode: activeBranch.code
+  });
 
   return (
     <div className="grid gap-4">

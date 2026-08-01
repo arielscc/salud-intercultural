@@ -24,6 +24,7 @@ import {
 } from "@/modules/database/queries/purchases";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 type LotStatus = "available" | "expiring" | "expired" | "empty" | "all";
 
@@ -58,6 +59,7 @@ export default async function InventoryLotsPage({
   }>;
 }) {
   const user = await requirePermission("inventory_read");
+  const { activeBranch } = await getBranchContext(user);
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = 24;
@@ -71,7 +73,12 @@ export default async function InventoryLotsPage({
   const status = allowedStatuses.includes(params.estado ?? "all")
     ? (params.estado ?? "all")
     : "all";
-  const filters = { search: params.q, status, itemId: params.item };
+  const filters = {
+    search: params.q,
+    status,
+    itemId: params.item,
+    branchCode: activeBranch.code
+  };
   const canAdjust = roleHasPermission(user.role, "inventory_lot_adjust");
   const canReadCosts = roleHasPermission(user.role, "inventory_cost_read");
   const canReadPurchases = roleHasPermission(user.role, "purchases_read");
@@ -79,8 +86,8 @@ export default async function InventoryLotsPage({
   const [lots, total, fefoIds, personnel] = await Promise.all([
     getInventoryLots({ ...filters, page, pageSize }),
     countInventoryLots(filters),
-    getFefoInventoryLotIds(),
-    canAdjust ? getCashPersonnel() : Promise.resolve([])
+    getFefoInventoryLotIds(activeBranch.code),
+    canAdjust ? getCashPersonnel(activeBranch.code) : Promise.resolve([])
   ]);
   const authorizers = personnel.filter(
     (person) => person.role === "direccion" || person.role === "super_admin"

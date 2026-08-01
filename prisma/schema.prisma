@@ -18,6 +18,12 @@ enum InternalRole {
   seguimiento
 }
 
+enum ClinicBranchStatus {
+  active
+  preparation
+  inactive
+}
+
 enum InternalPermission {
   internal_access
   leads_read
@@ -620,6 +626,8 @@ enum InventoryMovementType {
   supplier_return
   patient_return
   correction
+  transfer_out
+  transfer_in
 }
 
 enum InventoryAlertStatus {
@@ -758,9 +766,56 @@ model InternalUser {
   configuredProfessionalProfiles ClinicalProfessionalProfile[]   @relation("ProfessionalProfileConfiguredBy")
   generatedDocuments             GeneratedDocument[]             @relation("GeneratedDocumentGeneratedBy")
   recordedAreaTimeEvents         VisitAreaTimeEvent[]            @relation("VisitAreaTimeEventRecordedBy")
+  branchAssignments              InternalUserBranch[]
+  createdInventoryTransfers      InventoryTransfer[]             @relation("InventoryTransferCreatedBy")
 
   @@index([role])
   @@index([active])
+}
+
+/// Sede física de la clínica. `preparation` permite configurar una nueva sede
+/// sin habilitar todavía operaciones reales ni mostrarla como seleccionable.
+model ClinicBranch {
+  code                 String                   @id
+  name                 String
+  city                 String
+  department           String
+  status               ClinicBranchStatus       @default(preparation)
+  openedAt             DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  userAssignments      InternalUserBranch[]
+  visits               Visit[]
+  sales                Sale[]
+  payments             Payment[]
+  cashMovements        CashMovement[]
+  cashSessions         CashSession[]
+  purchases            Purchase[]
+  purchasePayments     PurchasePayment[]
+  purchaseReceipts     PurchaseReceipt[]
+  inventoryLots        InventoryLot[]
+  inventoryMovements   InventoryMovement[]
+  inventoryAdjustments InventoryAdjustment[]
+  inventoryBalances    BranchInventoryBalance[]
+  outgoingTransfers    InventoryTransfer[]      @relation("InventoryTransferSourceBranch")
+  incomingTransfers    InventoryTransfer[]      @relation("InventoryTransferDestinationBranch")
+
+  @@index([status, name])
+}
+
+/// Una persona puede trabajar en varias sedes, pero solo una se marca como
+/// predeterminada para evitar registrar por accidente en la sucursal equivocada.
+model InternalUserBranch {
+  userId     String
+  branchCode String
+  isDefault  Boolean      @default(false)
+  assignedAt DateTime     @default(now())
+  user       InternalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch     ClinicBranch @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+
+  @@id([userId, branchCode])
+  @@index([branchCode, userId])
+  @@index([userId, isDefault])
 }
 
 model InternalSession {
@@ -1098,6 +1153,7 @@ model Visit {
   createdAt                 DateTime                      @default(now())
   updatedAt                 DateTime                      @updatedAt
   patient                   Patient                       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch                    ClinicBranch                  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   createdBy                 InternalUser?                 @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   checkIn                   ReceptionCheckIn?
   route                     PatientRoute?
@@ -1762,6 +1818,7 @@ model Sale {
   visitId            String?
   workItemId         String?
   createdById        String?
+  branchCode         String              @default("el-alto")
   status             SaleStatus          @default(pending)
   subtotalCents      Int                 @default(0)
   discountCents      Int                 @default(0)
@@ -1775,6 +1832,7 @@ model Sale {
   visit              Visit?              @relation(fields: [visitId], references: [id], onDelete: SetNull)
   workItem           VisitWorkItem?      @relation(fields: [workItemId], references: [id], onDelete: SetNull)
   createdBy          InternalUser?       @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  branch             ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   items              SaleItem[]
   payments           Payment[]
   deliveredProducts  DeliveredProduct[]
@@ -1787,6 +1845,7 @@ model Sale {
   @@index([visitId])
   @@index([workItemId])
   @@index([createdById])
+  @@index([branchCode, createdAt])
   @@index([status, createdAt])
   @@index([createdAt])
 }
@@ -1887,6 +1946,7 @@ model Payment {
   visitId        String?
   methodId       String
   receivedById   String?
+  branchCode     String         @default("el-alto")
   amountCents    Int
   reference      String?
   notes          String?
@@ -1897,6 +1957,7 @@ model Payment {
   visit          Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
   method         PaymentMethod  @relation(fields: [methodId], references: [id], onDelete: Restrict)
   receivedBy     InternalUser?  @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  branch         ClinicBranch   @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   cashMovements  CashMovement[]
 
   @@index([saleId])
@@ -1904,6 +1965,7 @@ model Payment {
   @@index([visitId])
   @@index([methodId])
   @@index([receivedById])
+  @@index([branchCode, paidAt])
   @@index([paidAt])
 }
 
@@ -1937,6 +1999,7 @@ model CashMovement {
   visitId            String?
   userId             String?
   authorizedById     String?
+  branchCode         String            @default("el-alto")
   originalMovementId String?
   idempotencyKey     String?           @unique
   type               CashMovementType  @default(income)
@@ -1954,6 +2017,7 @@ model CashMovement {
   visit              Visit?            @relation(fields: [visitId], references: [id], onDelete: SetNull)
   user               InternalUser?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   authorizedBy       InternalUser?     @relation("CashMovementAuthorizedBy", fields: [authorizedById], references: [id], onDelete: SetNull)
+  branch             ClinicBranch      @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   originalMovement   CashMovement?     @relation("CashMovementCorrections", fields: [originalMovementId], references: [id], onDelete: Restrict)
   corrections        CashMovement[]    @relation("CashMovementCorrections")
   expense            CashExpense?
@@ -1966,6 +2030,7 @@ model CashMovement {
   @@index([visitId])
   @@index([userId])
   @@index([authorizedById])
+  @@index([branchCode, occurredAt])
   @@index([originalMovementId])
   @@index([type, occurredAt])
 }
@@ -1999,6 +2064,7 @@ model CashSession {
   closeRequestedBy   InternalUser?               @relation("CashSessionCloseRequestedBy", fields: [closeRequestedById], references: [id], onDelete: Restrict)
   approvedBy         InternalUser?               @relation("CashSessionApprovedBy", fields: [approvedById], references: [id], onDelete: Restrict)
   closedBy           InternalUser?               @relation("CashSessionClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
+  branch             ClinicBranch                @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   movements          CashMovement[]
   expenses           CashExpense[]
   purchasePayments   PurchasePayment[]
@@ -2425,12 +2491,28 @@ model InventoryItem {
   receiptLines       PurchaseReceiptLine[]
   lots               InventoryLot[]
   lotAdjustments     InventoryLotAdjustment[]
+  branchBalances     BranchInventoryBalance[]
+  transfers          InventoryTransfer[]
 
   @@index([name])
   @@index([category])
   @@index([usage])
   @@index([active])
   @@index([currentStock])
+}
+
+/// Stock operativo separado por producto y sucursal. `InventoryItem.currentStock`
+/// se conserva como total compatible, pero las validaciones usan este saldo.
+model BranchInventoryBalance {
+  itemId       String
+  branchCode   String
+  currentStock Int           @default(0)
+  updatedAt    DateTime      @updatedAt
+  item         InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branch       ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+
+  @@id([itemId, branchCode])
+  @@index([branchCode, currentStock])
 }
 
 model InventoryItemSupplier {
@@ -2526,6 +2608,7 @@ model Purchase {
   createdBy             InternalUser          @relation("PurchaseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   confirmedBy           InternalUser?         @relation("PurchaseConfirmedBy", fields: [confirmedById], references: [id], onDelete: Restrict)
   cancelledBy           InternalUser?         @relation("PurchaseCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  branch                ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   lines                 PurchaseLine[]
   payments              PurchasePayment[]
   receipts              PurchaseReceipt[]
@@ -2566,6 +2649,7 @@ model PurchasePayment {
   cashSessionId  String?
   cashMovementId String?               @unique
   recordedById   String
+  branchCode     String                @default("el-alto")
   method         PurchasePaymentMethod
   amountCents    Int
   reference      String?
@@ -2576,10 +2660,12 @@ model PurchasePayment {
   cashSession    CashSession?          @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
   cashMovement   CashMovement?         @relation(fields: [cashMovementId], references: [id], onDelete: Restrict)
   recordedBy     InternalUser          @relation("PurchasePaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  branch         ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
   @@index([purchaseId, paidAt])
   @@index([cashSessionId])
   @@index([recordedById])
+  @@index([branchCode, paidAt])
 }
 
 model PurchaseReceipt {
@@ -2598,6 +2684,7 @@ model PurchaseReceipt {
   purchase       Purchase              @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
   recordedBy     InternalUser          @relation("PurchaseReceiptRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
   receivedBy     InternalUser          @relation("PurchaseReceiptReceivedBy", fields: [receivedById], references: [id], onDelete: Restrict)
+  branch         ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   lines          PurchaseReceiptLine[]
   lots           InventoryLot[]
   movements      InventoryMovement[]
@@ -2653,6 +2740,7 @@ model InventoryLot {
   purchase         Purchase                 @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
   purchaseLine     PurchaseLine             @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
   receipt          PurchaseReceipt          @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  branch           ClinicBranch             @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   receiptLine      PurchaseReceiptLine?
   movements        InventoryMovement[]
   adjustments      InventoryLotAdjustment[]
@@ -2713,35 +2801,38 @@ model PurchaseDocument {
 }
 
 model InventoryMovement {
-  id              String                  @id @default(cuid())
-  idempotencyKey  String?                 @unique
-  itemId          String
-  saleId          String?
-  saleItemId      String?
-  purchaseId      String?
-  purchaseLineId  String?
-  receiptId       String?
-  receiptLineId   String?                 @unique
-  lotId           String?
-  lotAdjustmentId String?                 @unique
-  userId          String?
-  type            InventoryMovementType
-  quantityDelta   Int
-  stockAfter      Int
-  branchCode      String?
-  locationCode    String?
-  reason          String
-  createdAt       DateTime                @default(now())
-  item            InventoryItem           @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  sale            Sale?                   @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  saleItem        SaleItem?               @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
-  purchase        Purchase?               @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
-  purchaseLine    PurchaseLine?           @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
-  receipt         PurchaseReceipt?        @relation(fields: [receiptId], references: [id], onDelete: Restrict)
-  receiptLine     PurchaseReceiptLine?    @relation(fields: [receiptLineId], references: [id], onDelete: Restrict)
-  lot             InventoryLot?           @relation(fields: [lotId], references: [id], onDelete: Restrict)
-  lotAdjustment   InventoryLotAdjustment? @relation(fields: [lotAdjustmentId], references: [id], onDelete: Restrict)
-  user            InternalUser?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id               String                  @id @default(cuid())
+  idempotencyKey   String?                 @unique
+  itemId           String
+  saleId           String?
+  saleItemId       String?
+  purchaseId       String?
+  purchaseLineId   String?
+  receiptId        String?
+  receiptLineId    String?                 @unique
+  lotId            String?
+  lotAdjustmentId  String?                 @unique
+  userId           String?
+  type             InventoryMovementType
+  quantityDelta    Int
+  stockAfter       Int
+  branchCode       String                  @default("el-alto")
+  locationCode     String?
+  reason           String
+  createdAt        DateTime                @default(now())
+  item             InventoryItem           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  sale             Sale?                   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  saleItem         SaleItem?               @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+  purchase         Purchase?               @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchaseLine     PurchaseLine?           @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
+  receipt          PurchaseReceipt?        @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  receiptLine      PurchaseReceiptLine?    @relation(fields: [receiptLineId], references: [id], onDelete: Restrict)
+  lot              InventoryLot?           @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  lotAdjustment    InventoryLotAdjustment? @relation(fields: [lotAdjustmentId], references: [id], onDelete: Restrict)
+  user             InternalUser?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch           ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  outgoingTransfer InventoryTransfer?      @relation("InventoryTransferOutMovement")
+  incomingTransfer InventoryTransfer?      @relation("InventoryTransferInMovement")
 
   @@index([itemId])
   @@index([saleId])
@@ -2751,6 +2842,7 @@ model InventoryMovement {
   @@index([receiptId])
   @@index([lotId])
   @@index([userId])
+  @@index([branchCode, createdAt])
   @@index([type, createdAt])
 }
 
@@ -2758,15 +2850,45 @@ model InventoryAdjustment {
   id            String        @id @default(cuid())
   itemId        String
   userId        String?
+  branchCode    String        @default("el-alto")
   quantityDelta Int
   reason        String
   createdAt     DateTime      @default(now())
   item          InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
   user          InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch        ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
   @@index([itemId])
   @@index([userId])
+  @@index([branchCode, createdAt])
   @@index([createdAt])
+}
+
+/// Traslado confirmado en una sola transacción: una salida y una entrada
+/// inseparables. Nunca se corrige borrando movimientos anteriores.
+model InventoryTransfer {
+  id                    String            @id @default(cuid())
+  transferNumber        String            @unique
+  itemId                String
+  sourceBranchCode      String
+  destinationBranchCode String
+  quantity              Int
+  reason                String
+  createdById           String
+  sourceMovementId      String            @unique
+  destinationMovementId String            @unique
+  idempotencyKey        String            @unique
+  createdAt             DateTime          @default(now())
+  item                  InventoryItem     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  sourceBranch          ClinicBranch      @relation("InventoryTransferSourceBranch", fields: [sourceBranchCode], references: [code], onDelete: Restrict)
+  destinationBranch     ClinicBranch      @relation("InventoryTransferDestinationBranch", fields: [destinationBranchCode], references: [code], onDelete: Restrict)
+  createdBy             InternalUser      @relation("InventoryTransferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  sourceMovement        InventoryMovement @relation("InventoryTransferOutMovement", fields: [sourceMovementId], references: [id], onDelete: Restrict)
+  destinationMovement   InventoryMovement @relation("InventoryTransferInMovement", fields: [destinationMovementId], references: [id], onDelete: Restrict)
+
+  @@index([sourceBranchCode, createdAt])
+  @@index([destinationBranchCode, createdAt])
+  @@index([itemId, createdAt])
 }
 
 model InventoryAlert {

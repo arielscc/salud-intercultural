@@ -44,12 +44,15 @@ function paymentCodeToCashChannel(code: string): CashChannel {
     : "other";
 }
 
-export async function getAdministrationWorkItems(input: PaginationInput = {}) {
+export async function getAdministrationWorkItems(
+  input: PaginationInput & { branchCode?: string } = {}
+) {
   const pagination = getPagination(input);
 
   return withDatabaseError("getAdministrationWorkItems", async () => {
     return prisma.visitWorkItem.findMany({
       where: {
+        visit: { branchCode: input.branchCode },
         area: "administracion",
         status: {
           in: ["pending", "acknowledged", "in_progress", "blocked"]
@@ -82,10 +85,11 @@ export async function getAdministrationWorkItems(input: PaginationInput = {}) {
   });
 }
 
-export async function getLatestPendingAdministrationWorkItem() {
+export async function getLatestPendingAdministrationWorkItem(branchCode?: string) {
   return withDatabaseError("getLatestPendingAdministrationWorkItem", async () => {
     return prisma.visitWorkItem.findFirst({
       where: {
+        visit: { branchCode },
         area: "administracion",
         status: { in: ["pending", "acknowledged", "in_progress", "blocked"] },
         OR: [{ sales: { none: {} } }, { sales: { some: { balanceCents: { gt: 0 } } } }]
@@ -144,6 +148,7 @@ export async function createSaleRecord(input: {
   visitId?: string;
   workItemId?: string;
   createdById?: string;
+  branchCode?: string;
   itemType: SaleItemType;
   inventoryItemId?: string;
   description: string;
@@ -170,9 +175,19 @@ export async function createSaleRecord(input: {
       const totalCents = Math.max(0, subtotalCents - discountCents);
       const initialPaymentCents = Math.min(input.initialPaymentCents ?? 0, totalCents);
       const status = getSaleStatus(totalCents, initialPaymentCents);
+      const visitBranch = input.visitId
+        ? await tx.visit.findUnique({
+            where: { id: input.visitId },
+            select: { branchCode: true }
+          })
+        : null;
+      const branchCode = visitBranch?.branchCode ?? input.branchCode ?? "el-alto";
+      if (visitBranch && input.branchCode && visitBranch.branchCode !== input.branchCode) {
+        throw new Error("BRANCH_MISMATCH");
+      }
       const cashSession =
         initialPaymentCents > 0
-          ? await getOpenCashSessionForOperation(tx)
+          ? await getOpenCashSessionForOperation(tx, branchCode)
           : null;
 
       const sale = await tx.sale.create({
@@ -182,6 +197,7 @@ export async function createSaleRecord(input: {
           visitId: input.visitId,
           workItemId: input.workItemId,
           createdById: input.createdById,
+          branchCode,
           status,
           subtotalCents,
           discountCents,
@@ -209,6 +225,7 @@ export async function createSaleRecord(input: {
           saleId: sale.id,
           saleItemId: sale.items[0]?.id,
           userId: input.createdById,
+          branchCode,
           type: "automatic_sale_exit",
           quantityDelta: -input.quantity,
           reason: `Salida automática por venta ${sale.id}`
@@ -238,6 +255,7 @@ export async function createSaleRecord(input: {
             visitId: input.visitId,
             methodId: method.id,
             receivedById: input.createdById,
+            branchCode,
             amountCents: initialPaymentCents,
             reference: input.paymentReference
           }
@@ -254,6 +272,7 @@ export async function createSaleRecord(input: {
             patientId: input.patientId,
             visitId: input.visitId,
             userId: input.createdById,
+            branchCode,
             type: "income",
             channel: paymentCodeToCashChannel(
               input.paymentMethodCode ?? "cash"
@@ -288,6 +307,7 @@ export async function createPaymentRecord(input: {
   reference?: string;
   notes?: string;
   paidAt?: Date;
+  branchCode?: string;
 }) {
   return withDatabaseError("createPaymentRecord", async () => {
     return prisma.$transaction(async (tx) => {
@@ -301,11 +321,14 @@ export async function createPaymentRecord(input: {
       const sale = await tx.sale.findUniqueOrThrow({
         where: { id: input.saleId }
       });
+      if (input.branchCode && sale.branchCode !== input.branchCode) {
+        throw new Error("BRANCH_MISMATCH");
+      }
       const amountCents = Math.min(input.amountCents, sale.balanceCents);
       if (amountCents <= 0) {
         throw new CashWorkflowError("invalid_amount");
       }
-      const cashSession = await getOpenCashSessionForOperation(tx);
+      const cashSession = await getOpenCashSessionForOperation(tx, sale.branchCode);
       const paidCents = sale.paidCents + amountCents;
       const balanceCents = Math.max(0, sale.totalCents - paidCents);
       const method = await ensurePaymentMethod(tx, input.paymentMethodCode);
@@ -318,6 +341,7 @@ export async function createPaymentRecord(input: {
           visitId: sale.visitId,
           methodId: method.id,
           receivedById: input.receivedById,
+          branchCode: sale.branchCode,
           amountCents,
           reference: input.reference,
           notes: input.notes,
@@ -345,6 +369,7 @@ export async function createPaymentRecord(input: {
           patientId: sale.patientId,
           visitId: sale.visitId,
           userId: input.receivedById,
+          branchCode: sale.branchCode,
           type: "income",
           channel: paymentCodeToCashChannel(input.paymentMethodCode),
           amountCents,
@@ -415,23 +440,23 @@ export async function getPatientSales(patientId: string) {
   });
 }
 
-export async function getSalesSummary(date = new Date()) {
+export async function getSalesSummary(date = new Date(), branchCode?: string) {
   return withDatabaseError("getSalesSummary", async () => {
     const today = dayRange(date);
     const month = monthRange(date);
     const [todaySales, monthSales, pendingSales] = await Promise.all([
       prisma.sale.aggregate({
-        where: { createdAt: { gte: today.start, lt: today.end } },
+        where: { branchCode, createdAt: { gte: today.start, lt: today.end } },
         _sum: { totalCents: true, paidCents: true },
         _count: true
       }),
       prisma.sale.aggregate({
-        where: { createdAt: { gte: month.start, lt: month.end } },
+        where: { branchCode, createdAt: { gte: month.start, lt: month.end } },
         _sum: { totalCents: true, paidCents: true },
         _count: true
       }),
       prisma.sale.aggregate({
-        where: { status: { in: ["pending", "partial"] } },
+        where: { branchCode, status: { in: ["pending", "partial"] } },
         _sum: { balanceCents: true },
         _count: true
       })

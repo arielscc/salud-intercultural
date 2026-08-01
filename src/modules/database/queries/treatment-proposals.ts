@@ -198,11 +198,12 @@ export async function recordTreatmentProposalOutcome(
   });
 }
 
-export async function getTreatmentProposalOutcomeSummary(now = new Date()) {
+export async function getTreatmentProposalOutcomeSummary(now = new Date(), branchCode?: string) {
   return withDatabaseError("getTreatmentProposalOutcomeSummary", async () => {
     const range = monthRange(now);
     const outcomes = await prisma.treatmentProposalOutcome.findMany({
       where: {
+        visit: { branchCode },
         decidedAt: { gte: range.start, lt: range.end },
         supersededBy: null
       },

@@ -1,4 +1,5 @@
 import {
+  Building2,
   Boxes,
   ClipboardList,
   FileSignature,
@@ -62,6 +63,12 @@ export const sigecoNavItems: SigecoNavItem[] = [
     href: "/sigeco/reportes/tiempos",
     label: "Tiempos",
     icon: Timer,
+    permission: "reports_read"
+  },
+  {
+    href: "/sigeco/sucursales",
+    label: "Sucursales",
+    icon: Building2,
     permission: "reports_read"
   },
   { href: "/sigeco/auditoria", label: "Auditoría", icon: ShieldCheck, permission: "audit_read" },

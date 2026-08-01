@@ -46,6 +46,7 @@ import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { getPrescriptionDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 const orderTypeOptions = (Object.entries(clinicalOrderTypeLabels) as Array<
   [ClinicalOrderType, string]
@@ -112,6 +113,7 @@ export default async function ConsultationDetailPage({
   searchParams
 }: ConsultationDetailPageProps) {
   const user = await requirePermission("clinical_read");
+  const { activeBranch } = await getBranchContext(user);
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
   const [visit, prescriptionDocuments, areaTiming] = await Promise.all([
     getClinicalVisitById(visitId),
@@ -120,6 +122,7 @@ export default async function ConsultationDetailPage({
   ]);
 
   if (!visit) notFound();
+  if (visit.branchCode !== activeBranch.code) notFound();
 
   const primaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "primary");
   const secondaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "secondary");

@@ -78,18 +78,20 @@ export function PurchaseReceiptForm({
   purchaseId,
   lines,
   people,
-  idempotencyKey
+  idempotencyKey,
+  branchCode
 }: {
   action: (formData: FormData) => void | Promise<void>;
   purchaseId: string;
   lines: PendingLine[];
   people: Array<{ id: string; name: string | null; email: string }>;
   idempotencyKey: string;
+  branchCode: string;
 }) {
   return (
     <form action={action} className="grid gap-4" encType="multipart/form-data">
       <input type="hidden" name="purchaseId" value={purchaseId} />
-      <input type="hidden" name="branchCode" value="el-alto" />
+      <input type="hidden" name="branchCode" value={branchCode} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <Card>
         <CardHeader

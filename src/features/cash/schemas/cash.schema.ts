@@ -15,7 +15,7 @@ const identifier = z.string().trim().min(1).max(120);
 const reason = z.string().trim().min(3).max(300);
 
 export const openCashSessionSchema = z.object({
-  branchCode: z.literal("el-alto"),
+  branchCode: z.string().trim().regex(/^[a-z0-9-]{2,80}$/),
   registerName: z.string().trim().min(2).max(80),
   businessDate: z.string().date(),
   shift: z.enum(["morning", "afternoon", "full_day", "other"]),

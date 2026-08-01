@@ -36,6 +36,7 @@ import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { requirePermission } from "@/modules/permissions";
 import { Clock3, MapPin, Phone } from "lucide-react";
 import { notFound } from "next/navigation";
+import { getBranchContext } from "@/features/branches/context";
 
 const statusOptions = (
   Object.entries(visitStatusLabels) as Array<[VisitStatus, string]>
@@ -55,6 +56,7 @@ type VisitDetailPageProps = {
 
 export default async function VisitDetailPage({ params, searchParams }: VisitDetailPageProps) {
   const user = await requirePermission("visits_read");
+  const { activeBranch } = await getBranchContext(user);
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const [visit, areaTiming] = await Promise.all([
     getVisitById(id),
@@ -62,6 +64,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
   ]);
 
   if (!visit) notFound();
+  if (visit.branchCode !== activeBranch.code) notFound();
 
   const isActive = isActiveVisitStatus(visit.status);
   const canRecordDiscontinuation = roleHasPermission(

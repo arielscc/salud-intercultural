@@ -19,6 +19,7 @@ export type PatientJourneyFilters = {
 
 function visitWhere(input: PatientJourneyFilters): Prisma.VisitWhereInput {
   const where: Prisma.VisitWhereInput = {
+    isTestData: false,
     checkedInAt:
       input.from || input.to
         ? { gte: input.from, lt: input.to }
@@ -191,11 +192,13 @@ export async function getPatientJourneyFilterOptions() {
       }),
       prisma.visit.groupBy({
         by: ["originCity"],
+        where: { isTestData: false },
         _count: { _all: true },
         orderBy: { originCity: "asc" }
       }),
       prisma.visit.groupBy({
         by: ["branchCode"],
+        where: { isTestData: false },
         _count: { _all: true },
         orderBy: { branchCode: "asc" }
       })

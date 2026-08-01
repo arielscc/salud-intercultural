@@ -21,6 +21,7 @@ import { recordDuplicateCandidatesInTransaction } from "@/modules/database/queri
 export type ReceptionIntakeRecordInput = {
   idempotencyKey?: string;
   userId?: string;
+  branchCode?: string;
   patientId?: string;
   patient: {
     fullName: string;
@@ -123,6 +124,7 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
         idempotencyKey: input.idempotencyKey,
         patientId,
         userId: input.userId,
+        branchCode: input.branchCode,
         note: "Llegada registrada en recepción",
         ...input.visit
       });
@@ -180,31 +182,32 @@ const dashboardRouteAreas: PatientRouteArea[] = [
   "cierre"
 ];
 
-export async function getReceptionDashboardSummary(date = new Date()) {
+export async function getReceptionDashboardSummary(date = new Date(), branchCode?: string) {
   const day = dayRange(date);
 
   return withDatabaseError("getReceptionDashboardSummary", async () => {
     const [todayPatients, activeGroups, abandonmentEvents, latestArrivals] = await Promise.all([
       prisma.visit.findMany({
-        where: { checkedInAt: { gte: day.start, lt: day.end } },
+        where: { branchCode, checkedInAt: { gte: day.start, lt: day.end } },
         distinct: ["patientId"],
         select: { patientId: true }
       }),
       prisma.patientRoute.groupBy({
         by: ["currentArea"],
-        where: { active: true },
+        where: { active: true, visit: { branchCode } },
         _count: { _all: true }
       }),
       prisma.visitStatusHistory.findMany({
         where: {
           toStatus: "left_without_care",
+          visit: { branchCode },
           createdAt: { gte: day.start, lt: day.end }
         },
         distinct: ["visitId"],
         select: { visitId: true }
       }),
       prisma.visit.findMany({
-        where: { checkedInAt: { gte: day.start, lt: day.end } },
+        where: { branchCode, checkedInAt: { gte: day.start, lt: day.end } },
         include: { patient: true, route: true },
         orderBy: { checkedInAt: "desc" },
         take: 8

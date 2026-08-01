@@ -28,6 +28,7 @@ import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { getNursingWorkItemById } from "@/modules/database/queries/nursing";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 const workItemStatusOptions = (["acknowledged", "in_progress", "completed", "blocked"] as VisitWorkItemStatus[]).map(
   (status) => [status, nursingWorkItemStatusLabels[status]] as [VisitWorkItemStatus, string]
@@ -42,11 +43,13 @@ type NursingWorkItemPageProps = {
 
 export default async function NursingWorkItemPage({ params, searchParams }: NursingWorkItemPageProps) {
   const user = await requirePermission("nursing_read");
+  const { activeBranch } = await getBranchContext(user);
   const { workItemId } = await params;
   const query = await searchParams;
   const item = await getNursingWorkItemById(workItemId);
 
   if (!item) notFound();
+  if (item.visit.branchCode !== activeBranch.code) notFound();
   const areaTiming = await getVisitAreaTimingState(item.visit.id);
 
   const patient = item.visit.patient;

@@ -110,6 +110,7 @@ function positivePage(value?: string) {
 
 function branchLabel(value: string) {
   if (value === "el-alto") return "El Alto";
+  if (value === "cochabamba") return "Cochabamba";
   return value.replaceAll("-", " ");
 }
 

@@ -21,6 +21,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Encuestas y reclamos | En progreso | Piloto manual con enlace privado, casos críticos, responsable, plazo y tendencias. |
 | Móvil y conectividad lenta | En progreso | Bloqueo offline, reintentos idempotentes, borrador seguro y contingencia implementados localmente. |
 | Integración Payload-SIGECO | En progreso | Campañas en Payload, copia técnica en SIGECO y métricas agregadas con privacidad implementadas localmente. |
+| Multi-sucursal | En progreso | El Alto activa, Cochabamba en preparación y operación, Caja y stock aislados localmente. |
 | Abandono y pendientes | En progreso | Punto, motivo, área y pendientes conservados; tareas abiertas quedan bloqueadas y recuperables. |
 | Versiones y firma clínica | En progreso | Borrador, cierre, autor y correcciones comparables implementados en desarrollo local. |
 | Compras y lotes | En progreso | Compra, pago, recepción parcial, costo histórico, lote y stock enlazados localmente. |

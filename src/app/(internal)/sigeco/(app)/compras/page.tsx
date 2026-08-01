@@ -30,6 +30,7 @@ import {
 } from "@/modules/database/queries/purchases";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 const statuses = [
   "draft",
@@ -57,6 +58,7 @@ export default async function PurchasesPage({
   }>;
 }) {
   const user = await requirePermission("purchases_read");
+  const { activeBranch } = await getBranchContext(user);
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = 30;
@@ -67,12 +69,13 @@ export default async function PurchasesPage({
   const filters = {
     search: params.q,
     status,
-    supplierId: params.proveedor
+    supplierId: params.proveedor,
+    branchCode: activeBranch.code
   };
   const [purchases, total, summary, suppliers] = await Promise.all([
     getPurchases({ ...filters, page, pageSize }),
     countPurchases(filters),
-    getPurchaseSummary(),
+    getPurchaseSummary(activeBranch.code),
     getActiveSuppliers()
   ]);
   const canWrite = roleHasPermission(user.role, "purchases_write");

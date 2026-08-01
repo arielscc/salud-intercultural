@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-27 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-28 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las treinta y seis migraciones actuales están
-aplicadas en desarrollo. Falta validar las veinticuatro
+anteriores están en staging y las treinta y ocho migraciones actuales están
+aplicadas en desarrollo. Falta validar las veintiséis
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -42,13 +42,16 @@ pago, Caja, compras y stock reutilizan claves para no duplicar operaciones.
 Payload ya conserva las campañas editables; SIGECO recibe identificadores,
 mantiene una copia técnica y solo devuelve métricas agregadas con supresión de
 grupos pequeños.
+El Alto ya opera como sede activa en el modelo local y Cochabamba está
+configurada en preparación. Usuarios, colas, Caja, compras y stock quedan
+aislados por sede sin duplicar el expediente del paciente.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 2 |
-| En progreso | 26 |
+| Pendiente | 1 |
+| En progreso | 27 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -61,7 +64,7 @@ grupos pequeños.
 | 2. Datos y flujo | 9-17 | En progreso | Recorrido clínico íntegro y auditable |
 | 3. Caja e inventario | 18-21 | En progreso | Caja, compra y stock reconcilian |
 | 4. Medición y continuidad | 22-27 | En progreso | Indicadores reconciliados y móvil validado |
-| 5. Expansión y piloto | 28-29 | Pendiente | Piloto de El Alto aprobado |
+| 5. Expansión y piloto | 28-29 | En progreso | Multi-sucursal local; piloto con personal pendiente |
 
 ## Estado Por Tarea
 
@@ -94,7 +97,7 @@ grupos pequeños.
 | 25 | Encuestas y reclamos | P2 | En progreso | 9, 24, piloto manual |
 | 26 | Móvil y conectividad lenta | P1 | En progreso | 2, 5, 13, 18, 20 |
 | 27 | Integración Payload-SIGECO | P2 | En progreso | 3, 5, 9, 11, 22 |
-| 28 | Multi-sucursal | P1 | Pendiente | 10, 18-20, 22, 26 |
+| 28 | Multi-sucursal | P1 | En progreso | 10, 18-20, 22, 26 |
 | 29 | Piloto completo con personal | P0 | Pendiente | Módulos del despliegue |
 
 ## Próximo Trabajo
@@ -1465,6 +1468,47 @@ Responsables: Marketing y TI.
 - No migrar ni habilitar producción sin aviso y autorización.
 
 **Commit sugerido:** `feat(sigeco): integrate campaign attribution safely`
+
+## 2026-08-01 — Tarea 28 — Multi-Sucursal El Alto Y Cochabamba
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección.
+
+### Resultado
+
+- El Alto quedó activa y Cochabamba preparada, sin habilitar operación real.
+- Paciente único con visitas, colas, Caja, ventas, pagos y compras por sede.
+- Usuarios con una o varias sucursales y una activa predeterminada.
+- Selector global confirmado, visible también en móvil.
+- Stock por producto y sede; traslados con salida y entrada enlazadas.
+- Dirección dispone de detalle y consolidado; roles operativos no.
+- La prueba sintética de Cochabamba no contamina indicadores reales.
+
+### Archivos Y Migraciones
+
+- Modelos y consultas multi-sucursal en Prisma y módulos de base de datos.
+- Pantallas `/sigeco/sucursales` e `/sigeco/inventario/traslados`.
+- Migraciones `20260801185354_multi_branch_el_alto_cochabamba` y
+  `20260801190000_multi_branch_transfer_append_only`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local; staging y producción no fueron modificados.
+- 38 migraciones locales al día y seed sintético de Cochabamba aprobado.
+- Prisma, TypeScript, pruebas enfocadas y diff check aprobados.
+- Integración completa, build y QA gstack permanecen acumulados para Tarea 29.
+
+### Pendientes
+
+- Aplicar y probar en staging con todos los roles.
+- Confirmar responsables, stock físico y fecha de apertura.
+- Pedir autorización antes de migrar o activar producción.
+
+**Commit sugerido:** `feat(sigeco): support multi-branch operations`
 
 ## Cómo Actualizar El Progreso
 
