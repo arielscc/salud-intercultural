@@ -5,6 +5,7 @@ const validTransfer = {
   itemId: "item-1",
   sourceBranchCode: "el-alto",
   destinationBranchCode: "cochabamba",
+  destinationLocationCode: "Estante CBBA-2",
   quantity: "4",
   reason: "Preparar inventario de apertura",
   idempotencyKey: "7f00b7d2-b563-4bf2-9ee6-b1d8fc6f7a57"

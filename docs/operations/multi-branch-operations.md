@@ -55,6 +55,16 @@ Un traslado confirmado crea, dentro de una sola transacción:
 2. una entrada por la misma cantidad en la sucursal de destino;
 3. un registro que enlaza ambos movimientos, producto, responsable y motivo.
 
+Cuando las unidades pertenecen a uno o varios lotes, SIGECO utiliza primero el
+lote vigente que vence antes. Descuenta esas unidades del lote de origen y crea
+en la sede destino un lote enlazado que conserva el mismo número de partida,
+proveedor, costo y fecha de vencimiento. La persona que registra el traslado
+debe indicar la nueva ubicación física, por ejemplo `Estante CBBA-2`.
+
+El stock histórico que todavía no tiene lote también puede trasladarse, pero se
+identifica claramente como `stock anterior sin lote`; el sistema no inventa
+una fecha de vencimiento para esas unidades.
+
 El traslado es append-only: no se edita ni se borra. Si hay un error, se debe
 registrar un traslado compensatorio. Mientras Cochabamba esté en preparación,
 el formulario de traslado permanece bloqueado.

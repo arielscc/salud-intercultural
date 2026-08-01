@@ -2718,32 +2718,34 @@ model PurchaseReceiptLine {
 }
 
 model InventoryLot {
-  id               String                   @id @default(cuid())
-  internalLotCode  String                   @unique
-  itemId           String
-  supplierId       String
-  purchaseId       String
-  purchaseLineId   String
-  receiptId        String
-  batchNumber      String?
-  expirationDate   DateTime?                @db.Date
-  branchCode       String
-  locationCode     String
-  receivedQuantity Int
-  currentQuantity  Int
-  unitCostCents    Int
-  active           Boolean                  @default(true)
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
-  item             InventoryItem            @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  supplier         Supplier                 @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-  purchase         Purchase                 @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
-  purchaseLine     PurchaseLine             @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
-  receipt          PurchaseReceipt          @relation(fields: [receiptId], references: [id], onDelete: Restrict)
-  branch           ClinicBranch             @relation(fields: [branchCode], references: [code], onDelete: Restrict)
-  receiptLine      PurchaseReceiptLine?
-  movements        InventoryMovement[]
-  adjustments      InventoryLotAdjustment[]
+  id                          String                           @id @default(cuid())
+  internalLotCode             String                           @unique
+  itemId                      String
+  supplierId                  String
+  purchaseId                  String
+  purchaseLineId              String
+  receiptId                   String
+  batchNumber                 String?
+  expirationDate              DateTime?                        @db.Date
+  branchCode                  String
+  locationCode                String
+  receivedQuantity            Int
+  currentQuantity             Int
+  unitCostCents               Int
+  active                      Boolean                          @default(true)
+  createdAt                   DateTime                         @default(now())
+  updatedAt                   DateTime                         @updatedAt
+  item                        InventoryItem                    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  supplier                    Supplier                         @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchase                    Purchase                         @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchaseLine                PurchaseLine                     @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
+  receipt                     PurchaseReceipt                  @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  branch                      ClinicBranch                     @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  receiptLine                 PurchaseReceiptLine?
+  movements                   InventoryMovement[]
+  adjustments                 InventoryLotAdjustment[]
+  outgoingTransferAllocations InventoryTransferLotAllocation[] @relation("InventoryTransferSourceLot")
+  incomingTransferAllocation  InventoryTransferLotAllocation?  @relation("InventoryTransferDestinationLot")
 
   @@index([itemId, branchCode, locationCode, expirationDate])
   @@index([supplierId])
@@ -2867,28 +2869,47 @@ model InventoryAdjustment {
 /// Traslado confirmado en una sola transacción: una salida y una entrada
 /// inseparables. Nunca se corrige borrando movimientos anteriores.
 model InventoryTransfer {
-  id                    String            @id @default(cuid())
-  transferNumber        String            @unique
+  id                    String                           @id @default(cuid())
+  transferNumber        String                           @unique
   itemId                String
   sourceBranchCode      String
   destinationBranchCode String
   quantity              Int
   reason                String
   createdById           String
-  sourceMovementId      String            @unique
-  destinationMovementId String            @unique
-  idempotencyKey        String            @unique
-  createdAt             DateTime          @default(now())
-  item                  InventoryItem     @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  sourceBranch          ClinicBranch      @relation("InventoryTransferSourceBranch", fields: [sourceBranchCode], references: [code], onDelete: Restrict)
-  destinationBranch     ClinicBranch      @relation("InventoryTransferDestinationBranch", fields: [destinationBranchCode], references: [code], onDelete: Restrict)
-  createdBy             InternalUser      @relation("InventoryTransferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  sourceMovement        InventoryMovement @relation("InventoryTransferOutMovement", fields: [sourceMovementId], references: [id], onDelete: Restrict)
-  destinationMovement   InventoryMovement @relation("InventoryTransferInMovement", fields: [destinationMovementId], references: [id], onDelete: Restrict)
+  sourceMovementId      String                           @unique
+  destinationMovementId String                           @unique
+  idempotencyKey        String                           @unique
+  createdAt             DateTime                         @default(now())
+  item                  InventoryItem                    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  sourceBranch          ClinicBranch                     @relation("InventoryTransferSourceBranch", fields: [sourceBranchCode], references: [code], onDelete: Restrict)
+  destinationBranch     ClinicBranch                     @relation("InventoryTransferDestinationBranch", fields: [destinationBranchCode], references: [code], onDelete: Restrict)
+  createdBy             InternalUser                     @relation("InventoryTransferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  sourceMovement        InventoryMovement                @relation("InventoryTransferOutMovement", fields: [sourceMovementId], references: [id], onDelete: Restrict)
+  destinationMovement   InventoryMovement                @relation("InventoryTransferInMovement", fields: [destinationMovementId], references: [id], onDelete: Restrict)
+  lotAllocations        InventoryTransferLotAllocation[]
 
   @@index([sourceBranchCode, createdAt])
   @@index([destinationBranchCode, createdAt])
   @@index([itemId, createdAt])
+}
+
+/// Parte de un traslado que conserva el lote físico, su costo y vencimiento.
+/// El lote de destino es una nueva existencia de la misma partida en otra sede.
+model InventoryTransferLotAllocation {
+  id               String            @id @default(cuid())
+  transferId       String
+  sourceLotId      String
+  destinationLotId String            @unique
+  quantity         Int
+  createdAt        DateTime          @default(now())
+  transfer         InventoryTransfer @relation(fields: [transferId], references: [id], onDelete: Restrict)
+  sourceLot        InventoryLot      @relation("InventoryTransferSourceLot", fields: [sourceLotId], references: [id], onDelete: Restrict)
+  destinationLot   InventoryLot      @relation("InventoryTransferDestinationLot", fields: [destinationLotId], references: [id], onDelete: Restrict)
+
+  @@unique([transferId, sourceLotId])
+  @@index([sourceLotId, createdAt])
+  @@index([transferId])
 }
 
 model InventoryAlert {

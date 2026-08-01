@@ -777,6 +777,7 @@ export async function createInventoryTransferRecord(input: {
   itemId: string;
   sourceBranchCode: string;
   destinationBranchCode: string;
+  destinationLocationCode: string;
   quantity: number;
   reason: string;
   createdById: string;
@@ -786,7 +787,11 @@ export async function createInventoryTransferRecord(input: {
     prisma.$transaction(async (tx) => {
       const reused = await tx.inventoryTransfer.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
-        include: { sourceMovement: true, destinationMovement: true }
+        include: {
+          sourceMovement: true,
+          destinationMovement: true,
+          lotAllocations: { include: { sourceLot: true, destinationLot: true } }
+        }
       });
       if (reused) return reused;
       if (input.sourceBranchCode === input.destinationBranchCode) {
@@ -805,6 +810,111 @@ export async function createInventoryTransferRecord(input: {
       });
       if (branches.length !== 2) {
         throw new InventoryTransferError("branch-not-active");
+      }
+
+      await tx.$queryRaw`SELECT "id" FROM "InventoryItem" WHERE "id" = ${input.itemId} FOR UPDATE`;
+      await tx.branchInventoryBalance.upsert({
+        where: {
+          itemId_branchCode: {
+            itemId: input.itemId,
+            branchCode: input.sourceBranchCode
+          }
+        },
+        create: {
+          itemId: input.itemId,
+          branchCode: input.sourceBranchCode,
+          currentStock: 0
+        },
+        update: {}
+      });
+      await tx.$queryRaw`
+        SELECT "itemId" FROM "BranchInventoryBalance"
+        WHERE "itemId" = ${input.itemId}
+          AND "branchCode" = ${input.sourceBranchCode}
+        FOR UPDATE
+      `;
+
+      const reusedAfterLock = await tx.inventoryTransfer.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+        include: {
+          sourceMovement: true,
+          destinationMovement: true,
+          lotAllocations: { include: { sourceLot: true, destinationLot: true } }
+        }
+      });
+      if (reusedAfterLock) return reusedAfterLock;
+
+      const sourceBalance = await tx.branchInventoryBalance.findUniqueOrThrow({
+        where: {
+          itemId_branchCode: {
+            itemId: input.itemId,
+            branchCode: input.sourceBranchCode
+          }
+        }
+      });
+      const today = todayDatabaseDate();
+      const allLotStock = await tx.inventoryLot.aggregate({
+        where: {
+          itemId: input.itemId,
+          branchCode: input.sourceBranchCode,
+          currentQuantity: { gt: 0 }
+        },
+        _sum: { currentQuantity: true }
+      });
+      const sourceLots = await tx.inventoryLot.findMany({
+        where: {
+          itemId: input.itemId,
+          branchCode: input.sourceBranchCode,
+          active: true,
+          currentQuantity: { gt: 0 },
+          OR: [{ expirationDate: null }, { expirationDate: { gte: today } }]
+        },
+        orderBy: [
+          { expirationDate: { sort: "asc", nulls: "last" } },
+          { createdAt: "asc" }
+        ]
+      });
+      const validLotStock = sourceLots.reduce(
+        (total, lot) => total + lot.currentQuantity,
+        0
+      );
+      const legacyStock = Math.max(
+        0,
+        sourceBalance.currentStock - (allLotStock._sum.currentQuantity ?? 0)
+      );
+      const transferableStock = Math.min(
+        sourceBalance.currentStock,
+        validLotStock + legacyStock
+      );
+      if (input.quantity > transferableStock) {
+        const item = await tx.inventoryItem.findUniqueOrThrow({
+          where: { id: input.itemId },
+          select: { name: true }
+        });
+        throw new InsufficientStockError(
+          item.name,
+          transferableStock,
+          input.quantity
+        );
+      }
+
+      let remaining = input.quantity;
+      const lotAllocations: Array<{
+        sourceLot: (typeof sourceLots)[number];
+        quantity: number;
+      }> = [];
+      for (const sourceLot of sourceLots) {
+        if (remaining === 0) break;
+        const quantity = Math.min(sourceLot.currentQuantity, remaining);
+        await tx.inventoryLot.update({
+          where: { id: sourceLot.id },
+          data: {
+            currentQuantity: { decrement: quantity },
+            active: sourceLot.currentQuantity - quantity > 0
+          }
+        });
+        lotAllocations.push({ sourceLot, quantity });
+        remaining -= quantity;
       }
 
       const sourceMovement = await applyInventoryMovement(tx, {
@@ -826,7 +936,7 @@ export async function createInventoryTransferRecord(input: {
         reason: `Traslado desde ${input.sourceBranchCode}: ${input.reason}`
       });
 
-      return tx.inventoryTransfer.create({
+      const transfer = await tx.inventoryTransfer.create({
         data: {
           transferNumber: `TR-${todayDatabaseDate().toISOString().slice(0, 10).replaceAll("-", "")}-${randomUUID().slice(0, 8).toUpperCase()}`,
           itemId: input.itemId,
@@ -838,8 +948,44 @@ export async function createInventoryTransferRecord(input: {
           sourceMovementId: sourceMovement.id,
           destinationMovementId: destinationMovement.id,
           idempotencyKey: input.idempotencyKey
-        },
-        include: { sourceMovement: true, destinationMovement: true }
+        }
+      });
+
+      for (const allocation of lotAllocations) {
+        const destinationLot = await tx.inventoryLot.create({
+          data: {
+            internalLotCode: `${allocation.sourceLot.internalLotCode}-${input.destinationBranchCode.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}`,
+            itemId: allocation.sourceLot.itemId,
+            supplierId: allocation.sourceLot.supplierId,
+            purchaseId: allocation.sourceLot.purchaseId,
+            purchaseLineId: allocation.sourceLot.purchaseLineId,
+            receiptId: allocation.sourceLot.receiptId,
+            batchNumber: allocation.sourceLot.batchNumber,
+            expirationDate: allocation.sourceLot.expirationDate,
+            branchCode: input.destinationBranchCode,
+            locationCode: input.destinationLocationCode,
+            receivedQuantity: allocation.quantity,
+            currentQuantity: allocation.quantity,
+            unitCostCents: allocation.sourceLot.unitCostCents
+          }
+        });
+        await tx.inventoryTransferLotAllocation.create({
+          data: {
+            transferId: transfer.id,
+            sourceLotId: allocation.sourceLot.id,
+            destinationLotId: destinationLot.id,
+            quantity: allocation.quantity
+          }
+        });
+      }
+
+      return tx.inventoryTransfer.findUniqueOrThrow({
+        where: { id: transfer.id },
+        include: {
+          sourceMovement: true,
+          destinationMovement: true,
+          lotAllocations: { include: { sourceLot: true, destinationLot: true } }
+        }
       });
     })
   );
@@ -855,7 +1001,11 @@ export async function getInventoryTransfers(branchCode?: string) {
         item: true,
         sourceBranch: true,
         destinationBranch: true,
-        createdBy: { select: { id: true, name: true, email: true } }
+        createdBy: { select: { id: true, name: true, email: true } },
+        lotAllocations: {
+          include: { sourceLot: true, destinationLot: true },
+          orderBy: { createdAt: "asc" }
+        }
       },
       orderBy: { createdAt: "desc" },
       take: 50

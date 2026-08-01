@@ -1483,7 +1483,8 @@ Responsable: Dirección.
 - Paciente único con visitas, colas, Caja, ventas, pagos y compras por sede.
 - Usuarios con una o varias sucursales y una activa predeterminada.
 - Selector global confirmado, visible también en móvil.
-- Stock por producto y sede; traslados con salida y entrada enlazadas.
+- Stock por producto y sede; traslados con salida y entrada enlazadas. Los lotes
+  trasladados conservan partida, costo y vencimiento en la sede destino.
 - Dirección dispone de detalle y consolidado; roles operativos no.
 - La prueba sintética de Cochabamba no contamina indicadores reales.
 
@@ -1493,14 +1494,17 @@ Responsable: Dirección.
 - Pantallas `/sigeco/sucursales` e `/sigeco/inventario/traslados`.
 - Migraciones `20260801185354_multi_branch_el_alto_cochabamba` y
   `20260801190000_multi_branch_transfer_append_only`.
+- Migración `20260801210000_inventory_transfer_lot_traceability` para enlazar
+  lotes físicos entre origen y destino.
 - Guía operativa y reporte de cambios de la tarea.
 
 ### Validación
 
 - Ambiente local; staging y producción no fueron modificados.
-- 38 migraciones locales al día y seed sintético de Cochabamba aprobado.
-- Prisma, TypeScript, pruebas enfocadas y diff check aprobados.
-- Integración completa, build y QA gstack permanecen acumulados para Tarea 29.
+- 40 migraciones locales al día y seed sintético de Cochabamba aprobado.
+- 356 pruebas unitarias, 53 integraciones, lint, TypeScript, seguridad y build
+  aprobados en la revisión acumulada de gstack.
+- El QA visual y el piloto con el personal permanecen en la Tarea 29.
 
 ### Pendientes
 

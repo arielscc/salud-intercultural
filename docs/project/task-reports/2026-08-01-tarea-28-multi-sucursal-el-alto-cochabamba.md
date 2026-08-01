@@ -13,7 +13,8 @@ Fecha: 2026-08-01. Entorno modificado: desarrollo local.
 - Ventas, pagos, movimientos de Caja, compras y movimientos de stock guardan
   obligatoriamente su sucursal.
 - Stock separado mediante saldos por producto y sede.
-- Traslados con salida y entrada atómicas, enlazadas y append-only.
+- Traslados con salida y entrada atómicas, enlazadas y append-only. Si existe
+  lote, también trasladan la cantidad, partida, costo, vencimiento y ubicación.
 - Comparativo y consolidado exclusivo para Dirección y super administrador.
 - Datos sintéticos de Cochabamba separados de los resultados reales.
 
@@ -23,7 +24,9 @@ Fecha: 2026-08-01. Entorno modificado: desarrollo local.
   saldos, traslados y completa la sucursal histórica de forma controlada.
 - `20260801190000_multi_branch_transfer_append_only` protege los traslados
   contra edición y borrado.
-- 38 migraciones locales al día.
+- `20260801210000_inventory_transfer_lot_traceability` enlaza el lote de origen
+  con el nuevo registro físico de la sucursal destino.
+- 40 migraciones locales al día.
 - El Alto fue asignada como predeterminada a las cuentas existentes.
 - La validación sintética idempotente de Cochabamba fue ejecutada localmente.
 
@@ -41,15 +44,17 @@ Fecha: 2026-08-01. Entorno modificado: desarrollo local.
 
 - Prisma format, validate, generate y migraciones locales: aprobados.
 - TypeScript: aprobado.
-- Política, permisos consolidados y esquema de traslados: 11 pruebas enfocadas
-  aprobadas junto con los esquemas de Caja y compras.
+- 356 pruebas unitarias y 53 pruebas de integración: aprobadas.
+- Lint, TypeScript, control de dependencias, gate local de seguridad y build de
+  producción local: aprobados.
+- El traslado de prueba conserva lote, vencimiento y costo, y una repetición
+  con la misma clave no duplica el stock destino.
 - Seed sintético local de Cochabamba: aprobado.
 - `git diff --check`: aprobado.
 
 ## Pendientes Antes De Producción
 
-- Ejecutar integración completa, lint global, build y QA gstack acumulado en la
-  Tarea 29, tal como fue acordado.
+- Completar el QA visual de gstack y el piloto con el personal en la Tarea 29.
 - Aplicar migraciones y seed de usuarios en staging.
 - Probar cambio de sede, Caja, compra, venta y traslado con todos los roles.
 - Confirmar conteo físico, responsables y fecha real de apertura.
@@ -57,4 +62,4 @@ Fecha: 2026-08-01. Entorno modificado: desarrollo local.
 
 ## Commit Sugerido
 
-`feat(sigeco): support multi-branch operations`
+`fix(inventario): conservar lotes en traslados entre sucursales`

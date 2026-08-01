@@ -5,11 +5,16 @@ import {
   createInventoryItemRecord,
   createInventoryTransferRecord
 } from "@/modules/database/queries/inventory";
+import {
+  confirmPurchaseRecord,
+  createPurchaseDraftRecord,
+  createPurchaseReceiptRecord
+} from "@/modules/database/queries/purchases";
 
 describe("multi-branch operations", () => {
   beforeEach(async () => {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "InventoryTransfer", "InventoryMovement", "BranchInventoryBalance", "InventoryAdjustment", "InventoryAlert", "InventoryItemCatalogVersion", "InventoryItem", "Visit", "Patient", "InternalSession", "InternalUser" CASCADE'
+      'TRUNCATE TABLE "InventoryTransferLotAllocation", "InventoryTransfer", "InventoryMovement", "BranchInventoryBalance", "InventoryAdjustment", "InventoryAlert", "PurchaseReceiptLine", "InventoryLot", "PurchaseReceipt", "PurchasePayment", "PurchaseLine", "Purchase", "InventoryItemCatalogVersion", "SupplierVersion", "InventoryItemSupplier", "InventoryItem", "Supplier", "Visit", "Patient", "InternalSession", "InternalUser" CASCADE'
     );
     await prisma.clinicBranch.update({
       where: { code: "cochabamba" },
@@ -44,6 +49,7 @@ describe("multi-branch operations", () => {
       itemId: item.id,
       sourceBranchCode: "el-alto",
       destinationBranchCode: "cochabamba",
+      destinationLocationCode: "Depósito general",
       quantity: 4,
       reason: "Validación de apertura",
       createdById: user.id,
@@ -65,6 +71,114 @@ describe("multi-branch operations", () => {
     expect(currentItem.currentStock).toBe(10);
     expect(transfer.sourceMovement.type).toBe("transfer_out");
     expect(transfer.destinationMovement.type).toBe("transfer_in");
+  });
+
+  it("moves the physical batch and preserves its expiration at the destination", async () => {
+    const user = await prisma.internalUser.create({
+      data: {
+        email: "branch-lot-transfer@example.invalid",
+        passwordHash: "not-used-in-integration-test",
+        role: "administracion"
+      }
+    });
+    const supplier = await prisma.supplier.create({
+      data: { name: "Proveedor de lotes" }
+    });
+    const item = await createInventoryItemRecord({
+      internalCode: "BRANCH-LOT-1",
+      name: "Producto con lote",
+      branchCode: "el-alto",
+      userId: user.id
+    });
+    const purchase = await createPurchaseDraftRecord({
+      supplierId: supplier.id,
+      branchCode: "el-alto",
+      purchaseDate: new Date("2026-08-01T00:00:00.000Z"),
+      currency: "BOB",
+      intendedPaymentMethod: "credit",
+      idempotencyKey: "f4bb2c37-c62f-4639-9d7d-d54ff6d12961",
+      createdById: user.id,
+      lines: [
+        { itemId: item.id, orderedQuantity: 10, unitCostCents: 1_250 }
+      ]
+    });
+    await confirmPurchaseRecord({
+      purchaseId: purchase.id,
+      expectedRevision: 1,
+      confirmedById: user.id,
+      paymentIdempotencyKey: "08e3ab30-523d-454a-93d9-b5a0874b095d"
+    });
+    const purchaseLine = await prisma.purchaseLine.findFirstOrThrow({
+      where: { purchaseId: purchase.id }
+    });
+    await createPurchaseReceiptRecord({
+      purchaseId: purchase.id,
+      branchCode: "el-alto",
+      locationCode: "Estante LP-1",
+      receivedAt: new Date("2026-08-01T15:00:00.000Z"),
+      receivedById: user.id,
+      recordedById: user.id,
+      idempotencyKey: "fcb9f04a-a148-4894-91bf-c96356717325",
+      lines: [
+        {
+          purchaseLineId: purchaseLine.id,
+          quantity: 10,
+          unitCostCents: 1_250,
+          batchNumber: "FAB-2026-08",
+          expirationDate: new Date("2027-03-31T00:00:00.000Z")
+        }
+      ]
+    });
+    const sourceLotBefore = await prisma.inventoryLot.findFirstOrThrow({
+      where: { itemId: item.id, branchCode: "el-alto" }
+    });
+
+    const transfer = await createInventoryTransferRecord({
+      itemId: item.id,
+      sourceBranchCode: "el-alto",
+      destinationBranchCode: "cochabamba",
+      destinationLocationCode: "Estante CBBA-2",
+      quantity: 4,
+      reason: "Apertura de la nueva sucursal",
+      createdById: user.id,
+      idempotencyKey: "f8a8db83-4e71-41a9-b635-eed8bf4f3c02"
+    });
+    const replay = await createInventoryTransferRecord({
+      itemId: item.id,
+      sourceBranchCode: "el-alto",
+      destinationBranchCode: "cochabamba",
+      destinationLocationCode: "Estante CBBA-2",
+      quantity: 4,
+      reason: "Apertura de la nueva sucursal",
+      createdById: user.id,
+      idempotencyKey: "f8a8db83-4e71-41a9-b635-eed8bf4f3c02"
+    });
+
+    const [sourceLotAfter, destinationLots] = await Promise.all([
+      prisma.inventoryLot.findUniqueOrThrow({ where: { id: sourceLotBefore.id } }),
+      prisma.inventoryLot.findMany({
+        where: { itemId: item.id, branchCode: "cochabamba" }
+      })
+    ]);
+    expect(replay.id).toBe(transfer.id);
+    expect(sourceLotAfter.currentQuantity).toBe(6);
+    expect(destinationLots).toHaveLength(1);
+    expect(destinationLots[0]).toMatchObject({
+      batchNumber: "FAB-2026-08",
+      locationCode: "Estante CBBA-2",
+      currentQuantity: 4,
+      receivedQuantity: 4,
+      unitCostCents: 1_250
+    });
+    expect(destinationLots[0]?.expirationDate?.toISOString()).toBe(
+      "2027-03-31T00:00:00.000Z"
+    );
+    expect(transfer.lotAllocations).toHaveLength(1);
+    expect(transfer.lotAllocations[0]).toMatchObject({
+      sourceLotId: sourceLotBefore.id,
+      destinationLotId: destinationLots[0]?.id,
+      quantity: 4
+    });
   });
 
   it("keeps synthetic Cochabamba visits outside the real consolidated result", async () => {

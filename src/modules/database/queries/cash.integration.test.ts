@@ -15,7 +15,7 @@ async function cleanCash() {
   await prisma.$executeRawUnsafe(
     'TRUNCATE TABLE "CashExpenseBeneficiary", "CashExpense", "CashSessionReconciliation", "CashMovement", "CashSession" CASCADE'
   );
-  await prisma.auditEvent.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "AuditEvent" CASCADE');
   await prisma.internalSession.deleteMany();
   await prisma.internalUser.deleteMany();
 }
