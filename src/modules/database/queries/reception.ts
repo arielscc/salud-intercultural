@@ -19,6 +19,7 @@ import {
 import { recordDuplicateCandidatesInTransaction } from "@/modules/database/queries/patient-duplicates";
 
 export type ReceptionIntakeRecordInput = {
+  idempotencyKey?: string;
   userId?: string;
   patientId?: string;
   patient: {
@@ -60,6 +61,27 @@ export type ReceptionIntakeRecordInput = {
 export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
   return withDatabaseError("createReceptionIntake", async () => {
     return prisma.$transaction(async (tx) => {
+      const reused = input.idempotencyKey
+        ? await tx.visit.findUnique({
+            where: { idempotencyKey: input.idempotencyKey },
+            include: {
+              attribution: {
+                include: {
+                  campaign: true,
+                  touches: { include: { source: true } }
+                }
+              }
+            }
+          })
+        : null;
+      if (reused?.attribution) {
+        return {
+          patientId: reused.patientId,
+          visit: reused,
+          attribution: reused.attribution
+        };
+      }
+
       let patientId = input.patientId;
       const {
         captureSource,
@@ -98,6 +120,7 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
       }
 
       const visit = await createVisitInTransaction(tx, {
+        idempotencyKey: input.idempotencyKey,
         patientId,
         userId: input.userId,
         note: "Llegada registrada en recepción",

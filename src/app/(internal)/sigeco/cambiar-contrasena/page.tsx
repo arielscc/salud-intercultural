@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import { PasswordChangeForm } from "@/components/internal/PasswordChangeForm";
-import { logoutInternalUser } from "@/features/internal-auth/actions";
+import { LogoutForm } from "@/components/internal/LogoutForm";
 import { requireInternalSession } from "@/modules/permissions";
 
 type ForcedPasswordPageProps = {
@@ -30,11 +30,10 @@ export default async function ForcedPasswordPage({ searchParams }: ForcedPasswor
           </div>
         </div>
         <PasswordChangeForm returnTo="forced" error={query.error} />
-        <form action={logoutInternalUser} className="mt-4 border-t border-border pt-4 text-center">
-          <button type="submit" className="text-sm font-semibold text-muted hover:text-text">
-            Cerrar sesión
-          </button>
-        </form>
+        <LogoutForm
+          variant="text"
+          className="mt-4 border-t border-border pt-4 text-center"
+        />
       </section>
     </main>
   );

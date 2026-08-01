@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
 /*
@@ -31,6 +32,21 @@ export function NoticeForm({ action, notice, children, ...props }: NoticeFormPro
   return (
     <form {...props} action={formAction}>
       {children}
+      <NoticeFormStatus saved={Boolean(doneAt)} />
     </form>
+  );
+}
+
+function NoticeFormStatus({ saved }: { saved: boolean }) {
+  const { pending } = useFormStatus();
+  if (!pending && !saved) return null;
+  return (
+    <p
+      className="text-xs font-medium text-muted"
+      role="status"
+      aria-live="polite"
+    >
+      {pending ? "Guardando…" : "Guardado y confirmado en SIGECO"}
+    </p>
   );
 }

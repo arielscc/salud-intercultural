@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import type { SaleItemType } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
@@ -158,6 +159,7 @@ export default async function AdministrationWorkItemPage({
             />
             {generatedSale.balanceCents > 0 ? (
               <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
+                <input type="hidden" name="idempotencyKey" value={randomUUID()} />
                 <input type="hidden" name="saleId" value={generatedSale.id} />
                 <input type="hidden" name="workItemId" value={item.id} />
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -183,6 +185,7 @@ export default async function AdministrationWorkItemPage({
             description="Detalla el concepto, calcula el importe y registra el cobro inicial."
           />
           <form action={createSaleAction} className="grid gap-3">
+            <input type="hidden" name="idempotencyKey" value={randomUUID()} />
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
             <input type="hidden" name="workItemId" value={item.id} />

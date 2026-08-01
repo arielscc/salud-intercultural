@@ -13,7 +13,7 @@ export const buttonVariants = cva(
         link: "text-primary-dark underline-offset-4 hover:underline"
       },
       size: {
-        sm: "min-h-9 px-3 text-[13px]",
+        sm: "min-h-11 px-3 text-[13px] sm:min-h-9",
         md: "min-h-11 px-4"
       }
     },

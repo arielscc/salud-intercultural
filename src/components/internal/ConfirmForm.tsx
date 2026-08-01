@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/internal/ui/Button";
+import { clearSigecoBrowserStorage } from "@/features/mobile-resilience/storage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,7 @@ type ConfirmFormProps = Omit<React.ComponentPropsWithoutRef<"form">, "action"> &
     equals: string;
   };
   confirmAtAllWidths?: boolean;
+  clearLocalDataOnSubmit?: boolean;
 };
 
 export function ConfirmForm({
@@ -51,6 +53,7 @@ export function ConfirmForm({
   confirmLabel,
   confirmWhen,
   confirmAtAllWidths = false,
+  clearLocalDataOnSubmit = false,
   children,
   ...props
 }: ConfirmFormProps) {
@@ -78,6 +81,7 @@ export function ConfirmForm({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (confirmedRef.current) {
       confirmedRef.current = false;
+      if (clearLocalDataOnSubmit) clearSigecoBrowserStorage();
       return;
     }
     if (
@@ -85,6 +89,7 @@ export function ConfirmForm({
       new FormData(event.currentTarget).get(confirmWhen.field) !==
         confirmWhen.equals
     ) {
+      if (clearLocalDataOnSubmit) clearSigecoBrowserStorage();
       return;
     }
     const mobile = window.matchMedia("(max-width: 639px)").matches;
@@ -94,7 +99,9 @@ export function ConfirmForm({
       event.preventDefault();
       returnFocusRef.current = document.activeElement as HTMLElement | null;
       setConfirmationMode(mobile ? "mobile" : "desktop");
+      return;
     }
+    if (clearLocalDataOnSubmit) clearSigecoBrowserStorage();
   }
 
   function handleConfirm() {

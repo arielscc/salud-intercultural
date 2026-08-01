@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-25 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-26 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las treinta y cuatro migraciones actuales están
-aplicadas en desarrollo. Falta validar las veintidós
+anteriores están en staging y las treinta y cinco migraciones actuales están
+aplicadas en desarrollo. Falta validar las veintitrés
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
@@ -37,13 +37,15 @@ Los recordatorios de evolución, retorno y recuperación ya se preparan con
 reglas versionadas, consentimiento, horario, idempotencia y aprobación humana.
 El piloto manual de encuestas ya separa opinión, reclamo y posible incidente
 clínico, con enlace privado, responsable, plazo y tendencias.
+Los formularios críticos ya detienen envíos sin conexión y llegada, venta,
+pago, Caja, compras y stock reutilizan claves para no duplicar operaciones.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 4 |
-| En progreso | 24 |
+| Pendiente | 3 |
+| En progreso | 25 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -87,7 +89,7 @@ clínico, con enlace privado, responsable, plazo y tendencias.
 | 23 | Tiempo por área | P1 | En progreso | 13, 16, 22 |
 | 24 | Recordatorios supervisados | P1 | En progreso | 9, 15 |
 | 25 | Encuestas y reclamos | P2 | En progreso | 9, 24, piloto manual |
-| 26 | Móvil y conectividad lenta | P1 | Pendiente | 2, 5, 13, 18, 20 |
+| 26 | Móvil y conectividad lenta | P1 | En progreso | 2, 5, 13, 18, 20 |
 | 27 | Integración Payload-SIGECO | P2 | Pendiente | 3, 5, 9, 11, 22 |
 | 28 | Multi-sucursal | P1 | Pendiente | 10, 18-20, 22, 26 |
 | 29 | Piloto completo con personal | P0 | Pendiente | Módulos del despliegue |
@@ -202,6 +204,12 @@ Estado de las tareas de la base segura:
   existe automatización ni publicación de testimonios. Pendiente completar el
   piloto, aprobar preguntas y textos `v2`, ejecutar QA acumulado y validar en
   staging.
+- **Tarea 26 — Móvil y conectividad lenta:** estado de conexión, bloqueo de
+  envío offline, reintentos idempotentes, borrador administrativo seguro,
+  limpieza al logout, ficha de contingencia y targets de 44 px implementados
+  en desarrollo local. Historia clínica y adjuntos no se cachean. Pendiente
+  integración acumulada, simulación real de red, dispositivos físicos y QA
+  gstack al cierre.
 
 Para terminar la Tarea 1:
 
@@ -251,6 +259,10 @@ Blob clínico privado y las credenciales separadas aprobadas.
   la tarea y el contacto real conserva su intento y resultado en Seguimientos.
 - Las encuestas permanecen manuales hasta cerrar el piloto. Una calificación o
   comentario nunca se publica ni se convierte automáticamente en testimonio.
+- Recuperar conexión no reintenta dinero o stock automáticamente. El empleado
+  revisa y vuelve a guardar con la misma clave de idempotencia.
+- Solo la compra administrativa admite borrador local; nunca pacientes,
+  historia clínica, adjuntos o archivos.
 - Web y móvil responsive usan las mismas reglas y permisos.
 - El Alto debe estabilizarse antes de activar Cochabamba.
 - Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
@@ -1339,6 +1351,57 @@ Responsable: Dirección.
 - No migrar ni habilitar producción sin aviso y autorización.
 
 **Commit sugerido:** `feat(sigeco): add feedback and complaints`
+
+## 2026-08-01 — Tarea 26 — Móvil Y Conectividad Lenta
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: equipo técnico.
+
+### Resultado
+
+- Estado global en línea, lento, sin conexión y recuperado.
+- Envío offline bloqueado sin borrar los campos de la pantalla.
+- Guardando, guardado y error diferenciados sin confirmar antes del servidor.
+- Idempotencia completada para llegada, venta, pago y stock manual; Caja,
+  compras, recepciones y lotes conservan sus claves existentes.
+- Borrador local estricto solo para compras administrativas, sin pacientes,
+  datos clínicos ni archivos.
+- Limpieza de almacenamiento `sigeco.*` al cerrar la sesión actual.
+- Ficha imprimible `/sigeco/contingencia` y proceso de doble revisión.
+- Targets móviles principales de 44 px, teclados apropiados y cámara donde
+  corresponde.
+- Cero PWA, service worker, caché clínico o reintento financiero automático.
+
+### Archivos Y Migración
+
+- Políticas y almacenamiento en `src/features/mobile-resilience`.
+- Guard de conexión, formularios, logout, controles táctiles y borrador de
+  compra actualizados.
+- Claves idempotentes en queries de visitas, ventas, pagos e inventario.
+- Migración local `20260801160000_mobile_resilience_idempotency`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local; staging y producción no fueron modificados.
+- Prisma format, validate, generate y 35 migraciones locales al día.
+- TypeScript y lint enfocado aprobados.
+- Conexión, storage, borrador seguro, schemas, privacidad y límites de seguridad:
+  10 archivos y 48 pruebas aprobadas.
+- Integración de reintentos ampliada y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack acumulado.
+- Simular red lenta, corte y respuesta perdida en staging.
+- Validar cámara y targets táctiles en teléfonos físicos.
+- Ensayar y aprobar la ficha de contingencia con el personal.
+- No migrar ni habilitar producción sin aviso y autorización.
+
+**Commit sugerido:** `feat(sigeco): improve mobile resilience`
 
 ## Cómo Actualizar El Progreso
 

@@ -46,7 +46,10 @@ export function Pagination({
   };
   const previous = currentPage > 1 ? hrefFor(currentPage - 1) : null;
   const next = currentPage < totalPages ? hrefFor(currentPage + 1) : null;
-  const iconClassName = cn(buttonVariants({ variant: "outline", size: "sm" }), "h-10 w-10 px-0");
+  const iconClassName = cn(
+    buttonVariants({ variant: "outline", size: "sm" }),
+    "h-11 w-11 px-0 sm:h-10 sm:w-10"
+  );
 
   return (
     <nav

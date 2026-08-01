@@ -49,10 +49,12 @@ const stepTitles: Record<number, string> = {
 };
 
 export function IntakeFunnel({
+  idempotencyKey,
   allowDuplicateFromServer = false,
   initialPatient,
   captureSourceOptions
 }: {
+  idempotencyKey: string;
   allowDuplicateFromServer?: boolean;
   initialPatient?: PatientMatch;
   captureSourceOptions: CaptureSourceOption[];
@@ -273,6 +275,7 @@ export function IntakeFunnel({
         }
       }}
     >
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <input type="hidden" name="funnelCompleted" value={step === 4 ? "true" : "false"} />
       <input type="hidden" name="patientId" value={existingPatient?.id ?? ""} />
       <input type="hidden" name="fullName" value={fullName} />

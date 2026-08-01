@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
@@ -314,6 +315,7 @@ export default async function SaleDetailPage({
               description="Aplica un pago al saldo pendiente de este comprobante."
             />
             <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
+              <input type="hidden" name="idempotencyKey" value={randomUUID()} />
               <input type="hidden" name="saleId" value={sale.id} />
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Monto Bs">

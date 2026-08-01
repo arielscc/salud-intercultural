@@ -3,6 +3,10 @@
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import {
+  clearSigecoSessionKey,
+  PURCHASE_SAFE_DRAFT_KEY
+} from "@/features/mobile-resilience/storage";
 
 /*
  * Lee el search param `?aviso=<codigo>` que dejan las server actions que
@@ -49,6 +53,9 @@ export function ActionNotice() {
 
   useEffect(() => {
     if (!aviso) return;
+    if (aviso === "compra-creada") {
+      clearSigecoSessionKey(PURCHASE_SAFE_DRAFT_KEY);
+    }
     const message = noticeMessages[aviso];
     if (message) toast.success(message);
     const params = new URLSearchParams(searchParams);

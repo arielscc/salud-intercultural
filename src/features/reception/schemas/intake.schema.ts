@@ -45,6 +45,7 @@ const captureSupportSourcesSchema = z.preprocess(
 
 export const receptionIntakeSchema = z
   .object({
+    idempotencyKey: z.string().uuid().default(() => crypto.randomUUID()),
     patientId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     fullName: z.string().trim().min(2, "Ingresa el nombre completo.").max(160),
     phone: z
@@ -202,6 +203,7 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
   );
 
   return {
+    idempotencyKey: input.idempotencyKey,
     patientId: input.patientId,
     patient: {
       fullName: cleanText(input.fullName),

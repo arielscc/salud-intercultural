@@ -43,7 +43,9 @@ export function SupplierForm({
             <input
               className={internalInputClassName}
               name="phone"
+              type="tel"
               inputMode="tel"
+              autoComplete="tel"
               defaultValue={supplier?.phone ?? ""}
             />
           </Field>
@@ -51,6 +53,7 @@ export function SupplierForm({
             <input
               className={internalInputClassName}
               name="whatsapp"
+              type="tel"
               inputMode="tel"
               defaultValue={supplier?.whatsapp ?? ""}
             />

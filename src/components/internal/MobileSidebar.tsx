@@ -30,7 +30,7 @@ export function MobileSidebar({
           <button
             type="button"
             aria-label="Abrir navegación"
-            className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-[9px] border border-border bg-surface text-muted transition hover:text-text"
+            className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[9px] border border-border bg-surface text-muted transition hover:text-text"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -49,7 +49,7 @@ export function MobileSidebar({
               <button
                 type="button"
                 aria-label="Cerrar navegación"
-                className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-[7px] text-muted transition hover:bg-surface-soft hover:text-text"
+                className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[7px] text-muted transition hover:bg-surface-soft hover:text-text"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>

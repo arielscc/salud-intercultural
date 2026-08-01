@@ -104,12 +104,14 @@ export function inventoryMoneyToCents(value: string) {
 }
 
 export const inventoryEntrySchema = z.object({
+  idempotencyKey: z.string().uuid().default(() => crypto.randomUUID()),
   itemId: z.string().min(1),
   quantity: z.coerce.number().int().positive(),
   reason: z.string().trim().min(2).max(220)
 });
 
 export const inventoryAdjustmentSchema = z.object({
+  idempotencyKey: z.string().uuid().default(() => crypto.randomUUID()),
   itemId: z.string().min(1),
   quantityDelta: z.coerce
     .number()

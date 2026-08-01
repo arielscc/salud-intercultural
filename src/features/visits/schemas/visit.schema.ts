@@ -28,6 +28,7 @@ export function isActiveVisitStatus(status: string) {
 }
 
 export const createVisitSchema = z.object({
+  idempotencyKey: z.string().uuid().default(() => crypto.randomUUID()),
   patientId: z.string().min(1),
   reason: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
   note: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional())

@@ -38,6 +38,7 @@ export const saleItemTypeSchema = z.enum([
 export const paymentMethodCodeSchema = z.enum(["cash", "qr", "card", "transfer", "other"]);
 
 export const createSaleSchema = z.object({
+  idempotencyKey: z.string().uuid().default(() => crypto.randomUUID()),
   patientId: z.string().min(1),
   visitId: optionalText,
   workItemId: optionalText,
@@ -54,6 +55,7 @@ export const createSaleSchema = z.object({
 });
 
 export const createPaymentSchema = z.object({
+  idempotencyKey: z.string().uuid().default(() => crypto.randomUUID()),
   saleId: z.string().min(1),
   amount: moneyString,
   paymentMethodCode: paymentMethodCodeSchema.default("cash"),

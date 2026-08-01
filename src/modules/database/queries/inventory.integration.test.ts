@@ -118,12 +118,28 @@ describe("inventory integration", () => {
     });
 
     await addInventoryEntryRecord({
+      idempotencyKey: "entry-mobile-retry",
+      itemId: item.id,
+      userId: user.id,
+      quantity: 4,
+      reason: "Compra"
+    });
+    await addInventoryEntryRecord({
+      idempotencyKey: "entry-mobile-retry",
       itemId: item.id,
       userId: user.id,
       quantity: 4,
       reason: "Compra"
     });
     await createInventoryAdjustmentRecord({
+      idempotencyKey: "adjustment-mobile-retry",
+      itemId: item.id,
+      userId: user.id,
+      quantityDelta: -1,
+      reason: "Conteo físico"
+    });
+    await createInventoryAdjustmentRecord({
+      idempotencyKey: "adjustment-mobile-retry",
       itemId: item.id,
       userId: user.id,
       quantityDelta: -1,

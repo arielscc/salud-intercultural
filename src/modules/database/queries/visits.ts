@@ -51,6 +51,7 @@ export function findDraftClinicalConsultationError(
 }
 
 export type CreateVisitRecordInput = {
+  idempotencyKey?: string;
   patientId: string;
   userId?: string;
   reason?: string;
@@ -70,8 +71,16 @@ export async function createVisitInTransaction(
   tx: Prisma.TransactionClient,
   input: CreateVisitRecordInput
 ) {
+  if (input.idempotencyKey) {
+    const reused = await tx.visit.findUnique({
+      where: { idempotencyKey: input.idempotencyKey }
+    });
+    if (reused) return reused;
+  }
+
   const visit = await tx.visit.create({
     data: {
+      idempotencyKey: input.idempotencyKey,
       patientId: input.patientId,
       createdById: input.userId,
       reason: input.reason,

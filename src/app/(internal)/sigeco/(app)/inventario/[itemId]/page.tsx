@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Field, internalInputClassName } from "@/components/internal/Field";
@@ -295,6 +296,7 @@ export default async function InventoryItemPage({
                 notice="Entrada registrada"
                 className="grid gap-3"
               >
+                <input type="hidden" name="idempotencyKey" value={randomUUID()} />
                 <input type="hidden" name="itemId" value={item.id} />
                 <Field label="Cantidad">
                   <input
@@ -330,6 +332,7 @@ export default async function InventoryItemPage({
                 notice="Ajuste registrado"
                 className="grid gap-3"
               >
+                <input type="hidden" name="idempotencyKey" value={randomUUID()} />
                 <input type="hidden" name="itemId" value={item.id} />
                 <Field label="Diferencia">
                   <input

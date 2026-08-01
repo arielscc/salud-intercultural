@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { InternalUser } from "@/generated/prisma/client";
-import { logoutInternalUser } from "@/features/internal-auth/actions";
 import {
   internalRoleLabels,
   roleHasPermission
@@ -10,6 +9,7 @@ import { formatLongDate } from "@/lib/dates";
 import { DesktopPatientSearch } from "@/components/internal/DesktopPatientSearch";
 import { DesktopSidebarNav } from "@/components/internal/DesktopSidebarNav";
 import { MobileSidebar } from "@/components/internal/MobileSidebar";
+import { LogoutForm } from "@/components/internal/LogoutForm";
 
 function formatToday() {
   const formatted = formatLongDate(new Date());
@@ -67,7 +67,7 @@ export function InternalShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
+        <header className="print-hidden flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
           <MobileSidebar role={user.role} userSlot={<UserBadge user={user} />} />
           <p className="font-sora text-sm font-bold text-text lg:hidden">Sigeco</p>
           {roleHasPermission(user.role, "patients_read") ? (
@@ -78,15 +78,15 @@ export function InternalShell({
             <div className="hidden sm:block">
               <UserBadge user={user} />
             </div>
-            <form action={logoutInternalUser}>
-              <button
-                type="submit"
-                title="Cerrar sesión"
-                className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-[9px] border border-border bg-surface text-muted transition hover:border-primary/40 hover:text-text"
-              >
-                <LogOut className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </form>
+            <Link
+              href="/sigeco/contingencia"
+              title="Ficha de contingencia"
+              className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[9px] border border-border bg-surface text-muted transition hover:border-primary/40 hover:text-text"
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Ficha de contingencia</span>
+            </Link>
+            <LogoutForm />
           </div>
         </header>
 

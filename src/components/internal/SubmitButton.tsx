@@ -23,7 +23,7 @@ export function SubmitButton({
       className={cn("relative", pending && "cursor-wait", className)}
     >
       {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-      {pending && pendingLabel ? pendingLabel : children}
+      {pending ? (pendingLabel ?? "Guardando…") : children}
     </Button>
   );
 }

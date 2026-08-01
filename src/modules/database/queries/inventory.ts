@@ -231,6 +231,7 @@ async function ensureUniqueItemCodes(
 export async function applyInventoryMovement(
   tx: Prisma.TransactionClient,
   input: {
+    idempotencyKey?: string;
     itemId: string;
     userId?: string;
     saleId?: string;
@@ -361,6 +362,7 @@ export async function applyInventoryMovement(
 
   const movement = await tx.inventoryMovement.create({
     data: {
+      idempotencyKey: input.idempotencyKey,
       itemId: input.itemId,
       saleId: input.saleId,
       saleItemId: input.saleItemId,
@@ -664,25 +666,34 @@ export async function setSupplierStatusRecord(input: {
 }
 
 export async function addInventoryEntryRecord(input: {
+  idempotencyKey?: string;
   itemId: string;
   userId?: string;
   quantity: number;
   reason: string;
 }) {
   return withDatabaseError("addInventoryEntryRecord", async () =>
-    prisma.$transaction((tx) =>
-      applyInventoryMovement(tx, {
+    prisma.$transaction(async (tx) => {
+      if (input.idempotencyKey) {
+        const reused = await tx.inventoryMovement.findUnique({
+          where: { idempotencyKey: input.idempotencyKey }
+        });
+        if (reused) return reused;
+      }
+      return applyInventoryMovement(tx, {
+        idempotencyKey: input.idempotencyKey,
         itemId: input.itemId,
         userId: input.userId,
         type: "entry",
         quantityDelta: input.quantity,
         reason: input.reason
-      })
-    )
+      });
+    })
   );
 }
 
 export async function createInventoryAdjustmentRecord(input: {
+  idempotencyKey?: string;
   itemId: string;
   userId?: string;
   quantityDelta: number;
@@ -690,6 +701,12 @@ export async function createInventoryAdjustmentRecord(input: {
 }) {
   return withDatabaseError("createInventoryAdjustmentRecord", async () =>
     prisma.$transaction(async (tx) => {
+      if (input.idempotencyKey) {
+        const reused = await tx.inventoryMovement.findUnique({
+          where: { idempotencyKey: input.idempotencyKey }
+        });
+        if (reused) return reused;
+      }
       await tx.inventoryAdjustment.create({
         data: {
           itemId: input.itemId,
@@ -699,6 +716,7 @@ export async function createInventoryAdjustmentRecord(input: {
         }
       });
       return applyInventoryMovement(tx, {
+        idempotencyKey: input.idempotencyKey,
         itemId: input.itemId,
         userId: input.userId,
         type: "authorized_manual_adjustment",

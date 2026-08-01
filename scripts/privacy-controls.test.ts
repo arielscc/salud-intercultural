@@ -43,6 +43,7 @@ describe("SIGECO privacy controls", () => {
     expect(internalLayout).toContain("index: false");
     expect(internalLayout).toContain("follow: false");
     expect(appLayout).toContain('dynamic = "force-dynamic"');
+    expect(nextConfig).not.toMatch(/serviceWorker|service-worker|workbox/i);
   });
 
   it("does not enable Prisma query logging", () => {

@@ -139,6 +139,7 @@ export async function getAdministrationWorkItemById(id: string) {
 }
 
 export async function createSaleRecord(input: {
+  idempotencyKey?: string;
   patientId: string;
   visitId?: string;
   workItemId?: string;
@@ -156,6 +157,14 @@ export async function createSaleRecord(input: {
 }) {
   return withDatabaseError("createSaleRecord", async () => {
     return prisma.$transaction(async (tx) => {
+      if (input.idempotencyKey) {
+        const reused = await tx.sale.findUnique({
+          where: { idempotencyKey: input.idempotencyKey },
+          include: { items: true }
+        });
+        if (reused) return reused;
+      }
+
       const subtotalCents = input.quantity * input.unitPriceCents;
       const discountCents = Math.min(input.discountCents ?? 0, subtotalCents);
       const totalCents = Math.max(0, subtotalCents - discountCents);
@@ -168,6 +177,7 @@ export async function createSaleRecord(input: {
 
       const sale = await tx.sale.create({
         data: {
+          idempotencyKey: input.idempotencyKey,
           patientId: input.patientId,
           visitId: input.visitId,
           workItemId: input.workItemId,
@@ -220,6 +230,9 @@ export async function createSaleRecord(input: {
         const method = await ensurePaymentMethod(tx, input.paymentMethodCode ?? "cash");
         const payment = await tx.payment.create({
           data: {
+            idempotencyKey: input.idempotencyKey
+              ? `sale:${input.idempotencyKey}`
+              : undefined,
             saleId: sale.id,
             patientId: input.patientId,
             visitId: input.visitId,
@@ -232,6 +245,9 @@ export async function createSaleRecord(input: {
 
         await tx.cashMovement.create({
           data: {
+            idempotencyKey: input.idempotencyKey
+              ? `sale:${input.idempotencyKey}`
+              : undefined,
             cashSessionId: cashSession?.id,
             saleId: sale.id,
             paymentId: payment.id,
@@ -264,6 +280,7 @@ export async function createSaleRecord(input: {
 }
 
 export async function createPaymentRecord(input: {
+  idempotencyKey?: string;
   saleId: string;
   receivedById?: string;
   amountCents: number;
@@ -274,6 +291,13 @@ export async function createPaymentRecord(input: {
 }) {
   return withDatabaseError("createPaymentRecord", async () => {
     return prisma.$transaction(async (tx) => {
+      if (input.idempotencyKey) {
+        const reused = await tx.payment.findUnique({
+          where: { idempotencyKey: input.idempotencyKey }
+        });
+        if (reused) return reused;
+      }
+
       const sale = await tx.sale.findUniqueOrThrow({
         where: { id: input.saleId }
       });
@@ -288,6 +312,7 @@ export async function createPaymentRecord(input: {
 
       const payment = await tx.payment.create({
         data: {
+          idempotencyKey: input.idempotencyKey,
           saleId: sale.id,
           patientId: sale.patientId,
           visitId: sale.visitId,
@@ -311,6 +336,9 @@ export async function createPaymentRecord(input: {
 
       await tx.cashMovement.create({
         data: {
+          idempotencyKey: input.idempotencyKey
+            ? `payment:${input.idempotencyKey}`
+            : undefined,
           cashSessionId: cashSession.id,
           saleId: sale.id,
           paymentId: payment.id,

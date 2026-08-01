@@ -42,6 +42,8 @@ Control de avance: [progress.md](./progress.md)
 - [Reporte de la Tarea 24](../task-reports/2026-08-01-tarea-24-recordatorios-supervisados.md)
 - [Encuestas, opiniones y reclamos](../../operations/patient-feedback-complaints.md)
 - [Reporte de la Tarea 25](../task-reports/2026-08-01-tarea-25-encuestas-reclamos.md)
+- [Móvil y conectividad lenta](../../operations/mobile-slow-connectivity.md)
+- [Reporte de la Tarea 26](../task-reports/2026-08-01-tarea-26-movil-conectividad-lenta.md)
 - [Backlog técnico anterior](../sigeco-mejoras-futuras/tareas-de-mejoras.md)
 - [Investigación y priorización anterior](../sigeco-mejoras-futuras/investigacion-y-priorizacion.md)
 
@@ -67,6 +69,9 @@ Control de avance: [progress.md](./progress.md)
 - [Queries de encuestas y reclamos](../../../src/modules/database/queries/patient-feedback.ts)
 - [Política de clasificación y plazos](../../../src/features/patient-feedback/policy.ts)
 - [Fachada pública de encuestas](../../../src/modules/patient-feedback/public.ts)
+- [Estado y bloqueo de conexión](../../../src/components/internal/ConnectivityGuard.tsx)
+- [Storage permitido y limpieza](../../../src/features/mobile-resilience/storage.ts)
+- [Borrador seguro de compra](../../../src/features/mobile-resilience/purchase-draft.ts)
 
 ## Qué Existe Actualmente
 
@@ -82,6 +87,10 @@ seguimientos.
 - Las entradas y ajustes generan `InventoryMovement`.
 - Una compra no aumenta stock; una recepción confirmada crea el lote y su
   entrada una sola vez.
+- Llegadas, ventas, pagos y movimientos manuales de stock usan claves únicas;
+  Caja, compras, recepciones y lotes conservan su idempotencia existente.
+- La conexión se muestra en el shell y un formulario offline no se envía ni se
+  interpreta como confirmado.
 - Los cambios de productos y proveedores crean versiones y no reutilizan el
   código interno.
 - Los montos se almacenan en centavos.

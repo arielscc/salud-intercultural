@@ -14,11 +14,12 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 | Sistema visual Marea | Implementado | Shell responsive, tablas de trabajo y tokens aislados del sitio publico. |
 | QA final V3.7 | Completado localmente | Matriz de roles, flujo de abandono, 17 pantallas activas a 390px, sitio publico y CMS. |
 | Publicacion remota | Pendiente | Requiere promocion controlada `develop -> staging -> main`. |
-| Consentimientos | En progreso | Cinco finalidades, historial y bloqueo implementados localmente; producción espera aprobación expresa de textos. |
+| Consentimientos | En progreso | Seis finalidades, historial y bloqueo implementados localmente; producción espera aprobación expresa de textos. |
 | Resultado de propuestas | En progreso | El médico registra la decisión; aceptación crea una instrucción, no una venta automática. |
 | Clasificación de seguimientos | En progreso | Tipo, prioridad, responsable y resultado separados; llamadas médicas escaladas al médico. |
 | Recordatorios supervisados | En progreso | Reglas versionadas preparan candidatos idempotentes; Marlen aprueba antes de crear el contacto. |
 | Encuestas y reclamos | En progreso | Piloto manual con enlace privado, casos críticos, responsable, plazo y tendencias. |
+| Móvil y conectividad lenta | En progreso | Bloqueo offline, reintentos idempotentes, borrador seguro y contingencia implementados localmente. |
 | Abandono y pendientes | En progreso | Punto, motivo, área y pendientes conservados; tareas abiertas quedan bloqueadas y recuperables. |
 | Versiones y firma clínica | En progreso | Borrador, cierre, autor y correcciones comparables implementados en desarrollo local. |
 | Compras y lotes | En progreso | Compra, pago, recepción parcial, costo histórico, lote y stock enlazados localmente. |
@@ -68,7 +69,7 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 
 ### Consentimientos Y Contacto
 
-- Seguimiento, recordatorios, educación, promociones e imagen/voz son
+- Seguimiento, recordatorios, educación, promociones, imagen/voz y encuestas son
   decisiones independientes.
 - El retiro conserva el historial y bloquea nuevas llamadas o WhatsApp.
 - La ficha permite demostrar el texto exacto aceptado.
@@ -155,6 +156,18 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 - La versión `v2` agrega consentimiento específico para encuestas.
 - Una respuesta nunca se copia a Payload ni se publica como testimonio.
 
+### Móvil Y Conectividad Lenta
+
+- El shell informa conexión normal, lenta, perdida o recuperada.
+- Sin conexión, los formularios no salen y conservan lo escrito en pantalla.
+- Llegada, venta, pago, Caja, compra, recepción y stock evitan duplicados al
+  reutilizar la clave de la misma operación.
+- Solo la compra administrativa admite borrador local de sesión; excluye
+  pacientes, historia clínica y archivos.
+- Cerrar la sesión actual limpia el almacenamiento permitido de SIGECO.
+- `/sigeco/contingencia` imprime una ficha vacía para cortes largos.
+- No existe PWA, service worker ni caché offline de datos clínicos.
+
 ### Abandono Y Pendientes
 
 - Abandono, cancelación y atención completada son cierres diferentes.
@@ -205,6 +218,7 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
 | `/sigeco/seguimientos` | Tareas de contacto posterior. |
 | `/sigeco/seguimientos/recordatorios` | Reglas, vistas previas, bloqueos, fallos y aprobación humana. |
 | `/sigeco/opiniones` | Piloto, reclamos, plazos, responsables y tendencias. |
+| `/sigeco/contingencia` | Ficha en blanco y reglas para cortes largos. |
 | `/encuesta/[token]` | Formulario privado y corto para el paciente. |
 | `/sigeco/inventario` | Productos, stock, entradas y ajustes. |
 | `/sigeco/inventario/lotes` | Lotes, vencimientos, FEFO y ajustes autorizados. |

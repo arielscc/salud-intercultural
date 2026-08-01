@@ -18,7 +18,7 @@ export function MobileTabs({ label, items }: { label: string; items: MobileTabIt
             href={item.href}
             aria-current={item.active ? "page" : undefined}
             className={cn(
-              "focus-ring inline-flex min-h-10 min-w-fit flex-1 items-center justify-center gap-1.5 rounded-[7px] px-3 text-[13px] font-semibold transition",
+              "focus-ring inline-flex min-h-11 min-w-fit flex-1 items-center justify-center gap-1.5 rounded-[7px] px-3 text-[13px] font-semibold transition",
               item.active
                 ? "bg-surface text-primary-dark"
                 : "text-muted active:bg-surface/70 active:text-text"

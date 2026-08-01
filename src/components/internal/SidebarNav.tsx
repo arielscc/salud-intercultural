@@ -25,7 +25,7 @@ export function SidebarNav({ role, onNavigate }: { role: InternalRole; onNavigat
             onClick={onNavigate}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "focus-ring flex items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-[13px] font-medium text-muted transition hover:bg-surface-soft/60 hover:text-text",
+              "focus-ring flex min-h-11 items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-[13px] font-medium text-muted transition hover:bg-surface-soft/60 hover:text-text",
               isActive && "bg-surface-soft font-semibold text-primary-dark hover:bg-surface-soft"
             )}
           >

@@ -57,6 +57,14 @@ describe("patients and visits integration", () => {
     });
 
     const visit = await createVisitRecord({
+      idempotencyKey: "visit-mobile-retry",
+      patientId: patient.id,
+      userId: user.id,
+      reason: "Primera consulta",
+      note: "Llego sin cita"
+    });
+    const retriedVisit = await createVisitRecord({
+      idempotencyKey: "visit-mobile-retry",
       patientId: patient.id,
       userId: user.id,
       reason: "Primera consulta",
@@ -77,6 +85,7 @@ describe("patients and visits integration", () => {
     const visitDetail = await getVisitById(visit.id);
 
     expect(patients).toHaveLength(1);
+    expect(retriedVisit.id).toBe(visit.id);
     expect(visits).toHaveLength(1);
     expect(detail?.visits).toHaveLength(1);
     expect(visitDetail?.status).toBe("in_consultation");

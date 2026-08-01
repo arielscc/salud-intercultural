@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { IntakeFunnel } from "@/components/internal/reception/IntakeFunnel";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { toDateOnlyString } from "@/lib/dates";
@@ -80,6 +81,7 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
       ) : null}
 
       <IntakeFunnel
+        idempotencyKey={randomUUID()}
         allowDuplicateFromServer={params.duplicate === "true"}
         initialPatient={initialPatient}
         captureSourceOptions={captureSourceOptions}

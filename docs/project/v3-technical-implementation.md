@@ -479,6 +479,31 @@ WebSocket solo se evaluarán con evidencia del piloto.
 La operación se documenta en
 [Actualización de bandejas operativas](../operations/operational-queue-refresh.md).
 
+## Resiliencia Móvil Y Conectividad
+
+`ConnectivityGuard` observa `navigator.onLine` y, cuando está disponible, la
+calidad informada por Network Information. Un listener de captura impide
+submits mientras el navegador está offline, sin vaciar o recargar el form. Al
+reconectar no existe replay automático: operaciones monetarias y de stock
+requieren revisión humana.
+
+`Visit`, `Sale`, `Payment` e `InventoryMovement` agregan una clave única
+opcional para no reescribir registros históricos. La UI nueva siempre envía un
+UUID estable por formulario. Caja, compras, recepciones y lotes reutilizan las
+claves incorporadas por las Tareas 18 y 20. Los queries consultan primero la
+clave y devuelven el registro existente antes de ejecutar efectos asociados.
+
+`sigeco.safe-draft.purchase.v1` es el único borrador local autorizado. Un
+schema estricto acepta solo datos administrativos de la compra, vive en
+`sessionStorage` y se elimina tras confirmación o logout. No se almacenan
+pacientes, clínica ni archivos. Las rutas `/sigeco/*` continúan con
+`private, no-store` y no se registra service worker.
+
+La contingencia física se prepara desde `/sigeco/contingencia`; la hoja exige
+número temporal, transcripción, ID definitivo y doble revisión de dinero o
+stock. La operación completa vive en
+[Móvil y conectividad lenta](../operations/mobile-slow-connectivity.md).
+
 ## Dashboard
 
 `getReceptionDashboardSummary` calcula con rango diario local:

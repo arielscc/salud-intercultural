@@ -98,6 +98,21 @@ describe("sales integration", () => {
 
     const workItem = (await getAdministrationWorkItems())[0];
     const sale = await createSaleRecord({
+      idempotencyKey: "sale-mobile-retry",
+      patientId: patient.id,
+      visitId: visit.id,
+      workItemId: workItem.id,
+      createdById: admin.id,
+      itemType: "treatment",
+      description: "Tratamiento mensual",
+      quantity: 2,
+      unitPriceCents: 10000,
+      discountCents: 2000,
+      initialPaymentCents: 5000,
+      paymentMethodCode: "cash"
+    });
+    const retriedSale = await createSaleRecord({
+      idempotencyKey: "sale-mobile-retry",
       patientId: patient.id,
       visitId: visit.id,
       workItemId: workItem.id,
@@ -112,6 +127,15 @@ describe("sales integration", () => {
     });
 
     await createPaymentRecord({
+      idempotencyKey: "payment-mobile-retry",
+      saleId: sale.id,
+      receivedById: admin.id,
+      amountCents: 13000,
+      paymentMethodCode: "qr",
+      reference: "QR-001"
+    });
+    await createPaymentRecord({
+      idempotencyKey: "payment-mobile-retry",
       saleId: sale.id,
       receivedById: admin.id,
       amountCents: 13000,
@@ -131,6 +155,7 @@ describe("sales integration", () => {
       balanceCents: 0,
       status: "paid"
     });
+    expect(retriedSale.id).toBe(sale.id);
     expect(detail?.payments).toHaveLength(2);
     expect(summary.todaySales._sum.paidCents).toBeGreaterThanOrEqual(18000);
     expect(patientDetail?.sales[0]?.id).toBe(sale.id);

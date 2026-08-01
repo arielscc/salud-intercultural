@@ -53,6 +53,7 @@ export async function createSaleAction(formData: FormData) {
       let created;
       try {
         created = await createSaleRecord({
+          idempotencyKey: parsed.data.idempotencyKey,
           patientId: parsed.data.patientId,
           visitId: parsed.data.visitId,
           workItemId: parsed.data.workItemId,
@@ -130,6 +131,7 @@ export async function createPaymentAction(formData: FormData) {
       let payment;
       try {
         payment = await createPaymentRecord({
+          idempotencyKey: parsed.data.idempotencyKey,
           saleId: parsed.data.saleId,
           receivedById: user.id,
           amountCents,

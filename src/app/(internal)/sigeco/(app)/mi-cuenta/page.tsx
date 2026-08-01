@@ -75,6 +75,7 @@ export default async function MyAccountPage({ searchParams }: MyAccountPageProps
                           : "Ese dispositivo tendrá que iniciar sesión nuevamente."
                       }
                       confirmLabel="Cerrar sesión"
+                      clearLocalDataOnSubmit={isCurrent}
                     >
                       <input type="hidden" name="sessionId" value={session.id} />
                       <Button type="submit" variant={isCurrent ? "danger" : "outline"} size="sm">
@@ -99,4 +100,3 @@ export default async function MyAccountPage({ searchParams }: MyAccountPageProps
     </div>
   );
 }
-

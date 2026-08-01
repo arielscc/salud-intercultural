@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { ActionNotice } from "@/components/internal/ActionNotice";
 import { DesktopBreadcrumb } from "@/components/internal/DesktopBreadcrumb";
 import { InternalShell } from "@/components/internal/InternalShell";
+import { ConnectivityGuard } from "@/components/internal/ConnectivityGuard";
 import { Toaster } from "@/components/ui/sonner";
 import { requireInternalUser } from "@/modules/permissions";
 
@@ -15,6 +16,7 @@ export default async function SigecoAppLayout({
   const user = await requireInternalUser();
   return (
     <InternalShell user={user}>
+      <ConnectivityGuard />
       <DesktopBreadcrumb />
       {children}
       {/* Posiciones separadas: movil conserva abajo; desktop usa esquina superior derecha. */}

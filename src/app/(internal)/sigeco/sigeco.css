@@ -39,3 +39,27 @@
 .sigeco-app main .grid > * {
   min-width: 0;
 }
+
+@media print {
+  .sigeco-app aside,
+  .sigeco-app .print-hidden {
+    display: none !important;
+  }
+
+  .sigeco-app body,
+  .sigeco-app main {
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  .sigeco-app main {
+    padding: 0 !important;
+  }
+
+  .sigeco-app .sigeco-contingency-sheet {
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+}

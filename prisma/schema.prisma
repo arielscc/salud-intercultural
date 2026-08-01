@@ -1076,6 +1076,7 @@ model PatientNote {
 
 model Visit {
   id                        String                        @id @default(cuid())
+  idempotencyKey            String?                       @unique
   patientId                 String
   branchCode                String                        @default("el-alto")
   isTestData                Boolean                       @default(false)
@@ -1752,6 +1753,7 @@ model NursingWorkItemResult {
 
 model Sale {
   id                 String              @id @default(cuid())
+  idempotencyKey     String?             @unique
   patientId          String
   visitId            String?
   workItemId         String?
@@ -1874,23 +1876,24 @@ model PaymentMethod {
 }
 
 model Payment {
-  id            String         @id @default(cuid())
-  saleId        String
-  patientId     String
-  visitId       String?
-  methodId      String
-  receivedById  String?
-  amountCents   Int
-  reference     String?
-  notes         String?
-  paidAt        DateTime       @default(now())
-  createdAt     DateTime       @default(now())
-  sale          Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit         Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  method        PaymentMethod  @relation(fields: [methodId], references: [id], onDelete: Restrict)
-  receivedBy    InternalUser?  @relation(fields: [receivedById], references: [id], onDelete: SetNull)
-  cashMovements CashMovement[]
+  id             String         @id @default(cuid())
+  idempotencyKey String?        @unique
+  saleId         String
+  patientId      String
+  visitId        String?
+  methodId       String
+  receivedById   String?
+  amountCents    Int
+  reference      String?
+  notes          String?
+  paidAt         DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  sale           Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  patient        Patient        @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit          Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  method         PaymentMethod  @relation(fields: [methodId], references: [id], onDelete: Restrict)
+  receivedBy     InternalUser?  @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  cashMovements  CashMovement[]
 
   @@index([saleId])
   @@index([patientId])
@@ -2707,6 +2710,7 @@ model PurchaseDocument {
 
 model InventoryMovement {
   id              String                  @id @default(cuid())
+  idempotencyKey  String?                 @unique
   itemId          String
   saleId          String?
   saleItemId      String?

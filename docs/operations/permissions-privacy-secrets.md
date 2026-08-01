@@ -144,6 +144,12 @@ Las páginas internas también son dinámicas y SIGECO declara `robots` sin
 indexación. Al abrir WhatsApp u otra página externa no se envía la ruta interna
 como referencia.
 
+SIGECO no registra service worker ni caché offline. El único almacenamiento
+operativo permitido en el navegador es el borrador transitorio de una compra,
+validado mediante lista estricta y sin pacientes, clínica o archivos. Las
+claves `sigeco.*` se limpian al cerrar la sesión actual. La política completa
+vive en [Móvil y conectividad lenta](./mobile-slow-connectivity.md).
+
 ## Separación De Marketing, Payload Y SIGECO
 
 | Superficie | Datos permitidos | Datos prohibidos |

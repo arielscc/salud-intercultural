@@ -146,6 +146,7 @@ const pagePermissions: Record<string, InternalPermission[]> = {
 
 const authenticatedPages = [
   "src/app/(internal)/sigeco/(app)/page.tsx",
+  "src/app/(internal)/sigeco/(app)/contingencia/page.tsx",
   "src/app/(internal)/sigeco/(app)/mi-cuenta/page.tsx"
 ];
 
