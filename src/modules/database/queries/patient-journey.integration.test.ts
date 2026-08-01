@@ -73,13 +73,25 @@ describe("patient journey report integration", () => {
         motive: "Consulta de prueba"
       }
     });
+    const administrationOrder = await prisma.clinicalOrder.create({
+      data: {
+        visitId: visit.id,
+        patientId: patient.id,
+        doctorId: doctor.id,
+        type: "administration",
+        targetArea: "administracion",
+        title: "Iniciar tratamiento"
+      }
+    });
     await prisma.treatmentProposalOutcome.create({
       data: {
         consultationId: consultation.id,
         visitId: visit.id,
         doctorId: doctor.id,
         status: "accepted",
-        reason: "agreed_to_start"
+        reason: "agreed_to_start",
+        administrationInstruction: "Coordinar el inicio del tratamiento",
+        administrationOrderId: administrationOrder.id
       }
     });
     await prisma.sale.create({
@@ -143,4 +155,3 @@ describe("patient journey report integration", () => {
     });
   });
 });
-

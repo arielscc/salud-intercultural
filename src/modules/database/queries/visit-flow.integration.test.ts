@@ -11,8 +11,12 @@ import { recordVisitDiscontinuation } from "@/modules/database/queries/visit-dis
 
 async function cleanVisitFlowData() {
   await prisma.visitDiscontinuation.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "PatientConsent" CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
+  await prisma.internalSession.deleteMany();
+  await prisma.internalUser.deleteMany();
 }
 
 beforeEach(cleanVisitFlowData);

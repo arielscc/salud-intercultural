@@ -35,6 +35,8 @@ const reportedAttribution = {
 
 async function cleanReceptionData() {
   await prisma.visitDiscontinuation.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "PatientConsent" CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.lead.deleteMany();
@@ -42,7 +44,32 @@ async function cleanReceptionData() {
   await prisma.internalUser.deleteMany();
 }
 
-beforeEach(cleanReceptionData);
+async function seedReceptionCaptureSources() {
+  await Promise.all(
+    [
+      ["referral", "Recomendación", "Recomendación", "referral"],
+      ["whatsapp", "WhatsApp", "WhatsApp", "messaging"],
+      ["tiktok", "TikTok", "TikTok", "social"],
+      ["other", "Otro", "Otro", "other"]
+    ].map(([code, patientLabel, internalLabel, category]) =>
+      prisma.captureSource.upsert({
+        where: { code },
+        create: {
+          code,
+          patientLabel,
+          internalLabel,
+          category: category as "referral" | "messaging" | "social" | "other"
+        },
+        update: {}
+      })
+    )
+  );
+}
+
+beforeEach(async () => {
+  await cleanReceptionData();
+  await seedReceptionCaptureSources();
+});
 afterEach(cleanReceptionData);
 
 async function createReceptionUser() {

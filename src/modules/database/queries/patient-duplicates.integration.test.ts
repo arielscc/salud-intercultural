@@ -11,6 +11,7 @@ async function cleanFixtures() {
   await prisma.patientAlias.deleteMany();
   await prisma.patientMerge.deleteMany();
   await prisma.patientNote.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.internalUser.deleteMany();

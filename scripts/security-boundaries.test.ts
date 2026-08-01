@@ -99,6 +99,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/inventario/proveedores/[supplierId]/editar/page.tsx": [
     "suppliers_write"
   ],
+  "src/app/(internal)/sigeco/(app)/inventario/traslados/page.tsx": [
+    "inventory_read"
+  ],
   "src/app/(internal)/sigeco/(app)/opiniones/page.tsx": ["feedback_read"],
   "src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx": ["visits_create"],
   "src/app/(internal)/sigeco/(app)/recepcion/abandonos/page.tsx": [
@@ -138,6 +141,7 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/seguimientos/recordatorios/page.tsx": [
     "followups_read"
   ],
+  "src/app/(internal)/sigeco/(app)/sucursales/page.tsx": ["reports_read"],
   "src/app/(internal)/sigeco/(app)/usuarios/[userId]/page.tsx": [
     "users_manage"
   ],
@@ -162,6 +166,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   addInventoryEntryAction: "inventory_write",
   applyVisitFlowAction: "visits_update",
   approveCashSessionCloseAction: "cash_sessions_approve",
+  changeActiveBranchAction: "internal_access",
   changeOwnInternalPasswordAction: "internal_access",
   configureProfessionalProfileAction: "documents_configure",
   cancelFeedbackRequestAction: "feedback_manage",
@@ -176,6 +181,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createInventoryAdjustmentAction: "inventory_adjust",
   createInventoryLotAdjustmentAction: "inventory_lot_adjust",
   createInventoryItemAction: "inventory_write",
+  createInventoryTransferAction: "inventory_write",
   createLeadContactAttemptAction: "leads_contact",
   createLeadReminderAction: "leads_reminder",
   createManagedInternalUserAction: "users_manage",
@@ -228,6 +234,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   unlockManagedInternalUserAction: "users_manage",
   updateLeadStatusAction: "leads_update",
   updateManagedInternalUserAccessAction: "users_manage",
+  updateManagedInternalUserBranchesAction: "users_manage",
   updateCaptureSourceAction: "attribution_manage",
   updateFeedbackCaseAction: "feedback_manage",
   updateInventoryItemAction: "inventory_write",

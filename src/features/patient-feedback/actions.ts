@@ -7,6 +7,7 @@ import {
   createFeedbackRequestSchema,
   updateFeedbackCaseSchema
 } from "@/features/patient-feedback/schema";
+import type { CreateFeedbackRequestState } from "@/features/patient-feedback/state";
 import {
   createFeedbackAccessToken,
   hashFeedbackAccessToken
@@ -21,19 +22,6 @@ import {
 } from "@/modules/database/queries/patient-feedback";
 
 const feedbackPath = "/sigeco/opiniones";
-
-export type CreateFeedbackRequestState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-  link?: string;
-  rotated?: boolean;
-};
-
-const initialCreateFeedbackRequestState: CreateFeedbackRequestState = {
-  status: "idle"
-};
-
-export { initialCreateFeedbackRequestState };
 
 function findFeedbackError(error: unknown): PatientFeedbackError | null {
   let current = error;

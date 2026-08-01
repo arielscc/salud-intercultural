@@ -37,6 +37,7 @@ async function cleanFollowUps() {
   await prisma.clinicalAttachmentAccessGrant.deleteMany();
   await prisma.clinicalAttachment.deleteMany();
   await prisma.study.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.lead.deleteMany();
@@ -160,7 +161,7 @@ describe("follow-up integration", () => {
     }
 
     expect(withdrawn.supersedesId).toBe(granted.id);
-    expect(withdrawn.textVersion).toBe("v1");
+    expect(withdrawn.textVersion).toBe("v2");
     expect(withdrawn.textSnapshot).toContain("dar seguimiento a mi tratamiento");
     expect(captured).toBeInstanceOf(DatabaseError);
     expect((captured as DatabaseError).cause).toBeInstanceOf(

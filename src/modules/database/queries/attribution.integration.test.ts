@@ -6,6 +6,11 @@ import { syncPayloadCampaignToSigeco } from "@/modules/payload-sigeco/campaign-s
 
 async function cleanAttributionFixtures() {
   await prisma.sale.deleteMany();
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "TreatmentProposalOutcome", "ClinicalOrder" CASCADE'
+  );
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "PatientConsent" CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.captureCampaign.deleteMany({
@@ -13,7 +18,44 @@ async function cleanAttributionFixtures() {
   });
 }
 
-beforeEach(cleanAttributionFixtures);
+async function seedAttributionCatalog() {
+  const tiktok = await prisma.captureSource.upsert({
+    where: { code: "tiktok" },
+    create: {
+      code: "tiktok",
+      patientLabel: "TikTok",
+      internalLabel: "TikTok",
+      category: "social"
+    },
+    update: {}
+  });
+  await prisma.captureSource.upsert({
+    where: { code: "whatsapp" },
+    create: {
+      code: "whatsapp",
+      patientLabel: "WhatsApp",
+      internalLabel: "WhatsApp",
+      category: "messaging"
+    },
+    update: {}
+  });
+  await prisma.captureCampaign.upsert({
+    where: { code: "TIKTOK-DR" },
+    create: {
+      code: "TIKTOK-DR",
+      name: "TikTok Dr. Franco",
+      sourceId: tiktok.id,
+      accountLabel: "TikTok del Dr. Franco",
+      trafficType: "organic"
+    },
+    update: {}
+  });
+}
+
+beforeEach(async () => {
+  await cleanAttributionFixtures();
+  await seedAttributionCatalog();
+});
 afterEach(cleanAttributionFixtures);
 
 describe("capture attribution integration", () => {
@@ -69,12 +111,31 @@ describe("capture attribution integration", () => {
       }
     });
 
-    await prisma.clinicalConsultation.create({
+    const consultation = await prisma.clinicalConsultation.create({
       data: {
         visitId: created.visit.id,
         patientId: created.patientId,
         motive: "Valoración",
         treatmentPlanText: "Plan propuesto"
+      }
+    });
+    const administrationOrder = await prisma.clinicalOrder.create({
+      data: {
+        visitId: created.visit.id,
+        patientId: created.patientId,
+        type: "administration",
+        targetArea: "administracion",
+        title: "Iniciar tratamiento"
+      }
+    });
+    await prisma.treatmentProposalOutcome.create({
+      data: {
+        consultationId: consultation.id,
+        visitId: created.visit.id,
+        status: "accepted",
+        reason: "agreed_to_start",
+        administrationInstruction: "Coordinar inicio del tratamiento",
+        administrationOrderId: administrationOrder.id
       }
     });
     await prisma.sale.create({

@@ -23,7 +23,7 @@ describe("user management server boundaries", () => {
       "utf8"
     );
 
-    expect(actions.match(/permission: "users_manage"/g)).toHaveLength(5);
+    expect(actions.match(/permission: "users_manage"/g)).toHaveLength(6);
     expect(actions.match(/permission: "internal_access"/g)).toHaveLength(2);
     expect(actions).not.toContain("captacion");
   });

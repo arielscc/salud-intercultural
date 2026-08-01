@@ -17,8 +17,8 @@ async function cleanAreaTimes() {
   );
 }
 
-beforeEach(cleanAreaTimes);
-afterEach(cleanAreaTimes);
+beforeEach(cleanAreaTimes, 30_000);
+afterEach(cleanAreaTimes, 30_000);
 
 describe("area time events integration", () => {
   it("records phase changes and route boundaries without editing history", async () => {

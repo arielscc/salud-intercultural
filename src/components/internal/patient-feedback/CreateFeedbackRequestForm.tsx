@@ -5,9 +5,9 @@ import { Check, Copy, Link2 } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { Button } from "@/components/internal/ui/Button";
 import {
-  createFeedbackRequestAction,
-  initialCreateFeedbackRequestState
+  createFeedbackRequestAction
 } from "@/features/patient-feedback/actions";
+import { initialCreateFeedbackRequestState } from "@/features/patient-feedback/state";
 import { formatDateTime } from "@/lib/dates";
 import type { InternalRole } from "@/generated/prisma/client";
 
