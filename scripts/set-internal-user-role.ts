@@ -8,8 +8,9 @@ import { reportScriptError } from "./safe-error";
 
 /*
  * Reasigna el rol de un usuario interno existente.
- * Uso: INTERNAL_USER_EMAIL=... INTERNAL_USER_ROLE=seguimiento pnpm internal:set-role
- * Solo acepta roles asignables (los deprecados, como `captacion`, se rechazan).
+ * Uso: INTERNAL_USER_EMAIL=... INTERNAL_USER_ROLE=recepcion pnpm internal:set-role
+ * Solo acepta roles asignables (los deprecados, como `captacion` y
+ * `seguimiento`, se rechazan).
  */
 async function main() {
   const email = process.env.INTERNAL_USER_EMAIL?.trim().toLowerCase();

@@ -18,35 +18,35 @@ de SIGECO y cómo administrar los secretos de cada ambiente.
 Leyenda: `L` lectura, `E` escritura, `F` finalización, `C` corrección,
 `A` ajuste sensible y `—` sin acceso.
 
-| Módulo | Super administrador | Dirección | Médico | Recepción | Administración | Enfermería | Seguimiento |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Cuenta y sesiones propias | L/E | L/E | L/E | L/E | L/E | L/E | L/E |
-| Pacientes | L/E | L | L | L/E | L | L | L |
-| Visitas y recorrido | L/E | L | L/E | L/E | L/E | L | — |
-| Consulta clínica | L/E/F/C | L | L/E/F/C | — | — | — | — |
-| Enfermería | L/E | L | L | — | — | L/E | — |
-| Estudios | L/E | L | L | — | — | L/E | — |
-| Ventas y cobros | L/E | L | — | — | L/E | — | — |
-| Seguimientos | L/E | L | L/E | L/E | L/E | — | L/E |
-| Recordatorios supervisados | L/E | L/E reglas | — | L/E revisión | — | — | — |
-| Encuestas y reclamos | L/E | L/E | — | — | — | — | — |
-| Inventario | L/E/A | L | — | — | L/E | — | — |
-| Reportes | L | L | — | — | — | — | — |
-| Auditoría | L | L | — | — | — | — | — |
-| Usuarios y roles | L/E | — | — | — | — | — | — |
-| Adjuntos clínicos | L/E/A | L | L/E | — | — | L/E | — |
-| Consentimientos | L/E | L | L | L/E | L | L | L |
-| Abandono y pendientes | L/E | L | L/E | L/E | L/E | L/E | — |
-| Tiempos por área | L/E | L | E | E | E | E | — |
-| Recetas versionadas | L/E/C | L | L/E/C | — | — | — | — |
-| Comprobantes internos | L/E | L | — | — | L/E | — | — |
-| Configuración profesional | E | E | — | — | — | — | — |
+| Módulo | Super administrador | Dirección | Médico | Recepción | Administración | Enfermería |
+| --- | --- | --- | --- | --- | --- | --- |
+| Cuenta y sesiones propias | L/E | L/E | L/E | L/E | L/E | L/E |
+| Pacientes | L/E | L | L | L/E | L | L |
+| Visitas y recorrido | L/E | L | L/E | L/E | L/E | L |
+| Consulta clínica | L/E/F/C | L | L/E/F/C | — | — | — |
+| Enfermería | L/E | L | L | — | — | L/E |
+| Estudios | L/E | L | L | — | — | L/E |
+| Ventas y cobros | L/E | L | — | — | L/E | — |
+| Seguimientos | L/E | L | L/E | L/E | L/E | — |
+| Recordatorios supervisados | L/E | L/E reglas | — | L/E revisión | — | — |
+| Encuestas y reclamos | L/E | L/E | — | — | — | — |
+| Inventario | L/E/A | L | — | — | L/E | — |
+| Reportes | L | L | — | — | — | — |
+| Auditoría | L | L | — | — | — | — |
+| Usuarios y roles | L/E | — | — | — | — | — |
+| Adjuntos clínicos | L/E/A | L | L/E | — | — | L/E |
+| Consentimientos | L/E | L | L | L/E | L | L |
+| Abandono y pendientes | L/E | L | L/E | L/E | L/E | L/E |
+| Tiempos por área | L/E | L | E | E | E | E |
+| Recetas versionadas | L/E/C | L | L/E/C | — | — | — |
+| Comprobantes internos | L/E | L | — | — | L/E | — |
+| Configuración profesional | E | E | — | — | — | — |
 
 En Seguimientos, `L/E` no significa que todos puedan trabajar todas las tareas.
 Médico atiende la relación clínica y las llamadas médicas; Recepción/Marlen
-atiende evolución, retorno y recuperación de tratamiento; Administración y el
-rol técnico Seguimiento trabajan únicamente la relación administrativa. Esta
-separación también se valida en el servidor.
+atiende evolución, retorno y recuperación de tratamiento; Administración trabaja
+únicamente la relación administrativa. Esta separación también se valida en el
+servidor.
 
 En Recordatorios, Dirección configura reglas pero no aprueba contactos.
 Recepción/Marlen revisa candidatos, pero no cambia reglas. El super
@@ -65,8 +65,11 @@ En consulta clínica, guardar un borrador no concede automáticamente permiso
 para finalizar o corregir. Dirección puede revisar el registro vigente y todas
 sus versiones, pero no cambiar el contenido clínico.
 
-El rol retirado `captacion` solo conserva acceso a su cuenta hasta ser
-reasignado. No puede operar pacientes, leads internos ni módulos clínicos.
+Los roles retirados `captacion` y `seguimiento` solo conservan acceso a su
+cuenta hasta ser reasignados. No pueden operar pacientes, leads internos ni
+módulos clínicos. El rol `seguimiento` se retiró el 2026-08-02 porque el
+seguimiento de pacientes lo hace ahora Recepción; sus cuentas se reasignan a
+Recepción.
 
 ## Cómo Se Aplica La Matriz
 

@@ -265,12 +265,13 @@ Blob clínico privado y las credenciales separadas aprobadas.
 - El médico cierra la propuesta del tratamiento.
 - Una aceptación crea una instrucción para Administración, pero la venta y el
   pago se registran después y no se inventan automáticamente.
-- Los seguimientos clínicos pertenecen a Recepción/Marlen; Comunicación/Yazmin
-  solo trabaja gestiones administrativas y una llamada médica solo la cierra
-  el médico.
+- El seguimiento de pacientes (clínico y administrativo) pertenece a Recepción;
+  una llamada médica solo la cierra el médico. El rol técnico `seguimiento` se
+  retiró el 2026-08-02 y sus cuentas (Yazmin) se reasignaron a Recepción.
 - Administración controla Caja, gastos, compras e inventario.
-- Marlen realiza seguimiento de pacientes en tratamiento.
-- Yazmin conserva solo comunicación y apoyo para la llegada.
+- Recepción (Marlen y Yazmin) realiza el seguimiento de pacientes en
+  tratamiento y la comunicación por llamadas y WhatsApp. No hace ventas, Caja
+  ni inventario.
 - Una entrega grupal de dinero registra beneficiarios y montos individuales.
 - Registrar una compra no aumenta stock; la recepción confirmada sí.
 - Compra, pago/egreso, recepción y movimiento de stock quedan enlazados.
@@ -1620,6 +1621,26 @@ Al terminar:
 2. Cambiar a `Terminada`.
 3. Registrar archivos, migraciones, pruebas, QA web/móvil y pendientes.
 4. Actualizar la documentación técnica afectada.
+
+## 2026-08-02 — Decisión — Retiro Del Rol Seguimiento
+
+A pedido de Dirección, el rol interno `seguimiento` se retira: el seguimiento de
+pacientes (clínico y administrativo) lo hace ahora Recepción.
+
+- El rol se marca **deprecado** (igual que `captacion`): no se asigna a cuentas
+  nuevas, desaparece del selector y conserva solo acceso mínimo.
+- Migración `20260802120000_reassign_seguimiento_to_reception`: reasigna a
+  Recepción las cuentas que tenían el rol (Yazmin). El valor permanece en el
+  enum de Prisma por el historial y la auditoría.
+- Recepción ya tenía los permisos y la política para trabajar los seguimientos;
+  no se agregaron permisos nuevos. Se retiró `seguimiento` de la política de
+  clasificación y de las consultas de asignación.
+- Documentado en `permissions-privacy-secrets.md` (matriz sin columna
+  Seguimiento) y `follow-up-classification.md`.
+- Redacción ya actualizada en `staff-pilot.md` y `tasks.md`. Queda pendiente,
+  sin bloquear, el repaso de los documentos de negocio/estrategia en
+  `docs/masters/` (mencionan a Yazmin como persona). Los reportes históricos no
+  se modifican porque son evidencia.
 
 ## 2026-08-02 — Decisión — Modo De Ejecución Sin gstack, Pruebas Ni Build
 

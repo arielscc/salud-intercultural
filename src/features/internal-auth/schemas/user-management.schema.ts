@@ -10,8 +10,7 @@ export const activeInternalRoleSchema = z.enum([
   "medico",
   "recepcion",
   "administracion",
-  "enfermeria",
-  "seguimiento"
+  "enfermeria"
 ]);
 
 const nameSchema = z

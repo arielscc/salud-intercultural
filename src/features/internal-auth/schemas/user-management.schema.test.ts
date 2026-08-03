@@ -5,23 +5,25 @@ import {
 } from "@/features/internal-auth/schemas/user-management.schema";
 
 describe("internal user management schemas", () => {
-  it("accepts active roles and rejects the deprecated captacion role", () => {
+  it("accepts active roles and rejects the deprecated roles", () => {
     expect(
       createInternalUserSchema.safeParse({
         name: "Usuario QA",
         email: "usuario@example.com",
-        role: "seguimiento",
+        role: "recepcion",
         temporaryPassword: "Kp7mVw3q"
       }).success
     ).toBe(true);
-    expect(
-      createInternalUserSchema.safeParse({
-        name: "Usuario Antiguo",
-        email: "antiguo@example.com",
-        role: "captacion",
-        temporaryPassword: "Kp7mVw3q"
-      }).success
-    ).toBe(false);
+    for (const role of ["captacion", "seguimiento"]) {
+      expect(
+        createInternalUserSchema.safeParse({
+          name: "Usuario Antiguo",
+          email: "antiguo@example.com",
+          role,
+          temporaryPassword: "Kp7mVw3q"
+        }).success
+      ).toBe(false);
+    }
   });
 
   it("rejects passwords shorter than six characters", () => {

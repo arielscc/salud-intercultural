@@ -95,7 +95,7 @@ describe("internal user management integration", () => {
     const result = await updateManagedInternalUserAccess({
       actorId: actor.id,
       userId: target.id,
-      role: "seguimiento",
+      role: "administracion",
       active: true
     });
 

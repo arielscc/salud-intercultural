@@ -22,13 +22,13 @@ pendiente, terminado o cancelado.
 | Evolución | Preguntar cómo sigue un paciente atendido. | Clínica | Recepción/Marlen |
 | Retorno | Confirmar o coordinar que un paciente vuelva. | Clínica | Recepción/Marlen |
 | Recuperación de tratamiento | Recuperar una decisión o tratamiento que no continuó. | Clínica | Recepción/Marlen |
-| Administrativo | Pagos, documentos, horarios u otra coordinación. | Administrativa | Recepción, Administración o Comunicación |
+| Administrativo | Pagos, documentos, horarios u otra coordinación. | Administrativa | Recepción o Administración |
 | Llamada médica | El paciente necesita criterio o respuesta médica. | Clínica | Médico |
 
-Cuando Comunicación/Yazmin contacta a una persona que todavía no llegó a la
-clínica, se usa `Administrativo`. `Recuperación de tratamiento` está reservada
-para pacientes que ya recibieron una propuesta o iniciaron atención y se
-asigna a Marlen.
+Cuando se contacta a una persona que todavía no llegó a la clínica, se usa
+`Administrativo`. `Recuperación de tratamiento` está reservada para pacientes
+que ya recibieron una propuesta o iniciaron atención y se asigna a
+Recepción/Marlen.
 
 ## Prioridad
 
@@ -67,18 +67,18 @@ Si Recepción registra `Empeoró` o `Escalado al médico`:
 7. ambas tareas quedan relacionadas.
 
 Solo Médico o Super administrador pueden registrar el resultado de una llamada
-médica. Recepción, Administración y Comunicación pueden verla únicamente
-cuando su alcance lo permite, pero no pueden cerrarla como gestión
-administrativa.
+médica. Recepción y Administración pueden verla únicamente cuando su alcance lo
+permite, pero no pueden cerrarla como gestión administrativa.
 
-## Asignación Y Rol De Yazmin
+## Asignación
 
 - Los tipos clínicos `Evolución`, `Retorno` y `Recuperación de tratamiento`
   buscan una cuenta activa de Recepción cuyo nombre contenga `Marlen`.
 - `Llamada médica` busca una cuenta activa con rol Médico.
-- `Administrativo` puede asignarse a Recepción, Administración o Seguimiento.
-- El rol técnico `seguimiento`, usado para Comunicación/Yazmin, solo puede
-  trabajar tareas administrativas.
+- `Administrativo` puede asignarse a Recepción o Administración.
+- El rol técnico `seguimiento` quedó **deprecado el 2026-08-02**: el seguimiento
+  de pacientes (clínico y administrativo) lo hace ahora Recepción. Las cuentas
+  que lo tenían se reasignan a Recepción.
 - Si no existe la cuenta requerida, SIGECO muestra `Sin asignar`. No entrega
   silenciosamente una tarea clínica a otra persona.
 

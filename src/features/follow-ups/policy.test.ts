@@ -9,17 +9,21 @@ import {
 } from "@/features/follow-ups/policy";
 
 describe("follow-up classification policy", () => {
-  it("keeps treatment work with Reception and away from Seguimiento", () => {
+  it("gives all follow-up work to Reception; the deprecated Seguimiento role does none", () => {
     expect(canRoleWorkFollowUpType("recepcion", "treatment_recovery")).toBe(
       true
     );
+    expect(canRoleWorkFollowUpType("recepcion", "administrative")).toBe(true);
     expect(canRoleWorkFollowUpType("seguimiento", "treatment_recovery")).toBe(
       false
     );
-    expect(
-      canRoleCreateFollowUpType("seguimiento", "treatment_recovery")
-    ).toBe(false);
+    expect(canRoleCreateFollowUpType("seguimiento", "treatment_recovery")).toBe(
+      false
+    );
     expect(canRoleCreateFollowUpType("seguimiento", "administrative")).toBe(
+      false
+    );
+    expect(canRoleWorkFollowUpType("administracion", "administrative")).toBe(
       true
     );
   });

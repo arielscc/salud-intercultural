@@ -51,7 +51,7 @@ const currentFollowUpConsent = {
 
 function followUpVisibilityWhere(role?: InternalRole): Prisma.FollowUpTaskWhereInput {
   if (!role || role === "super_admin" || role === "direccion") return {};
-  if (role === "seguimiento" || role === "administracion") {
+  if (role === "administracion") {
     return { domain: "administrative" };
   }
   if (role === "medico") return { domain: "clinical" };
@@ -93,7 +93,7 @@ async function resolveFollowUpAssignee(
     where: {
       id: requestedId,
       active: true,
-      role: { in: ["recepcion", "administracion", "seguimiento"] }
+      role: { in: ["recepcion", "administracion"] }
     },
     select: { id: true }
   });

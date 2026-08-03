@@ -85,7 +85,7 @@ export function canRoleWorkFollowUpType(
   if (role === "super_admin") return true;
   if (type === "doctor_call") return role === "medico";
   if (type === "administrative") {
-    return ["recepcion", "administracion", "seguimiento"].includes(role);
+    return ["recepcion", "administracion"].includes(role);
   }
   return role === "recepcion" || role === "medico";
 }
@@ -97,8 +97,5 @@ export function canRoleCreateFollowUpType(
   if (role === "super_admin" || role === "medico" || role === "recepcion") {
     return true;
   }
-  return (
-    (role === "administracion" || role === "seguimiento") &&
-    type === "administrative"
-  );
+  return role === "administracion" && type === "administrative";
 }

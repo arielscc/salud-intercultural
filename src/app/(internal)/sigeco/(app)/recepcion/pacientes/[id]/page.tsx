@@ -97,10 +97,7 @@ export default async function PatientDetailPage({
   const followUpCreationTypes = (
     Object.keys(followUpTypeLabels) as FollowUpType[]
   ).filter((type) => {
-    if (
-      user.role === "seguimiento" ||
-      user.role === "administracion"
-    ) {
+    if (user.role === "administracion") {
       return type === "administrative";
     }
     return true;

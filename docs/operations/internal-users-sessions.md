@@ -38,6 +38,9 @@ La gestión compleja se oculta en móvil. En teléfonos se dirige al empleado a
 - La contraseña nueva debe ser diferente de la anterior.
 - Corregir el nombre de una cuenta no cierra sus sesiones; cambiar rol o estado
   sí las cierra.
+- Roles retirados (`captacion` y `seguimiento`): no se asignan a cuentas nuevas
+  ni aparecen en el selector; conservan solo acceso mínimo hasta reasignarse.
+  `seguimiento` se retiró el 2026-08-02 y sus cuentas pasaron a Recepción.
 - Mientras el cambio esté pendiente, las páginas y acciones operativas quedan
   bloqueadas.
 - Cambiar rol o estado revoca inmediatamente las sesiones del usuario.

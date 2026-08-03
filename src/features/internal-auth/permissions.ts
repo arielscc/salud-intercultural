@@ -12,12 +12,15 @@ export const internalRoleLabels: Record<InternalRole, string> = {
 };
 
 /**
- * Rol deprecado por la simplificacion V3.7: no asignar a usuarios nuevos.
+ * Roles deprecados: no se asignan a usuarios nuevos.
  * El valor permanece en el enum de Prisma porque existen filas con ese rol;
  * un usuario con este rol solo conserva `internal_access` hasta ser reasignado
  * (script `pnpm internal:set-role`).
+ * - `captacion`: retirado por la simplificacion V3.7.
+ * - `seguimiento`: retirado el 2026-08-02; el seguimiento de pacientes lo hace
+ *   ahora Recepcion. Las cuentas existentes se reasignan a `recepcion`.
  */
-export const deprecatedInternalRoles: InternalRole[] = ["captacion"];
+export const deprecatedInternalRoles: InternalRole[] = ["captacion", "seguimiento"];
 
 export const internalRolePermissions: Record<InternalRole, InternalPermission[]> = {
   super_admin: [
@@ -200,13 +203,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "visit_discontinuations_read",
     "visit_discontinuations_write"
   ],
-  seguimiento: [
-    "internal_access",
-    "patients_read",
-    "followups_read",
-    "followups_write",
-    "patient_consents_read"
-  ]
+  // Rol deprecado (2026-08-02): conserva solo acceso minimo hasta reasignar.
+  // El seguimiento de pacientes lo hace Recepcion.
+  seguimiento: ["internal_access"]
 };
 
 export const assignableInternalRoles = (

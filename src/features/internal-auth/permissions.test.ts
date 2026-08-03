@@ -153,20 +153,19 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("captacion", "followups_write")).toBe(false);
   });
 
-  it("keeps captacion out of the assignable roles and includes seguimiento", () => {
+  it("keeps deprecated roles out of the assignable roles", () => {
     expect(assignableInternalRoles).not.toContain("captacion");
-    expect(assignableInternalRoles).toContain("seguimiento");
+    expect(assignableInternalRoles).not.toContain("seguimiento");
     expect(assignableInternalRoles).toContain("recepcion");
   });
 
-  it("limits seguimiento to follow-up work and patient reads", () => {
-    expect(roleHasPermission("seguimiento", "followups_read")).toBe(true);
-    expect(roleHasPermission("seguimiento", "followups_write")).toBe(true);
-    expect(roleHasPermission("seguimiento", "patients_read")).toBe(true);
-    expect(roleHasPermission("seguimiento", "patients_update")).toBe(false);
-    expect(roleHasPermission("seguimiento", "leads_read")).toBe(false);
-    expect(roleHasPermission("seguimiento", "clinical_read")).toBe(false);
-    expect(roleHasPermission("seguimiento", "sales_read")).toBe(false);
+  it("retires seguimiento to internal access only; Recepcion does the follow-up", () => {
+    expect(roleHasPermission("seguimiento", "internal_access")).toBe(true);
+    expect(roleHasPermission("seguimiento", "followups_read")).toBe(false);
+    expect(roleHasPermission("seguimiento", "followups_write")).toBe(false);
+    expect(roleHasPermission("seguimiento", "patients_read")).toBe(false);
+    expect(roleHasPermission("recepcion", "followups_read")).toBe(true);
+    expect(roleHasPermission("recepcion", "followups_write")).toBe(true);
   });
 
   it("scopes inventory adjustments to authorized roles", () => {

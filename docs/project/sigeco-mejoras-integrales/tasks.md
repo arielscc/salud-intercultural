@@ -102,8 +102,7 @@ Se debe ampliar esta base. No se reconstruyen ventas o inventario desde cero.
 
 - **Médico:** explica el tratamiento, responde dudas, registra el resultado de la propuesta y cierra la venta del tratamiento.
 - **Administración:** registra cobros, egresos, dinero entregado al personal, compras, productos, entradas y cierre de Caja.
-- **Recepción — Marlen:** registra llegadas, completa datos y realiza seguimiento de pacientes en tratamiento.
-- **Comunicación — Yazmin:** responde llamadas y WhatsApp, informa, recupera visitas que no llegaron y apoya con recojos coordinados. No realiza seguimiento clínico, ventas, Caja o inventario.
+- **Recepción — Marlen y Yazmin:** registra llegadas, completa datos, realiza el seguimiento de pacientes (clínico y administrativo), responde llamadas y WhatsApp, informa y recupera visitas que no llegaron. No realiza ventas, Caja ni inventario. El rol técnico `seguimiento` se retiró el 2026-08-02: Yazmin usa el rol Recepción.
 - **Enfermería:** registra controles, estudios, aplicaciones y observaciones.
 - **Dirección:** autoriza operaciones sensibles y revisa indicadores, diferencias y reportes.
 - **Super administrador:** administra la plataforma y los accesos técnicos; no reemplaza autorizaciones de Dirección.
@@ -527,7 +526,8 @@ pruebas unitarias, pruebas de integración ni build. Solo se ejecutan **lint** y
 - Separar tipo de tarea y resultado.
 - Registrar responsable, prioridad, vencimiento y relación clínica/administrativa.
 - Escalar llamadas médicas al médico.
-- No asignar seguimiento de tratamiento a Yazmin.
+- Los seguimientos clínicos (evolución, retorno, recuperación de tratamiento)
+  los trabaja Recepción; los administrativos, Recepción o Administración.
 
 **Web:** filtros por tipo, responsable, estado y atraso.
 
@@ -654,7 +654,7 @@ Registrar efectivo contado, diferencia, observación y aprobación cuando supere
 
 - Administración abre, cobra, registra egresos y solicita cierre.
 - Dirección revisa, aprueba diferencias y autoriza anulaciones.
-- Médico, Enfermería, Recepción y Yazmin no modifican Caja.
+- Médico, Enfermería y Recepción no modifican Caja.
 
 **Web:** “Caja de hoy”, movimientos, filtros, conciliación y cierre imprimible.
 
@@ -686,7 +686,7 @@ Registrar efectivo contado, diferencia, observación y aprobación cuando supere
 - Crear y actualizar proveedores, contacto y notas.
 - Asociar varios proveedores y uno preferido.
 
-**Permisos:** Administración modifica; Dirección revisa costos; otros roles solo consultan disponibilidad cuando esté permitido. Yazmin no accede.
+**Permisos:** Administración modifica; Dirección revisa costos; otros roles solo consultan disponibilidad cuando esté permitido. Recepción no accede al inventario.
 
 **Web:** catálogo con búsqueda, filtros, edición e historial.
 
