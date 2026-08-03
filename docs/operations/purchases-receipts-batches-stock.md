@@ -26,7 +26,7 @@ que los números parezcan completos.
 - Super administrador puede realizar y autorizar estas operaciones.
 - Médico y Enfermería pueden consultar existencias y vencimientos sin ver
   costos ni contactos de proveedores.
-- Seguimiento y Comunicación no administran compras ni inventario.
+- Recepción no administra compras ni inventario.
 
 ## Registrar Y Confirmar Una Compra
 

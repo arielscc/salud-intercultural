@@ -9,7 +9,7 @@ que el médico presentó y explicó un tratamiento.
 - Administración recibe una instrucción únicamente cuando el paciente acepta.
 - Recepción/Marlen atiende el seguimiento cuando el paciente necesita tiempo y
   autorizó previamente el contacto.
-- Comunicación/Yazmin no cierra tratamientos ni recibe estos seguimientos.
+- El médico no cierra estos seguimientos; los trabaja Recepción.
 
 El permiso se valida en el servidor. No basta con ocultar el formulario en la
 pantalla.
@@ -59,7 +59,7 @@ SIGECO consulta la decisión vigente de consentimiento para seguimiento:
 - si no existe consentimiento vigente, guarda la decisión pero no crea una
   tarea de contacto.
 
-Nunca se asigna automáticamente a Comunicación/Yazmin.
+La asignación automática busca a Recepción/Marlen, nunca a otro rol.
 
 ## Historia Y Correcciones
 

@@ -4,7 +4,7 @@ Estado consolidado de Sigeco, el sistema interno clinico y operativo de Salud In
 
 ## Estado Actual
 
-**V3.7 Simplificacion Sigeco esta implementada y validada localmente.** Las diez tareas de la fase estan cerradas: modelo aditivo, funnel de recepcion, retiro de la UI de leads, modulo Recepcion unificado, rol seguimiento, flujo flexible, edicion de paciente, consulta prellenada, dashboard operativo y QA/documentacion final.
+**V3.7 Simplificacion Sigeco esta implementada y validada localmente.** Las diez tareas de la fase estan cerradas: modelo aditivo, funnel de recepcion, retiro de la UI de leads, modulo Recepcion unificado, rol seguimiento (retirado el 2026-08-02; su trabajo pasó a Recepción), flujo flexible, edicion de paciente, consulta prellenada, dashboard operativo y QA/documentacion final.
 
 | Area | Estado | Resultado actual |
 | --- | --- | --- |
@@ -134,8 +134,8 @@ El flujo no es lineal. Una visita puede cerrarse o registrar abandono desde cual
   resultado visibles sin leer notas.
 - `No responde` y `Reprogramado` conservan la tarea pendiente con nueva fecha.
 - `Empeoró` o `Escalado al médico` crean una llamada médica urgente.
-- Recepción/Marlen trabaja seguimientos clínicos; Comunicación/Yazmin solo
-  gestiones administrativas.
+- Recepción trabaja los seguimientos clínicos y administrativos; el rol técnico
+  `seguimiento` se retiró el 2026-08-02.
 - Advertencia cuando el paciente prefiere no recibir contacto.
 - Llamadas y WhatsApp disponibles en móvil según consentimiento.
 

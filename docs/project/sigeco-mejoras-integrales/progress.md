@@ -155,8 +155,8 @@ Estado de las tareas de la base segura:
 - **Tarea 15 — Tipos y resultados de seguimiento:** propósito, relación,
   prioridad, responsable, estado y resultado separados; filtros web, acciones
   móviles, reprogramación y escalamiento urgente al médico implementados en
-  desarrollo local. Los seguimientos clínicos quedan con Recepción/Marlen y el
-  rol técnico de Yazmin solo puede trabajar tareas administrativas. Pendiente
+  desarrollo local. Los seguimientos (clínicos y administrativos) los trabaja
+  Recepción; el rol técnico `seguimiento` se retiró el 2026-08-02. Pendiente
   integración acumulada, QA de gstack y validación por roles en staging.
 - **Tarea 16 — Abandono, bloqueo y pendientes:** punto, área, motivo, usuario,
   fecha y pendientes persistentes implementados en desarrollo local. Las
@@ -180,7 +180,7 @@ Estado de las tareas de la base segura:
   proveedores con contacto, asociaciones múltiples y uno preferido
   implementados en desarrollo local. El código no cambia ni se reutiliza,
   Dirección revisa costos, Médico y Enfermería solo disponibilidad y
-  Seguimiento/Yazmin no accede. Pendiente integración acumulada, QA web/móvil,
+  Recepción no accede al inventario. Pendiente integración acumulada, QA web/móvil,
   revisión de datos reales y validación por roles en staging.
 - **Tarea 20 — Compras, recepciones, lotes y stock:** orden, pago, egreso,
   recepción parcial, lote, costo histórico, vencimiento y kardex enlazados en
@@ -1637,10 +1637,12 @@ pacientes (clínico y administrativo) lo hace ahora Recepción.
   clasificación y de las consultas de asignación.
 - Documentado en `permissions-privacy-secrets.md` (matriz sin columna
   Seguimiento) y `follow-up-classification.md`.
-- Redacción ya actualizada en `staff-pilot.md` y `tasks.md`. Queda pendiente,
-  sin bloquear, el repaso de los documentos de negocio/estrategia en
-  `docs/masters/` (mencionan a Yazmin como persona). Los reportes históricos no
-  se modifican porque son evidencia.
+- Redacción actualizada en toda la documentación viva (guías de operación,
+  plan activo, estado y guías históricas con nota). Los documentos de
+  negocio/estrategia en `docs/masters/` y `CLINICA_PRE_SIGECO.md` describen a
+  Yazmin como persona (comunicación) y ya asignan el seguimiento a
+  Marlen/Recepción: no mencionan el rol técnico y no requieren cambios. Los
+  reportes fechados no se modifican porque son evidencia.
 
 ## 2026-08-02 — Decisión — Modo De Ejecución Sin gstack, Pruebas Ni Build
 

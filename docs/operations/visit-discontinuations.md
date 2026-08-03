@@ -59,7 +59,7 @@ seguimiento está concedida. La tarea:
 - tiene prioridad alta;
 - se programa para el día siguiente;
 - busca una cuenta activa de Recepción llamada Marlen;
-- nunca se asigna automáticamente a Yazmin.
+- si no la encuentra, queda `Sin asignar`; no se entrega a otro rol.
 
 Si no existe consentimiento, el abandono se registra igualmente, pero no se
 crea contacto. La pantalla lo informa de forma visible.

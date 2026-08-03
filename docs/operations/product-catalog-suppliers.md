@@ -13,7 +13,7 @@ una entrada ni corrige existencias.
 - **Médico y Enfermería** consultan únicamente productos activos y su
   disponibilidad. No ven costos ni contactos de proveedores.
 - **Super administrador** conserva acceso completo para soporte.
-- Recepción, Seguimiento/Yazmin y Comunicación no acceden al inventario.
+- Recepción no accede al inventario.
 
 Las validaciones se realizan en servidor. Ocultar un botón no sustituye el
 permiso de la acción.

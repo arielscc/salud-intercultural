@@ -2,7 +2,7 @@
 
 Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacion.md). Cada tarea terminada agrega aqui su entrada con fecha, archivos tocados, validaciones ejecutadas y pendientes que deja.
 
-> **Aclaración operativa vigente:** este archivo conserva decisiones técnicas e históricas de la simplificación. Aunque SIGECO utiliza el nombre técnico `seguimiento`, Yazmin no realiza seguimiento de pacientes en tratamiento. Sus únicas tareas actuales son responder mensajes y llamadas de WhatsApp, responder llamadas al número de la clínica, llamar a personas que requieren información, contactar a quienes no lograron llegar a su visita y realizar recojos coordinados. Marlen y Recepción realizan el seguimiento del tratamiento.
+> **Aclaración operativa vigente (actualizada 2026-08-02):** este archivo conserva decisiones técnicas e históricas de la simplificación. El **rol técnico `seguimiento` fue retirado el 2026-08-02**: el seguimiento de pacientes (clínico y administrativo) lo hace ahora Recepción y las cuentas que tenían ese rol se reasignaron a Recepción. Yazmin usa el rol Recepción y su trabajo sigue siendo comunicación: responder mensajes y llamadas de WhatsApp y del número de la clínica, llamar a personas que requieren información, contactar a quienes no lograron llegar y realizar recojos coordinados. Lo que este archivo menciona más abajo sobre un rol `seguimiento` es historia del plan.
 
 ## Estado General
 

@@ -9,8 +9,7 @@ No reemplaza las reglas contables o fiscales que Dirección defina después.
 - **Dirección** consulta Caja, registra devoluciones o reintegros y aprueba una
   diferencia que supera el límite.
 - **Super administrador** conserva todos los permisos para soporte controlado.
-- Médico, Enfermería, Recepción, Seguimiento y Comunicación no pueden consultar
-  ni modificar Caja.
+- Médico, Enfermería y Recepción no pueden consultar ni modificar Caja.
 
 Los permisos están separados en apertura, lectura, movimiento, corrección,
 cierre y aprobación. Tener acceso a ventas no concede por sí solo permiso para

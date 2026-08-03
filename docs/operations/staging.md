@@ -122,7 +122,10 @@ El seed crea bandejas sinteticas para recepcion, consulta, enfermeria, administr
 | Recepcion | `qa.recepcion@staging.invalid` |
 | Administracion | `qa.administracion@staging.invalid` |
 | Enfermeria | `qa.enfermeria@staging.invalid` |
-| Seguimiento | `qa.seguimiento@staging.invalid` |
+
+El seed usa los roles asignables, por lo que no crea cuenta para los roles
+retirados `captacion` ni `seguimiento` (este último se retiró el 2026-08-02 y su
+trabajo lo hace Recepción).
 
 `.invalid` es un dominio reservado y no recibe correo. Cada contraseña se forma internamente como:
 

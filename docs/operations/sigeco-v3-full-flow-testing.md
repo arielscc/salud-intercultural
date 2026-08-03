@@ -1,5 +1,11 @@
 # Prueba Del Flujo Completo Sigeco V3.7
 
+> **Nota (2026-08-02):** guía histórica de V3.7. El **rol técnico `seguimiento`
+> fue retirado el 2026-08-02**: el seguimiento de pacientes lo hace ahora
+> Recepción y las cuentas que tenían ese rol se reasignaron a Recepción. Donde
+> esta guía menciona un rol/cuenta `seguimiento`, léase Recepción. La guía
+> vigente del piloto es [staff-pilot.md](./staff-pilot.md).
+
 Guia operativa y guiada para validar el flujo vigente desde recepcion hasta cierre o seguimiento. Esta pensada para ejecutarse a mano, pantalla por pantalla, con un paciente simulado y datos exactos para cada campo.
 
 **Tiempo estimado:** 60 a 90 minutos completa; las secciones 1 a 9 (flujo clinico) toman unos 40 minutos.

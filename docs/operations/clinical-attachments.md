@@ -25,7 +25,6 @@ de salud. Por eso:
 | Enfermería | Sí | Sí | No |
 | Recepción | No | No | No |
 | Administración | No | No | No |
-| Seguimiento | No | No | No |
 
 La eliminación queda reservada al super administrador. El contenido se borra
 del storage, pero la metadata se conserva con estado `deleted`, fecha y

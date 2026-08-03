@@ -2,7 +2,7 @@
 
 Plan tecnico para simplificar el flujo del paciente en Sigeco: menos formularios, menos secciones y captura unica de datos en recepcion mediante un funnel clinico corto. El analisis que origino este plan esta en el artefacto "Analisis de flujo Sigeco" (2026-07-10) y las decisiones aprobadas por el usuario se registran en [Progreso de simplificacion](./progreso-de-simplificacion.md).
 
-> **Aclaración operativa vigente:** este plan conserva la especificación técnica aprobada en julio de 2026. El nombre técnico del rol `seguimiento` no describe las tareas actuales de Yazmin. Ella solo responde mensajes y llamadas de WhatsApp, responde llamadas al número de la clínica, llama a personas que requieren información, contacta a quienes no lograron llegar a su visita y realiza recojos coordinados. Marlen y Recepción realizan el seguimiento de pacientes que ya están en tratamiento.
+> **Aclaración operativa vigente (actualizada 2026-08-02):** este plan conserva la especificación técnica aprobada en julio de 2026, pero el **rol técnico `seguimiento` fue retirado el 2026-08-02**. El seguimiento de pacientes (clínico y administrativo) lo hace ahora Recepción; las cuentas que tenían ese rol se reasignaron a Recepción. Yazmin usa el rol Recepción y su trabajo sigue siendo comunicación: responde mensajes y llamadas de WhatsApp y del número de la clínica, llama a personas que requieren información, contacta a quienes no lograron llegar y realiza recojos coordinados. Lo escrito más abajo sobre un rol `seguimiento` es historia del plan.
 
 A diferencia del rediseno Marea, esta fase SI toca logica, modelos y permisos. El sistema visual sigue siendo Marea sin cambios ([spec](../../design/sigeco-visual-system.md)).
 

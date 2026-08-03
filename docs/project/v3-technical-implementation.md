@@ -177,8 +177,9 @@ dentro de una transacción. Cuando el resultado es `worsened` o
 `escalated_to_doctor`, crea una tarea urgente `doctor_call` relacionada mediante
 `escalatedFromTaskId`. Solo Médico o Super administrador pueden resolverla.
 
-La asignación clínica busca Recepción/Marlen; el rol técnico `seguimiento`
-queda limitado a `domain=administrative`. La guía completa vive en
+La asignación clínica busca Recepción/Marlen; el trabajo administrativo lo
+atienden Recepción o Administración. El rol técnico `seguimiento` se retiró el
+2026-08-02 y su trabajo pasó a Recepción. La guía completa vive en
 [Tipos y resultados de seguimiento](../operations/follow-up-classification.md).
 
 ### Recordatorios Automatizados Y Supervisados

@@ -59,12 +59,22 @@ el rol interno `seguimiento`.
 - QA de navegador (gstack): selector de roles sin Seguimiento, seguimientos
   trabajados por Recepción, negativos por rol.
 - `pnpm test`, `pnpm test:integration` y `pnpm run build`.
-- Repaso de redacción del rol retirado ya realizado en `staff-pilot.md` (caso
-  P29-17, cuentas QA, tabla de personal, permisos y firmas; también se corrigió
-  la regla de contraseña a mínimo 6) y en `tasks.md` (responsabilidades, Caja e
-  inventario). Queda pendiente, sin bloquear, el repaso de los documentos de
-  negocio/estrategia en `docs/masters/` que mencionan a Yazmin como persona. Los
-  reportes históricos no se modifican porque son evidencia.
+- Repaso de redacción completo de toda la documentación viva: `staff-pilot.md`,
+  `tasks.md`, `permissions-privacy-secrets.md`, `follow-up-classification.md`,
+  `internal-users-sessions.md`, `clinical-attachments.md`,
+  `cash-sessions-expenses-close.md`, `purchases-receipts-batches-stock.md`,
+  `product-catalog-suppliers.md`, `treatment-proposal-outcomes.md`,
+  `visit-discontinuations.md`, `staging.md`, `v3-implementation-status.md`,
+  `v3-technical-implementation.md`, banners de `sigeco-simplificacion` y nota en
+  la guía histórica `sigeco-v3-full-flow-testing.md`.
+- Los documentos de negocio/estrategia en `docs/masters/` y
+  `CLINICA_PRE_SIGECO.md` describen a **Yazmin como persona** (comunicación:
+  WhatsApp, llamadas, recuperar visitas) y ya dicen que el seguimiento de
+  pacientes lo hace Marlen/Recepción. No mencionan el rol técnico, así que no
+  requieren cambios; Yazmin conserva su función de comunicación pero usa el rol
+  Recepción en el sistema.
+- Los reportes fechados y las entradas de log históricas no se modifican porque
+  son evidencia.
 
 ## Commit Sugerido
 
