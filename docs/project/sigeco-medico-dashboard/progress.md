@@ -14,8 +14,8 @@ brechas y las decisiones confirmadas por Dirección.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 3 |
-| En progreso | 5 |
+| Pendiente | 2 |
+| En progreso | 6 |
 | Terminada | 0 |
 
 ## Estado Por Tarea
@@ -27,7 +27,7 @@ brechas y las decisiones confirmadas por Dirección.
 | 3 | Administración confirma, valida descuento y cobra | P0 | En progreso | 2, Caja (plan integral 18) |
 | 4 | Suero y servicio con pago previo antes de Enfermería | P1 | En progreso | 2-3 |
 | 5 | Sesiones de servicio | P1 | En progreso | 1-4 |
-| 6 | Historial del paciente en la consulta | P1 | Pendiente | 1-3 |
+| 6 | Historial del paciente en la consulta | P1 | En progreso | 1-3 |
 | 7 | Seguimiento estricto por compra | P1 | Pendiente | 3, 6 |
 | 8 | Catálogo administrable de estudios | P2 | Pendiente | 1 |
 
@@ -44,8 +44,9 @@ Estado del código al crear el plan:
 - 🟢 Suero pagado antes de Enfermería (implementado en la Tarea 4, 2026-08-03:
   `requiresNursing` + derivación solo con la venta pagada; `serum` fuera de la
   derivación directa).
-- 🔴 Historial entre visitas: tratamientos y costos previos y precarga de receta
-  (no existe: la consulta solo carga la visita actual).
+- 🟢 Historial entre visitas: tratamientos y costos previos y precarga de receta
+  (implementado en la Tarea 6, 2026-08-03: tarjeta de historial + precarga de
+  receta rápida, solo lectura).
 - 🟠 Seguimiento estricto por compra (existe creación de seguimientos, falta el
   bloqueo por venta registrada).
 - 🟢 Catálogo administrable de servicios y tratamientos (implementado en la
@@ -98,6 +99,17 @@ Estado del código al crear el plan:
   cobra), catálogo nuevo de servicios/tratamientos, descuento máximo por oferta
   con validación de Administración, seguimiento estricto por venta, y manejo de
   sesiones con cada sesión como número de visita.
+
+### 2026-08-03 — Tarea 6 Implementada (Historial Del Paciente)
+
+- `getPatientConsultationHistory` carga las visitas previas (consulta, ventas e
+  ítems con costo, sesiones y última receta). Nueva tarjeta "Historial del
+  paciente" (plegada) con resumen por visita (1..n reconsultas).
+- "Receta rápida" se precarga desde la consulta anterior; vacía en la primera
+  visita; la receta actual manda. Solo lectura del historial.
+- Sin migración. Estado: **En progreso** (código + lint + typecheck; QA/pruebas/
+  build al cierre acumulado).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-historial-paciente-consulta.md).
 
 ### 2026-08-03 — Tarea 5 Implementada (Sesiones De Servicio)
 

@@ -156,6 +156,48 @@ export async function getClinicalVisitById(visitId: string) {
   });
 }
 
+/**
+ * Historial de visitas anteriores del paciente para la consulta (Tarea 6):
+ * consultas previas (1..n reconsultas), lo vendido y su costo, sesiones y la
+ * última receta. Solo lectura; no altera registros previos.
+ */
+export async function getPatientConsultationHistory(patientId: string, excludeVisitId: string) {
+  return withDatabaseError("getPatientConsultationHistory", async () => {
+    return prisma.visit.findMany({
+      where: {
+        patientId,
+        id: { not: excludeVisitId },
+        OR: [
+          { clinicalConsultation: { isNot: null } },
+          { sales: { some: {} } },
+          { serviceSessionPackages: { some: {} } }
+        ]
+      },
+      include: {
+        clinicalConsultation: {
+          include: {
+            diagnoses: { orderBy: [{ kind: "asc" }, { createdAt: "asc" }] }
+          }
+        },
+        prescriptions: {
+          orderBy: [{ version: "desc" }, { createdAt: "desc" }],
+          include: { items: true },
+          take: 1
+        },
+        sales: {
+          include: { items: true },
+          orderBy: { createdAt: "desc" }
+        },
+        serviceSessionPackages: {
+          orderBy: { createdAt: "desc" }
+        }
+      },
+      orderBy: [{ checkedInAt: "desc" }, { createdAt: "desc" }],
+      take: 20
+    });
+  });
+}
+
 export async function createClinicalOrderRecord(input: {
   visitId: string;
   doctorId?: string;

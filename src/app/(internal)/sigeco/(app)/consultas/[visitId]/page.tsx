@@ -51,7 +51,14 @@ import {
   doctorOrderLineTotalCents
 } from "@/features/doctor-orders/labels";
 import { formatDateTime } from "@/lib/dates";
-import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
+import {
+  getClinicalVisitById,
+  getPatientConsultationHistory
+} from "@/modules/database/queries/clinical-care";
+import {
+  formatServiceSessionMoney,
+  serviceSessionPricingModeLabels
+} from "@/features/service-sessions/labels";
 import {
   getDoctorOrderByVisit,
   getDoctorOrderOptions
@@ -151,9 +158,17 @@ export default async function ConsultationDetailPage({
   if (!visit) notFound();
   if (visit.branchCode !== activeBranch.code) notFound();
 
+  const consultationHistory = await getPatientConsultationHistory(visit.patient.id, visit.id);
+
   const primaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "primary");
   const secondaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "secondary");
   const prescriptionItem = visit.prescriptions[0]?.items[0];
+  // Precarga de "Receta rápida" desde la consulta anterior (Tarea 6); vacía en
+  // la primera visita. La receta de la visita actual siempre tiene prioridad.
+  const previousPrescriptionItem = consultationHistory
+    .map((entry) => entry.prescriptions[0]?.items[0])
+    .find((entry) => Boolean(entry));
+  const recetaDefault = prescriptionItem ?? previousPrescriptionItem;
   const age = calculatePatientAge(visit.patient.birthDate);
   const symptomDuration =
     visit.symptomDurationValue && visit.symptomDurationUnit
@@ -244,6 +259,94 @@ export default async function ConsultationDetailPage({
             <InfoRow label="Medicación actual" value={visit.patient.currentMedication} wide />
           </dl>
         </Card>
+
+        {consultationHistory.length > 0 ? (
+          <Card className="max-sm:order-2 p-0">
+            <details className="group">
+              <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-start justify-between gap-3 rounded-[9px] p-[18px] [&::-webkit-details-marker]:hidden">
+                <div>
+                  <h3 className="text-sm font-semibold text-text">Historial del paciente</h3>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {consultationHistory.length} visita
+                    {consultationHistory.length === 1 ? "" : "s"} anterior
+                    {consultationHistory.length === 1 ? "" : "es"} · solo lectura
+                  </p>
+                </div>
+                <ChevronDown
+                  className="mt-0.5 size-5 shrink-0 text-muted transition group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+              <div className="grid gap-3 border-t border-border p-[18px]">
+                {consultationHistory.map((entry) => {
+                  const dxPrimary = entry.clinicalConsultation?.diagnoses.find(
+                    (dx) => dx.kind === "primary"
+                  );
+                  const dxSecondary = entry.clinicalConsultation?.diagnoses.find(
+                    (dx) => dx.kind === "secondary"
+                  );
+                  const soldCents = entry.sales.reduce((sum, sale) => sum + sale.totalCents, 0);
+                  const rx = entry.prescriptions[0]?.items[0];
+                  return (
+                    <article
+                      key={entry.id}
+                      className="rounded-[9px] border border-border p-3 text-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold text-text">
+                          {formatDateTime(entry.checkedInAt ?? entry.createdAt)}
+                        </span>
+                        {soldCents > 0 ? (
+                          <span className="tabular-nums text-text">{formatMoney(soldCents)}</span>
+                        ) : null}
+                      </div>
+                      {dxPrimary ? (
+                        <p className="mt-1 text-muted">
+                          Dx: {dxPrimary.name}
+                          {dxSecondary ? ` · ${dxSecondary.name}` : ""}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-muted">Sin diagnóstico registrado.</p>
+                      )}
+                      {entry.clinicalConsultation?.treatmentPlanText ? (
+                        <p className="mt-1 text-muted">
+                          Plan: {entry.clinicalConsultation.treatmentPlanText}
+                        </p>
+                      ) : null}
+                      {entry.sales.length > 0 ? (
+                        <ul className="mt-1 grid gap-0.5 text-muted">
+                          {entry.sales.flatMap((sale) =>
+                            sale.items.map((saleItem) => (
+                              <li key={saleItem.id} className="tabular-nums">
+                                {saleItem.description} · {saleItem.quantity} ×{" "}
+                                {formatMoney(saleItem.unitPriceCents)}
+                              </li>
+                            ))
+                          )}
+                        </ul>
+                      ) : null}
+                      {entry.serviceSessionPackages.map((pkg) => (
+                        <p key={pkg.id} className="mt-1 tabular-nums text-muted">
+                          {pkg.serviceName} ({serviceSessionPricingModeLabels[pkg.pricingMode]}):{" "}
+                          {pkg.sessionsUsed}/{pkg.totalSessions} sesiones ·{" "}
+                          {formatServiceSessionMoney(pkg.totalPaidCents)}
+                        </p>
+                      ))}
+                      {rx ? (
+                        <p className="mt-1 text-muted">
+                          Receta: {rx.medication}
+                          {[rx.dose, rx.frequency, rx.duration].filter(Boolean).length > 0
+                            ? ` · ${[rx.dose, rx.frequency, rx.duration].filter(Boolean).join(" · ")}`
+                            : ""}
+                        </p>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </details>
+          </Card>
+        ) : null}
 
         <Card className="max-sm:order-3 p-0">
           <details className="group">
@@ -354,14 +457,18 @@ export default async function ConsultationDetailPage({
 
                 <CollapsibleSection
                   title="Receta rápida"
-                  description="Abrir solo cuando se indique medicación."
-                  defaultOpen={Boolean(prescriptionItem)}
+                  description={
+                    !prescriptionItem && previousPrescriptionItem
+                      ? "Precargada desde la consulta anterior; edítala si cambió."
+                      : "Abrir solo cuando se indique medicación."
+                  }
+                  defaultOpen={Boolean(recetaDefault)}
                 >
                   <Field label="Medicamento">
                     <input
                       className={internalInputClassName}
                       name="prescriptionMedication"
-                      defaultValue={prescriptionItem?.medication}
+                      defaultValue={recetaDefault?.medication}
                     />
                   </Field>
                   <div className="grid gap-3 sm:grid-cols-3">
@@ -369,21 +476,21 @@ export default async function ConsultationDetailPage({
                       <input
                         className={internalInputClassName}
                         name="prescriptionDose"
-                        defaultValue={prescriptionItem?.dose ?? ""}
+                        defaultValue={recetaDefault?.dose ?? ""}
                       />
                     </Field>
                     <Field label="Frecuencia">
                       <input
                         className={internalInputClassName}
                         name="prescriptionFrequency"
-                        defaultValue={prescriptionItem?.frequency ?? ""}
+                        defaultValue={recetaDefault?.frequency ?? ""}
                       />
                     </Field>
                     <Field label="Duración">
                       <input
                         className={internalInputClassName}
                         name="prescriptionDuration"
-                        defaultValue={prescriptionItem?.duration ?? ""}
+                        defaultValue={recetaDefault?.duration ?? ""}
                       />
                     </Field>
                   </div>
@@ -391,7 +498,7 @@ export default async function ConsultationDetailPage({
                     <input
                       className={internalInputClassName}
                       name="prescriptionObservations"
-                      defaultValue={prescriptionItem?.observations ?? ""}
+                      defaultValue={recetaDefault?.observations ?? ""}
                     />
                   </Field>
                 </CollapsibleSection>
