@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
-import { createPaymentRecord, createSaleRecord } from "@/modules/database/queries/sales";
+import {
+  confirmDoctorOrderSale,
+  createPaymentRecord,
+  createSaleRecord,
+  findDoctorOrderSaleError
+} from "@/modules/database/queries/sales";
 import {
   findInsufficientStockError,
   findInventoryCatalogError
@@ -14,6 +19,7 @@ import {
   releasePaidStudiesToNursing
 } from "@/modules/database/queries/paid-studies";
 import {
+  confirmDoctorOrderSchema,
   createPaymentSchema,
   createSaleSchema,
   moneyToCents
@@ -109,6 +115,65 @@ export async function createSaleAction(formData: FormData) {
   revalidatePath("/sigeco/administracion");
   if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
   revalidatePath(`/sigeco/recepcion/pacientes/${patientId}`);
+  redirect(`/sigeco/administracion/ventas/${sale.id}?aviso=venta-creada`);
+}
+
+export async function confirmDoctorOrderSaleAction(formData: FormData) {
+  const workItemId = String(formData.get("workItemId") ?? "");
+  const target = workItemId ? `/sigeco/administracion/${workItemId}` : "/sigeco/administracion";
+  const sale = await runAuditedAction(
+    {
+      permission: "sales_write",
+      action: "sale.doctor_order.confirm",
+      entityType: "sale",
+      context: { workItemId: workItemId || undefined }
+    },
+    async (user) => {
+      const { activeBranch } = await getBranchContext(user);
+      const parsed = confirmDoctorOrderSchema.safeParse(parseFormData(formData));
+      if (!parsed.success) redirect(`${target}?error=invalid-sale`);
+
+      let created;
+      try {
+        created = await confirmDoctorOrderSale({
+          doctorOrderId: parsed.data.doctorOrderId,
+          approveDiscount: parsed.data.approveDiscount,
+          workItemId: parsed.data.workItemId,
+          createdById: user.id,
+          branchCode: activeBranch.code,
+          initialPaymentCents: moneyToCents(parsed.data.initialPayment),
+          paymentMethodCode: parsed.data.paymentMethodCode,
+          paymentReference: parsed.data.paymentReference,
+          notes: parsed.data.notes
+        });
+      } catch (error) {
+        const cashError = findCashWorkflowError(error);
+        if (cashError?.code === "session_not_open") {
+          redirect(`${target}?error=cash-session-required`);
+        }
+        const stockError = findInsufficientStockError(error);
+        if (stockError) redirect(`${target}?error=insufficient-stock`);
+        const orderError = findDoctorOrderSaleError(error);
+        if (orderError) redirect(`${target}?error=${orderError.code}`);
+        throw error;
+      }
+
+      return auditedResult(created, {
+        entityId: created.id,
+        context: {
+          doctorOrderId: parsed.data.doctorOrderId,
+          approveDiscount: parsed.data.approveDiscount,
+          discountCents: created.discountCents,
+          totalCents: created.totalCents,
+          workItemId: parsed.data.workItemId
+        }
+      });
+    }
+  );
+
+  revalidatePath("/sigeco/administracion");
+  if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
+  revalidatePath("/sigeco/consultas");
   redirect(`/sigeco/administracion/ventas/${sale.id}?aviso=venta-creada`);
 }
 

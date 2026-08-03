@@ -16,10 +16,13 @@ import { FormActions } from "@/components/internal/ui/FormActions";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import {
+  confirmDoctorOrderSaleAction,
   createPaymentAction,
   createSaleAction,
   sendPaidStudiesToNursingAction
 } from "@/features/sales/actions";
+import { DoctorOrderConfirmPanel } from "@/features/doctor-orders/components/DoctorOrderConfirmPanel";
+import { doctorOrderStatusLabels } from "@/features/doctor-orders/labels";
 import {
   formatMoney,
   saleItemTypeLabels,
@@ -68,6 +71,7 @@ export default async function AdministrationWorkItemPage({
   const patient = item.visit.patient;
   const order = item.clinicalOrders[0];
   const proposalOutcome = order?.treatmentProposalOutcome;
+  const doctorOrder = item.visit.doctorOrder;
   const generatedSale = item.sales[0];
   const isPaidStudyOrder = Boolean(generatedSale && item.clinicalOrders.some((entry) => entry.type === "study"));
   const canRecordDiscontinuation = roleHasPermission(
@@ -105,6 +109,20 @@ export default async function AdministrationWorkItemPage({
             role="alert"
           >
             El producto ya no está activo o no está habilitado para venta. Elige otro producto.
+          </div>
+        ) : null}
+        {query.error === "not-submitted" ||
+        query.error === "empty-order" ||
+        query.error === "discount-over-cap" ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+          >
+            {query.error === "discount-over-cap"
+              ? "El descuento del pedido supera el tope permitido. Pide al médico que lo ajuste."
+              : query.error === "empty-order"
+                ? "El pedido no tiene líneas. Pide al médico que lo complete."
+                : "El pedido ya no está disponible para confirmar (revisa su estado)."}
           </div>
         ) : null}
         {query.error === "cash-session-required" ? (
@@ -185,6 +203,37 @@ export default async function AdministrationWorkItemPage({
                 <SubmitButton className="w-full">Pago confirmado · Enviar a Enfermería</SubmitButton>
               </NoticeForm>
             )}
+          </Card>
+        ) : doctorOrder?.status === "submitted" ? (
+          <Card className="max-sm:order-2">
+            <CardHeader
+              title="Confirmar pedido del médico"
+              description="Revisa las líneas, valida el descuento pedido por el paciente y crea la venta. No se cobra sin confirmar."
+              action={
+                <Chip tone="primary" dot>
+                  {doctorOrderStatusLabels[doctorOrder.status]}
+                </Chip>
+              }
+            />
+            <DoctorOrderConfirmPanel
+              action={confirmDoctorOrderSaleAction}
+              orderId={doctorOrder.id}
+              workItemId={item.id}
+              patientName={patient.fullName}
+              doctorName={
+                doctorOrder.doctor?.name ?? doctorOrder.doctor?.email ?? "Médico"
+              }
+              indications={doctorOrder.indications}
+              lines={doctorOrder.lines.map((line) => ({
+                id: line.id,
+                source: line.source,
+                description: line.description,
+                quantity: line.quantity,
+                unitPriceCents: line.unitPriceCents,
+                discountCents: line.discountCents,
+                maxDiscountCents: line.maxDiscountCents
+              }))}
+            />
           </Card>
         ) : (
         <Card className="max-sm:order-2">

@@ -67,7 +67,8 @@ export async function getAdministrationWorkItems(
         visit: {
           include: {
             patient: true,
-            route: true
+            route: true,
+            doctorOrder: { select: { status: true } }
           }
         },
         sales: {
@@ -124,7 +125,13 @@ export async function getAdministrationWorkItemById(id: string) {
         visit: {
           include: {
             patient: true,
-            route: true
+            route: true,
+            doctorOrder: {
+              include: {
+                doctor: { select: { id: true, name: true, email: true } },
+                lines: { orderBy: { position: "asc" } }
+              }
+            }
           }
         },
         sales: {
@@ -290,6 +297,188 @@ export async function createSaleRecord(input: {
             status: "completed",
             completedAt: new Date()
           }
+        });
+      }
+
+      return sale;
+    });
+  });
+}
+
+export class DoctorOrderSaleError extends Error {
+  constructor(public readonly code: "not-submitted" | "empty-order" | "discount-over-cap") {
+    super(code);
+    this.name = "DoctorOrderSaleError";
+  }
+}
+
+export function findDoctorOrderSaleError(error: unknown): DoctorOrderSaleError | null {
+  let current = error;
+  while (current instanceof Error) {
+    if (current instanceof DoctorOrderSaleError) return current;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return null;
+}
+
+/**
+ * Convierte un pedido del médico (Tarea 2) en una venta con varias líneas
+ * (Tarea 3). Administración aprueba o rechaza el descuento; si lo rechaza se
+ * cobra el precio completo. Es idempotente por pedido: si ya existe la venta la
+ * devuelve. No supera nunca el tope (suma de umbrales por producto).
+ */
+export async function confirmDoctorOrderSale(input: {
+  doctorOrderId: string;
+  approveDiscount: boolean;
+  workItemId?: string;
+  createdById?: string;
+  branchCode?: string;
+  initialPaymentCents?: number;
+  paymentMethodCode?: string;
+  paymentReference?: string;
+  notes?: string;
+}) {
+  return withDatabaseError("confirmDoctorOrderSale", async () => {
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.sale.findUnique({
+        where: { doctorOrderId: input.doctorOrderId },
+        include: { items: true }
+      });
+      if (existing) return existing;
+
+      const order = await tx.doctorOrder.findUniqueOrThrow({
+        where: { id: input.doctorOrderId },
+        include: { lines: { orderBy: { position: "asc" } }, visit: { select: { branchCode: true } } }
+      });
+
+      if (order.status !== "submitted") throw new DoctorOrderSaleError("not-submitted");
+      if (order.lines.length === 0) throw new DoctorOrderSaleError("empty-order");
+
+      const branchCode = order.visit?.branchCode ?? input.branchCode ?? "el-alto";
+
+      let subtotalCents = 0;
+      let discountCents = 0;
+      let capCents = 0;
+      for (const line of order.lines) {
+        subtotalCents += line.unitPriceCents * line.quantity;
+        capCents += line.maxDiscountCents;
+        if (input.approveDiscount) {
+          discountCents += Math.min(line.discountCents, line.maxDiscountCents);
+        }
+      }
+      if (discountCents > capCents) throw new DoctorOrderSaleError("discount-over-cap");
+      discountCents = Math.min(discountCents, subtotalCents);
+      const totalCents = Math.max(0, subtotalCents - discountCents);
+      const initialPaymentCents = Math.min(Math.max(0, input.initialPaymentCents ?? 0), totalCents);
+      const status = getSaleStatus(totalCents, initialPaymentCents);
+      const cashSession =
+        initialPaymentCents > 0 ? await getOpenCashSessionForOperation(tx, branchCode) : null;
+
+      const sale = await tx.sale.create({
+        data: {
+          idempotencyKey: `doctor-order:${order.id}`,
+          patientId: order.patientId,
+          visitId: order.visitId,
+          workItemId: input.workItemId,
+          doctorOrderId: order.id,
+          createdById: input.createdById,
+          branchCode,
+          status,
+          subtotalCents,
+          discountCents,
+          totalCents,
+          paidCents: initialPaymentCents,
+          balanceCents: totalCents - initialPaymentCents,
+          notes: input.notes ?? order.indications ?? undefined,
+          items: {
+            create: order.lines.map((line) => ({
+              inventoryItemId: line.inventoryItemId,
+              type: line.itemType,
+              description: line.description,
+              quantity: line.quantity,
+              unitPriceCents: line.unitPriceCents,
+              totalCents: line.unitPriceCents * line.quantity
+            }))
+          }
+        },
+        include: { items: true }
+      });
+
+      for (const line of order.lines) {
+        if (!line.inventoryItemId) continue;
+        const saleItem = sale.items.find(
+          (candidate) => candidate.inventoryItemId === line.inventoryItemId
+        );
+        await applyInventoryMovement(tx, {
+          itemId: line.inventoryItemId,
+          saleId: sale.id,
+          saleItemId: saleItem?.id,
+          userId: input.createdById,
+          branchCode,
+          type: "automatic_sale_exit",
+          quantityDelta: -line.quantity,
+          reason: `Salida automática por venta ${sale.id}`
+        });
+        await tx.deliveredProduct.create({
+          data: {
+            saleId: sale.id,
+            saleItemId: saleItem?.id,
+            patientId: order.patientId,
+            visitId: order.visitId,
+            description: line.description,
+            quantity: line.quantity
+          }
+        });
+      }
+
+      if (initialPaymentCents > 0) {
+        const method = await ensurePaymentMethod(tx, input.paymentMethodCode ?? "cash");
+        const payment = await tx.payment.create({
+          data: {
+            idempotencyKey: `doctor-order-payment:${order.id}`,
+            saleId: sale.id,
+            patientId: order.patientId,
+            visitId: order.visitId,
+            methodId: method.id,
+            receivedById: input.createdById,
+            branchCode,
+            amountCents: initialPaymentCents,
+            reference: input.paymentReference
+          }
+        });
+        await tx.cashMovement.create({
+          data: {
+            idempotencyKey: `doctor-order-payment:${order.id}`,
+            cashSessionId: cashSession?.id,
+            saleId: sale.id,
+            paymentId: payment.id,
+            patientId: order.patientId,
+            visitId: order.visitId,
+            userId: input.createdById,
+            branchCode,
+            type: "income",
+            channel: paymentCodeToCashChannel(input.paymentMethodCode ?? "cash"),
+            amountCents: initialPaymentCents,
+            description: `Cobro de venta ${sale.id}`
+          }
+        });
+      }
+
+      await tx.doctorOrder.update({
+        where: { id: order.id },
+        data: {
+          status: "confirmed",
+          confirmedAt: new Date(),
+          discountApproved: input.approveDiscount,
+          discountDecidedById: input.createdById,
+          discountDecidedAt: new Date()
+        }
+      });
+
+      if (input.workItemId && status === "paid") {
+        await tx.visitWorkItem.update({
+          where: { id: input.workItemId },
+          data: { status: "completed", completedAt: new Date() }
         });
       }
 

@@ -14,8 +14,8 @@ brechas y las decisiones confirmadas por Dirección.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 6 |
-| En progreso | 2 |
+| Pendiente | 5 |
+| En progreso | 3 |
 | Terminada | 0 |
 
 ## Estado Por Tarea
@@ -24,7 +24,7 @@ brechas y las decisiones confirmadas por Dirección.
 | --- | --- | --- | --- | --- |
 | 1 | Catálogo de servicios y tratamientos | P0 | En progreso | Ninguna |
 | 2 | El médico arma el pedido en la consulta | P0 | En progreso | 1 |
-| 3 | Administración confirma, valida descuento y cobra | P0 | Pendiente | 2, Caja (plan integral 18) |
+| 3 | Administración confirma, valida descuento y cobra | P0 | En progreso | 2, Caja (plan integral 18) |
 | 4 | Suero y servicio con pago previo antes de Enfermería | P1 | Pendiente | 2-3 |
 | 5 | Sesiones de servicio | P1 | Pendiente | 1-4 |
 | 6 | Historial del paciente en la consulta | P1 | Pendiente | 1-3 |
@@ -96,6 +96,19 @@ Estado del código al crear el plan:
   cobra), catálogo nuevo de servicios/tratamientos, descuento máximo por oferta
   con validación de Administración, seguimiento estricto por venta, y manejo de
   sesiones con cada sesión como número de visita.
+
+### 2026-08-03 — Tarea 3 Implementada (Administración Confirma Y Cobra)
+
+- Panel "Confirmar pedido del médico" en la tarea administrativa: convierte el
+  pedido `submitted` en una `Sale` multi-línea y lo enlaza (`Sale.doctorOrderId`).
+- Validación de descuento (aprobar/rechazar) auditada con quién y cuándo; el tope
+  se revalida en servidor. Cobro inicial en Caja; el saldo se cobra en la venta.
+- Idempotente por pedido (no duplica venta ni cobro). La cola de Administración
+  marca "Pedido del médico por confirmar".
+- Migración aditiva `20260803160000_doctor_order_confirm_sale` (aplicada en local).
+- Estado: **En progreso** (código + lint + typecheck listos; QA/pruebas/build al
+  cierre acumulado).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-administracion-confirma-cobra.md).
 
 ### 2026-08-03 — Tarea 2 Implementada (El Médico Arma El Pedido)
 

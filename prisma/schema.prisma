@@ -790,6 +790,7 @@ model InternalUser {
   performedPatientMerges         PatientMerge[]                  @relation("PatientMergePerformedBy")
   treatmentProposalOutcomes      TreatmentProposalOutcome[]
   doctorOrders                   DoctorOrder[]                   @relation("DoctorOrderDoctor")
+  discountDecidedOrders          DoctorOrder[]                   @relation("DoctorOrderDiscountDecidedBy")
   recordedDiscontinuations       VisitDiscontinuation[]          @relation("VisitDiscontinuationRecordedBy")
   finalizedConsultations         ClinicalConsultation[]          @relation("ClinicalConsultationFinalizedBy")
   authoredClinicalVersions       ClinicalConsultationVersion[]   @relation("ClinicalConsultationVersionAuthor")
@@ -1850,6 +1851,7 @@ model Sale {
   patientId          String
   visitId            String?
   workItemId         String?
+  doctorOrderId      String?             @unique
   createdById        String?
   branchCode         String              @default("el-alto")
   status             SaleStatus          @default(pending)
@@ -1864,6 +1866,7 @@ model Sale {
   patient            Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
   visit              Visit?              @relation(fields: [visitId], references: [id], onDelete: SetNull)
   workItem           VisitWorkItem?      @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  doctorOrder        DoctorOrder?        @relation(fields: [doctorOrderId], references: [id], onDelete: SetNull)
   createdBy          InternalUser?       @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   branch             ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   items              SaleItem[]
@@ -3049,19 +3052,27 @@ model ServiceCatalogItemVersion {
 /// precio y descuento y se envía a Administración, pero NO crea la venta ni el
 /// cobro (eso es Tarea 3). Hay como máximo un pedido activo por visita.
 model DoctorOrder {
-  id          String            @id @default(cuid())
-  visitId     String            @unique
-  patientId   String
-  doctorId    String?
-  status      DoctorOrderStatus @default(draft)
-  indications String?
-  submittedAt DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  visit       Visit             @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  patient     Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  doctor      InternalUser?     @relation("DoctorOrderDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
-  lines       DoctorOrderLine[]
+  id                 String            @id @default(cuid())
+  visitId            String            @unique
+  patientId          String
+  doctorId           String?
+  status             DoctorOrderStatus @default(draft)
+  indications        String?
+  submittedAt        DateTime?
+  /// Decisión de Administración sobre el descuento aplicado por el médico:
+  /// null = sin decidir; true = aprobado; false = rechazado (se cobra completo).
+  discountApproved   Boolean?
+  discountDecidedById String?
+  discountDecidedAt  DateTime?
+  confirmedAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  visit              Visit             @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient            Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor             InternalUser?     @relation("DoctorOrderDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  discountDecidedBy  InternalUser?     @relation("DoctorOrderDiscountDecidedBy", fields: [discountDecidedById], references: [id], onDelete: SetNull)
+  lines              DoctorOrderLine[]
+  sale               Sale?
 
   @@index([patientId])
   @@index([status])

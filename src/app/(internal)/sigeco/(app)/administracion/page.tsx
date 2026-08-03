@@ -206,6 +206,9 @@ export default async function AdministrationPage() {
                     {formatMoney(sale.totalCents)} · Saldo {formatMoney(sale.balanceCents)}
                   </span>
                 ) : null}
+                {item.visit.doctorOrder?.status === "submitted" && !sale ? (
+                  <Chip tone="primary">Pedido del médico por confirmar</Chip>
+                ) : null}
               </RecordItem>
             );
           })}
@@ -246,6 +249,11 @@ export default async function AdministrationPage() {
                       <span className="block truncate font-medium text-text">{item.title}</span>
                       {item.description ? (
                         <span className="block truncate text-[11px] text-muted">{item.description}</span>
+                      ) : null}
+                      {item.visit.doctorOrder?.status === "submitted" && !sale ? (
+                        <span className="mt-0.5 block text-[11px] font-semibold text-primary-dark">
+                          Pedido del médico por confirmar
+                        </span>
                       ) : null}
                     </Td>
                     <Td className="lg:hidden xl:table-cell">

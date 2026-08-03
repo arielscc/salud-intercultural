@@ -64,6 +64,19 @@ export const createPaymentSchema = z.object({
   paidAt: optionalDate
 });
 
+export const confirmDoctorOrderSchema = z.object({
+  doctorOrderId: z.string().min(1),
+  workItemId: optionalText,
+  approveDiscount: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  initialPayment: optionalMoneyString,
+  paymentMethodCode: paymentMethodCodeSchema.default("cash"),
+  paymentReference: optionalText,
+  notes: optionalText
+});
+
 export function moneyToCents(value?: string) {
   if (!value) return 0;
   return Math.round(Number(value) * 100);
