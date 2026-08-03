@@ -81,7 +81,10 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_duplicates_merge",
     "visit_discontinuations_read",
     "visit_discontinuations_write",
-    "documents_configure"
+    "documents_configure",
+    "service_catalog_read",
+    "service_catalog_write",
+    "discount_threshold_manage"
   ],
   direccion: [
     "internal_access",
@@ -110,7 +113,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "attribution_manage",
     "patient_duplicates_read",
     "visit_discontinuations_read",
-    "documents_configure"
+    "documents_configure",
+    "service_catalog_read",
+    "discount_threshold_manage"
   ],
   medico: [
     "internal_access",
@@ -133,7 +138,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "inventory_read",
     "patient_consents_read",
     "visit_discontinuations_read",
-    "visit_discontinuations_write"
+    "visit_discontinuations_write",
+    "service_catalog_read"
   ],
   recepcion: [
     "internal_access",
@@ -184,7 +190,9 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "inventory_lot_adjust",
     "patient_consents_read",
     "visit_discontinuations_read",
-    "visit_discontinuations_write"
+    "visit_discontinuations_write",
+    "service_catalog_read",
+    "service_catalog_write"
   ],
   enfermeria: [
     "internal_access",

@@ -21,6 +21,7 @@ import {
   setInventoryItemStatusAction,
   updateInventoryItemSuppliersAction
 } from "@/features/inventory/actions";
+import { updateInventoryItemMaxDiscountAction } from "@/features/service-catalog/service-catalog-actions";
 import {
   formatInventoryMoney,
   inventoryItemUsageLabels,
@@ -60,6 +61,7 @@ export default async function InventoryItemPage({
   const canReadSuppliers = roleHasPermission(user.role, "suppliers_read");
   const canReadPurchases = roleHasPermission(user.role, "purchases_read");
   const canWriteSuppliers = roleHasPermission(user.role, "suppliers_write");
+  const canManageThreshold = roleHasPermission(user.role, "discount_threshold_manage");
   if (!item.active && !canWrite && !canReadCosts) notFound();
 
   const suppliers = canWriteSuppliers ? await getActiveSuppliers() : [];
@@ -131,6 +133,10 @@ export default async function InventoryItemPage({
                   value={formatInventoryMoney(item.referenceCostCents)}
                 />
               ) : null}
+              <InfoRow
+                label="Descuento máx."
+                value={formatInventoryMoney(item.maxDiscountCents)}
+              />
             </dl>
           </Card>
 
@@ -407,6 +413,36 @@ export default async function InventoryItemPage({
                   />
                 </Field>
                 <SubmitButton variant="outline">Guardar proveedores</SubmitButton>
+              </NoticeForm>
+            </Card>
+          ) : null}
+
+          {canManageThreshold ? (
+            <Card>
+              <CardHeader
+                title="Umbral de descuento máximo"
+                description="Solo Dirección y Super administrador. Acota el descuento del médico; en un tratamiento se suma por producto."
+              />
+              <NoticeForm
+                action={updateInventoryItemMaxDiscountAction}
+                notice="Umbral actualizado"
+                className="grid gap-3"
+              >
+                <input type="hidden" name="itemId" value={item.id} />
+                <input type="hidden" name="expectedRevision" value={item.revision} />
+                <Field label="Descuento máximo por unidad (Bs)">
+                  <input
+                    className={internalInputClassName}
+                    name="maxDiscount"
+                    inputMode="decimal"
+                    defaultValue={(item.maxDiscountCents / 100).toFixed(2)}
+                    required
+                  />
+                </Field>
+                <Field label="Motivo">
+                  <input className={internalInputClassName} name="changeReason" required />
+                </Field>
+                <SubmitButton variant="outline">Guardar umbral</SubmitButton>
               </NoticeForm>
             </Card>
           ) : null}

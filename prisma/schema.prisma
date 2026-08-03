@@ -88,6 +88,9 @@ enum InternalPermission {
   visit_discontinuations_read
   visit_discontinuations_write
   documents_configure
+  service_catalog_read
+  service_catalog_write
+  discount_threshold_manage
 }
 
 enum AuditResult {
@@ -641,6 +644,14 @@ enum InventoryItemUsage {
   both
 }
 
+/// Tipo de oferta vendible del catálogo de servicios y tratamientos.
+/// `service` = servicio propio (sueroterapia, ozonoterapia, etc.).
+/// `treatment` = conjunto de productos vendidos juntos.
+enum ServiceCatalogKind {
+  service
+  treatment
+}
+
 enum PurchaseStatus {
   draft
   confirmed
@@ -741,6 +752,7 @@ model InternalUser {
   inventoryMovements             InventoryMovement[]
   inventoryAdjustments           InventoryAdjustment[]
   inventoryCatalogVersions       InventoryItemCatalogVersion[]   @relation("InventoryCatalogVersionChangedBy")
+  serviceCatalogVersions         ServiceCatalogItemVersion[]     @relation("ServiceCatalogVersionChangedBy")
   supplierVersions               SupplierVersion[]               @relation("SupplierVersionChangedBy")
   createdPurchases               Purchase[]                      @relation("PurchaseCreatedBy")
   confirmedPurchases             Purchase[]                      @relation("PurchaseConfirmedBy")
@@ -2475,6 +2487,9 @@ model InventoryItem {
   usage              InventoryItemUsage            @default(both)
   salePriceCents     Int                           @default(0)
   referenceCostCents Int                           @default(0)
+  /// Umbral de descuento máximo por unidad (en centavos) que solo Dirección y
+  /// Super administrador pueden editar. Acota el descuento del médico.
+  maxDiscountCents   Int                           @default(0)
   currentStock       Int                           @default(0)
   minimumStock       Int                           @default(0)
   active             Boolean                       @default(true)
@@ -2482,6 +2497,7 @@ model InventoryItem {
   createdAt          DateTime                      @default(now())
   updatedAt          DateTime                      @updatedAt
   saleItems          SaleItem[]
+  serviceComponents  ServiceCatalogComponent[]
   movements          InventoryMovement[]
   adjustments        InventoryAdjustment[]
   alerts             InventoryAlert[]
@@ -2544,6 +2560,7 @@ model InventoryItemCatalogVersion {
   usage              InventoryItemUsage
   salePriceCents     Int
   referenceCostCents Int
+  maxDiscountCents   Int                @default(0)
   minimumStock       Int
   active             Boolean
   supplierSnapshot   Json?
@@ -2923,4 +2940,84 @@ model InventoryAlert {
 
   @@index([itemId])
   @@index([status, createdAt])
+}
+
+/// Oferta vendible que el médico puede elegir en la consulta (servicio o
+/// tratamiento). Es un catálogo administrable, separado de Productos (que son
+/// insumos con stock). Nada hardcodeado; siempre existe la opción de texto libre
+/// al armar el pedido. El precio y el umbral históricos de una venta no cambian
+/// al editar este catálogo (se versiona de forma append-only).
+model ServiceCatalogItem {
+  id                  String                      @id @default(cuid())
+  code                String                      @unique
+  name                String
+  description         String?
+  category            String                      @default("Sin categoría")
+  kind                ServiceCatalogKind          @default(service)
+  basePriceCents      Int                         @default(0)
+  /// Umbral de descuento propio (centavos). Aplica a servicios sin productos
+  /// componentes. Solo Dirección y Super administrador lo editan.
+  ownMaxDiscountCents Int                         @default(0)
+  /// Marca los servicios que se venden por sesiones (ver Tarea 5).
+  supportsSessions    Boolean                     @default(false)
+  sessionCount        Int?
+  packagePriceCents   Int?
+  sessionPriceCents   Int?
+  active              Boolean                     @default(true)
+  revision            Int                         @default(1)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  components          ServiceCatalogComponent[]
+  versions            ServiceCatalogItemVersion[]
+
+  @@index([name])
+  @@index([category])
+  @@index([kind])
+  @@index([active])
+}
+
+/// Producto componente de un Tratamiento. El tope de descuento del tratamiento
+/// es la suma de `InventoryItem.maxDiscountCents * quantity` de sus componentes.
+model ServiceCatalogComponent {
+  id              String             @id @default(cuid())
+  catalogItemId   String
+  inventoryItemId String
+  quantity        Int                @default(1)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  catalogItem     ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem      @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@unique([catalogItemId, inventoryItemId])
+  @@index([catalogItemId])
+  @@index([inventoryItemId])
+}
+
+/// Historial append-only del catálogo de servicios/tratamientos.
+model ServiceCatalogItemVersion {
+  id                  String             @id @default(cuid())
+  catalogItemId       String
+  version             Int
+  code                String
+  name                String
+  description         String?
+  category            String
+  kind                ServiceCatalogKind
+  basePriceCents      Int
+  ownMaxDiscountCents Int
+  supportsSessions    Boolean
+  sessionCount        Int?
+  packagePriceCents   Int?
+  sessionPriceCents   Int?
+  active              Boolean
+  componentSnapshot   Json?
+  changedById         String?
+  changeReason        String
+  createdAt           DateTime           @default(now())
+  catalogItem         ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
+  changedBy           InternalUser?      @relation("ServiceCatalogVersionChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@unique([catalogItemId, version])
+  @@index([catalogItemId, createdAt])
+  @@index([changedById])
 }

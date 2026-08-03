@@ -185,6 +185,26 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("super_admin", "inventory_adjust")).toBe(true);
   });
 
+  it("lets administration manage the service/treatment catalog and medico read it", () => {
+    expect(roleHasPermission("administracion", "service_catalog_read")).toBe(true);
+    expect(roleHasPermission("administracion", "service_catalog_write")).toBe(true);
+    expect(roleHasPermission("medico", "service_catalog_read")).toBe(true);
+    expect(roleHasPermission("medico", "service_catalog_write")).toBe(false);
+    expect(roleHasPermission("recepcion", "service_catalog_read")).toBe(true);
+    expect(roleHasPermission("direccion", "service_catalog_read")).toBe(true);
+    expect(roleHasPermission("direccion", "service_catalog_write")).toBe(false);
+    expect(roleHasPermission("enfermeria", "service_catalog_read")).toBe(false);
+    expect(roleHasPermission("seguimiento", "service_catalog_read")).toBe(false);
+  });
+
+  it("reserves discount-threshold edits for Direction and super administrators", () => {
+    expect(roleHasPermission("super_admin", "discount_threshold_manage")).toBe(true);
+    expect(roleHasPermission("direccion", "discount_threshold_manage")).toBe(true);
+    expect(roleHasPermission("administracion", "discount_threshold_manage")).toBe(false);
+    expect(roleHasPermission("medico", "discount_threshold_manage")).toBe(false);
+    expect(roleHasPermission("recepcion", "discount_threshold_manage")).toBe(false);
+  });
+
   it("restricts the audit history to direction and super administrators", () => {
     expect(roleHasPermission("super_admin", "audit_read")).toBe(true);
     expect(roleHasPermission("direccion", "audit_read")).toBe(true);

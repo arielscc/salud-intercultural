@@ -164,6 +164,7 @@ async function createItemCatalogVersion(
       usage: item.usage,
       salePriceCents: item.salePriceCents,
       referenceCostCents: item.referenceCostCents,
+      maxDiscountCents: item.maxDiscountCents,
       minimumStock: item.minimumStock,
       active: item.active,
       supplierSnapshot: item.supplierLinks.map((link) => ({
@@ -509,6 +510,33 @@ export async function updateInventoryItemRecord(input: {
       if (updated.count !== 1) throw new InventoryCatalogError("concurrent-update");
 
       await syncLowStockAlert(tx, input.itemId);
+      await createItemCatalogVersion(tx, input.itemId, input);
+      return tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+    })
+  );
+}
+
+/**
+ * Edita el umbral de descuento máximo por producto (centavos). Solo se invoca
+ * desde una acción con permiso `discount_threshold_manage` (Dirección / Super
+ * administrador). Este umbral acota el descuento que el médico puede aplicar:
+ * el tope de un tratamiento es la suma de los umbrales de sus productos.
+ */
+export async function updateInventoryItemMaxDiscountRecord(input: {
+  itemId: string;
+  expectedRevision: number;
+  maxDiscountCents: number;
+  changeReason: string;
+  userId?: string;
+}) {
+  return withDatabaseError("updateInventoryItemMaxDiscountRecord", async () =>
+    prisma.$transaction(async (tx) => {
+      const updated = await tx.inventoryItem.updateMany({
+        where: { id: input.itemId, revision: input.expectedRevision },
+        data: { maxDiscountCents: input.maxDiscountCents, revision: { increment: 1 } }
+      });
+      if (updated.count !== 1) throw new InventoryCatalogError("concurrent-update");
+
       await createItemCatalogVersion(tx, input.itemId, input);
       return tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
     })

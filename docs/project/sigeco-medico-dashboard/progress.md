@@ -14,15 +14,15 @@ brechas y las decisiones confirmadas por Dirección.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 8 |
-| En progreso | 0 |
+| Pendiente | 7 |
+| En progreso | 1 |
 | Terminada | 0 |
 
 ## Estado Por Tarea
 
 | # | Tarea | Prioridad | Estado | Dependencias |
 | --- | --- | --- | --- | --- |
-| 1 | Catálogo de servicios y tratamientos | P0 | Pendiente | Ninguna |
+| 1 | Catálogo de servicios y tratamientos | P0 | En progreso | Ninguna |
 | 2 | El médico arma el pedido en la consulta | P0 | Pendiente | 1 |
 | 3 | Administración confirma, valida descuento y cobra | P0 | Pendiente | 2, Caja (plan integral 18) |
 | 4 | Suero y servicio con pago previo antes de Enfermería | P1 | Pendiente | 2-3 |
@@ -45,7 +45,8 @@ Estado del código al crear el plan:
   (no existe: la consulta solo carga la visita actual).
 - 🟠 Seguimiento estricto por compra (existe creación de seguimientos, falta el
   bloqueo por venta registrada).
-- 🔴 Catálogo administrable de servicios y tratamientos (no existe).
+- 🟢 Catálogo administrable de servicios y tratamientos (implementado en la
+  Tarea 1, 2026-08-03; pendiente el cierre acumulado de QA/pruebas/build).
 
 ## Decisiones Vigentes
 
@@ -94,6 +95,21 @@ Estado del código al crear el plan:
   cobra), catálogo nuevo de servicios/tratamientos, descuento máximo por oferta
   con validación de Administración, seguimiento estricto por venta, y manejo de
   sesiones con cada sesión como número de visita.
+
+### 2026-08-03 — Tarea 1 Implementada (Catálogo De Servicios Y Tratamientos)
+
+- Catálogo nuevo separado de Productos: modelos `ServiceCatalogItem`,
+  `ServiceCatalogComponent` y `ServiceCatalogItemVersion` (append-only), enum
+  `ServiceCatalogKind` (service/treatment) y CRUD en `/sigeco/catalogo`.
+- Umbral de descuento por producto (`InventoryItem.maxDiscountCents`) editable
+  solo por Dirección/Super admin; el tope de un tratamiento es la suma de los
+  umbrales de sus productos; los servicios sin productos usan `ownMaxDiscountCents`.
+- Permisos nuevos: `service_catalog_read`, `service_catalog_write` y
+  `discount_threshold_manage`, con auditoría en todas las escrituras.
+- Migración aditiva `20260803120000_service_treatment_catalog` (no aplicada aún).
+- Estado: **En progreso** (código + lint + typecheck listos; QA de navegador,
+  pruebas y build pendientes para el cierre acumulado, según el modo vigente).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-catalogo-servicios-tratamientos.md).
 
 ### 2026-08-03 — Reglas Adicionales De Descuento, Sesiones E Historial
 
