@@ -2983,6 +2983,9 @@ model ServiceCatalogItem {
   /// Umbral de descuento propio (centavos). Aplica a servicios sin productos
   /// componentes. Solo Dirección y Super administrador lo editan.
   ownMaxDiscountCents Int                         @default(0)
+  /// Se ejecuta en Enfermería (sueroterapia, ozonoterapia): requiere pago previo
+  /// antes de derivar (Tarea 4).
+  requiresNursing     Boolean                     @default(false)
   /// Marca los servicios que se venden por sesiones (ver Tarea 5).
   supportsSessions    Boolean                     @default(false)
   sessionCount        Int?
@@ -3031,6 +3034,7 @@ model ServiceCatalogItemVersion {
   kind                ServiceCatalogKind
   basePriceCents      Int
   ownMaxDiscountCents Int
+  requiresNursing     Boolean            @default(false)
   supportsSessions    Boolean
   sessionCount        Int?
   packagePriceCents   Int?
@@ -3065,6 +3069,9 @@ model DoctorOrder {
   discountDecidedById String?
   discountDecidedAt  DateTime?
   confirmedAt        DateTime?
+  /// Derivación a Enfermería después del pago (Tarea 4). Idempotente.
+  nursingReleasedAt  DateTime?
+  nursingWorkItemId  String?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   visit              Visit             @relation(fields: [visitId], references: [id], onDelete: Cascade)
@@ -3094,6 +3101,7 @@ model DoctorOrderLine {
   quantity         Int                   @default(1)
   sessionCount     Int?
   maxDiscountCents Int                   @default(0)
+  requiresNursing  Boolean               @default(false)
   notes            String?
   position         Int                   @default(0)
   createdAt        DateTime              @default(now())

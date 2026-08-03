@@ -14,8 +14,8 @@ brechas y las decisiones confirmadas por Dirección.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 5 |
-| En progreso | 3 |
+| Pendiente | 4 |
+| En progreso | 4 |
 | Terminada | 0 |
 
 ## Estado Por Tarea
@@ -25,7 +25,7 @@ brechas y las decisiones confirmadas por Dirección.
 | 1 | Catálogo de servicios y tratamientos | P0 | En progreso | Ninguna |
 | 2 | El médico arma el pedido en la consulta | P0 | En progreso | 1 |
 | 3 | Administración confirma, valida descuento y cobra | P0 | En progreso | 2, Caja (plan integral 18) |
-| 4 | Suero y servicio con pago previo antes de Enfermería | P1 | Pendiente | 2-3 |
+| 4 | Suero y servicio con pago previo antes de Enfermería | P1 | En progreso | 2-3 |
 | 5 | Sesiones de servicio | P1 | Pendiente | 1-4 |
 | 6 | Historial del paciente en la consulta | P1 | Pendiente | 1-3 |
 | 7 | Seguimiento estricto por compra | P1 | Pendiente | 3, 6 |
@@ -41,7 +41,9 @@ Estado del código al crear el plan:
 - 🟢 El médico elige productos/servicios con precio y descuento (implementado en
   la Tarea 2, 2026-08-03: pedido estructurado con tope duro de descuento; el cobro
   sigue siendo de Administración en la Tarea 3).
-- 🟠 Suero pagado antes de Enfermería (hoy va directo a Enfermería sin pago).
+- 🟢 Suero pagado antes de Enfermería (implementado en la Tarea 4, 2026-08-03:
+  `requiresNursing` + derivación solo con la venta pagada; `serum` fuera de la
+  derivación directa).
 - 🔴 Historial entre visitas: tratamientos y costos previos y precarga de receta
   (no existe: la consulta solo carga la visita actual).
 - 🟠 Seguimiento estricto por compra (existe creación de seguimientos, falta el
@@ -96,6 +98,19 @@ Estado del código al crear el plan:
   cobra), catálogo nuevo de servicios/tratamientos, descuento máximo por oferta
   con validación de Administración, seguimiento estricto por venta, y manejo de
   sesiones con cada sesión como número de visita.
+
+### 2026-08-03 — Tarea 4 Implementada (Suero Con Pago Previo)
+
+- Catálogo marca `requiresNursing` (suero/ozono); el pedido lo guarda por línea.
+- Administración solo puede "Enviar a Enfermería" cuando la venta del pedido está
+  pagada; crea la tarea de Enfermería con orden e indicaciones y mueve la visita
+  a `in_nursing`. Bloqueo por saldo; derivación idempotente
+  (`nursingReleasedAt`/`nursingWorkItemId`).
+- Se quitó `serum` de la derivación directa en consulta (reemplazo del camino sin
+  pago). Migración `20260803180000_doctor_order_nursing_release` (aplicada).
+- Estado: **En progreso** (código + lint + typecheck; QA/pruebas/build al cierre
+  acumulado).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-suero-pago-previo-enfermeria.md).
 
 ### 2026-08-03 — Tarea 3 Implementada (Administración Confirma Y Cobra)
 

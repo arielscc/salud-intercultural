@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import {
   findDoctorOrderError,
+  findDoctorOrderNursingError,
+  releaseDoctorOrderToNursing,
   saveDoctorOrder,
   type DoctorOrderLineInput
 } from "@/modules/database/queries/doctor-orders";
@@ -73,4 +75,44 @@ export async function saveDoctorOrderAction(formData: FormData) {
   revalidatePath(consultaPath);
   revalidatePath("/sigeco/administracion");
   redirect(`${consultaPath}?aviso=pedido-guardado`);
+}
+
+export async function releaseDoctorOrderToNursingAction(formData: FormData) {
+  const workItemId = String(formData.get("workItemId") ?? "");
+  const doctorOrderId = String(formData.get("doctorOrderId") ?? "");
+  const target = workItemId ? `/sigeco/administracion/${workItemId}` : "/sigeco/administracion";
+  await runAuditedAction(
+    {
+      permission: "visits_update",
+      action: "doctor_order.nursing.release",
+      entityType: "doctor_order",
+      entityId: doctorOrderId || undefined,
+      context: { workItemId: workItemId || undefined }
+    },
+    async (user) => {
+      if (!doctorOrderId) redirect(`${target}?error=invalid-order`);
+      try {
+        const nursing = await releaseDoctorOrderToNursing({
+          doctorOrderId,
+          userId: user.id
+        });
+        return auditedResult(nursing, {
+          entityId: doctorOrderId,
+          context: { nursingWorkItemId: nursing?.id }
+        });
+      } catch (error) {
+        const nursingError = findDoctorOrderNursingError(error);
+        if (nursingError?.code === "payment-required") {
+          redirect(`${target}?error=pago-pendiente`);
+        }
+        if (nursingError) redirect(`${target}?error=${nursingError.code}`);
+        throw error;
+      }
+    }
+  );
+
+  revalidatePath("/sigeco/administracion");
+  revalidatePath("/sigeco/enfermeria");
+  revalidatePath("/sigeco/consultas");
+  redirect("/sigeco/administracion?aviso=paciente-enviado-enfermeria");
 }

@@ -121,7 +121,7 @@ export async function createSaleAction(formData: FormData) {
 export async function confirmDoctorOrderSaleAction(formData: FormData) {
   const workItemId = String(formData.get("workItemId") ?? "");
   const target = workItemId ? `/sigeco/administracion/${workItemId}` : "/sigeco/administracion";
-  const sale = await runAuditedAction(
+  const result = await runAuditedAction(
     {
       permission: "sales_write",
       action: "sale.doctor_order.confirm",
@@ -159,12 +159,13 @@ export async function confirmDoctorOrderSaleAction(formData: FormData) {
       }
 
       return auditedResult(created, {
-        entityId: created.id,
+        entityId: created.sale.id,
         context: {
           doctorOrderId: parsed.data.doctorOrderId,
           approveDiscount: parsed.data.approveDiscount,
-          discountCents: created.discountCents,
-          totalCents: created.totalCents,
+          discountCents: created.sale.discountCents,
+          totalCents: created.sale.totalCents,
+          requiresNursing: created.requiresNursing,
           workItemId: parsed.data.workItemId
         }
       });
@@ -174,7 +175,12 @@ export async function confirmDoctorOrderSaleAction(formData: FormData) {
   revalidatePath("/sigeco/administracion");
   if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
   revalidatePath("/sigeco/consultas");
-  redirect(`/sigeco/administracion/ventas/${sale.id}?aviso=venta-creada`);
+  // El suero/servicio se deriva a Enfermería desde la tarea; el resto va a la
+  // venta para cobrar el saldo.
+  if (result.requiresNursing && workItemId) {
+    redirect(`/sigeco/administracion/${workItemId}?aviso=venta-creada`);
+  }
+  redirect(`/sigeco/administracion/ventas/${result.sale.id}?aviso=venta-creada`);
 }
 
 export async function createPaymentAction(formData: FormData) {

@@ -22,6 +22,7 @@ import {
   sendPaidStudiesToNursingAction
 } from "@/features/sales/actions";
 import { DoctorOrderConfirmPanel } from "@/features/doctor-orders/components/DoctorOrderConfirmPanel";
+import { releaseDoctorOrderToNursingAction } from "@/features/doctor-orders/doctor-order-actions";
 import { doctorOrderStatusLabels } from "@/features/doctor-orders/labels";
 import {
   formatMoney,
@@ -43,6 +44,7 @@ type AdministrationWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
   searchParams: Promise<{
     error?: string;
+    aviso?: string;
   }>;
 };
 
@@ -72,6 +74,10 @@ export default async function AdministrationWorkItemPage({
   const order = item.clinicalOrders[0];
   const proposalOutcome = order?.treatmentProposalOutcome;
   const doctorOrder = item.visit.doctorOrder;
+  const orderHasNursing = doctorOrder?.lines.some((line) => line.requiresNursing) ?? false;
+  const doctorOrderSale = doctorOrder
+    ? item.sales.find((sale) => sale.doctorOrderId === doctorOrder.id)
+    : undefined;
   const generatedSale = item.sales[0];
   const isPaidStudyOrder = Boolean(generatedSale && item.clinicalOrders.some((entry) => entry.type === "study"));
   const canRecordDiscontinuation = roleHasPermission(
@@ -83,6 +89,15 @@ export default async function AdministrationWorkItemPage({
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
       <MobileBackLink href="/sigeco/administracion" label="Volver a Caja" />
       <div className="grid gap-4 max-sm:contents">
+        {query.aviso === "venta-creada" ? (
+          <div
+            className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text max-sm:order-1"
+            role="status"
+          >
+            Venta creada desde el pedido del médico. Si incluye suero o servicio, cóbralo y
+            envíalo a Enfermería aquí.
+          </div>
+        ) : null}
         {query.error === "insufficient-stock" ? (
           <div
             className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
@@ -176,6 +191,18 @@ export default async function AdministrationWorkItemPage({
             Debes registrar el pago completo antes de enviar al paciente a Enfermería.
           </div>
         ) : null}
+        {query.error === "not-confirmed" ||
+        query.error === "no-nursing-services" ||
+        query.error === "invalid-order" ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+          >
+            {query.error === "no-nursing-services"
+              ? "Este pedido no tiene suero ni servicios que se ejecuten en Enfermería."
+              : "El pedido todavía no está confirmado; primero crea y cobra la venta."}
+          </div>
+        ) : null}
 
         {isPaidStudyOrder && generatedSale ? (
           <Card className="max-sm:order-2">
@@ -234,6 +261,68 @@ export default async function AdministrationWorkItemPage({
                 maxDiscountCents: line.maxDiscountCents
               }))}
             />
+          </Card>
+        ) : doctorOrder?.status === "confirmed" && orderHasNursing ? (
+          <Card className="max-sm:order-2">
+            <CardHeader
+              title="Suero / servicio a Enfermería"
+              description="El suero y los servicios se ejecutan en Enfermería solo después del pago."
+              action={
+                doctorOrder.nursingReleasedAt ? (
+                  <Chip tone="success" dot>
+                    Enviado a Enfermería
+                  </Chip>
+                ) : undefined
+              }
+            />
+            {doctorOrder.nursingReleasedAt ? (
+              <p className="text-sm text-muted">
+                Se envió a Enfermería con la orden e indicaciones del médico.
+              </p>
+            ) : doctorOrderSale && doctorOrderSale.balanceCents > 0 ? (
+              <div className="grid gap-3">
+                <p className="text-sm text-warning">
+                  Cobra el saldo ({formatMoney(doctorOrderSale.balanceCents)}) antes de enviar a
+                  Enfermería.
+                </p>
+                <NoticeForm
+                  action={createPaymentAction}
+                  notice="Cobro registrado"
+                  className="grid gap-3"
+                >
+                  <input type="hidden" name="idempotencyKey" value={randomUUID()} />
+                  <input type="hidden" name="saleId" value={doctorOrderSale.id} />
+                  <input type="hidden" name="workItemId" value={item.id} />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Monto Bs">
+                      <input
+                        className={internalInputClassName}
+                        name="amount"
+                        inputMode="decimal"
+                        defaultValue={(doctorOrderSale.balanceCents / 100).toFixed(2)}
+                        required
+                      />
+                    </Field>
+                    <PaymentMethodChips />
+                  </div>
+                  <Field label="Referencia">
+                    <input className={internalInputClassName} name="reference" />
+                  </Field>
+                  <SubmitButton>Registrar pago completo</SubmitButton>
+                </NoticeForm>
+              </div>
+            ) : (
+              <NoticeForm
+                action={releaseDoctorOrderToNursingAction}
+                notice="Paciente enviado a Enfermería"
+              >
+                <input type="hidden" name="workItemId" value={item.id} />
+                <input type="hidden" name="doctorOrderId" value={doctorOrder.id} />
+                <SubmitButton className="w-full">
+                  Pago confirmado · Enviar a Enfermería
+                </SubmitButton>
+              </NoticeForm>
+            )}
           </Card>
         ) : (
         <Card className="max-sm:order-2">

@@ -29,6 +29,7 @@ type ServiceCatalogFormItem = {
   category: string;
   kind: ServiceCatalogKind;
   basePriceCents: number;
+  requiresNursing: boolean;
   supportsSessions: boolean;
   sessionCount: number | null;
   packagePriceCents: number | null;
@@ -51,6 +52,7 @@ function nextRowKey() {
 export function ServiceCatalogForm({ action, products, item }: ServiceCatalogFormProps) {
   const editing = Boolean(item);
   const [kind, setKind] = useState<ServiceCatalogKind>(item?.kind ?? "service");
+  const [requiresNursing, setRequiresNursing] = useState(item?.requiresNursing ?? false);
   const [supportsSessions, setSupportsSessions] = useState(item?.supportsSessions ?? false);
   const [rows, setRows] = useState<ComponentRow[]>(
     item?.components.map((component) => ({
@@ -87,6 +89,7 @@ export function ServiceCatalogForm({ action, products, item }: ServiceCatalogFor
         </>
       ) : null}
       <input type="hidden" name="kind" value={kind} />
+      <input type="hidden" name="requiresNursing" value={String(requiresNursing)} />
       <input type="hidden" name="supportsSessions" value={String(supportsSessions)} />
 
       <Card>
@@ -153,6 +156,15 @@ export function ServiceCatalogForm({ action, products, item }: ServiceCatalogFor
             />
           </Field>
         </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-text">
+          <input
+            type="checkbox"
+            className="size-4"
+            checked={requiresNursing}
+            onChange={(event) => setRequiresNursing(event.target.checked)}
+          />
+          Se ejecuta en Enfermería y requiere pago previo (sueroterapia, ozonoterapia)
+        </label>
         {kind === "service" ? (
           <label className="mt-3 flex items-center gap-2 text-sm text-text">
             <input

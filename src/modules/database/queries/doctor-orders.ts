@@ -1,6 +1,7 @@
 import type { DoctorOrderLineSource, Prisma, SaleItemType } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { computeServiceCatalogMaxDiscountCents } from "@/modules/database/queries/service-catalog";
+import { updateVisitRouteStatusInTransaction } from "@/modules/database/queries/visits";
 
 export class DoctorOrderError extends Error {
   constructor(
@@ -21,6 +22,24 @@ export function findDoctorOrderError(error: unknown): DoctorOrderError | null {
   let current = error;
   while (current instanceof Error) {
     if (current instanceof DoctorOrderError) return current;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return null;
+}
+
+export class DoctorOrderNursingError extends Error {
+  constructor(
+    public readonly code: "not-confirmed" | "payment-required" | "no-nursing-services"
+  ) {
+    super(code);
+    this.name = "DoctorOrderNursingError";
+  }
+}
+
+export function findDoctorOrderNursingError(error: unknown): DoctorOrderNursingError | null {
+  let current = error;
+  while (current instanceof Error) {
+    if (current instanceof DoctorOrderNursingError) return current;
     current = "cause" in current ? current.cause : undefined;
   }
   return null;
@@ -79,6 +98,7 @@ export async function getDoctorOrderOptions() {
       label: item.name,
       unitPriceCents: item.basePriceCents,
       perUnitCapCents: computeServiceCatalogMaxDiscountCents(item),
+      requiresNursing: item.requiresNursing,
       supportsSessions: item.supportsSessions,
       sessionCount: item.sessionCount
     }));
@@ -90,6 +110,7 @@ export async function getDoctorOrderOptions() {
       label: product.name,
       unitPriceCents: product.salePriceCents,
       perUnitCapCents: product.maxDiscountCents,
+      requiresNursing: false,
       supportsSessions: false,
       sessionCount: null
     }));
@@ -98,11 +119,14 @@ export async function getDoctorOrderOptions() {
   });
 }
 
-/** Tope de descuento por unidad de una línea, resuelto siempre desde la base. */
-async function resolvePerUnitCapCents(
+/**
+ * Metadatos de una línea resueltos siempre desde la base: tope de descuento por
+ * unidad y si la oferta se ejecuta en Enfermería (pago previo, Tarea 4).
+ */
+async function resolveLineMeta(
   tx: Prisma.TransactionClient,
   line: DoctorOrderLineInput
-): Promise<number> {
+): Promise<{ perUnitCapCents: number; requiresNursing: boolean }> {
   if (line.source === "product") {
     if (!line.inventoryItemId) throw new DoctorOrderError("invalid-line");
     const product = await tx.inventoryItem.findUnique({
@@ -110,7 +134,7 @@ async function resolvePerUnitCapCents(
       select: { active: true, maxDiscountCents: true }
     });
     if (!product || !product.active) throw new DoctorOrderError("invalid-line");
-    return product.maxDiscountCents;
+    return { perUnitCapCents: product.maxDiscountCents, requiresNursing: false };
   }
 
   if (line.source === "service" || line.source === "treatment") {
@@ -122,11 +146,14 @@ async function resolvePerUnitCapCents(
       }
     });
     if (!catalogItem || !catalogItem.active) throw new DoctorOrderError("invalid-line");
-    return computeServiceCatalogMaxDiscountCents(catalogItem);
+    return {
+      perUnitCapCents: computeServiceCatalogMaxDiscountCents(catalogItem),
+      requiresNursing: catalogItem.requiresNursing
+    };
   }
 
-  // free_text: sin umbral, no admite descuento.
-  return 0;
+  // free_text: sin umbral, no admite descuento ni ejecución en Enfermería.
+  return { perUnitCapCents: 0, requiresNursing: false };
 }
 
 export async function saveDoctorOrder(input: {
@@ -160,14 +187,23 @@ export async function saveDoctorOrder(input: {
       let totalDiscount = 0;
       let totalCap = 0;
       const resolvedLines = [] as Array<
-        DoctorOrderLineInput & { maxDiscountCents: number; position: number }
+        DoctorOrderLineInput & {
+          maxDiscountCents: number;
+          requiresNursing: boolean;
+          position: number;
+        }
       >;
       for (const [position, line] of input.lines.entries()) {
-        const perUnitCap = await resolvePerUnitCapCents(tx, line);
-        const lineCap = perUnitCap * line.quantity;
+        const meta = await resolveLineMeta(tx, line);
+        const lineCap = meta.perUnitCapCents * line.quantity;
         totalDiscount += line.discountCents;
         totalCap += lineCap;
-        resolvedLines.push({ ...line, maxDiscountCents: lineCap, position });
+        resolvedLines.push({
+          ...line,
+          maxDiscountCents: lineCap,
+          requiresNursing: meta.requiresNursing,
+          position
+        });
       }
       if (totalDiscount > totalCap) {
         throw new DoctorOrderError("discount-over-cap");
@@ -206,6 +242,7 @@ export async function saveDoctorOrder(input: {
             quantity: line.quantity,
             sessionCount: line.sessionCount,
             maxDiscountCents: line.maxDiscountCents,
+            requiresNursing: line.requiresNursing,
             notes: line.notes,
             position: line.position
           }
@@ -216,6 +253,81 @@ export async function saveDoctorOrder(input: {
         where: { id: order.id },
         include: { lines: { orderBy: { position: "asc" } } }
       });
+    })
+  );
+}
+
+/**
+ * Deriva a Enfermería las líneas que se ejecutan ahí (suero/servicio), pero solo
+ * si la venta del pedido ya está pagada (Tarea 4). Crea la tarea de Enfermería
+ * con la orden e indicaciones del médico y mueve la visita a Enfermería. Es
+ * idempotente: si ya se derivó, devuelve la tarea existente.
+ */
+export async function releaseDoctorOrderToNursing(input: {
+  doctorOrderId: string;
+  userId?: string;
+}) {
+  return withDatabaseError("releaseDoctorOrderToNursing", () =>
+    prisma.$transaction(async (tx) => {
+      const order = await tx.doctorOrder.findUniqueOrThrow({
+        where: { id: input.doctorOrderId },
+        include: { lines: { orderBy: { position: "asc" } }, sale: true }
+      });
+
+      if (order.nursingReleasedAt && order.nursingWorkItemId) {
+        return tx.visitWorkItem.findUnique({ where: { id: order.nursingWorkItemId } });
+      }
+      if (order.status !== "confirmed" || !order.sale) {
+        throw new DoctorOrderNursingError("not-confirmed");
+      }
+      if (order.sale.balanceCents > 0) {
+        throw new DoctorOrderNursingError("payment-required");
+      }
+
+      const nursingLines = order.lines.filter((line) => line.requiresNursing);
+      if (nursingLines.length === 0) {
+        throw new DoctorOrderNursingError("no-nursing-services");
+      }
+
+      const { workItem: nursing } = await updateVisitRouteStatusInTransaction(tx, {
+        visitId: order.visitId,
+        userId: input.userId,
+        status: "in_nursing",
+        area: "enfermeria",
+        note: "Pago confirmado; enviado a Enfermería",
+        workItemTitle: "Aplicar servicios pagados",
+        workItemDescription: nursingLines.map((line) => line.description).join(", ")
+      });
+
+      for (const line of nursingLines) {
+        await tx.clinicalOrder.create({
+          data: {
+            visitId: order.visitId,
+            patientId: order.patientId,
+            doctorId: order.doctorId,
+            workItemId: nursing.id,
+            type: "nursing_application",
+            targetArea: "enfermeria",
+            status: "pending",
+            title: line.description,
+            details: line.notes ?? order.indications ?? undefined
+          }
+        });
+      }
+
+      if (order.sale.workItemId) {
+        await tx.visitWorkItem.update({
+          where: { id: order.sale.workItemId },
+          data: { status: "completed", completedAt: new Date() }
+        });
+      }
+
+      await tx.doctorOrder.update({
+        where: { id: order.id },
+        data: { nursingReleasedAt: new Date(), nursingWorkItemId: nursing.id }
+      });
+
+      return nursing;
     })
   );
 }

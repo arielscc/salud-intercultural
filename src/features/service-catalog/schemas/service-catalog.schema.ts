@@ -46,6 +46,10 @@ const catalogFields = {
   description: optionalText,
   category: z.string().trim().min(2).max(100).default("Sin categoría"),
   basePrice: moneyText,
+  requiresNursing: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
   supportsSessions: z
     .enum(["true", "false"])
     .default("false")

@@ -46,6 +46,7 @@ export default async function EditServiceCatalogItemPage({
           category: item.category,
           kind: item.kind,
           basePriceCents: item.basePriceCents,
+          requiresNursing: item.requiresNursing,
           supportsSessions: item.supportsSessions,
           sessionCount: item.sessionCount,
           packagePriceCents: item.packagePriceCents,

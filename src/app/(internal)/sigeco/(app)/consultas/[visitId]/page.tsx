@@ -61,9 +61,11 @@ import { getPrescriptionDocuments } from "@/modules/generated-documents/service"
 import { requirePermission } from "@/modules/permissions";
 import { getBranchContext } from "@/features/branches/context";
 
+// El suero se ordena por el pedido para Administración (pago previo, Tarea 4),
+// no por la derivación directa a Enfermería.
 const orderTypeOptions = (Object.entries(clinicalOrderTypeLabels) as Array<
   [ClinicalOrderType, string]
->).filter(([type]) => type !== "study");
+>).filter(([type]) => type !== "study" && type !== "serum");
 const targetAreaOptions = (["enfermeria", "administracion", "seguimiento"] as PatientRouteArea[]).map(
   (area) => [area, routeAreaLabels[area]] as [PatientRouteArea, string]
 );

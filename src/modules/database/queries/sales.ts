@@ -340,16 +340,17 @@ export async function confirmDoctorOrderSale(input: {
 }) {
   return withDatabaseError("confirmDoctorOrderSale", async () => {
     return prisma.$transaction(async (tx) => {
-      const existing = await tx.sale.findUnique({
-        where: { doctorOrderId: input.doctorOrderId },
-        include: { items: true }
-      });
-      if (existing) return existing;
-
       const order = await tx.doctorOrder.findUniqueOrThrow({
         where: { id: input.doctorOrderId },
         include: { lines: { orderBy: { position: "asc" } }, visit: { select: { branchCode: true } } }
       });
+      const requiresNursing = order.lines.some((line) => line.requiresNursing);
+
+      const existing = await tx.sale.findUnique({
+        where: { doctorOrderId: input.doctorOrderId },
+        include: { items: true }
+      });
+      if (existing) return { sale: existing, requiresNursing };
 
       if (order.status !== "submitted") throw new DoctorOrderSaleError("not-submitted");
       if (order.lines.length === 0) throw new DoctorOrderSaleError("empty-order");
@@ -475,14 +476,16 @@ export async function confirmDoctorOrderSale(input: {
         }
       });
 
-      if (input.workItemId && status === "paid") {
+      // Si el pedido va a Enfermería, la tarea se cierra recién al derivar
+      // (Tarea 4); si no, se completa al quedar pagada.
+      if (input.workItemId && status === "paid" && !requiresNursing) {
         await tx.visitWorkItem.update({
           where: { id: input.workItemId },
           data: { status: "completed", completedAt: new Date() }
         });
       }
 
-      return sale;
+      return { sale, requiresNursing };
     });
   });
 }

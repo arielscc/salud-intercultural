@@ -78,6 +78,7 @@ async function createServiceCatalogItemVersion(
       kind: item.kind,
       basePriceCents: item.basePriceCents,
       ownMaxDiscountCents: item.ownMaxDiscountCents,
+      requiresNursing: item.requiresNursing,
       supportsSessions: item.supportsSessions,
       sessionCount: item.sessionCount,
       packagePriceCents: item.packagePriceCents,
@@ -146,6 +147,7 @@ export async function createServiceCatalogItemRecord(input: {
   kind: ServiceCatalogKind;
   basePriceCents: number;
   ownMaxDiscountCents?: number;
+  requiresNursing?: boolean;
   supportsSessions?: boolean;
   sessionCount?: number;
   packagePriceCents?: number;
@@ -165,6 +167,7 @@ export async function createServiceCatalogItemRecord(input: {
           kind: input.kind,
           basePriceCents: input.basePriceCents,
           ownMaxDiscountCents: input.ownMaxDiscountCents ?? 0,
+          requiresNursing: input.requiresNursing ?? false,
           supportsSessions: input.supportsSessions ?? false,
           sessionCount: input.sessionCount,
           packagePriceCents: input.packagePriceCents,
@@ -193,6 +196,7 @@ export async function updateServiceCatalogItemRecord(input: {
   description?: string;
   category: string;
   basePriceCents: number;
+  requiresNursing: boolean;
   supportsSessions: boolean;
   sessionCount?: number;
   packagePriceCents?: number;
@@ -215,6 +219,7 @@ export async function updateServiceCatalogItemRecord(input: {
           description: input.description,
           category: normalizeCategory(input.category),
           basePriceCents: input.basePriceCents,
+          requiresNursing: input.requiresNursing,
           supportsSessions: input.supportsSessions,
           sessionCount: input.sessionCount,
           packagePriceCents: input.packagePriceCents,

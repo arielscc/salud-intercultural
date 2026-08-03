@@ -55,6 +55,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-03 | [Tarea 1: catálogo de servicios y tratamientos](./2026-08-03-catalogo-servicios-tratamientos.md) | Catálogo administrable separado de Productos, con umbral de descuento por producto editable solo por Dirección/Super admin y versionado append-only. |
 | 2026-08-03 | [Tarea 2: el médico arma el pedido](./2026-08-03-medico-arma-pedido.md) | El médico arma un pedido con líneas del catálogo/inventario o texto libre, con precio y descuento acotado por el tope duro, y lo envía a Administración sin cobrar. |
 | 2026-08-03 | [Tarea 3: Administración confirma, valida descuento y cobra](./2026-08-03-administracion-confirma-cobra.md) | Convierte el pedido en venta multi-línea, aprueba o rechaza el descuento con auditoría, y cobra en Caja de forma idempotente. |
+| 2026-08-03 | [Tarea 4: suero y servicio con pago previo antes de Enfermería](./2026-08-03-suero-pago-previo-enfermeria.md) | Marca las ofertas ejecutadas en Enfermería, exige pago antes de derivar y envía la orden e indicaciones a Enfermería de forma idempotente. |
 
 ## Relacion Con Estado V3
 
