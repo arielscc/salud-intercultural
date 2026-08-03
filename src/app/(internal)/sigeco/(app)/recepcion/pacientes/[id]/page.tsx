@@ -45,6 +45,12 @@ import { geographicOriginLabel } from "@/features/geography/origin";
 import { visitAttributionSummary } from "@/features/attribution/catalog";
 import { formatDateTime } from "@/lib/dates";
 import { getPatientById } from "@/modules/database/queries/patients";
+import { getPatientServiceSessionPackages } from "@/modules/database/queries/service-sessions";
+import {
+  formatServiceSessionMoney,
+  serviceSessionPricingModeLabels,
+  serviceSessionStatusLabels
+} from "@/features/service-sessions/labels";
 import { getClinicalAttachmentsForPatient } from "@/modules/clinical-attachments/service";
 import { requirePermission } from "@/modules/permissions";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -81,6 +87,7 @@ export default async function PatientDetailPage({
   const attachments = canReadAttachments
     ? await getClinicalAttachmentsForPatient(patient.id)
     : [];
+  const sessionPackages = await getPatientServiceSessionPackages(patient.id);
   const nursingCount =
     patient.vitalSigns.length + patient.nursingApplications.length + patient.nursingNotes.length;
   const age = calculateAgeFromDate(patient.birthDate);
@@ -477,6 +484,40 @@ export default async function PatientDetailPage({
           </div>
         </Card>
           </DesktopSectionPanel>
+
+          {sessionPackages.length > 0 ? (
+            <DesktopSectionPanel id="historial-sesiones">
+              <Card className="max-sm:order-8">
+                <CardHeader
+                  title="Sesiones de servicio"
+                  description="Paquetes de suero/ozono: pagadas, usadas y restantes."
+                />
+                <div className="grid gap-2">
+                  {sessionPackages.map((pkg) => {
+                    const remaining = pkg.totalSessions - pkg.sessionsUsed;
+                    return (
+                      <div
+                        key={pkg.id}
+                        className="rounded-[9px] border border-border px-3 py-2 text-sm"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-semibold text-text">{pkg.serviceName}</span>
+                          <Chip tone={pkg.status === "active" ? "primary" : "neutral"}>
+                            {serviceSessionStatusLabels[pkg.status]}
+                          </Chip>
+                        </div>
+                        <p className="mt-1 tabular-nums text-muted">
+                          {serviceSessionPricingModeLabels[pkg.pricingMode]} · Pagadas{" "}
+                          {pkg.totalSessions} · Usadas {pkg.sessionsUsed} · Restantes {remaining} ·{" "}
+                          {formatServiceSessionMoney(pkg.totalPaidCents)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </DesktopSectionPanel>
+          ) : null}
 
           <DesktopSectionPanel id="historial-administracion">
 

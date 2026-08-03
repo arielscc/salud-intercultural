@@ -717,7 +717,9 @@ export default async function ConsultationDetailPage({
                 unitPriceCents: option.unitPriceCents,
                 perUnitCapCents: option.perUnitCapCents,
                 supportsSessions: option.supportsSessions,
-                sessionCount: option.sessionCount
+                sessionCount: option.sessionCount,
+                packagePriceCents: option.packagePriceCents,
+                sessionPriceCents: option.sessionPriceCents
               }))}
               productOptions={doctorOrderOptions.productOptions.map((option) => ({
                 inventoryItemId: option.inventoryItemId,
@@ -734,6 +736,7 @@ export default async function ConsultationDetailPage({
                 discountCents: line.discountCents,
                 quantity: line.quantity,
                 sessionCount: line.sessionCount,
+                pricingMode: line.pricingMode,
                 maxDiscountCents: line.maxDiscountCents,
                 notes: line.notes
               }))}

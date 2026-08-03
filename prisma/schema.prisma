@@ -670,6 +670,19 @@ enum DoctorOrderLineSource {
   free_text
 }
 
+/// Modo de precio de un servicio por sesiones (Tarea 5): por paquete (mayor
+/// descuento) o por sesión individual (descuento similar o menor).
+enum ServiceSessionPricingMode {
+  package
+  per_session
+}
+
+enum ServiceSessionPackageStatus {
+  active
+  completed
+  cancelled
+}
+
 enum PurchaseStatus {
   draft
   confirmed
@@ -791,6 +804,7 @@ model InternalUser {
   treatmentProposalOutcomes      TreatmentProposalOutcome[]
   doctorOrders                   DoctorOrder[]                   @relation("DoctorOrderDoctor")
   discountDecidedOrders          DoctorOrder[]                   @relation("DoctorOrderDiscountDecidedBy")
+  appliedServiceSessions         ServiceSessionUse[]             @relation("ServiceSessionAppliedBy")
   recordedDiscontinuations       VisitDiscontinuation[]          @relation("VisitDiscontinuationRecordedBy")
   finalizedConsultations         ClinicalConsultation[]          @relation("ClinicalConsultationFinalizedBy")
   authoredClinicalVersions       ClinicalConsultationVersion[]   @relation("ClinicalConsultationVersionAuthor")
@@ -1015,6 +1029,7 @@ model Patient {
   studies                  Study[]
   sales                    Sale[]
   doctorOrders             DoctorOrder[]
+  serviceSessionPackages   ServiceSessionPackage[]
   payments                 Payment[]
   deliveredProducts        DeliveredProduct[]
   cashMovements            CashMovement[]
@@ -1210,6 +1225,8 @@ model Visit {
   attribution               VisitAttribution?
   treatmentProposalOutcomes TreatmentProposalOutcome[]
   doctorOrder               DoctorOrder?
+  serviceSessionPackages    ServiceSessionPackage[]       @relation("ServiceSessionPackageOriginVisit")
+  serviceSessionUses        ServiceSessionUse[]
   discontinuation           VisitDiscontinuation?
   generatedDocuments        GeneratedDocument[]
   areaTimeEvents            VisitAreaTimeEvent[]
@@ -1876,6 +1893,7 @@ model Sale {
   followUpTasks      FollowUpTask[]
   inventoryMovements InventoryMovement[]
   generatedDocuments GeneratedDocument[]
+  sessionPackages    ServiceSessionPackage[]
 
   @@index([patientId])
   @@index([visitId])
@@ -2998,6 +3016,7 @@ model ServiceCatalogItem {
   components          ServiceCatalogComponent[]
   versions            ServiceCatalogItemVersion[]
   orderLines          DoctorOrderLine[]
+  sessionPackages     ServiceSessionPackage[]
 
   @@index([name])
   @@index([category])
@@ -3080,6 +3099,7 @@ model DoctorOrder {
   discountDecidedBy  InternalUser?     @relation("DoctorOrderDiscountDecidedBy", fields: [discountDecidedById], references: [id], onDelete: SetNull)
   lines              DoctorOrderLine[]
   sale               Sale?
+  sessionPackages    ServiceSessionPackage[]
 
   @@index([patientId])
   @@index([status])
@@ -3098,12 +3118,13 @@ model DoctorOrderLine {
   description      String
   unitPriceCents   Int                   @default(0)
   discountCents    Int                   @default(0)
-  quantity         Int                   @default(1)
+  quantity         Int                       @default(1)
   sessionCount     Int?
-  maxDiscountCents Int                   @default(0)
-  requiresNursing  Boolean               @default(false)
+  pricingMode      ServiceSessionPricingMode?
+  maxDiscountCents Int                       @default(0)
+  requiresNursing  Boolean                   @default(false)
   notes            String?
-  position         Int                   @default(0)
+  position         Int                       @default(0)
   createdAt        DateTime              @default(now())
   order            DoctorOrder           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   catalogItem      ServiceCatalogItem?   @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
@@ -3112,4 +3133,54 @@ model DoctorOrderLine {
   @@index([orderId])
   @@index([catalogItemId])
   @@index([inventoryItemId])
+}
+
+/// Paquete de sesiones de un servicio (sueroterapia, ozonoterapia) comprado por
+/// un paciente (Tarea 5). Los precios son una fotografía: no cambian al editar el
+/// catálogo. Cada sesión se consume en una visita distinta.
+model ServiceSessionPackage {
+  id                String                      @id @default(cuid())
+  patientId         String
+  catalogItemId     String?
+  serviceName       String
+  originVisitId     String?
+  doctorOrderId     String?
+  saleId            String?
+  pricingMode       ServiceSessionPricingMode   @default(package)
+  totalSessions     Int
+  sessionsUsed      Int                         @default(0)
+  packagePriceCents Int?
+  sessionPriceCents Int?
+  totalPaidCents    Int                         @default(0)
+  status            ServiceSessionPackageStatus @default(active)
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  patient           Patient                     @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  catalogItem       ServiceCatalogItem?         @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  originVisit       Visit?                      @relation("ServiceSessionPackageOriginVisit", fields: [originVisitId], references: [id], onDelete: SetNull)
+  doctorOrder       DoctorOrder?                @relation(fields: [doctorOrderId], references: [id], onDelete: SetNull)
+  sale              Sale?                       @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  uses              ServiceSessionUse[]
+
+  @@index([patientId, status])
+  @@index([catalogItemId])
+  @@index([doctorOrderId])
+}
+
+/// Registro de una sesión aplicada (consumo) de un paquete. Cada uso corresponde
+/// a una visita (número de sesión = número de visita del servicio).
+model ServiceSessionUse {
+  id            String                @id @default(cuid())
+  packageId     String
+  visitId       String?
+  sessionNumber Int
+  appliedById   String?
+  notes         String?
+  appliedAt     DateTime              @default(now())
+  package       ServiceSessionPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  visit         Visit?                @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  appliedBy     InternalUser?         @relation("ServiceSessionAppliedBy", fields: [appliedById], references: [id], onDelete: SetNull)
+
+  @@index([packageId])
+  @@index([visitId])
 }

@@ -19,6 +19,8 @@ type CatalogOption = {
   perUnitCapCents: number;
   supportsSessions: boolean;
   sessionCount: number | null;
+  packagePriceCents: number | null;
+  sessionPriceCents: number | null;
 };
 
 type ProductOption = {
@@ -37,9 +39,12 @@ type ExistingLine = {
   discountCents: number;
   quantity: number;
   sessionCount: number | null;
+  pricingMode: "package" | "per_session" | null;
   maxDiscountCents: number;
   notes: string | null;
 };
+
+type PricingMode = "" | "package" | "per_session";
 
 type Row = {
   key: string;
@@ -51,9 +56,12 @@ type Row = {
   discount: string;
   quantity: number;
   sessionCount: string;
+  pricingMode: PricingMode;
   notes: string;
   perUnitCapCents: number;
   supportsSessions: boolean;
+  packagePriceCents: number | null;
+  sessionPriceCents: number | null;
 };
 
 type DoctorOrderBuilderProps = {
@@ -101,9 +109,12 @@ export function DoctorOrderBuilder({
       discount: centsToInput(line.discountCents),
       quantity: line.quantity,
       sessionCount: line.sessionCount != null ? String(line.sessionCount) : "",
+      pricingMode: line.pricingMode ?? "",
       notes: line.notes ?? "",
       perUnitCapCents: line.quantity > 0 ? Math.round(line.maxDiscountCents / line.quantity) : 0,
-      supportsSessions: line.sessionCount != null
+      supportsSessions: line.pricingMode != null || line.sessionCount != null,
+      packagePriceCents: null,
+      sessionPriceCents: null
     }))
   );
   const [picker, setPicker] = useState("");
@@ -131,9 +142,12 @@ export function DoctorOrderBuilder({
           discount: "0.00",
           quantity: 1,
           sessionCount: "",
+          pricingMode: "",
           notes: "",
           perUnitCapCents: 0,
-          supportsSessions: false
+          supportsSessions: false,
+          packagePriceCents: null,
+          sessionPriceCents: null
         }
       ]);
       setPicker("");
@@ -143,6 +157,11 @@ export function DoctorOrderBuilder({
     if (kind === "catalog") {
       const option = catalogOptions.find((item) => item.catalogItemId === id);
       if (!option) return;
+      const sessioned = option.source === "service" && option.supportsSessions;
+      const initialPrice =
+        sessioned && option.packagePriceCents != null
+          ? option.packagePriceCents
+          : option.unitPriceCents;
       setRows((current) => [
         ...current,
         {
@@ -151,13 +170,16 @@ export function DoctorOrderBuilder({
           catalogItemId: option.catalogItemId,
           inventoryItemId: "",
           description: option.label,
-          unitPrice: centsToInput(option.unitPriceCents),
+          unitPrice: centsToInput(initialPrice),
           discount: "0.00",
           quantity: 1,
-          sessionCount: option.supportsSessions && option.sessionCount ? String(option.sessionCount) : "",
+          sessionCount: sessioned && option.sessionCount ? String(option.sessionCount) : "",
+          pricingMode: sessioned ? "package" : "",
           notes: "",
           perUnitCapCents: option.perUnitCapCents,
-          supportsSessions: option.supportsSessions
+          supportsSessions: sessioned,
+          packagePriceCents: option.packagePriceCents,
+          sessionPriceCents: option.sessionPriceCents
         }
       ]);
     } else if (kind === "product") {
@@ -175,13 +197,35 @@ export function DoctorOrderBuilder({
           discount: "0.00",
           quantity: 1,
           sessionCount: "",
+          pricingMode: "",
           notes: "",
           perUnitCapCents: option.perUnitCapCents,
-          supportsSessions: false
+          supportsSessions: false,
+          packagePriceCents: null,
+          sessionPriceCents: null
         }
       ]);
     }
     setPicker("");
+  }
+
+  function changePricingMode(key: string, mode: PricingMode) {
+    setRows((current) =>
+      current.map((row) => {
+        if (row.key !== key) return row;
+        const price =
+          mode === "package"
+            ? row.packagePriceCents
+            : mode === "per_session"
+              ? row.sessionPriceCents
+              : null;
+        return {
+          ...row,
+          pricingMode: mode,
+          unitPrice: price != null ? centsToInput(price) : row.unitPrice
+        };
+      })
+    );
   }
 
   const services = catalogOptions.filter((option) => option.source === "service");
@@ -290,6 +334,24 @@ export function DoctorOrderBuilder({
               <input type="hidden" name="lineSource" value={row.source} />
               <input type="hidden" name="lineCatalogItemId" value={row.catalogItemId} />
               <input type="hidden" name="lineInventoryItemId" value={row.inventoryItemId} />
+              <input type="hidden" name="linePricingMode" value={row.pricingMode} />
+
+              {row.supportsSessions ? (
+                <div className="mt-3">
+                  <Field label="Modo de precio">
+                    <select
+                      className={internalInputClassName}
+                      value={row.pricingMode || "package"}
+                      onChange={(event) =>
+                        changePricingMode(row.key, event.target.value as PricingMode)
+                      }
+                    >
+                      <option value="package">Paquete (varias sesiones, mayor descuento)</option>
+                      <option value="per_session">Sesión individual</option>
+                    </select>
+                  </Field>
+                </div>
+              ) : null}
 
               <div className="mt-3 grid gap-2 sm:grid-cols-4">
                 <Field label="Precio unit. (Bs)">

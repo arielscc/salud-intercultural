@@ -1,4 +1,9 @@
-import type { DoctorOrderLineSource, Prisma, SaleItemType } from "@/generated/prisma/client";
+import type {
+  DoctorOrderLineSource,
+  Prisma,
+  SaleItemType,
+  ServiceSessionPricingMode
+} from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { computeServiceCatalogMaxDiscountCents } from "@/modules/database/queries/service-catalog";
 import { updateVisitRouteStatusInTransaction } from "@/modules/database/queries/visits";
@@ -55,6 +60,7 @@ export type DoctorOrderLineInput = {
   discountCents: number;
   quantity: number;
   sessionCount?: number;
+  pricingMode?: ServiceSessionPricingMode;
   notes?: string;
 };
 
@@ -100,7 +106,9 @@ export async function getDoctorOrderOptions() {
       perUnitCapCents: computeServiceCatalogMaxDiscountCents(item),
       requiresNursing: item.requiresNursing,
       supportsSessions: item.supportsSessions,
-      sessionCount: item.sessionCount
+      sessionCount: item.sessionCount,
+      packagePriceCents: item.packagePriceCents,
+      sessionPriceCents: item.sessionPriceCents
     }));
 
     const productOptions = products.map((product) => ({
@@ -112,7 +120,9 @@ export async function getDoctorOrderOptions() {
       perUnitCapCents: product.maxDiscountCents,
       requiresNursing: false,
       supportsSessions: false,
-      sessionCount: null
+      sessionCount: null,
+      packagePriceCents: null,
+      sessionPriceCents: null
     }));
 
     return { catalogOptions, productOptions };
@@ -241,6 +251,7 @@ export async function saveDoctorOrder(input: {
             discountCents: line.discountCents,
             quantity: line.quantity,
             sessionCount: line.sessionCount,
+            pricingMode: line.pricingMode,
             maxDiscountCents: line.maxDiscountCents,
             requiresNursing: line.requiresNursing,
             notes: line.notes,
@@ -313,6 +324,28 @@ export async function releaseDoctorOrderToNursing(input: {
             details: line.notes ?? order.indications ?? undefined
           }
         });
+
+        // Servicio por sesiones (Tarea 5): crea el paquete pagado para
+        // consumir a lo largo de varias visitas. Precios en fotografía.
+        if (line.pricingMode) {
+          const totalSessions =
+            line.pricingMode === "package" ? line.sessionCount ?? 1 : line.quantity;
+          await tx.serviceSessionPackage.create({
+            data: {
+              patientId: order.patientId,
+              catalogItemId: line.catalogItemId,
+              serviceName: line.description,
+              originVisitId: order.visitId,
+              doctorOrderId: order.id,
+              saleId: order.sale.id,
+              pricingMode: line.pricingMode,
+              totalSessions: Math.max(1, totalSessions),
+              packagePriceCents: line.pricingMode === "package" ? line.unitPriceCents : null,
+              sessionPriceCents: line.pricingMode === "per_session" ? line.unitPriceCents : null,
+              totalPaidCents: line.unitPriceCents * line.quantity
+            }
+          });
+        }
       }
 
       if (order.sale.workItemId) {

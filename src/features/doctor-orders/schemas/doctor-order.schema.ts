@@ -37,6 +37,10 @@ export const doctorOrderLineSchema = z
     discount: moneyString,
     quantity: z.coerce.number().int().positive().max(999).default(1),
     sessionCount: z.coerce.number().int().positive().max(999).optional(),
+    pricingMode: z
+      .enum(["package", "per_session"])
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
     notes: z
       .string()
       .trim()
@@ -79,6 +83,7 @@ export function parseDoctorOrderLines(formData: FormData) {
   const discounts = formData.getAll("lineDiscount").map(String);
   const quantities = formData.getAll("lineQuantity").map(String);
   const sessionCounts = formData.getAll("lineSessionCount").map(String);
+  const pricingModes = formData.getAll("linePricingMode").map(String);
   const notes = formData.getAll("lineNotes").map(String);
 
   return sources.map((source, index) => ({
@@ -90,6 +95,7 @@ export function parseDoctorOrderLines(formData: FormData) {
     discount: discounts[index] ?? "0",
     quantity: quantities[index] ?? "1",
     sessionCount: sessionCounts[index] || undefined,
+    pricingMode: pricingModes[index] || undefined,
     notes: notes[index] ?? ""
   }));
 }

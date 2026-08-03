@@ -47,6 +47,7 @@ export async function saveDoctorOrderAction(formData: FormData) {
           discountCents: doctorOrderMoneyToCents(line.discount),
           quantity: line.quantity,
           sessionCount: line.sessionCount,
+          pricingMode: line.source === "service" ? line.pricingMode : undefined,
           notes: line.notes
         }));
 

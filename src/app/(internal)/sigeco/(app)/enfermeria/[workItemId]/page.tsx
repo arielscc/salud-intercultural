@@ -21,6 +21,12 @@ import {
   updateNursingWorkItemAction
 } from "@/features/nursing/actions";
 import { nursingWorkItemStatusLabels } from "@/features/nursing/labels";
+import { consumeServiceSessionAction } from "@/features/service-sessions/service-session-actions";
+import {
+  formatServiceSessionMoney,
+  serviceSessionPricingModeLabels
+} from "@/features/service-sessions/labels";
+import { getActivePatientServiceSessionPackages } from "@/modules/database/queries/service-sessions";
 import { createStudyAction } from "@/features/studies/actions";
 import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
@@ -38,7 +44,7 @@ const studyStatusOptions = Object.entries(studyStatusLabels) as Array<[StudyStat
 
 type NursingWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; aviso?: string }>;
 };
 
 export default async function NursingWorkItemPage({ params, searchParams }: NursingWorkItemPageProps) {
@@ -51,8 +57,10 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
   if (!item) notFound();
   if (item.visit.branchCode !== activeBranch.code) notFound();
   const areaTiming = await getVisitAreaTimingState(item.visit.id);
+  const sessionPackages = await getActivePatientServiceSessionPackages(item.visit.patientId);
 
   const patient = item.visit.patient;
+  const canWriteNursing = roleHasPermission(user.role, "nursing_write");
   const order = item.clinicalOrders[0];
   const applicationOrderTypes = ["nursing_application", "serum", "medication"];
   const studyOrders = item.clinicalOrders.filter((entry) => entry.type === "study");
@@ -95,6 +103,74 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
             </p>
           </div>
         </Card>
+
+        {query.aviso === "sesion-registrada" ? (
+          <div
+            className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text max-sm:order-1"
+            role="status"
+          >
+            Sesión registrada. Se descontó del paquete del paciente.
+          </div>
+        ) : null}
+        {query.error === "no-sessions-left" || query.error === "not-active" ? (
+          <div
+            className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning max-sm:order-1"
+            role="alert"
+          >
+            {query.error === "no-sessions-left"
+              ? "Ese paquete ya no tiene sesiones disponibles."
+              : "Ese paquete ya no está activo."}
+          </div>
+        ) : null}
+
+        {sessionPackages.length > 0 ? (
+          <Card className="max-sm:order-2">
+            <CardHeader
+              title="Sesiones de servicio del paciente"
+              description="Suero/ozono pagados. Registra cada sesión aplicada; cada una cuenta como una visita."
+            />
+            <div className="grid gap-3">
+              {sessionPackages.map((pkg) => {
+                const remaining = pkg.totalSessions - pkg.sessionsUsed;
+                return (
+                  <div key={pkg.id} className="rounded-[9px] border border-border p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-text">{pkg.serviceName}</span>
+                      <span className="text-xs tabular-nums text-muted">
+                        {serviceSessionPricingModeLabels[pkg.pricingMode]} ·{" "}
+                        {formatServiceSessionMoney(pkg.totalPaidCents)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm tabular-nums text-muted">
+                      Usadas <strong className="text-text">{pkg.sessionsUsed}</strong> de{" "}
+                      {pkg.totalSessions} · Restantes{" "}
+                      <strong className="text-text">{remaining}</strong>
+                    </p>
+                    {canWriteNursing && remaining > 0 ? (
+                      <NoticeForm
+                        action={consumeServiceSessionAction}
+                        notice="Sesión registrada"
+                        className="mt-3 grid gap-2"
+                      >
+                        <input type="hidden" name="packageId" value={pkg.id} />
+                        <input type="hidden" name="visitId" value={item.visit.id} />
+                        <input type="hidden" name="workItemId" value={item.id} />
+                        <Field label="Nota de la sesión (opcional)">
+                          <input className={internalInputClassName} name="notes" />
+                        </Field>
+                        <FormActions className="justify-end">
+                          <SubmitButton variant="outline">
+                            Registrar sesión {pkg.sessionsUsed + 1}/{pkg.totalSessions}
+                          </SubmitButton>
+                        </FormActions>
+                      </NoticeForm>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        ) : null}
 
         <Card className="max-sm:order-3">
           <CollapsibleSection

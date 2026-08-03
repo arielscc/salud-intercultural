@@ -14,8 +14,8 @@ brechas y las decisiones confirmadas por Dirección.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 4 |
-| En progreso | 4 |
+| Pendiente | 3 |
+| En progreso | 5 |
 | Terminada | 0 |
 
 ## Estado Por Tarea
@@ -26,7 +26,7 @@ brechas y las decisiones confirmadas por Dirección.
 | 2 | El médico arma el pedido en la consulta | P0 | En progreso | 1 |
 | 3 | Administración confirma, valida descuento y cobra | P0 | En progreso | 2, Caja (plan integral 18) |
 | 4 | Suero y servicio con pago previo antes de Enfermería | P1 | En progreso | 2-3 |
-| 5 | Sesiones de servicio | P1 | Pendiente | 1-4 |
+| 5 | Sesiones de servicio | P1 | En progreso | 1-4 |
 | 6 | Historial del paciente en la consulta | P1 | Pendiente | 1-3 |
 | 7 | Seguimiento estricto por compra | P1 | Pendiente | 3, 6 |
 | 8 | Catálogo administrable de estudios | P2 | Pendiente | 1 |
@@ -98,6 +98,20 @@ Estado del código al crear el plan:
   cobra), catálogo nuevo de servicios/tratamientos, descuento máximo por oferta
   con validación de Administración, seguimiento estricto por venta, y manejo de
   sesiones con cada sesión como número de visita.
+
+### 2026-08-03 — Tarea 5 Implementada (Sesiones De Servicio)
+
+- Paquetes `ServiceSessionPackage` + `ServiceSessionUse`; creados al derivar a
+  Enfermería (venta pagada). Modo de precio por línea (paquete o sesión) con
+  precarga de precio; total de sesiones según el modo.
+- Consumo por sesión en Enfermería (cada sesión = una visita), con conteo de
+  usadas/restantes; el paquete se completa al llegar al total. Vista en la ficha
+  del paciente. Precios en fotografía (sin cambio retroactivo).
+- Migración `20260803200000_service_session_packages` (aplicada en local).
+- Estado: **En progreso** (código + lint + typecheck; QA/pruebas/build al cierre
+  acumulado). Falta validar el recorrido de retorno del paciente (Recepción crea
+  la visita y deriva a Enfermería) en QA.
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-sesiones-de-servicio.md).
 
 ### 2026-08-03 — Tarea 4 Implementada (Suero Con Pago Previo)
 
