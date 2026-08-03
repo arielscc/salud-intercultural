@@ -42,8 +42,20 @@ import {
 } from "@/features/treatment-proposals/labels";
 import { formatMoney } from "@/features/sales/labels";
 import { applyVisitFlowAction } from "@/features/visits/actions";
+import { DoctorOrderBuilder } from "@/features/doctor-orders/components/DoctorOrderBuilder";
+import { saveDoctorOrderAction } from "@/features/doctor-orders/doctor-order-actions";
+import {
+  doctorOrderLineSourceLabels,
+  doctorOrderStatusLabels,
+  formatDoctorOrderMoney,
+  doctorOrderLineTotalCents
+} from "@/features/doctor-orders/labels";
 import { formatDateTime } from "@/lib/dates";
 import { getClinicalVisitById } from "@/modules/database/queries/clinical-care";
+import {
+  getDoctorOrderByVisit,
+  getDoctorOrderOptions
+} from "@/modules/database/queries/doctor-orders";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { getPrescriptionDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
@@ -101,7 +113,16 @@ function pageErrorMessage(error: string) {
     "correccion-receta-invalida":
       "Revisa el motivo y todos los datos de la receta corregida.",
     "correccion-receta-sin-cambios":
-      "La receta no cambió; se conservó la versión vigente."
+      "La receta no cambió; se conservó la versión vigente.",
+    "pedido-invalido": "Revisa las líneas del pedido: oferta, cantidad y montos.",
+    "discount-over-cap":
+      "El descuento total del pedido supera el tope permitido (suma de los umbrales por producto).",
+    "empty-order": "Agrega al menos una línea antes de enviar el pedido a Administración.",
+    "consultation-not-finalized":
+      "Finaliza y firma la consulta antes de enviar el pedido a Administración.",
+    "visit-not-in-consultation": "La visita ya no admite cambios en el pedido.",
+    "already-confirmed": "Administración ya confirmó este pedido; no se puede editar.",
+    "invalid-line": "Una línea apunta a una oferta o producto que ya no está disponible."
   };
   return (
     messages[error] ??
@@ -116,11 +137,14 @@ export default async function ConsultationDetailPage({
   const user = await requirePermission("clinical_read");
   const { activeBranch } = await getBranchContext(user);
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
-  const [visit, prescriptionDocuments, areaTiming] = await Promise.all([
-    getClinicalVisitById(visitId),
-    getPrescriptionDocuments(visitId),
-    getVisitAreaTimingState(visitId)
-  ]);
+  const [visit, prescriptionDocuments, areaTiming, doctorOrder, doctorOrderOptions] =
+    await Promise.all([
+      getClinicalVisitById(visitId),
+      getPrescriptionDocuments(visitId),
+      getVisitAreaTimingState(visitId),
+      getDoctorOrderByVisit(visitId),
+      getDoctorOrderOptions()
+    ]);
 
   if (!visit) notFound();
   if (visit.branchCode !== activeBranch.code) notFound();
@@ -154,6 +178,11 @@ export default async function ConsultationDetailPage({
     visit.status === "in_consultation" &&
     visit.clinicalConsultation?.status === "finalized" &&
     latestProposalOutcome?.status !== "accepted";
+  const canEditDoctorOrder =
+    canWriteClinical &&
+    doctorOrder?.status !== "confirmed" &&
+    (visit.status === "in_consultation" || visit.status === "in_administration");
+  const doctorOrderCanSubmit = visit.clinicalConsultation?.status === "finalized";
   const clinicalSnapshot = {
     motive: consultationMotive,
     primaryDiagnosis: primaryDiagnosis?.name ?? "",
@@ -183,7 +212,9 @@ export default async function ConsultationDetailPage({
           >
             {query.aviso === "consulta-finalizada"
               ? "La consulta quedó finalizada con autor, fecha y hora."
-              : "La corrección quedó registrada como una nueva versión."}
+              : query.aviso === "pedido-guardado"
+                ? "El pedido para Administración quedó guardado."
+                : "La corrección quedó registrada como una nueva versión."}
           </div>
         ) : null}
         <Card className="max-sm:order-1">
@@ -651,6 +682,97 @@ export default async function ConsultationDetailPage({
         roleHasPermission(user.role, "area_time_write") ? (
           <AreaTimeControl state={areaTiming} compact />
         ) : null}
+
+        <Card className="max-sm:order-2">
+          <CardHeader
+            title="Pedido para Administración"
+            description="El médico arma el pedido (servicios, tratamientos y productos) con precio y descuento. No cobra: Administración lo confirma y cobra."
+            action={
+              doctorOrder ? (
+                <Chip
+                  tone={
+                    doctorOrder.status === "confirmed"
+                      ? "success"
+                      : doctorOrder.status === "submitted"
+                        ? "primary"
+                        : "neutral"
+                  }
+                  dot
+                >
+                  {doctorOrderStatusLabels[doctorOrder.status]}
+                </Chip>
+              ) : undefined
+            }
+          />
+          {canEditDoctorOrder ? (
+            <DoctorOrderBuilder
+              action={saveDoctorOrderAction}
+              visitId={visit.id}
+              catalogOptions={doctorOrderOptions.catalogOptions.map((option) => ({
+                source: option.source,
+                catalogItemId: option.catalogItemId,
+                label: option.label,
+                unitPriceCents: option.unitPriceCents,
+                perUnitCapCents: option.perUnitCapCents,
+                supportsSessions: option.supportsSessions,
+                sessionCount: option.sessionCount
+              }))}
+              productOptions={doctorOrderOptions.productOptions.map((option) => ({
+                inventoryItemId: option.inventoryItemId,
+                label: option.label,
+                unitPriceCents: option.unitPriceCents,
+                perUnitCapCents: option.perUnitCapCents
+              }))}
+              existingLines={(doctorOrder?.lines ?? []).map((line) => ({
+                source: line.source,
+                catalogItemId: line.catalogItemId,
+                inventoryItemId: line.inventoryItemId,
+                description: line.description,
+                unitPriceCents: line.unitPriceCents,
+                discountCents: line.discountCents,
+                quantity: line.quantity,
+                sessionCount: line.sessionCount,
+                maxDiscountCents: line.maxDiscountCents,
+                notes: line.notes
+              }))}
+              indications={doctorOrder?.indications ?? ""}
+              canSubmit={doctorOrderCanSubmit}
+            />
+          ) : doctorOrder && doctorOrder.lines.length > 0 ? (
+            <div className="grid gap-2">
+              {doctorOrder.lines.map((line) => (
+                <div
+                  key={line.id}
+                  className="rounded-[9px] border border-border px-3 py-2 text-sm"
+                >
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="font-semibold text-text">{line.description}</span>
+                    <span className="tabular-nums text-text">
+                      {formatDoctorOrderMoney(doctorOrderLineTotalCents(line))}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {doctorOrderLineSourceLabels[line.source]} · {line.quantity} ×{" "}
+                    {formatDoctorOrderMoney(line.unitPriceCents)}
+                    {line.discountCents > 0
+                      ? ` · desc. ${formatDoctorOrderMoney(line.discountCents)}`
+                      : ""}
+                  </p>
+                  {line.notes ? <p className="mt-0.5 text-xs text-muted">{line.notes}</p> : null}
+                </div>
+              ))}
+              {doctorOrder.indications ? (
+                <p className="rounded-[9px] bg-surface-soft px-3 py-2 text-sm text-muted">
+                  {doctorOrder.indications}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">
+              Todavía no se armó un pedido para esta visita.
+            </p>
+          )}
+        </Card>
 
         <Card className="max-sm:order-2">
           <CardHeader

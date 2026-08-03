@@ -53,6 +53,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-02 | [Ajuste: sección "Consulta médica" colapsable](./2026-08-02-consulta-medica-colapsable.md) | Convierte la tarjeta de consulta en una sección colapsable que conserva visible el estado; plegada por defecto para que el médico la abra manualmente. |
 | 2026-08-02 | [Ajuste: retiro del rol Seguimiento](./2026-08-02-retiro-rol-seguimiento.md) | Depreca el rol `seguimiento`, reasigna sus cuentas a Recepción por migración y deja el seguimiento de pacientes en Recepción sin permisos nuevos. |
 | 2026-08-03 | [Tarea 1: catálogo de servicios y tratamientos](./2026-08-03-catalogo-servicios-tratamientos.md) | Catálogo administrable separado de Productos, con umbral de descuento por producto editable solo por Dirección/Super admin y versionado append-only. |
+| 2026-08-03 | [Tarea 2: el médico arma el pedido](./2026-08-03-medico-arma-pedido.md) | El médico arma un pedido con líneas del catálogo/inventario o texto libre, con precio y descuento acotado por el tope duro, y lo envía a Administración sin cobrar. |
 
 ## Relacion Con Estado V3
 

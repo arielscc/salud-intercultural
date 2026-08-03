@@ -14,8 +14,8 @@ brechas y las decisiones confirmadas por Dirección.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 7 |
-| En progreso | 1 |
+| Pendiente | 6 |
+| En progreso | 2 |
 | Terminada | 0 |
 
 ## Estado Por Tarea
@@ -23,7 +23,7 @@ brechas y las decisiones confirmadas por Dirección.
 | # | Tarea | Prioridad | Estado | Dependencias |
 | --- | --- | --- | --- | --- |
 | 1 | Catálogo de servicios y tratamientos | P0 | En progreso | Ninguna |
-| 2 | El médico arma el pedido en la consulta | P0 | Pendiente | 1 |
+| 2 | El médico arma el pedido en la consulta | P0 | En progreso | 1 |
 | 3 | Administración confirma, valida descuento y cobra | P0 | Pendiente | 2, Caja (plan integral 18) |
 | 4 | Suero y servicio con pago previo antes de Enfermería | P1 | Pendiente | 2-3 |
 | 5 | Sesiones de servicio | P1 | Pendiente | 1-4 |
@@ -38,8 +38,9 @@ Estado del código al crear el plan:
 - 🟢 Ordenar estudios con precio y derivar a pago (existe; catálogo hardcodeado).
 - 🟢 Abandono en consulta con motivo (existe).
 - 🟢 Indicaciones al derivar a otra área (existe, básico).
-- 🔴 El médico elige productos/servicios con precio y descuento (no existe: hoy
-  es texto libre y quien elige es Administración).
+- 🟢 El médico elige productos/servicios con precio y descuento (implementado en
+  la Tarea 2, 2026-08-03: pedido estructurado con tope duro de descuento; el cobro
+  sigue siendo de Administración en la Tarea 3).
 - 🟠 Suero pagado antes de Enfermería (hoy va directo a Enfermería sin pago).
 - 🔴 Historial entre visitas: tratamientos y costos previos y precarga de receta
   (no existe: la consulta solo carga la visita actual).
@@ -95,6 +96,21 @@ Estado del código al crear el plan:
   cobra), catálogo nuevo de servicios/tratamientos, descuento máximo por oferta
   con validación de Administración, seguimiento estricto por venta, y manejo de
   sesiones con cada sesión como número de visita.
+
+### 2026-08-03 — Tarea 2 Implementada (El Médico Arma El Pedido)
+
+- Pedido estructurado `DoctorOrder` + `DoctorOrderLine` (uno por visita), estados
+  `draft`/`submitted`/`confirmed`/`cancelled`. UI nueva "Pedido para
+  Administración" en la consulta.
+- Selector de servicios/tratamientos (catálogo) y productos (inventario) o texto
+  libre; precio predefinido editable y descuento por línea, cantidad y sesiones.
+- Tope de descuento **duro** validado en servidor: el descuento total no supera
+  la suma de umbrales por producto (`discount-over-cap`). No crea venta ni cobro:
+  "Enviar a Administración" solo marca `submitted` (requiere consulta finalizada).
+- Migración aditiva `20260803140000_doctor_order` (aplicada en local).
+- Estado: **En progreso** (código + lint + typecheck listos; QA/pruebas/build al
+  cierre acumulado). Consumo por Administración = Tarea 3.
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-medico-arma-pedido.md).
 
 ### 2026-08-03 — Tarea 1 Implementada (Catálogo De Servicios Y Tratamientos)
 
