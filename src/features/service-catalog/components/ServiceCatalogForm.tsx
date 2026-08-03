@@ -80,6 +80,12 @@ export function ServiceCatalogForm({ action, products, item }: ServiceCatalogFor
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
   }
 
+  function selectKind(nextKind: ServiceCatalogKind) {
+    setKind(nextKind);
+    if (nextKind === "study") setRequiresNursing(true);
+    if (nextKind !== "service") setSupportsSessions(false);
+  }
+
   return (
     <form action={action} className="grid gap-4">
       {item ? (
@@ -102,12 +108,13 @@ export function ServiceCatalogForm({ action, products, item }: ServiceCatalogFor
             <select
               className={internalInputClassName}
               value={kind}
-              onChange={(event) => setKind(event.target.value as ServiceCatalogKind)}
+              onChange={(event) => selectKind(event.target.value as ServiceCatalogKind)}
               disabled={editing}
               aria-label="Tipo de oferta"
             >
               <option value="service">Servicio (sueroterapia, ozonoterapia, etc.)</option>
               <option value="treatment">Tratamiento (conjunto de productos)</option>
+              <option value="study">Estudio (hemograma, resonancia, orina, etc.)</option>
             </select>
           </Field>
           <Field label="Código">
@@ -117,7 +124,7 @@ export function ServiceCatalogForm({ action, products, item }: ServiceCatalogFor
               defaultValue={item?.code}
               disabled={editing}
               required={!editing}
-              placeholder="Ej. SRV-SUERO"
+              placeholder={kind === "study" ? "Ej. EST-GLUCOSA" : "Ej. SRV-SUERO"}
             />
           </Field>
           <Field label="Nombre" className="sm:col-span-2">
@@ -161,9 +168,10 @@ export function ServiceCatalogForm({ action, products, item }: ServiceCatalogFor
             type="checkbox"
             className="size-4"
             checked={requiresNursing}
+            disabled={kind === "study"}
             onChange={(event) => setRequiresNursing(event.target.checked)}
           />
-          Se ejecuta en Enfermería y requiere pago previo (sueroterapia, ozonoterapia)
+          Se ejecuta en Enfermería y requiere pago previo (sueroterapia, ozonoterapia o estudio)
         </label>
         {kind === "service" ? (
           <label className="mt-3 flex items-center gap-2 text-sm text-text">

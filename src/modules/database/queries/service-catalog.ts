@@ -219,11 +219,11 @@ export async function updateServiceCatalogItemRecord(input: {
           description: input.description,
           category: normalizeCategory(input.category),
           basePriceCents: input.basePriceCents,
-          requiresNursing: input.requiresNursing,
-          supportsSessions: input.supportsSessions,
-          sessionCount: input.sessionCount,
-          packagePriceCents: input.packagePriceCents,
-          sessionPriceCents: input.sessionPriceCents,
+          requiresNursing: current.kind === "study" || input.requiresNursing,
+          supportsSessions: current.kind === "service" && input.supportsSessions,
+          sessionCount: current.kind === "service" ? input.sessionCount : null,
+          packagePriceCents: current.kind === "service" ? input.packagePriceCents : null,
+          sessionPriceCents: current.kind === "service" ? input.sessionPriceCents : null,
           revision: { increment: 1 }
         }
       });
@@ -383,15 +383,26 @@ export async function getInventoryProductOptions() {
   );
 }
 
-/** Ofertas activas para el selector del médico (Tarea 2). */
+/** Ofertas activas para el selector del médico (Tarea 2); excluye estudios. */
 export async function getActiveServiceCatalogItems() {
   return withDatabaseError("getActiveServiceCatalogItems", () =>
     prisma.serviceCatalogItem.findMany({
-      where: { active: true },
+      where: { active: true, kind: { in: ["service", "treatment"] } },
       include: {
         components: { include: { inventoryItem: true }, orderBy: { createdAt: "asc" } }
       },
       orderBy: [{ kind: "asc" }, { name: "asc" }]
+    })
+  );
+}
+
+/** Estudios activos del catálogo administrable (Tarea 8). */
+export async function getActiveStudyCatalogItems() {
+  return withDatabaseError("getActiveStudyCatalogItems", () =>
+    prisma.serviceCatalogItem.findMany({
+      where: { active: true, kind: "study" },
+      select: { id: true, name: true, basePriceCents: true },
+      orderBy: { name: "asc" }
     })
   );
 }

@@ -32,13 +32,14 @@ type CatalogPageProps = {
     page?: string;
     q?: string;
     categoria?: string;
-    tipo?: "service" | "treatment" | "all";
+    tipo?: "service" | "treatment" | "study" | "all";
     estado?: "active" | "inactive" | "all";
   }>;
 };
 
-const actionClassName =
-  "focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-[9px] border border-border bg-surface px-3 text-sm font-semibold text-text transition hover:border-primary/40 hover:text-primary-dark";
+const actionBaseClassName =
+  "focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-[9px] border px-3 text-sm font-semibold transition";
+const secondaryActionClassName = `${actionBaseClassName} border-border bg-surface text-text hover:border-primary/40 hover:text-primary-dark`;
 
 export default async function ServiceCatalogPage({ searchParams }: CatalogPageProps) {
   const user = await requirePermission("service_catalog_read");
@@ -47,7 +48,10 @@ export default async function ServiceCatalogPage({ searchParams }: CatalogPagePr
   const pageSize = 40;
   const canWrite = roleHasPermission(user.role, "service_catalog_write");
   const selectedKind =
-    params.tipo === "service" || params.tipo === "treatment" || params.tipo === "all"
+    params.tipo === "service" ||
+    params.tipo === "treatment" ||
+    params.tipo === "study" ||
+    params.tipo === "all"
       ? params.tipo
       : "all";
   const selectedStatus =
@@ -69,12 +73,12 @@ export default async function ServiceCatalogPage({ searchParams }: CatalogPagePr
   return (
     <div className="grid gap-4">
       <PageHeader
-        title="Catálogo de servicios y tratamientos"
-        description="Ofertas vendibles que el médico puede elegir. Separado de Productos (insumos con stock)."
+        title="Catálogo de servicios, tratamientos y estudios"
+        description="Ofertas y estudios que el personal puede elegir. Separado de Productos (insumos con stock)."
         actions={
           canWrite ? (
             <Link
-              className={`${actionClassName} border-primary bg-primary text-white hover:text-white`}
+              className={`${actionBaseClassName} border-primary bg-primary text-white hover:bg-primary-dark hover:text-white`}
               href="/sigeco/catalogo/nuevo"
             >
               <Plus size={16} aria-hidden="true" />
@@ -123,6 +127,7 @@ export default async function ServiceCatalogPage({ searchParams }: CatalogPagePr
             <option value="all">Todos los tipos</option>
             <option value="service">Servicios</option>
             <option value="treatment">Tratamientos</option>
+            <option value="study">Estudios</option>
           </select>
           {canWrite ? (
             <select
@@ -138,7 +143,7 @@ export default async function ServiceCatalogPage({ searchParams }: CatalogPagePr
           ) : (
             <input type="hidden" name="estado" value="active" />
           )}
-          <button className={actionClassName} type="submit">
+          <button className={secondaryActionClassName} type="submit">
             Filtrar
           </button>
         </form>
@@ -149,7 +154,7 @@ export default async function ServiceCatalogPage({ searchParams }: CatalogPagePr
         <CardHeader
           className="mb-0 p-[18px] pb-3"
           title="Ofertas"
-          description="El tope de descuento de un tratamiento es la suma de los umbrales de sus productos."
+          description="Administra precios, disponibilidad y topes de descuento sin modificar el código."
         />
         <RecordList>
           {items.map((item) => {
@@ -185,7 +190,7 @@ export default async function ServiceCatalogPage({ searchParams }: CatalogPagePr
           ) : null}
         </RecordList>
         <RecordTable>
-          <Table caption="Catálogo de servicios y tratamientos">
+          <Table caption="Catálogo de servicios, tratamientos y estudios">
             <thead>
               <tr>
                 <Th>Oferta</Th>

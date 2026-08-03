@@ -16,8 +16,8 @@ PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
 de incidentes y el gate técnico local también están aprobados, sin autorizar
 producción. Los consentimientos independientes ya están implementados en
 desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
-anteriores están en staging y las treinta y ocho migraciones actuales están
-aplicadas en desarrollo. Falta validar las veintiséis
+anteriores están en staging y las cuarenta y nueve migraciones actuales están
+aplicadas en desarrollo. Falta validar las treinta y siete
 nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
 remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
 funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con

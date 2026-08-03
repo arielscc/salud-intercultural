@@ -20,7 +20,7 @@ export default async function NewServiceCatalogItemPage({
       <MobileBackLink href="/sigeco/catalogo" label="Volver al catálogo" />
       <PageHeader
         title="Nueva oferta"
-        description="Servicio o tratamiento que el médico podrá elegir en la consulta."
+        description="Servicio, tratamiento o estudio que el personal podrá elegir durante la atención."
       />
       <ServiceCatalogError code={query.error} />
       <ServiceCatalogForm action={createServiceCatalogItemAction} products={products} />

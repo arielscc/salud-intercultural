@@ -12,6 +12,15 @@ import {
 import { createPatientRecord, getPatientById } from "@/modules/database/queries/patients";
 import { createStudyRecord, getStudiesForVisit } from "@/modules/database/queries/studies";
 import { createVisitRecord, updateVisitRouteStatus } from "@/modules/database/queries/visits";
+import {
+  createPaidStudyOrder,
+  hasPaidStudyFlowError,
+  releasePaidStudiesToNursing
+} from "@/modules/database/queries/paid-studies";
+import {
+  createServiceCatalogItemRecord,
+  getActiveStudyCatalogItems
+} from "@/modules/database/queries/service-catalog";
 
 async function cleanNursingStudies() {
   await prisma.$executeRawUnsafe(
@@ -42,12 +51,111 @@ async function cleanNursingStudies() {
   await prisma.lead.deleteMany();
   await prisma.internalSession.deleteMany();
   await prisma.internalUser.deleteMany();
+  await prisma.serviceCatalogItemVersion.deleteMany({
+    where: { catalogItem: { code: { startsWith: "TEST-STUDY-" } } }
+  });
+  await prisma.serviceCatalogItem.deleteMany({
+    where: { code: { startsWith: "TEST-STUDY-" } }
+  });
 }
 
 beforeEach(cleanNursingStudies);
 afterEach(cleanNursingStudies);
 
 describe("nursing and studies integration", () => {
+  it("orders an administrable study, requires payment and releases it to nursing", async () => {
+    const doctor = await prisma.internalUser.create({
+      data: {
+        email: "medico-estudio-catalogo@example.com",
+        name: "Médico Catálogo",
+        passwordHash: await hashPassword("clave-segura-123"),
+        role: "medico"
+      }
+    });
+    const patient = await createPatientRecord({
+      fullName: "Paciente Estudio Administrable",
+      phone: "+591 70000108",
+      captureSource: "whatsapp"
+    });
+    const visit = await createVisitRecord({
+      patientId: patient.id,
+      userId: doctor.id,
+      reason: "Requiere análisis"
+    });
+    await updateVisitRouteStatus({
+      visitId: visit.id,
+      userId: doctor.id,
+      status: "in_consultation",
+      area: "medico",
+      note: "Consulta activa"
+    });
+    const catalogItem = await createServiceCatalogItemRecord({
+      code: "TEST-STUDY-GLUCOSA",
+      name: "Glucosa en sangre",
+      category: "Estudios",
+      kind: "study",
+      basePriceCents: 7500,
+      requiresNursing: true,
+      userId: doctor.id
+    });
+
+    expect(await getActiveStudyCatalogItems()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: catalogItem.id, name: "Glucosa en sangre" })
+      ])
+    );
+
+    const { sale, workItem } = await createPaidStudyOrder({
+      visitId: visit.id,
+      doctorId: doctor.id,
+      requestedById: doctor.id,
+      source: "consultation",
+      discount: "5.00",
+      details: "Paciente en ayunas",
+      studies: [{ catalogItemId: catalogItem.id, price: "75.00" }]
+    });
+
+    expect(sale).toMatchObject({
+      status: "pending",
+      subtotalCents: 7500,
+      discountCents: 500,
+      totalCents: 7000,
+      balanceCents: 7000
+    });
+    expect(
+      await prisma.clinicalOrder.findFirstOrThrow({ where: { workItemId: workItem.id } })
+    ).toMatchObject({
+      type: "study",
+      title: "Glucosa en sangre",
+      details: "Paciente en ayunas"
+    });
+
+    let unpaidError: unknown;
+    try {
+      await releasePaidStudiesToNursing({ workItemId: workItem.id, userId: doctor.id });
+    } catch (error) {
+      unpaidError = error;
+    }
+    expect(hasPaidStudyFlowError(unpaidError, "STUDY_PAYMENT_REQUIRED")).toBe(true);
+
+    await prisma.sale.update({
+      where: { id: sale.id },
+      data: { status: "paid", paidCents: 7000, balanceCents: 0 }
+    });
+    const nursingWorkItem = await releasePaidStudiesToNursing({
+      workItemId: workItem.id,
+      userId: doctor.id
+    });
+
+    expect(nursingWorkItem).toMatchObject({
+      area: "enfermeria",
+      title: "Realizar estudios pagados"
+    });
+    expect(await prisma.visit.findUniqueOrThrow({ where: { id: visit.id } })).toMatchObject({
+      status: "in_nursing"
+    });
+  });
+
   it("associates nursing execution and studies with patient and visit", async () => {
     const doctor = await prisma.internalUser.create({
       data: {

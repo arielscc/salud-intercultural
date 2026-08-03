@@ -6,17 +6,18 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 ## Estado General
 
-Plan creado el 2026-08-03 a partir de las reglas operativas del médico. Ninguna
-tarea implementada todavía; este documento captura el alcance, el análisis de
-brechas y las decisiones confirmadas por Dirección.
+Las ocho tareas tienen implementación local. Las Tareas 1–7 están guardadas en
+commits y siguen en progreso según su propio cierre. La Tarea 8 está terminada
+en el árbol de trabajo, sin commit: validaciones automáticas, integración y QA
+de navegador aprobados.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 1 |
+| Pendiente | 0 |
 | En progreso | 7 |
-| Terminada | 0 |
+| Terminada | 1 |
 
 ## Estado Por Tarea
 
@@ -29,7 +30,7 @@ brechas y las decisiones confirmadas por Dirección.
 | 5 | Sesiones de servicio | P1 | En progreso | 1-4 |
 | 6 | Historial del paciente en la consulta | P1 | En progreso | 1-3 |
 | 7 | Seguimiento estricto por compra | P1 | En progreso | 3, 6 |
-| 8 | Catálogo administrable de estudios | P2 | Pendiente | 1 |
+| 8 | Catálogo administrable de estudios | P2 | Terminada | 1 |
 
 ## Análisis De Brechas (2026-08-03)
 
@@ -51,6 +52,9 @@ Estado del código al crear el plan:
   el médico agenda a Recepción solo con venta registrada; validado en servidor).
 - 🟢 Catálogo administrable de servicios y tratamientos (implementado en la
   Tarea 1, 2026-08-03; pendiente el cierre acumulado de QA/pruebas/build).
+- 🟢 Catálogo administrable de estudios (implementado en la Tarea 8,
+  2026-08-03: catálogo dinámico compartido por Consulta y Recepción; conserva
+  pago en Administración antes de Enfermería).
 
 ## Decisiones Vigentes
 
@@ -90,6 +94,32 @@ Estado del código al crear el plan:
 - El usuario seguirá agregando reglas; el plan puede crecer.
 
 ## Registro
+
+### 2026-08-03 — Tarea 8 Implementada (Catálogo Administrable De Estudios)
+
+- `ServiceCatalogKind` incorpora `study`; Administración puede crear, editar,
+  filtrar, activar y desactivar estudios desde `/sigeco/catalogo`.
+- Consulta y Recepción obtienen los estudios activos desde la base de datos. El
+  servidor valida identificadores, tipo, estado, precios y duplicados antes de
+  crear la orden y la venta.
+- Se conserva el recorrido: ordenar → pagar en Administración → ejecutar en
+  Enfermería. El nombre y precio quedan como fotografía histórica.
+- Migraciones `20260803210000_service_catalog_study_kind`,
+  `20260803210500_seed_study_catalog` y
+  `20260803211000_seed_study_catalog_versions`, aplicadas solo en local. Hay 49
+  migraciones locales al día y los cuatro estudios tienen su versión inicial.
+- Prisma format/validate/generate, lint, typecheck, 4 pruebas específicas, 363
+  pruebas unitarias, build, dependencias y gate de seguridad aprobados.
+- QA autenticado aprobado en Catálogo, alta móvil de estudio y selector de
+  estudios en Consulta; cuatro ofertas y precios correctos, sin errores de
+  consola. El reintento de Recepción no pudo completarse por la sesión del
+  automatizador, pero comparte el componente y queda cubierto por código.
+- Integración ejecutada con autorización explícita contra únicamente
+  `salud_intercultural_test`: 49 migraciones, 23 archivos y 54 pruebas
+  aprobadas. Incluye catálogo → orden → rechazo antes del pago → pago →
+  liberación a Enfermería.
+- Estado: **Terminada**, sin commit por instrucción de Dirección. Detalle:
+  [reporte de tarea](../task-reports/2026-08-03-catalogo-administrable-estudios.md).
 
 ### 2026-08-03 — Creación Del Plan
 
@@ -181,7 +211,8 @@ Estado del código al crear el plan:
 
 - Catálogo nuevo separado de Productos: modelos `ServiceCatalogItem`,
   `ServiceCatalogComponent` y `ServiceCatalogItemVersion` (append-only), enum
-  `ServiceCatalogKind` (service/treatment) y CRUD en `/sigeco/catalogo`.
+  `ServiceCatalogKind` (service/treatment; `study` se agregó en la Tarea 8) y
+  CRUD en `/sigeco/catalogo`.
 - Umbral de descuento por producto (`InventoryItem.maxDiscountCents`) editable
   solo por Dirección/Super admin; el tope de un tratamiento es la suma de los
   umbrales de sus productos; los servicios sin productos usan `ownMaxDiscountCents`.

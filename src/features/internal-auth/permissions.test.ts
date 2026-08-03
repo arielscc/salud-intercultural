@@ -185,7 +185,7 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("super_admin", "inventory_adjust")).toBe(true);
   });
 
-  it("lets administration manage the service/treatment catalog and medico read it", () => {
+  it("lets administration manage the offer catalog and clinical roles read it", () => {
     expect(roleHasPermission("administracion", "service_catalog_read")).toBe(true);
     expect(roleHasPermission("administracion", "service_catalog_write")).toBe(true);
     expect(roleHasPermission("medico", "service_catalog_read")).toBe(true);

@@ -278,6 +278,13 @@ desde cero en una reconsulta.
 
 **Commit sugerido:** `feat(sigeco): make study catalog manageable`
 
+**Estado de ejecución (2026-08-03):** implementación local completa y tres
+migraciones aplicadas en desarrollo. Lint, typecheck, unitarias, build, control
+de dependencias, gate de seguridad y QA autenticado de catálogo/consulta
+aprobados. Integración acumulada aprobada: 23 archivos y 54 pruebas, incluido
+el recorrido catálogo → orden → pago → Enfermería. **Tarea terminada.**
+Detalle: [reporte de tarea](../task-reports/2026-08-03-catalogo-administrable-estudios.md).
+
 ---
 
 ## Reglas Ya Cubiertas Por El Sistema (No Requieren Tarea Nueva)

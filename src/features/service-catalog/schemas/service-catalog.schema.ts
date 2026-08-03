@@ -62,7 +62,7 @@ const catalogFields = {
 
 export const createServiceCatalogItemSchema = z.object({
   code: z.string().trim().min(2).max(80),
-  kind: z.enum(["service", "treatment"]),
+  kind: z.enum(["service", "treatment", "study"]),
   ...catalogFields
 });
 

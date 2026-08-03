@@ -160,7 +160,8 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_duplicates_read",
     "patient_duplicates_review",
     "visit_discontinuations_read",
-    "visit_discontinuations_write"
+    "visit_discontinuations_write",
+    "service_catalog_read"
   ],
   captacion: ["internal_access"],
   administracion: [

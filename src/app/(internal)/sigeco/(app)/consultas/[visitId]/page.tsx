@@ -66,6 +66,7 @@ import {
   getDoctorOrderByVisit,
   getDoctorOrderOptions
 } from "@/modules/database/queries/doctor-orders";
+import { getActiveStudyCatalogItems } from "@/modules/database/queries/service-catalog";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { getPrescriptionDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
@@ -136,7 +137,9 @@ function pageErrorMessage(error: string) {
       "Finaliza y firma la consulta antes de enviar el pedido a Administración.",
     "visit-not-in-consultation": "La visita ya no admite cambios en el pedido.",
     "already-confirmed": "Administración ya confirmó este pedido; no se puede editar.",
-    "invalid-line": "Una línea apunta a una oferta o producto que ya no está disponible."
+    "invalid-line": "Una línea apunta a una oferta o producto que ya no está disponible.",
+    "invalid-study-order":
+      "Selecciona al menos un estudio activo y revisa los precios ingresados."
   };
   return (
     messages[error] ??
@@ -151,13 +154,21 @@ export default async function ConsultationDetailPage({
   const user = await requirePermission("clinical_read");
   const { activeBranch } = await getBranchContext(user);
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
-  const [visit, prescriptionDocuments, areaTiming, doctorOrder, doctorOrderOptions] =
+  const [
+    visit,
+    prescriptionDocuments,
+    areaTiming,
+    doctorOrder,
+    doctorOrderOptions,
+    studyCatalogItems
+  ] =
     await Promise.all([
       getClinicalVisitById(visitId),
       getPrescriptionDocuments(visitId),
       getVisitAreaTimingState(visitId),
       getDoctorOrderByVisit(visitId),
-      getDoctorOrderOptions()
+      getDoctorOrderOptions(),
+      getActiveStudyCatalogItems()
     ]);
 
   if (!visit) notFound();
@@ -1099,7 +1110,15 @@ export default async function ConsultationDetailPage({
               description="Al terminar la consulta el paciente puede seguir a otra área o irse."
             />
             <div className="grid gap-2">
-              <PaidStudyOrderDialog visitId={visit.id} action={createPaidStudyOrderAction} />
+              <PaidStudyOrderDialog
+                visitId={visit.id}
+                action={createPaidStudyOrderAction}
+                studies={studyCatalogItems.map((study) => ({
+                  id: study.id,
+                  label: study.name,
+                  referenceCents: study.basePriceCents
+                }))}
+              />
               {visit.clinicalConsultation?.status === "finalized" ? (
                 <ConfirmForm
                   action={applyVisitFlowAction}

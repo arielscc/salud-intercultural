@@ -33,6 +33,7 @@ import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { formatDateTime } from "@/lib/dates";
 import { getVisitById } from "@/modules/database/queries/visits";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
+import { getActiveStudyCatalogItems } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
 import { Clock3, MapPin, Phone } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -58,9 +59,10 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
   const user = await requirePermission("visits_read");
   const { activeBranch } = await getBranchContext(user);
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const [visit, areaTiming] = await Promise.all([
+  const [visit, areaTiming, studyCatalogItems] = await Promise.all([
     getVisitById(id),
-    getVisitAreaTimingState(id)
+    getVisitAreaTimingState(id),
+    getActiveStudyCatalogItems()
   ]);
 
   if (!visit) notFound();
@@ -95,6 +97,11 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
           <p className="mt-1 text-text">
             El médico debe finalizar y firmar la consulta antes del cierre.
           </p>
+        </div>
+      ) : null}
+      {query.error === "invalid-study-order" ? (
+        <div className="rounded-[9px] bg-error/10 px-4 py-3 text-sm text-error" role="alert">
+          Selecciona al menos un estudio activo y revisa los precios ingresados.
         </div>
       ) : null}
       {query.error === "abandono-invalido" ? (
@@ -214,8 +221,13 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 <PaidStudyOrderDialog
                   visitId={visit.id}
                   action={createReceptionPaidStudyOrderAction}
+                  studies={studyCatalogItems.map((study) => ({
+                    id: study.id,
+                    label: study.name,
+                    referenceCents: study.basePriceCents
+                  }))}
                   compactTrigger
-                  triggerLabel="Enviar a analisis"
+                  triggerLabel="Enviar a análisis"
                 />
               ) : null}
               {visit.status !== "in_consultation" ? (

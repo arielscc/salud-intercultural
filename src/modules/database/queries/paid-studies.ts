@@ -6,17 +6,6 @@ import {
 } from "@/modules/database/queries/area-times";
 import type { PaidStudyOrderInput } from "@/features/clinical-care/schemas/paid-study.schema";
 
-const studyCatalog = [
-  { key: "hemogram", priceKey: "hemogramPrice", title: "Hemograma" },
-  {
-    key: "hemogramResonance",
-    priceKey: "hemogramResonancePrice",
-    title: "Hemograma + resonancia"
-  },
-  { key: "resonance", priceKey: "resonancePrice", title: "Resonancia" },
-  { key: "urine", priceKey: "urinePrice", title: "Análisis de orina" }
-] as const;
-
 export function hasPaidStudyFlowError(error: unknown, code: string): boolean {
   if (!(error instanceof Error)) return false;
   if (error.message === code) return true;
@@ -62,6 +51,13 @@ async function moveVisit(
   }
 }
 
+export class PaidStudyCatalogError extends Error {
+  constructor(public readonly code: "invalid-study") {
+    super(code);
+    this.name = "PaidStudyCatalogError";
+  }
+}
+
 export async function createPaidStudyOrder(
   input: PaidStudyOrderInput & {
     doctorId?: string;
@@ -72,12 +68,19 @@ export async function createPaidStudyOrder(
   return withDatabaseError("createPaidStudyOrder", () =>
     prisma.$transaction(async (tx) => {
       const visit = await tx.visit.findUniqueOrThrow({ where: { id: input.visitId }, include: { patient: true } });
-      const studies = studyCatalog
-        .filter((study) => input[study.key])
-        .map((study) => ({
-          title: study.title,
-          unitPriceCents: toCents(input[study.priceKey] ?? "0")
-        }));
+      const catalogIds = [...new Set(input.studies.map((study) => study.catalogItemId))];
+      const catalogItems = await tx.serviceCatalogItem.findMany({
+        where: { id: { in: catalogIds }, kind: "study", active: true },
+        select: { id: true, name: true }
+      });
+      const nameById = new Map(catalogItems.map((item) => [item.id, item.name]));
+      if (nameById.size !== catalogIds.length) {
+        throw new PaidStudyCatalogError("invalid-study");
+      }
+      const studies = input.studies.map((study) => ({
+        title: nameById.get(study.catalogItemId) ?? "Estudio",
+        unitPriceCents: toCents(study.price)
+      }));
       const subtotalCents = studies.reduce((total, study) => total + study.unitPriceCents, 0);
       const discountCents = Math.min(toCents(input.discount), subtotalCents);
       const totalCents = subtotalCents - discountCents;

@@ -2,7 +2,8 @@ import type { ServiceCatalogKind } from "@/generated/prisma/client";
 
 export const serviceCatalogKindLabels: Record<ServiceCatalogKind, string> = {
   service: "Servicio",
-  treatment: "Tratamiento"
+  treatment: "Tratamiento",
+  study: "Estudio"
 };
 
 export function formatServiceCatalogMoney(cents: number) {

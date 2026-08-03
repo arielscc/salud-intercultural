@@ -84,7 +84,7 @@ export async function getDoctorOrderOptions() {
   return withDatabaseError("getDoctorOrderOptions", async () => {
     const [catalog, products] = await Promise.all([
       prisma.serviceCatalogItem.findMany({
-        where: { active: true },
+        where: { active: true, kind: { in: ["service", "treatment"] } },
         include: {
           components: { include: { inventoryItem: true }, orderBy: { createdAt: "asc" } }
         },

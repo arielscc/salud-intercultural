@@ -644,12 +644,14 @@ enum InventoryItemUsage {
   both
 }
 
-/// Tipo de oferta vendible del catálogo de servicios y tratamientos.
+/// Tipo de oferta vendible del catálogo de servicios, tratamientos y estudios.
 /// `service` = servicio propio (sueroterapia, ozonoterapia, etc.).
 /// `treatment` = conjunto de productos vendidos juntos.
+/// `study` = estudio/examen que se ordena, se paga y se ejecuta en Enfermería.
 enum ServiceCatalogKind {
   service
   treatment
+  study
 }
 
 /// Estado del pedido que el médico arma en la consulta (Tarea 2).
@@ -2985,9 +2987,9 @@ model InventoryAlert {
   @@index([status, createdAt])
 }
 
-/// Oferta vendible que el médico puede elegir en la consulta (servicio o
-/// tratamiento). Es un catálogo administrable, separado de Productos (que son
-/// insumos con stock). Nada hardcodeado; siempre existe la opción de texto libre
+/// Oferta vendible que el médico puede elegir en la consulta (servicio,
+/// tratamiento o estudio). Es un catálogo administrable, separado de Productos
+/// (que son insumos con stock). Nada hardcodeado; siempre existe la opción de texto libre
 /// al armar el pedido. El precio y el umbral históricos de una venta no cambian
 /// al editar este catálogo (se versiona de forma append-only).
 model ServiceCatalogItem {
@@ -2998,11 +3000,11 @@ model ServiceCatalogItem {
   category            String                      @default("Sin categoría")
   kind                ServiceCatalogKind          @default(service)
   basePriceCents      Int                         @default(0)
-  /// Umbral de descuento propio (centavos). Aplica a servicios sin productos
-  /// componentes. Solo Dirección y Super administrador lo editan.
+  /// Umbral de descuento propio (centavos). Aplica a servicios y estudios sin
+  /// productos componentes. Solo Dirección y Super administrador lo editan.
   ownMaxDiscountCents Int                         @default(0)
-  /// Se ejecuta en Enfermería (sueroterapia, ozonoterapia): requiere pago previo
-  /// antes de derivar (Tarea 4).
+  /// Se ejecuta en Enfermería (sueroterapia, ozonoterapia o estudios): requiere
+  /// pago previo antes de derivar (Tareas 4 y 8).
   requiresNursing     Boolean                     @default(false)
   /// Marca los servicios que se venden por sesiones (ver Tarea 5).
   supportsSessions    Boolean                     @default(false)
@@ -3041,7 +3043,7 @@ model ServiceCatalogComponent {
   @@index([inventoryItemId])
 }
 
-/// Historial append-only del catálogo de servicios/tratamientos.
+/// Historial append-only del catálogo de servicios, tratamientos y estudios.
 model ServiceCatalogItemVersion {
   id                  String             @id @default(cuid())
   catalogItemId       String

@@ -203,7 +203,7 @@ export default async function ServiceCatalogItemPage({
           {!isTreatment && canManageThreshold ? (
             <Card>
               <CardHeader
-                title="Umbral de descuento del servicio"
+                title={`Umbral de descuento del ${item.kind === "study" ? "estudio" : "servicio"}`}
                 description="Solo Dirección y Super administrador. Es el tope que el médico podrá aplicar."
               />
               <NoticeForm

@@ -21,8 +21,14 @@ import {
   sanitizeClinicalConsultationInput,
   upsertClinicalConsultationSchema
 } from "@/features/clinical-care/schemas/clinical-care.schema";
-import { paidStudyOrderSchema } from "@/features/clinical-care/schemas/paid-study.schema";
-import { createPaidStudyOrder } from "@/modules/database/queries/paid-studies";
+import {
+  paidStudyOrderSchema,
+  parsePaidStudyForm
+} from "@/features/clinical-care/schemas/paid-study.schema";
+import {
+  createPaidStudyOrder,
+  hasPaidStudyFlowError
+} from "@/modules/database/queries/paid-studies";
 import {
   correctClinicalConsultationSchema,
   finalizeClinicalConsultationSchema
@@ -254,15 +260,22 @@ export async function createPaidStudyOrderAction(formData: FormData) {
       entityId: visitId || undefined
     },
     async (user) => {
-      const parsed = paidStudyOrderSchema.safeParse(parseFormData(formData));
+      const parsed = paidStudyOrderSchema.safeParse(parsePaidStudyForm(formData));
       if (!parsed.success) redirect("/sigeco/consultas?error=invalid-study-order");
 
-      await createPaidStudyOrder({
-        ...parsed.data,
-        doctorId: user.id,
-        requestedById: user.id,
-        source: "consultation"
-      });
+      try {
+        await createPaidStudyOrder({
+          ...parsed.data,
+          doctorId: user.id,
+          requestedById: user.id,
+          source: "consultation"
+        });
+      } catch (error) {
+        if (hasPaidStudyFlowError(error, "invalid-study")) {
+          redirect("/sigeco/consultas?error=invalid-study-order");
+        }
+        throw error;
+      }
       return auditedResult(undefined, {
         entityId: parsed.data.visitId,
         context: { source: "consultation" }
@@ -285,7 +298,7 @@ export async function createReceptionPaidStudyOrderAction(formData: FormData) {
       entityId: visitId || undefined
     },
     async (user) => {
-      const parsed = paidStudyOrderSchema.safeParse(parseFormData(formData));
+      const parsed = paidStudyOrderSchema.safeParse(parsePaidStudyForm(formData));
 
       if (!parsed.success) {
         redirect("/sigeco/recepcion?error=invalid-study-order");
@@ -294,11 +307,18 @@ export async function createReceptionPaidStudyOrderAction(formData: FormData) {
         denyAuditedAction("role_policy_denied");
       }
 
-      await createPaidStudyOrder({
-        ...parsed.data,
-        requestedById: user.id,
-        source: "reception"
-      });
+      try {
+        await createPaidStudyOrder({
+          ...parsed.data,
+          requestedById: user.id,
+          source: "reception"
+        });
+      } catch (error) {
+        if (hasPaidStudyFlowError(error, "invalid-study")) {
+          redirect(`/sigeco/recepcion/visitas/${visitId}?error=invalid-study-order`);
+        }
+        throw error;
+      }
       return auditedResult(undefined, {
         entityId: parsed.data.visitId,
         context: { source: "reception" }

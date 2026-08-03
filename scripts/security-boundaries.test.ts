@@ -47,6 +47,18 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   ],
   "src/app/(internal)/sigeco/(app)/auditoria/page.tsx": ["audit_read"],
   "src/app/(internal)/sigeco/(app)/atribucion/page.tsx": ["reports_read"],
+  "src/app/(internal)/sigeco/(app)/catalogo/[itemId]/editar/page.tsx": [
+    "service_catalog_write"
+  ],
+  "src/app/(internal)/sigeco/(app)/catalogo/[itemId]/page.tsx": [
+    "service_catalog_read"
+  ],
+  "src/app/(internal)/sigeco/(app)/catalogo/nuevo/page.tsx": [
+    "service_catalog_write"
+  ],
+  "src/app/(internal)/sigeco/(app)/catalogo/page.tsx": [
+    "service_catalog_read"
+  ],
   "src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx": [
     "clinical_read"
   ],
@@ -169,10 +181,12 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   changeActiveBranchAction: "internal_access",
   changeOwnInternalPasswordAction: "internal_access",
   configureProfessionalProfileAction: "documents_configure",
+  confirmDoctorOrderSaleAction: "sales_write",
   cancelFeedbackRequestAction: "feedback_manage",
   correctClinicalConsultationAction: "clinical_correct",
   correctPrescriptionAction: "clinical_correct",
   createClinicalOrderAction: "clinical_write",
+  createDoctorVisitFollowUpAction: "followups_write",
   createCaptureSourceAction: "attribution_manage",
   createFollowUpAttemptAction: "followups_write",
   createFollowUpTaskAction: "followups_write",
@@ -201,6 +215,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   createPaymentAction: "payments_write",
   createReceptionPaidStudyOrderAction: "visits_update",
   createSaleAction: "sales_write",
+  createServiceCatalogItemAction: "service_catalog_write",
   createStaffCashExpenseAction: "cash_movements_create",
   createStudyAction: "studies_write",
   createSupplierAction: "suppliers_write",
@@ -217,6 +232,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   recordPurchasePaymentAction: "purchases_write",
   recordVisitDiscontinuationAction: "visit_discontinuations_write",
   recordTreatmentProposalOutcomeAction: "clinical_write",
+  releaseDoctorOrderToNursingAction: "visits_update",
   requestCashSessionCloseAction: "cash_sessions_close",
   returnStudiesToDoctorAction: "nursing_write",
   reverseCashMovementAction: "cash_movements_reverse",
@@ -224,12 +240,14 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   revokeManagedInternalUserSessionsAction: "users_manage",
   revokeOwnInternalSessionAction: "internal_access",
   saveClinicalConsultationAction: "clinical_write",
+  saveDoctorOrderAction: "clinical_write",
   saveReminderRuleVersionAction: "reminder_rules_manage",
   searchReceptionPatientsAction: "patients_read",
   sendPaidStudiesToNursingAction: "visits_update",
   submitReceptionIntakeAction: "visits_create",
   cancelPurchaseAction: "purchases_write",
   setInventoryItemStatusAction: "inventory_write",
+  setServiceCatalogItemStatusAction: "service_catalog_write",
   setSupplierStatusAction: "suppliers_write",
   unlockManagedInternalUserAction: "users_manage",
   updateLeadStatusAction: "leads_update",
@@ -238,11 +256,16 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   updateCaptureSourceAction: "attribution_manage",
   updateFeedbackCaseAction: "feedback_manage",
   updateInventoryItemAction: "inventory_write",
+  updateInventoryItemMaxDiscountAction: "discount_threshold_manage",
   updateInventoryItemSuppliersAction: "suppliers_write",
+  updateManagedInternalUserProfileAction: "users_manage",
   updateNursingWorkItemAction: "nursing_write",
   updateReceptionPatientAction: "patients_update",
+  updateServiceCatalogItemAction: "service_catalog_write",
+  updateServiceCatalogThresholdAction: "discount_threshold_manage",
   updateSupplierAction: "suppliers_write",
-  updateVisitStatusAction: "visits_update"
+  updateVisitStatusAction: "visits_update",
+  consumeServiceSessionAction: "nursing_write"
 };
 
 const clinicalAttachmentRoutePermissions: Record<string, InternalPermission> = {
