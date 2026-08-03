@@ -257,6 +257,11 @@ Blob clínico privado y las credenciales separadas aprobadas.
 
 - `tasks.md` es la única fuente de tareas activas.
 - Este archivo es la única fuente de estado y avance.
+- **Modo de ejecución vigente (2026-08-02):** la implementación de cada tarea
+  nueva no ejecuta QA de navegador (gstack, capturas, responsive), pruebas
+  unitarias, pruebas de integración ni build. Solo se corren lint y typecheck.
+  Lo no ejecutado se documenta como pendiente y evidencia; se valida después en
+  el cierre acumulado (CI, staging y piloto). El gate de cierre no cambia.
 - El médico cierra la propuesta del tratamiento.
 - Una aceptación crea una instrucción para Administración, pero la venta y el
   pago se registran después y no se inventan automáticamente.
@@ -1615,6 +1620,25 @@ Al terminar:
 2. Cambiar a `Terminada`.
 3. Registrar archivos, migraciones, pruebas, QA web/móvil y pendientes.
 4. Actualizar la documentación técnica afectada.
+
+## 2026-08-02 — Decisión — Modo De Ejecución Sin gstack, Pruebas Ni Build
+
+A pedido de Dirección, la implementación de las próximas tareas cambia su modo
+de validación por tarea:
+
+- **No se ejecutan** QA de navegador (gstack, capturas, responsive), pruebas
+  unitarias, pruebas de integración ni build durante la tarea.
+- **Se mantienen** lint y typecheck como red mínima de seguridad.
+- La validación no ejecutada se registra como pendiente y evidencia documental
+  en el reporte de la tarea y en este archivo.
+- Esa validación se corre después en el cierre acumulado (CI, staging y piloto),
+  no por tarea.
+- El gate de cierre de `tasks.md` no cambia: gstack, pruebas y build siguen
+  siendo requisitos para dar una tarea por `Terminada`; solo cambia cuándo y
+  quién los ejecuta.
+
+Referencia cruzada: sección **Modo De Ejecución Vigente** en
+[tasks.md](./tasks.md) y bullet correspondiente en **Decisiones Vigentes**.
 
 ## Plantilla De Avance
 

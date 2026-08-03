@@ -124,7 +124,22 @@ Se debe ampliar esta base. No se reconstruyen ventas o inventario desde cero.
 12. Dinero se calcula en servidor y se guarda en centavos.
 13. Las fechas operativas usan `America/La_Paz`.
 14. Cada tarea actualiza [progress.md](./progress.md).
-15. Cada tarea incluye pruebas unitarias, integración cuando toca datos, casos negativos por rol, lint, tipos, build y QA funcional aplicables.
+15. Cada tarea incluye pruebas unitarias, integración cuando toca datos, casos negativos por rol, lint, tipos, build y QA funcional aplicables. Estos siguen siendo requisitos del gate de cierre; el **modo de ejecución vigente** define cuándo se corren (ver más abajo y en [progress.md](./progress.md)).
+
+## Modo De Ejecución Vigente
+
+Decisión del 2026-08-02, a pedido de Dirección: durante la implementación de cada
+tarea nueva **no se ejecutan** QA de navegador (gstack, capturas, responsive),
+pruebas unitarias, pruebas de integración ni build. Solo se ejecutan **lint** y
+**typecheck** como red mínima.
+
+- Toda validación no ejecutada se registra como pendiente y evidencia documental
+  en el reporte de la tarea y en [progress.md](./progress.md).
+- La validación no ejecutada se corre después en el cierre acumulado (CI,
+  staging y piloto), no por tarea.
+- Esto **no** debilita el gate de cierre: gstack, pruebas y build siguen siendo
+  requisitos para dar una tarea por `Terminada`; solo cambia cuándo y quién los
+  ejecuta.
 
 ## Orden Por Fases
 
