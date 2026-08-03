@@ -11,7 +11,8 @@ import {
   revokeManagedInternalUserSessionsAction,
   unlockManagedInternalUserAction,
   updateManagedInternalUserAccessAction,
-  updateManagedInternalUserBranchesAction
+  updateManagedInternalUserBranchesAction,
+  updateManagedInternalUserProfileAction
 } from "@/features/internal-auth/user-management-actions";
 import {
   assignableInternalRoles,
@@ -34,6 +35,7 @@ const errorMessages: Record<string, string> = {
   last_super_admin: "No se puede quitar el acceso al último super administrador activo.",
   invalid_role: "El rol seleccionado no está permitido.",
   "invalid-branches": "Asigna al menos una sucursal y elige una de ellas como predeterminada.",
+  "invalid-name": "El nombre debe tener al menos 2 caracteres.",
   user_not_found: "El usuario ya no existe.",
   invalid: "No se pudo actualizar el acceso."
 };
@@ -125,6 +127,29 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
             {errorMessages[query.error] ?? errorMessages.invalid}
           </p>
         ) : null}
+
+        <Card>
+          <CardHeader
+            title="Nombre del empleado"
+            description="Corrige el nombre visible de la cuenta. No cierra sesiones."
+          />
+          <form action={updateManagedInternalUserProfileAction} className="grid gap-4">
+            <input type="hidden" name="userId" value={user.id} />
+            <Field label="Nombre completo">
+              <input
+                className={internalInputClassName}
+                name="name"
+                defaultValue={user.name ?? ""}
+                minLength={2}
+                maxLength={100}
+                required
+              />
+            </Field>
+            <SubmitButton variant="outline" pendingLabel="Guardando...">
+              Guardar nombre
+            </SubmitButton>
+          </form>
+        </Card>
 
         <Card>
           <CardHeader

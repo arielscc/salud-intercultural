@@ -7,6 +7,7 @@ import {
   denyAuditedAction,
   runAuditedAction
 } from "@/modules/audit/service";
+import type { ZodError } from "zod";
 import {
   createManagedInternalUser,
   InternalUserManagementError,
@@ -15,7 +16,8 @@ import {
   revokeOwnInternalSession,
   unlockManagedInternalUser,
   updateInternalUserPassword,
-  updateManagedInternalUserAccess
+  updateManagedInternalUserAccess,
+  updateManagedInternalUserProfile
 } from "@/modules/database/queries/internal-users";
 import { clearInternalSessionCookie } from "@/features/internal-auth/session";
 import { hashPassword, verifyPassword } from "@/features/internal-auth/password";
@@ -24,7 +26,8 @@ import {
   createInternalUserSchema,
   internalSessionTargetSchema,
   internalUserTargetSchema,
-  updateInternalUserAccessSchema
+  updateInternalUserAccessSchema,
+  updateInternalUserProfileSchema
 } from "@/features/internal-auth/schemas/user-management.schema";
 import { requireInternalSession } from "@/modules/permissions";
 import { replaceUserBranchAssignments } from "@/modules/database/queries/branches";
@@ -37,6 +40,10 @@ function managementErrorCode(error: unknown) {
   return error instanceof InternalUserManagementError ? error.code.toLowerCase() : "invalid";
 }
 
+function hasFieldIssue(error: ZodError, field: string) {
+  return error.issues.some((issue) => issue.path[0] === field);
+}
+
 export async function createManagedInternalUserAction(formData: FormData) {
   const user = await runAuditedAction(
     {
@@ -46,7 +53,12 @@ export async function createManagedInternalUserAction(formData: FormData) {
     },
     async () => {
       const parsed = createInternalUserSchema.safeParse(parseFormData(formData));
-      if (!parsed.success) redirect("/sigeco/usuarios?error=invalid-user");
+      if (!parsed.success) {
+        const code = hasFieldIssue(parsed.error, "temporaryPassword")
+          ? "weak-password"
+          : "invalid-user";
+        redirect(`/sigeco/usuarios?error=${code}`);
+      }
 
       try {
         const created = await createManagedInternalUser({
@@ -106,6 +118,36 @@ export async function updateManagedInternalUserAccessAction(formData: FormData) 
   revalidatePath("/sigeco/usuarios");
   revalidatePath(`/sigeco/usuarios/${targetId}`);
   redirect(`/sigeco/usuarios/${targetId}?aviso=acceso-actualizado`);
+}
+
+export async function updateManagedInternalUserProfileAction(formData: FormData) {
+  const targetId = String(formData.get("userId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "users_manage",
+      action: "user.profile.update",
+      entityType: "internal_user",
+      entityId: targetId || undefined
+    },
+    async () => {
+      const parsed = updateInternalUserProfileSchema.safeParse(parseFormData(formData));
+      if (!parsed.success) redirect(`/sigeco/usuarios/${targetId}?error=invalid-name`);
+
+      try {
+        const updated = await updateManagedInternalUserProfile({
+          userId: parsed.data.userId,
+          name: parsed.data.name
+        });
+        return auditedResult(updated, { entityId: updated.id });
+      } catch (error) {
+        redirect(`/sigeco/usuarios/${targetId}?error=${managementErrorCode(error)}`);
+      }
+    }
+  );
+
+  revalidatePath("/sigeco/usuarios");
+  revalidatePath(`/sigeco/usuarios/${targetId}`);
+  redirect(`/sigeco/usuarios/${targetId}?aviso=nombre-actualizado`);
 }
 
 export async function updateManagedInternalUserBranchesAction(formData: FormData) {
@@ -245,7 +287,14 @@ export async function changeOwnInternalPasswordAction(formData: FormData) {
     },
     async (actor) => {
       const parsed = changeInternalPasswordSchema.safeParse(parseFormData(formData));
-      if (!parsed.success) redirect(`${errorPath}?error=invalid-password`);
+      if (!parsed.success) {
+        const code = hasFieldIssue(parsed.error, "newPassword")
+          ? "weak-password"
+          : hasFieldIssue(parsed.error, "confirmPassword")
+            ? "password-mismatch"
+            : "invalid-password";
+        redirect(`${errorPath}?error=${code}`);
+      }
 
       const currentSession = await requireInternalSession();
       const currentPasswordIsValid = await verifyPassword(

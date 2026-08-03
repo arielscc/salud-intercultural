@@ -15,9 +15,13 @@ export function PasswordChangeForm({
       ? "La contraseña actual no es correcta."
       : error === "same-password"
         ? "La contraseña nueva debe ser diferente de la actual."
-        : error
-          ? "Revisa los campos. La nueva contraseña debe tener al menos 12 caracteres."
-          : null;
+        : error === "password-mismatch"
+          ? "Las contraseñas no coinciden."
+          : error === "weak-password"
+            ? "La nueva contraseña debe tener al menos 6 caracteres con mayúsculas, minúsculas y números, y no puede ser común o fácil de adivinar."
+            : error
+              ? "Revisa los campos e inténtalo de nuevo."
+              : null;
 
   return (
     <form action={changeOwnInternalPasswordAction} className="grid gap-4">
@@ -34,7 +38,7 @@ export function PasswordChangeForm({
         <PasswordInput
           name="newPassword"
           autoComplete="new-password"
-          minLength={12}
+          minLength={6}
           maxLength={128}
           required
         />
@@ -43,13 +47,14 @@ export function PasswordChangeForm({
         <PasswordInput
           name="confirmPassword"
           autoComplete="new-password"
-          minLength={12}
+          minLength={6}
           maxLength={128}
           required
         />
       </Field>
       <p className="text-xs text-muted">
-        Usa al menos 12 caracteres. No reutilices una contraseña de WhatsApp, correo u otra cuenta.
+        Mínimo 6 caracteres con mayúsculas, minúsculas y números. Evita contraseñas comunes o
+        con patrones fáciles y no reutilices la de WhatsApp, correo u otra cuenta.
       </p>
       <SubmitButton pendingLabel="Actualizando...">Cambiar contraseña</SubmitButton>
     </form>

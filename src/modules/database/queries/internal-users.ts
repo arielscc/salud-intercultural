@@ -163,6 +163,22 @@ export async function updateManagedInternalUserAccess(input: {
   );
 }
 
+export async function updateManagedInternalUserProfile(input: {
+  userId: string;
+  name: string;
+}) {
+  const target = await prisma.internalUser.findUnique({
+    where: { id: input.userId },
+    select: { id: true }
+  });
+  if (!target) throw new InternalUserManagementError("USER_NOT_FOUND");
+
+  return prisma.internalUser.update({
+    where: { id: input.userId },
+    data: { name: input.name }
+  });
+}
+
 export async function requireInternalUserPasswordChange(userId: string) {
   return prisma.internalUser.update({
     where: { id: userId },

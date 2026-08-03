@@ -16,6 +16,7 @@ manuales y sin compartir usuarios entre empleados.
 La ruta `/sigeco/usuarios` permite:
 
 - crear una cuenta con nombre, email, rol vigente y contraseña temporal;
+- corregir el nombre visible de la cuenta sin cerrar sus sesiones;
 - activar o desactivar una cuenta;
 - cambiar su rol;
 - exigir cambio de contraseña;
@@ -29,7 +30,14 @@ La gestión compleja se oculta en móvil. En teléfonos se dirige al empleado a
 ## Reglas De Seguridad
 
 - Una cuenta nueva debe cambiar la contraseña temporal al ingresar.
-- La contraseña nueva tiene al menos 12 caracteres y debe ser diferente.
+- Toda contraseña (temporal o de cambio propio) debe tener al menos 6 caracteres
+  e incluir mayúsculas, minúsculas y números.
+- Además se rechazan contraseñas comunes o con patrones fáciles de adivinar; la
+  validación usa la librería `@zxcvbn-ts` (diccionarios común y en español) y
+  exige un puntaje mínimo de 2 sobre 4.
+- La contraseña nueva debe ser diferente de la anterior.
+- Corregir el nombre de una cuenta no cierra sus sesiones; cambiar rol o estado
+  sí las cierra.
 - Mientras el cambio esté pendiente, las páginas y acciones operativas quedan
   bloqueadas.
 - Cambiar rol o estado revoca inmediatamente las sesiones del usuario.

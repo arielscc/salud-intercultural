@@ -23,6 +23,8 @@ type UsersPageProps = {
 
 const errorMessages: Record<string, string> = {
   "invalid-user": "Revisa el nombre, email, rol y contraseña temporal.",
+  "weak-password":
+    "La contraseña temporal debe tener al menos 6 caracteres con mayúsculas, minúsculas y números, y no puede ser común o fácil de adivinar.",
   email_exists: "Ya existe un usuario con ese email.",
   invalid_role: "El rol seleccionado ya no está permitido.",
   invalid: "No se pudo crear el usuario."
@@ -162,13 +164,14 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
               <PasswordInput
                 name="temporaryPassword"
                 autoComplete="new-password"
-                minLength={12}
+                minLength={6}
                 maxLength={128}
                 required
               />
             </Field>
             <p className="text-xs text-muted">
-              Comunícala directamente al empleado. No la envíes en grupos.
+              Mínimo 6 caracteres con mayúsculas, minúsculas y números. Evita contraseñas
+              comunes o con patrones fáciles. Comunícala directamente al empleado, no en grupos.
             </p>
             <SubmitButton pendingLabel="Creando...">Crear usuario</SubmitButton>
           </form>

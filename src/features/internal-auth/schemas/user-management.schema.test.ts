@@ -11,7 +11,7 @@ describe("internal user management schemas", () => {
         name: "Usuario QA",
         email: "usuario@example.com",
         role: "seguimiento",
-        temporaryPassword: "clave-temporal-segura"
+        temporaryPassword: "Kp7mVw3q"
       }).success
     ).toBe(true);
     expect(
@@ -19,18 +19,40 @@ describe("internal user management schemas", () => {
         name: "Usuario Antiguo",
         email: "antiguo@example.com",
         role: "captacion",
-        temporaryPassword: "clave-temporal-segura"
+        temporaryPassword: "Kp7mVw3q"
       }).success
     ).toBe(false);
   });
 
-  it("requires a long temporary password", () => {
+  it("rejects passwords shorter than six characters", () => {
     expect(
       createInternalUserSchema.safeParse({
         name: "Usuario QA",
         email: "usuario@example.com",
         role: "medico",
-        temporaryPassword: "corta"
+        temporaryPassword: "Ab1cd"
+      }).success
+    ).toBe(false);
+  });
+
+  it("requires upper, lower and digits", () => {
+    expect(
+      createInternalUserSchema.safeParse({
+        name: "Usuario QA",
+        email: "usuario@example.com",
+        role: "medico",
+        temporaryPassword: "todominuscula1"
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects common or easily guessed passwords", () => {
+    expect(
+      createInternalUserSchema.safeParse({
+        name: "Usuario QA",
+        email: "usuario@example.com",
+        role: "medico",
+        temporaryPassword: "Password1"
       }).success
     ).toBe(false);
   });
@@ -39,11 +61,22 @@ describe("internal user management schemas", () => {
     expect(
       changeInternalPasswordSchema.safeParse({
         currentPassword: "clave-anterior",
-        newPassword: "nueva-clave-segura",
-        confirmPassword: "otra-clave-segura",
+        newPassword: "Kp7mVw3q",
+        confirmPassword: "Zt4nBx9r",
         returnTo: "account"
       }).success
     ).toBe(false);
+  });
+
+  it("accepts a strong matching new password", () => {
+    expect(
+      changeInternalPasswordSchema.safeParse({
+        currentPassword: "clave-anterior",
+        newPassword: "Kp7mVw3q",
+        confirmPassword: "Kp7mVw3q",
+        returnTo: "account"
+      }).success
+    ).toBe(true);
   });
 });
 
