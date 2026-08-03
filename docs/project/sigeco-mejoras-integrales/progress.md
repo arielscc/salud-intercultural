@@ -1,6 +1,6 @@
 # Progress — Mejoras Integrales De SIGECO
 
-Última actualización: 2026-08-01.
+Última actualización: 2026-08-02.
 
 Plan de ejecución: [tasks.md](./tasks.md)
 
@@ -8,7 +8,7 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
 
-Las Tareas 1, 2, 3, 4, 5, 6, 7 y 9-28 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+Las Tareas 1-7 y 9-29 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
 la auditoría, la administración de usuarios y los límites de privacidad están
 implementados localmente. Los adjuntos clínicos privados ya tienen
 implementación local. El backup cifrado y la restauración conjunta de
@@ -45,13 +45,17 @@ grupos pequeños.
 El Alto ya opera como sede activa en el modelo local y Cochabamba está
 configurada en preparación. Usuarios, colas, Caja, compras y stock quedan
 aislados por sede sin duplicar el expediente del paciente.
+El ensayo técnico local de la Tarea 29 recorrió llegada, consulta, propuesta,
+venta, pago, comprobante, seguimiento, retorno, Caja, compra, recepción, lote,
+corrección y abandono sin defectos críticos. Falta ejecutarlo con el personal,
+dispositivos físicos, red real y aprobación de Dirección en El Alto.
 
 ## Resumen
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 1 |
-| En progreso | 27 |
+| Pendiente | 0 |
+| En progreso | 28 |
 | Bloqueada | 0 |
 | Terminada | 1 |
 | Descartada | 0 |
@@ -64,7 +68,7 @@ aislados por sede sin duplicar el expediente del paciente.
 | 2. Datos y flujo | 9-17 | En progreso | Recorrido clínico íntegro y auditable |
 | 3. Caja e inventario | 18-21 | En progreso | Caja, compra y stock reconcilian |
 | 4. Medición y continuidad | 22-27 | En progreso | Indicadores reconciliados y móvil validado |
-| 5. Expansión y piloto | 28-29 | En progreso | Multi-sucursal local; piloto con personal pendiente |
+| 5. Expansión y piloto | 28-29 | En progreso | Ensayo técnico aprobado; piloto humano de El Alto pendiente |
 
 ## Estado Por Tarea
 
@@ -98,7 +102,7 @@ aislados por sede sin duplicar el expediente del paciente.
 | 26 | Móvil y conectividad lenta | P1 | En progreso | 2, 5, 13, 18, 20 |
 | 27 | Integración Payload-SIGECO | P2 | En progreso | 3, 5, 9, 11, 22 |
 | 28 | Multi-sucursal | P1 | En progreso | 10, 18-20, 22, 26 |
-| 29 | Piloto completo con personal | P0 | Pendiente | Módulos del despliegue |
+| 29 | Piloto completo con personal | P0 | En progreso | Módulos del despliegue |
 
 ## Próximo Trabajo
 
@@ -221,6 +225,14 @@ Estado de las tareas de la base segura:
   agregadas con supresión y respaldo manual implementados en desarrollo local.
   Pendiente integración acumulada, caída simulada y validación por roles en
   staging.
+- **Tarea 28 — Multi-sucursal El Alto y Cochabamba:** El Alto activa y
+  Cochabamba en preparación, con pacientes únicos y operación, Caja, compras y
+  stock separados por sede. Pendiente staging, conteo físico, responsables y
+  autorización de apertura.
+- **Tarea 29 — Piloto completo con el personal:** ensayo técnico local aprobado
+  sin defectos críticos. Pendiente capacitación y ejecución por cada rol,
+  dispositivos físicos, red real, conciliación con valores reales y aprobación
+  de Dirección en El Alto.
 
 Para terminar la Tarea 1:
 
@@ -1513,6 +1525,81 @@ Responsable: Dirección.
 - Pedir autorización antes de migrar o activar producción.
 
 **Commit sugerido:** `feat(sigeco): support multi-branch operations`
+
+## 2026-08-02 — Tarea 29 — Piloto Completo Con El Personal
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección.
+
+### Resultado
+
+- Guía operativa reproducible con 30 casos ordenados, rutas, responsables,
+  pantallas, valores exactos, resultados esperados, errores controlados,
+  emergencias, documentos, evidencia y aprobación.
+- Juego maestro `P29-R01` para paciente, consulta, consentimientos, propuesta,
+  Enfermería, Caja, dos productos, proveedor, compras, lotes, venta,
+  seguimiento, reclamo, retorno, abandono y duplicado.
+- Matriz de rutas y permisos, pruebas de teléfono/tableta/computadora, red
+  lenta, doble envío, contingencia en papel e incidente de sesión perdida.
+- Plantillas para registrar defectos, reconciliar dinero y stock y obtener la
+  firma real del personal y Dirección.
+- Ensayo técnico local con datos ficticios desde llegada hasta seguimiento,
+  propuesta aceptada, venta pagada y comprobante versionado.
+- Caja reconciliada: Bs 100 iniciales + Bs 1 de cobro - Bs 10 de almuerzo -
+  Bs 10 de compra urgente = Bs 81 contados, diferencia cero.
+- Compra a crédito y recepción de 2 unidades con lote propio, costo histórico,
+  ubicación y vencimiento 2 de agosto de 2027.
+- Corrección clínica conservada como versión nueva y abandono conservado con
+  pendientes bloqueados.
+- Rol Recepción limitado a sus módulos y acceso directo a Consulta rechazado.
+- Dashboard sin desbordamiento horizontal en teléfono, tableta y escritorio.
+- Cero defectos críticos encontrados en el ensayo técnico.
+
+### Archivos Y Datos Locales
+
+- Guía `docs/operations/staff-pilot.md`.
+- Reporte `docs/project/task-reports/2026-08-02-tarea-29-piloto-completo-personal.md`.
+- Evidencia de QA local en `.gstack/qa-reports/`.
+- Paciente, venta, Caja, proveedor, compra y lote sintéticos permanecen solo en
+  la base de desarrollo y no representan operaciones reales.
+- Staging y producción no fueron modificados.
+- La guía deja explícito que las visitas manuales QA no reciben automáticamente
+  `isTestData=true`; por eso el recorrido empieza en local, no debe ejecutarse
+  en producción y puede formar parte de los indicadores del ambiente probado.
+
+### Validación
+
+- Recorrido autenticado, Caja, comprobante, consentimiento, seguimiento,
+  compra, lote, corrección y abandono: aprobados localmente.
+- Responsive automatizado: 390 × 844, 820 × 1180 y 1440 × 900 aprobados.
+- Permiso positivo de Recepción y denegación de Consulta: aprobados.
+- Gstack QA ejecutado con capturas locales.
+- Lint, TypeScript, 356 pruebas unitarias, 53 integraciones, control de
+  dependencias, seguridad local, build y `git diff --check`: aprobados.
+- La guía reproducible fue contrastada con las rutas actuales y sus enlaces
+  documentales fueron comprobados; esta ampliación no ejecutó migraciones ni
+  modificó ambientes.
+- Permanecen como avisos no bloqueantes la deprecación conocida de `pg` y el
+  trazado amplio de documentos de compras informado por Turbopack.
+
+### Pendientes
+
+- Crear las cuentas QA locales y capacitar a cada empleado sin prestar cuentas.
+- Ejecutar y firmar primero los 30 casos en `develop` y localhost.
+- Probar con teléfono y tableta físicos sobre la red de la clínica.
+- Confirmar Caja, stock físico y responsables reales de El Alto.
+- Resolver defectos críticos, si aparecen, y obtener aprobación por área de
+  Dirección.
+- Después de aprobar local, preparar migraciones y cuentas para repetir el
+  recorrido en staging con un ID distinto.
+- Avisar y pedir autorización antes de cualquier operación en producción.
+- Ejecutar y firmar los 30 casos reproducibles con el personal; documentar
+  cualquier caso no aplicable en vez de omitirlo silenciosamente.
+
+**Commit sugerido:** `test(sigeco): validate clinic operation`
 
 ## Cómo Actualizar El Progreso
 

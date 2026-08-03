@@ -48,6 +48,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-01 | [Tarea 26: móvil y conectividad lenta](./2026-08-01-tarea-26-movil-conectividad-lenta.md) | Evita duplicados al reintentar, protege formularios sin conexión y define contingencia segura. |
 | 2026-08-01 | [Tarea 27: integración segura Payload-SIGECO](./2026-08-01-tarea-27-integracion-payload-sigeco.md) | Deja campañas en Payload, atribución operativa en SIGECO y comparte únicamente métricas agregadas. |
 | 2026-08-01 | [Tarea 28: multi-sucursal El Alto y Cochabamba](./2026-08-01-tarea-28-multi-sucursal-el-alto-cochabamba.md) | Separa sede activa, Caja, compras y stock sin duplicar el expediente del paciente. |
+| 2026-08-02 | [Tarea 29: piloto completo con el personal](./2026-08-02-tarea-29-piloto-completo-personal.md) | Aprueba el ensayo técnico local y deja 30 casos reproducibles, datos, rutas, documentos, evidencia y firma para el piloto humano en El Alto. |
 
 ## Relacion Con Estado V3
 

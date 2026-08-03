@@ -1002,6 +1002,18 @@ Registrar una compra no aumenta stock. El stock cambia al confirmar la recepció
 - No quedan defectos críticos sin resolver.
 - Dirección aprueba cada módulo y sucursal.
 
+**Implementación y operación:**
+
+- [Piloto completo con el personal](../../operations/staff-pilot.md).
+- [Reporte de la Tarea 29](../task-reports/2026-08-02-tarea-29-piloto-completo-personal.md).
+- La guía contiene 30 casos reproducibles con rutas, datos exactos, documentos,
+  resultados esperados, errores, emergencias, evidencias y firma.
+- Cada repetición usa un identificador propio (`P29-R01`, `P29-R02`, etc.) y
+  se ejecuta primero en `develop` y localhost. Staging se valida después con
+  otro identificador.
+- El ensayo técnico local está aprobado; el piloto humano y la aprobación de
+  Dirección se registran en `progress.md` sin inventar evidencia.
+
 **Commit sugerido:** `test(sigeco): validate clinic operation`
 
 ---
