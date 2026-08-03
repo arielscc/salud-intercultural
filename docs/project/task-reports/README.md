@@ -50,6 +50,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-01 | [Tarea 28: multi-sucursal El Alto y Cochabamba](./2026-08-01-tarea-28-multi-sucursal-el-alto-cochabamba.md) | Separa sede activa, Caja, compras y stock sin duplicar el expediente del paciente. |
 | 2026-08-02 | [Tarea 29: piloto completo con el personal](./2026-08-02-tarea-29-piloto-completo-personal.md) | Aprueba el ensayo técnico local y deja 30 casos reproducibles, datos, rutas, documentos, evidencia y firma para el piloto humano en El Alto. |
 | 2026-08-02 | [Ajuste: edición de nombre y política de contraseñas](./2026-08-02-ajuste-usuarios-nombre-y-politica-contrasenas.md) | Permite corregir el nombre de una cuenta sin cerrar sesiones y baja la contraseña a mínimo 6 con mayúsculas, minúsculas, números y rechazo de claves inseguras vía @zxcvbn-ts. |
+| 2026-08-02 | [Ajuste: sección "Consulta médica" colapsable](./2026-08-02-consulta-medica-colapsable.md) | Convierte la tarjeta de consulta en una sección colapsable que conserva visible el estado; plegada por defecto para que el médico la abra manualmente. |
 
 ## Relacion Con Estado V3
 

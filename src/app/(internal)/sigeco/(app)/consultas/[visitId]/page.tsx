@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
@@ -211,31 +212,39 @@ export default async function ConsultationDetailPage({
           </dl>
         </Card>
 
-        <Card className="max-sm:order-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <CardHeader
-              title="Consulta médica"
-              description={
-                visit.clinicalConsultation?.status === "finalized"
-                  ? "Registro aprobado. Los cambios posteriores crean otra versión."
-                  : "Guarda el borrador y finalízalo cuando esté completo."
-              }
-            />
-            <Chip
-              tone={
-                visit.clinicalConsultation?.status === "finalized"
-                  ? "success"
-                  : "warning"
-              }
-              dot
-            >
-              {visit.clinicalConsultation
-                ? clinicalRecordStatusLabels[
-                    visit.clinicalConsultation.status
-                  ]
-                : "Sin guardar"}
-            </Chip>
-          </div>
+        <Card className="max-sm:order-3 p-0">
+          <details className="group">
+            <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-start justify-between gap-3 rounded-[9px] p-[18px] [&::-webkit-details-marker]:hidden">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Consulta médica</h3>
+                <p className="mt-0.5 text-xs text-muted">
+                  {visit.clinicalConsultation?.status === "finalized"
+                    ? "Registro aprobado. Los cambios posteriores crean otra versión."
+                    : "Guarda el borrador y finalízalo cuando esté completo."}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Chip
+                  tone={
+                    visit.clinicalConsultation?.status === "finalized"
+                      ? "success"
+                      : "warning"
+                  }
+                  dot
+                >
+                  {visit.clinicalConsultation
+                    ? clinicalRecordStatusLabels[
+                        visit.clinicalConsultation.status
+                      ]
+                    : "Sin guardar"}
+                </Chip>
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </div>
+            </summary>
+            <div className="border-t border-border p-[18px]">
 
           {visit.clinicalConsultation?.status !== "finalized" &&
           canWriteClinical ? (
@@ -517,6 +526,8 @@ export default async function ConsultationDetailPage({
               Todavía no existe una consulta guardada.
             </p>
           )}
+            </div>
+          </details>
         </Card>
 
         {visit.clinicalConsultation?.status === "finalized" &&
