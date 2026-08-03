@@ -58,6 +58,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-03 | [Tarea 4: suero y servicio con pago previo antes de Enfermería](./2026-08-03-suero-pago-previo-enfermeria.md) | Marca las ofertas ejecutadas en Enfermería, exige pago antes de derivar y envía la orden e indicaciones a Enfermería de forma idempotente. |
 | 2026-08-03 | [Tarea 5: sesiones de servicio](./2026-08-03-sesiones-de-servicio.md) | Paquetes de sesiones (suero/ozono) con modo paquete o por sesión, consumo por visita en Enfermería y conteo de pagadas/usadas/restantes con precios en fotografía. |
 | 2026-08-03 | [Tarea 6: historial del paciente en la consulta](./2026-08-03-historial-paciente-consulta.md) | Muestra el resumen de cada visita anterior (diagnóstico, vendido, costo y sesiones) y precarga la receta rápida desde la consulta previa, solo lectura. |
+| 2026-08-03 | [Tarea 7: seguimiento estricto por compra](./2026-08-03-seguimiento-estricto-por-compra.md) | El médico agenda seguimiento a Recepción (fecha, hora, motivo) solo si hay venta registrada en la visita; avisa y bloquea contacto sin consentimiento. |
 
 ## Relacion Con Estado V3
 

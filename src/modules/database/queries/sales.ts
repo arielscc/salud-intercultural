@@ -618,6 +618,20 @@ export async function getSaleById(id: string) {
   });
 }
 
+/**
+ * ¿La visita tiene una venta registrada? (Tarea 7: el médico solo puede agendar
+ * seguimiento si hubo compra). Devuelve la venta más reciente o null.
+ */
+export async function getVisitLatestSale(visitId: string) {
+  return withDatabaseError("getVisitLatestSale", () =>
+    prisma.sale.findFirst({
+      where: { visitId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, totalCents: true, status: true }
+    })
+  );
+}
+
 export async function getPatientSales(patientId: string) {
   return withDatabaseError("getPatientSales", async () => {
     return prisma.sale.findMany({

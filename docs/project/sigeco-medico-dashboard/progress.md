@@ -14,8 +14,8 @@ brechas y las decisiones confirmadas por Dirección.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 2 |
-| En progreso | 6 |
+| Pendiente | 1 |
+| En progreso | 7 |
 | Terminada | 0 |
 
 ## Estado Por Tarea
@@ -28,7 +28,7 @@ brechas y las decisiones confirmadas por Dirección.
 | 4 | Suero y servicio con pago previo antes de Enfermería | P1 | En progreso | 2-3 |
 | 5 | Sesiones de servicio | P1 | En progreso | 1-4 |
 | 6 | Historial del paciente en la consulta | P1 | En progreso | 1-3 |
-| 7 | Seguimiento estricto por compra | P1 | Pendiente | 3, 6 |
+| 7 | Seguimiento estricto por compra | P1 | En progreso | 3, 6 |
 | 8 | Catálogo administrable de estudios | P2 | Pendiente | 1 |
 
 ## Análisis De Brechas (2026-08-03)
@@ -47,8 +47,8 @@ Estado del código al crear el plan:
 - 🟢 Historial entre visitas: tratamientos y costos previos y precarga de receta
   (implementado en la Tarea 6, 2026-08-03: tarjeta de historial + precarga de
   receta rápida, solo lectura).
-- 🟠 Seguimiento estricto por compra (existe creación de seguimientos, falta el
-  bloqueo por venta registrada).
+- 🟢 Seguimiento estricto por compra (implementado en la Tarea 7, 2026-08-03:
+  el médico agenda a Recepción solo con venta registrada; validado en servidor).
 - 🟢 Catálogo administrable de servicios y tratamientos (implementado en la
   Tarea 1, 2026-08-03; pendiente el cierre acumulado de QA/pruebas/build).
 
@@ -99,6 +99,17 @@ Estado del código al crear el plan:
   cobra), catálogo nuevo de servicios/tratamientos, descuento máximo por oferta
   con validación de Administración, seguimiento estricto por venta, y manejo de
   sesiones con cada sesión como número de visita.
+
+### 2026-08-03 — Tarea 7 Implementada (Seguimiento Estricto Por Compra)
+
+- Tarjeta "Agendar seguimiento (Recepción)" en la consulta: tipo, fecha/hora,
+  motivo y notas; se asigna a Recepción y enlaza `visitId`/`saleId`.
+- Solo con venta registrada en la visita (UI + validación en servidor con
+  `getVisitLatestSale`; deniega e audita `follow_up_requires_sale`). Rol médico/
+  super admin. Sin consentimiento: se avisa y el contacto queda bloqueado.
+- Sin migración. Estado: **En progreso** (código + lint + typecheck; QA/pruebas/
+  build al cierre acumulado).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-seguimiento-estricto-por-compra.md).
 
 ### 2026-08-03 — Tarea 6 Implementada (Historial Del Paciente)
 

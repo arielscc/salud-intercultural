@@ -41,6 +41,9 @@ import {
   treatmentProposalOutcomeStatusLabels
 } from "@/features/treatment-proposals/labels";
 import { formatMoney } from "@/features/sales/labels";
+import { followUpTypeLabels } from "@/features/follow-ups/labels";
+import { createDoctorVisitFollowUpAction } from "@/features/follow-ups/actions";
+import { getVisitLatestSale } from "@/modules/database/queries/sales";
 import { applyVisitFlowAction } from "@/features/visits/actions";
 import { DoctorOrderBuilder } from "@/features/doctor-orders/components/DoctorOrderBuilder";
 import { saveDoctorOrderAction } from "@/features/doctor-orders/doctor-order-actions";
@@ -123,6 +126,8 @@ function pageErrorMessage(error: string) {
       "Revisa el motivo y todos los datos de la receta corregida.",
     "correccion-receta-sin-cambios":
       "La receta no cambió; se conservó la versión vigente.",
+    "seguimiento-invalido":
+      "Revisa el motivo, la fecha y la hora del seguimiento.",
     "pedido-invalido": "Revisa las líneas del pedido: oferta, cantidad y montos.",
     "discount-over-cap":
       "El descuento total del pedido supera el tope permitido (suma de los umbrales por producto).",
@@ -159,6 +164,7 @@ export default async function ConsultationDetailPage({
   if (visit.branchCode !== activeBranch.code) notFound();
 
   const consultationHistory = await getPatientConsultationHistory(visit.patient.id, visit.id);
+  const latestVisitSale = await getVisitLatestSale(visit.id);
 
   const primaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "primary");
   const secondaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "secondary");
@@ -231,7 +237,9 @@ export default async function ConsultationDetailPage({
               ? "La consulta quedó finalizada con autor, fecha y hora."
               : query.aviso === "pedido-guardado"
                 ? "El pedido para Administración quedó guardado."
-                : "La corrección quedó registrada como una nueva versión."}
+                : query.aviso === "seguimiento-agendado"
+                  ? "Seguimiento agendado y enviado a Recepción."
+                  : "La corrección quedó registrada como una nueva versión."}
           </div>
         ) : null}
         <Card className="max-sm:order-1">
@@ -1023,6 +1031,66 @@ export default async function ConsultationDetailPage({
             </p>
           ) : null}
         </Card>
+
+        {canWriteClinical ? (
+          <Card className="max-sm:order-2">
+            <CardHeader
+              title="Agendar seguimiento (Recepción)"
+              description="El médico agenda un seguimiento a Recepción con fecha, hora y motivo. Solo cuando hay una venta registrada en la visita."
+            />
+            {latestVisitSale ? (
+              <form action={createDoctorVisitFollowUpAction} className="grid gap-3">
+                <input type="hidden" name="visitId" value={visit.id} />
+                <input type="hidden" name="patientId" value={visit.patient.id} />
+                {!followUpConsentGranted ? (
+                  <p className="rounded-[9px] border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+                    Sin consentimiento vigente para contactar. El seguimiento se
+                    agenda, pero Recepción no podrá contactar hasta que exista
+                    consentimiento.
+                  </p>
+                ) : null}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Tipo de seguimiento">
+                    <select className={internalInputClassName} name="type" defaultValue="return">
+                      <option value="return">{followUpTypeLabels.return}</option>
+                      <option value="evolution">{followUpTypeLabels.evolution}</option>
+                      <option value="treatment_recovery">
+                        {followUpTypeLabels.treatment_recovery}
+                      </option>
+                    </select>
+                  </Field>
+                  <Field label="Fecha y hora">
+                    <input
+                      className={internalInputClassName}
+                      type="datetime-local"
+                      name="dueAt"
+                      required
+                    />
+                  </Field>
+                </div>
+                <Field label="Motivo">
+                  <input
+                    className={internalInputClassName}
+                    name="title"
+                    placeholder="Ej. Confirmar evolución del tratamiento"
+                    required
+                  />
+                </Field>
+                <Field label="Notas (opcional)">
+                  <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
+                </Field>
+                <FormActions className="justify-end">
+                  <SubmitButton>Agendar seguimiento</SubmitButton>
+                </FormActions>
+              </form>
+            ) : (
+              <p className="text-sm text-muted">
+                Solo puedes agendar seguimiento cuando haya una venta registrada de
+                tratamiento o servicio en esta visita.
+              </p>
+            )}
+          </Card>
+        ) : null}
 
         {visit.status === "in_consultation" ? (
           <Card className="max-sm:order-3">

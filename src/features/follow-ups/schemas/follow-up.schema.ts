@@ -72,6 +72,20 @@ export const createFollowUpTaskSchema = z.object({
   dueAt: dateInput
 });
 
+/**
+ * Seguimiento agendado por el médico desde la consulta hacia Recepción (Tarea 7).
+ * Requiere venta registrada en la visita (se valida en el servidor). Solo tipos
+ * clínicos, que se asignan a Recepción.
+ */
+export const createDoctorVisitFollowUpSchema = z.object({
+  visitId: z.string().min(1),
+  patientId: z.string().min(1),
+  type: z.enum(["return", "evolution", "treatment_recovery"]).default("return"),
+  title: z.string().trim().min(2).max(180),
+  notes: optionalText,
+  dueAt: dateInput
+});
+
 export const createFollowUpAttemptSchema = z
   .object({
     taskId: z.string().min(1),
