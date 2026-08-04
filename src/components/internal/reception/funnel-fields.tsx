@@ -2,7 +2,8 @@
 
 import { differenceInYears, isValid, parse } from "date-fns";
 
-import { cn } from "@/lib/cn";
+// Re-exportado desde su nueva ubicación global para no romper imports previos.
+export { ChipOption } from "@/components/internal/ChipOption";
 
 /*
  * Piezas compartidas entre el funnel de recepcion y la edicion de ficha:
@@ -38,28 +39,3 @@ export function normalizePhone(phone: string) {
   return phone.replace(/\D/g, "");
 }
 
-export function ChipOption({
-  selected,
-  onClick,
-  children
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={cn(
-        "focus-ring inline-flex min-h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold transition",
-        selected
-          ? "border-primary bg-surface-soft text-primary-dark"
-          : "border-border bg-surface text-muted hover:border-primary/40 hover:text-text"
-      )}
-    >
-      {children}
-    </button>
-  );
-}

@@ -274,6 +274,100 @@ export async function recordVisitDiscontinuation(
   });
 }
 
+// Tiempo máximo que un paciente puede estar en espera en Enfermería (sin que
+// nadie lo tome) antes de considerarse abandono de la visita.
+export const NURSING_MAX_WAIT_MS = 60 * 60 * 1_000;
+
+/**
+ * Cierra como abandono ("espera") las visitas cuyo paciente lleva más de 1 h en
+ * espera en Enfermería sin que ninguna enfermera lo haya tomado. Se dispara de
+ * forma perezosa al cargar la bandeja. Es idempotente y tolerante a carreras: si
+ * otra ejecución ya cerró la visita, la salta. El actor es el sistema (sin
+ * `recordedById`), a diferencia del abandono manual que registra la persona.
+ */
+export async function autoAbandonExpiredNursingVisits(input: {
+  branchCode?: string;
+  now?: Date;
+} = {}) {
+  return withDatabaseError("autoAbandonExpiredNursingVisits", async () => {
+    const now = input.now ?? new Date();
+    const cutoff = new Date(now.getTime() - NURSING_MAX_WAIT_MS);
+
+    const expired = await prisma.visitWorkItem.findMany({
+      where: {
+        area: "enfermeria",
+        status: "pending",
+        assignedToId: null,
+        createdAt: { lt: cutoff },
+        visit: {
+          branchCode: input.branchCode,
+          status: "in_nursing",
+          discontinuation: null
+        }
+      },
+      select: { visitId: true }
+    });
+
+    let abandoned = 0;
+    for (const { visitId } of expired) {
+      try {
+        await prisma.$transaction(
+          async (tx) => {
+            const visit = await tx.visit.findUniqueOrThrow({
+              where: { id: visitId },
+              include: { discontinuation: { select: { id: true } } }
+            });
+            // Otra ejecución (o una enfermera) pudo cerrarla/atenderla ya.
+            if (visit.status !== "in_nursing" || visit.discontinuation) return;
+
+            await tx.visitWorkItem.updateMany({
+              where: {
+                visitId: visit.id,
+                status: { in: ["pending", "acknowledged", "in_progress"] }
+              },
+              data: { status: "blocked", completedAt: null }
+            });
+            await tx.clinicalOrder.updateMany({
+              where: {
+                visitId: visit.id,
+                status: { in: ["pending", "acknowledged"] }
+              },
+              data: { status: "blocked" }
+            });
+
+            await updateVisitRouteStatusInTransaction(tx, {
+              visitId: visit.id,
+              status: "left_without_care",
+              area: "enfermeria",
+              note: "Abandono automático: más de 1 h en espera en Enfermería.",
+              workItemTitle: "Visita interrumpida",
+              workItemDescription: "Superó 1 h en espera sin ser atendido."
+            });
+
+            await tx.visitDiscontinuation.create({
+              data: {
+                visitId: visit.id,
+                fromStatus: "in_nursing",
+                area: "enfermeria",
+                reason: "wait",
+                pendingTypes: ["application"],
+                note: "Abandono automático por superar 1 h en espera en Enfermería.",
+                recordedById: null
+              }
+            });
+            abandoned += 1;
+          },
+          { isolationLevel: "Serializable" }
+        );
+      } catch {
+        // Carrera con otra transacción que ya cerró la visita: se ignora.
+      }
+    }
+
+    return { abandoned };
+  });
+}
+
 export type VisitDiscontinuationReportFilters = {
   reason?: VisitDiscontinuationReason;
   occurredFrom?: Date;

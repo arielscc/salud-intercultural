@@ -13,6 +13,8 @@ export type PaidStudyOption = {
   label: string;
   referenceCents: number;
   capCents?: number;
+  // "catalog" (estudio/servicio) por defecto; "product" para inventario.
+  kind?: "catalog" | "product";
 };
 
 function toCents(value: string) {
@@ -46,13 +48,19 @@ export function PaidStudyOrderDialog({
   action,
   studies,
   compactTrigger = false,
-  triggerLabel = "Derivar a enfermería"
+  triggerLabel = "Derivar a enfermería",
+  title = "Derivar a enfermería",
+  description = "Toca una tarjeta para agregar el estudio o servicio. La ficha pasa primero a Administración para el cobro.",
+  emptyMessage = "No hay estudios ni servicios de enfermería activos en el catálogo."
 }: {
   visitId: string;
   action: (formData: FormData) => Promise<void>;
   studies: PaidStudyOption[];
   compactTrigger?: boolean;
   triggerLabel?: string;
+  title?: string;
+  description?: string;
+  emptyMessage?: string;
 }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [qty, setQty] = useState<Record<string, number>>({});
@@ -105,11 +113,10 @@ export function PaidStudyOrderDialog({
           <div className="flex items-start justify-between gap-4">
             <div>
               <Dialog.Title className="font-sora text-lg font-bold text-text">
-                Derivar a enfermería
+                {title}
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-sm text-muted">
-                Toca una tarjeta para agregar el estudio o servicio. La ficha pasa primero a
-                Administración para el cobro.
+                {description}
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
@@ -121,7 +128,7 @@ export function PaidStudyOrderDialog({
 
           {studies.length === 0 ? (
             <p className="mt-5 rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-              No hay estudios ni servicios de enfermería activos en el catálogo.
+              {emptyMessage}
             </p>
           ) : (
             <form action={action} className="mt-5 grid gap-4">
@@ -230,7 +237,11 @@ export function PaidStudyOrderDialog({
                       </div>
                       {enabled ? (
                         <>
-                          <input type="hidden" name="studyCatalogItemId" value={study.id} />
+                          <input
+                            type="hidden"
+                            name="studyRef"
+                            value={`${study.kind ?? "catalog"}:${study.id}`}
+                          />
                           <input type="hidden" name="studyPrice" value={prices[study.id] ?? "0"} />
                           <input type="hidden" name="studyQuantity" value={qty[study.id] ?? 1} />
                         </>

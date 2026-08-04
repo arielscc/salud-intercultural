@@ -1262,7 +1262,21 @@ export default async function ConsultationDetailPage({
                 body={`${item.quantity ?? "Sin cantidad"} · ${item.route ?? "Sin vía"}`}
               />
             ))}
-            {visit.studies.length + visit.vitalSigns.length + visit.nursingApplications.length === 0 ? (
+            {visit.nursingNotes.slice(0, 3).map((item) => (
+              <TimelineItem
+                key={item.id}
+                title="Nota de enfermería"
+                meta={`${formatDateTime(item.createdAt)}${
+                  item.user ? ` · ${item.user.name ?? item.user.email}` : ""
+                }`}
+                body={item.note}
+              />
+            ))}
+            {visit.studies.length +
+              visit.vitalSigns.length +
+              visit.nursingApplications.length +
+              visit.nursingNotes.length ===
+            0 ? (
               <p className="py-2 text-sm text-muted">
                 Sin estudios ni registros de enfermería en esta visita.
               </p>

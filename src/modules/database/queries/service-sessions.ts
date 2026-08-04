@@ -32,16 +32,6 @@ export async function getPatientServiceSessionPackages(patientId: string) {
   );
 }
 
-/** Paquetes activos con sesiones restantes (para consumir en Enfermería). */
-export async function getActivePatientServiceSessionPackages(patientId: string) {
-  return withDatabaseError("getActivePatientServiceSessionPackages", async () => {
-    const packages = await prisma.serviceSessionPackage.findMany({
-      where: { patientId, status: "active" },
-      orderBy: { createdAt: "asc" }
-    });
-    return packages.filter((pkg) => pkg.sessionsUsed < pkg.totalSessions);
-  });
-}
 
 /** Consume una sesión de un paquete pagado (Enfermería). Cuenta como una visita. */
 export async function consumeServiceSession(input: {
@@ -49,6 +39,7 @@ export async function consumeServiceSession(input: {
   visitId?: string;
   userId?: string;
   notes?: string;
+  appliedAt?: Date;
 }) {
   return withDatabaseError("consumeServiceSession", () =>
     prisma.$transaction(async (tx) => {
@@ -67,7 +58,8 @@ export async function consumeServiceSession(input: {
           visitId: input.visitId,
           sessionNumber,
           appliedById: input.userId,
-          notes: input.notes
+          notes: input.notes,
+          appliedAt: input.appliedAt ?? undefined
         }
       });
 

@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createNursingApplicationSchema,
-  createVitalSignsSchema,
-  updateNursingWorkItemSchema
+  createVitalSignsSchema
 } from "@/features/nursing/schemas/nursing.schema";
 
 describe("nursing schemas", () => {
@@ -40,21 +39,5 @@ describe("nursing schemas", () => {
       quantity: "500 ml",
       route: "IV"
     });
-  });
-
-  it("limits task transitions to nursing execution statuses", () => {
-    expect(
-      updateNursingWorkItemSchema.parse({
-        workItemId: "task_1",
-        status: "in_progress"
-      })
-    ).toMatchObject({ status: "in_progress" });
-
-    expect(() =>
-      updateNursingWorkItemSchema.parse({
-        workItemId: "task_1",
-        status: "pending"
-      })
-    ).toThrow();
   });
 });

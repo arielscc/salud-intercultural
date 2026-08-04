@@ -23,22 +23,26 @@ const optionalDate = z
   .refine((value) => value === undefined || !Number.isNaN(value.getTime()), "Fecha inválida")
   .optional();
 
-export const nursingWorkItemStatusSchema = z.enum([
-  "acknowledged",
-  "in_progress",
-  "completed",
-  "blocked"
-]);
-
-export const updateNursingWorkItemSchema = z.object({
-  workItemId: z.string().min(1),
-  status: nursingWorkItemStatusSchema,
-  notes: optionalText
-});
-
 export const createVitalSignsSchema = z.object({
   patientId: z.string().min(1),
   visitId: optionalText,
+  temperatureCelsius: optionalNumber,
+  systolicPressureMmHg: optionalInt,
+  diastolicPressureMmHg: optionalInt,
+  heartRateBpm: optionalInt,
+  respiratoryRateRpm: optionalInt,
+  oxygenSaturation: optionalInt,
+  weightKg: optionalNumber,
+  heightCm: optionalNumber,
+  notes: optionalText,
+  recordedAt: optionalDate
+});
+
+export const updateVitalSignsSchema = z.object({
+  id: z.string().min(1),
+  patientId: optionalText,
+  visitId: optionalText,
+  workItemId: optionalText,
   temperatureCelsius: optionalNumber,
   systolicPressureMmHg: optionalInt,
   diastolicPressureMmHg: optionalInt,
@@ -56,8 +60,10 @@ export const createNursingApplicationSchema = z.object({
   visitId: optionalText,
   workItemId: optionalText,
   clinicalOrderId: optionalText,
+  inventoryItemId: optionalText,
   medication: z.string().trim().min(2).max(160),
   quantity: optionalText,
+  quantityUnits: optionalInt,
   route: optionalText,
   appliedAt: optionalDate,
   notes: optionalText
@@ -67,4 +73,8 @@ export const createNursingNoteSchema = z.object({
   patientId: z.string().min(1),
   visitId: optionalText,
   note: z.string().trim().min(2).max(2000)
+});
+
+export const deleteNursingNoteSchema = z.object({
+  noteId: z.string().min(1)
 });

@@ -13,6 +13,10 @@ export async function consumeServiceSessionAction(formData: FormData) {
   const visitId = String(formData.get("visitId") ?? "");
   const workItemId = String(formData.get("workItemId") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
+  const appliedAtRaw = String(formData.get("appliedAt") ?? "").trim();
+  const appliedAtParsed = appliedAtRaw ? new Date(appliedAtRaw) : undefined;
+  const appliedAt =
+    appliedAtParsed && !Number.isNaN(appliedAtParsed.getTime()) ? appliedAtParsed : undefined;
   const target = workItemId
     ? `/sigeco/enfermeria/${workItemId}`
     : "/sigeco/enfermeria";
@@ -32,7 +36,8 @@ export async function consumeServiceSessionAction(formData: FormData) {
           packageId,
           visitId: visitId || undefined,
           userId: user.id,
-          notes: notes.length > 0 ? notes : undefined
+          notes: notes.length > 0 ? notes : undefined,
+          appliedAt
         });
         return auditedResult(pkg, {
           entityId: pkg.id,

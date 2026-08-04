@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueRefresh";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -12,8 +13,13 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
-import { nursingWorkItemStatusLabels } from "@/features/nursing/labels";
+import {
+  nursingWorkItemStatusLabels,
+  nursingWorkItemStatusTone
+} from "@/features/nursing/labels";
+import { formatDateTime } from "@/lib/dates";
 import { getNursingWorkItems } from "@/modules/database/queries/nursing";
+import { autoAbandonExpiredNursingVisits } from "@/modules/database/queries/visit-discontinuations";
 import { requirePermission } from "@/modules/permissions";
 import { getBranchContext } from "@/features/branches/context";
 
@@ -31,10 +37,17 @@ const emptyNursingMessage = (
 export default async function NursingWorkQueuePage() {
   const user = await requirePermission("nursing_read");
   const { activeBranch } = await getBranchContext(user);
+  // Barrido perezoso: cierra por abandono a quienes superaron 1 h en espera
+  // antes de leer la bandeja, para que no aparezcan como "a atender".
+  await autoAbandonExpiredNursingVisits({ branchCode: activeBranch.code });
   const workItems = await getNursingWorkItems({
     pageSize: 40,
     branchCode: activeBranch.code
   });
+
+  // Pacientes recién derivados a Enfermería que todavía nadie tomó (en espera).
+  // Ya vienen ordenados por llegada (los más recientes primero).
+  const waitingArrivals = workItems.filter((item) => item.status === "pending");
 
   return (
     <div className="grid gap-4">
@@ -44,6 +57,51 @@ export default async function NursingWorkQueuePage() {
         queueKey="nursing"
         serverUpdatedAt={new Date().toISOString()}
       />
+
+      {waitingArrivals.length > 0 ? (
+        <section
+          className="payment-weave overflow-hidden rounded-[8px] border border-primary/25 bg-surface-soft shadow-lg"
+          aria-label="Pacientes derivados a Enfermería en espera"
+        >
+          <div className="grid gap-3 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase text-primary-dark">
+                Derivados a Enfermería
+              </p>
+              <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[11px] font-semibold text-primary-dark">
+                {waitingArrivals.length} en espera
+              </span>
+            </div>
+            <div className="grid gap-2">
+              {waitingArrivals.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/sigeco/enfermeria/${item.id}`}
+                  className="focus-ring flex flex-wrap items-center justify-between gap-3 rounded-[9px] border border-primary/20 bg-surface px-3 py-2.5 hover:border-primary/40"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-sora text-sm font-bold text-text">
+                      {item.visit.patient.fullName}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {item.title}
+                      <span className="px-1.5" aria-hidden="true">·</span>
+                      <span className="tabular-nums">{item.visit.patient.internalCode}</span>
+                    </p>
+                    <p className="mt-0.5 text-[11px] tabular-nums text-muted">
+                      Recibido {formatDateTime(item.createdAt)}
+                    </p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary-dark">
+                    Atender
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <DesktopTableToolbar count={`${workItems.length} indicaciones activas`} />
 
@@ -56,13 +114,18 @@ export default async function NursingWorkQueuePage() {
         <RecordList>
           {workItems.map((item) => {
             const order = item.clinicalOrders[0];
+            const nurse = item.assignedTo?.name ?? item.assignedTo?.email ?? null;
 
             return (
               <RecordItem
                 key={item.id}
                 href={`/sigeco/enfermeria/${item.id}`}
                 title={item.visit.patient.fullName}
-                status={<Chip>{nursingWorkItemStatusLabels[item.status]}</Chip>}
+                status={
+                  <Chip tone={nursingWorkItemStatusTone[item.status]} dot>
+                    {nursingWorkItemStatusLabels[item.status]}
+                  </Chip>
+                }
               >
                 <span className="tabular-nums">{item.visit.patient.internalCode}</span>
                 <span className="min-w-0 truncate font-medium text-text">{item.title}</span>
@@ -75,6 +138,11 @@ export default async function NursingWorkQueuePage() {
                     {order.doctor?.name ?? order.doctor?.email ?? "Médico"}
                   </span>
                 ) : null}
+                {nurse ? (
+                  <span className="font-medium text-primary-dark">Atiende: {nurse}</span>
+                ) : (
+                  <span className="text-muted">Sin asignar</span>
+                )}
               </RecordItem>
             );
           })}
@@ -89,12 +157,14 @@ export default async function NursingWorkQueuePage() {
                 <Th>Paciente</Th>
                 <Th>Tarea</Th>
                 <Th>Indicación</Th>
+                <Th>Atiende</Th>
                 <Th>Estado</Th>
               </tr>
             </thead>
             <tbody>
               {workItems.map((item) => {
                 const order = item.clinicalOrders[0];
+                const nurse = item.assignedTo?.name ?? item.assignedTo?.email ?? null;
 
                 return (
                   <Tr key={item.id}>
@@ -121,14 +191,23 @@ export default async function NursingWorkQueuePage() {
                         : "—"}
                     </Td>
                     <Td>
-                      <Chip>{nursingWorkItemStatusLabels[item.status]}</Chip>
+                      {nurse ? (
+                        <span className="font-medium text-primary-dark">{nurse}</span>
+                      ) : (
+                        <span className="text-muted">Sin asignar</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <Chip tone={nursingWorkItemStatusTone[item.status]} dot>
+                        {nursingWorkItemStatusLabels[item.status]}
+                      </Chip>
                     </Td>
                   </Tr>
                 );
               })}
               {workItems.length === 0 ? (
                 <tr>
-                  <Td className="py-8 text-center" colSpan={4}>
+                  <Td className="py-8 text-center" colSpan={5}>
                     {emptyNursingMessage}
                   </Td>
                 </tr>

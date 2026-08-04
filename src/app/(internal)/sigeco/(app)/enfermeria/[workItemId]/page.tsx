@@ -1,46 +1,70 @@
-import { notFound } from "next/navigation";
-import type { StudyStatus, StudyType, VisitWorkItemStatus } from "@/generated/prisma/client";
+import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { Field, internalInputClassName } from "@/components/internal/Field";
-import { NoticeForm } from "@/components/internal/NoticeForm";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
+import { ConfirmForm } from "@/components/internal/ConfirmForm";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
-import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
-import { FormActions } from "@/components/internal/ui/FormActions";
-import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
+import { getBranchContext } from "@/features/branches/context";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import {
+  assignNursingWorkItemAction,
   createNursingApplicationAction,
+  createNursingChargeOrderAction,
   createNursingNoteAction,
+  deleteNursingNoteAction,
   createVitalSignsAction,
-  returnStudiesToDoctorAction,
-  updateNursingWorkItemAction
+  deriveNursingToDoctorAction,
+  updateVitalSignsAction
 } from "@/features/nursing/actions";
-import { nursingWorkItemStatusLabels } from "@/features/nursing/labels";
-import { consumeServiceSessionAction } from "@/features/service-sessions/service-session-actions";
 import {
-  formatServiceSessionMoney,
-  serviceSessionPricingModeLabels
-} from "@/features/service-sessions/labels";
-import { getActivePatientServiceSessionPackages } from "@/modules/database/queries/service-sessions";
+  PaidStudyOrderDialog,
+  type PaidStudyOption
+} from "@/components/internal/PaidStudyOrderDialog";
+import { NursingRouteField } from "@/features/nursing/components/NursingRouteField";
+import { serviceSessionPricingModeLabels } from "@/features/service-sessions/labels";
+import { consumeServiceSessionAction } from "@/features/service-sessions/service-session-actions";
 import { createStudyAction } from "@/features/studies/actions";
 import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
-import { roleHasPermission } from "@/features/internal-auth/permissions";
-import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
-import { getNursingWorkItemById } from "@/modules/database/queries/nursing";
+import type {
+  StudyStatus,
+  StudyType,
+  VitalSigns
+} from "@/generated/prisma/client";
+import { cn } from "@/lib/cn";
+import { formatDateTime } from "@/lib/dates";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
+import {
+  getInjectableProductOptions,
+  getNursingChargeOptions,
+  getNursingWorkItemById
+} from "@/modules/database/queries/nursing";
+import { getPatientServiceSessionPackages } from "@/modules/database/queries/service-sessions";
 import { requirePermission } from "@/modules/permissions";
-import { getBranchContext } from "@/features/branches/context";
+import { CheckCircle2, Stethoscope, X } from "lucide-react";
+import { notFound } from "next/navigation";
 
-const workItemStatusOptions = (["acknowledged", "in_progress", "completed", "blocked"] as VisitWorkItemStatus[]).map(
-  (status) => [status, nursingWorkItemStatusLabels[status]] as [VisitWorkItemStatus, string]
-);
 const studyTypeOptions = Object.entries(studyTypeLabels) as Array<[StudyType, string]>;
 const studyStatusOptions = Object.entries(studyStatusLabels) as Array<[StudyStatus, string]>;
+
+function formatVitalsSummary(vs: VitalSigns) {
+  const parts: string[] = [];
+  if (vs.temperatureCelsius != null) parts.push(`T ${vs.temperatureCelsius}°C`);
+  if (vs.systolicPressureMmHg != null || vs.diastolicPressureMmHg != null) {
+    parts.push(`PA ${vs.systolicPressureMmHg ?? "—"}/${vs.diastolicPressureMmHg ?? "—"} mmHg`);
+  }
+  if (vs.heartRateBpm != null) parts.push(`FC ${vs.heartRateBpm} lpm`);
+  if (vs.oxygenSaturation != null) parts.push(`SpO₂ ${vs.oxygenSaturation}%`);
+  if (vs.respiratoryRateRpm != null) parts.push(`FR ${vs.respiratoryRateRpm} rpm`);
+  if (vs.weightKg != null) parts.push(`${vs.weightKg} kg`);
+  if (vs.heightCm != null) parts.push(`${vs.heightCm} cm`);
+  return parts.length > 0 ? parts.join(" · ") : "Sin valores registrados";
+}
 
 type NursingWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
@@ -57,18 +81,24 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
   if (!item) notFound();
   if (item.visit.branchCode !== activeBranch.code) notFound();
   const areaTiming = await getVisitAreaTimingState(item.visit.id);
-  const sessionPackages = await getActivePatientServiceSessionPackages(item.visit.patientId);
+  const sessionPackages = await getPatientServiceSessionPackages(item.visit.patientId);
+  const injectableProducts = await getInjectableProductOptions(item.visit.branchCode);
+  const chargeOptions = await getNursingChargeOptions();
+  // Opciones para derivar a Administración: catálogo (estudios/servicios de
+  // enfermería) + productos de inventario que el paciente puede solicitar.
+  const chargeStudyOptions: PaidStudyOption[] = [
+    ...chargeOptions.catalog.map((option) => ({ ...option, kind: "catalog" as const })),
+    ...chargeOptions.products.map((option) => ({ ...option, kind: "product" as const }))
+  ];
 
   const patient = item.visit.patient;
   const canWriteNursing = roleHasPermission(user.role, "nursing_write");
   const order = item.clinicalOrders[0];
-  const applicationOrderTypes = ["nursing_application", "serum", "medication"];
-  const studyOrders = item.clinicalOrders.filter((entry) => entry.type === "study");
-  const studiesCompleted = studyOrders.length > 0 && studyOrders.every((entry) => entry.status === "completed");
-  const canRecordDiscontinuation = roleHasPermission(
-    user.role,
-    "visit_discontinuations_write"
+  // Solo inyectables/procedimientos: excluye sueroterapia/ozono (sesiones) y estudios.
+  const injectableOrder = item.clinicalOrders.find(
+    (entry) => entry.type === "nursing_application" || entry.type === "medication"
   );
+  const studyOrders = item.clinicalOrders.filter((entry) => entry.type === "study");
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -85,13 +115,71 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
             </div>
             <VisitStatusPill status={item.visit.status} />
           </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[9px] border border-primary/25 bg-primary/5 p-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                Enfermera a cargo
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-text">
+                {item.assignedTo?.name ?? item.assignedTo?.email ?? "Sin asignar"}
+              </p>
+            </div>
+            {canWriteNursing ? (
+              item.assignedToId === user.id ? (
+                <NoticeForm action={assignNursingWorkItemAction} notice="Dejaste de atender">
+                  <input type="hidden" name="workItemId" value={item.id} />
+                  <input type="hidden" name="intent" value="release" />
+                  <SubmitButton variant="outline">Dejar de atender</SubmitButton>
+                </NoticeForm>
+              ) : (
+                <NoticeForm action={assignNursingWorkItemAction} notice="Estás atendiendo al paciente">
+                  <input type="hidden" name="workItemId" value={item.id} />
+                  <input type="hidden" name="intent" value="claim" />
+                  <SubmitButton>
+                    {item.assignedToId ? "Tomar el relevo" : "Atender a este paciente"}
+                  </SubmitButton>
+                </NoticeForm>
+              )
+            ) : null}
+          </div>
+
           <div className="mt-4 rounded-[9px] border border-border bg-background p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-              {order ? clinicalOrderTypeLabels[order.type] : "Tarea de enfermería"}
+              Estudios y servicios a realizar
             </p>
-            <p className="mt-0.5 text-sm font-semibold text-text">{order?.title ?? item.title}</p>
+            <ul className="mt-2 grid gap-2">
+              {item.clinicalOrders.map((clinicalOrder) => {
+                const pkg = sessionPackages.find(
+                  (candidate) => candidate.serviceName === clinicalOrder.title
+                );
+                return (
+                  <li
+                    key={clinicalOrder.id}
+                    className="flex items-center justify-between gap-3 rounded-[7px] border border-border bg-surface px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-text">
+                        {clinicalOrder.title}
+                      </p>
+                      <p className="text-[11px] text-muted">
+                        {clinicalOrderTypeLabels[clinicalOrder.type]}
+                      </p>
+                    </div>
+                    {pkg ? (
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary-dark">
+                        ×{pkg.totalSessions} sesiones · faltan{" "}
+                        {pkg.totalSessions - pkg.sessionsUsed}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
+              {item.clinicalOrders.length === 0 ? (
+                <li className="text-sm text-muted">{item.title}</li>
+              ) : null}
+            </ul>
             {order?.details ?? item.description ? (
-              <p className="mt-1 text-sm text-muted">{order?.details ?? item.description}</p>
+              <p className="mt-2 text-[11px] text-muted">{order?.details ?? item.description}</p>
             ) : null}
             <p className="mt-2 text-[11px] text-muted">
               Registró:{" "}
@@ -132,21 +220,62 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
             <div className="grid gap-3">
               {sessionPackages.map((pkg) => {
                 const remaining = pkg.totalSessions - pkg.sessionsUsed;
+                const done = remaining <= 0;
                 return (
-                  <div key={pkg.id} className="rounded-[9px] border border-border p-3">
+                  <div
+                    key={pkg.id}
+                    className={cn(
+                      "rounded-[9px] border p-3",
+                      done ? "border-success/30 bg-success/5" : "border-border"
+                    )}
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold text-text">{pkg.serviceName}</span>
-                      <span className="text-xs tabular-nums text-muted">
-                        {serviceSessionPricingModeLabels[pkg.pricingMode]} ·{" "}
-                        {formatServiceSessionMoney(pkg.totalPaidCents)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {done ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-success">
+                            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                            Completado
+                          </span>
+                        ) : null}
+                        <span className="text-xs tabular-nums text-muted">
+                          {serviceSessionPricingModeLabels[pkg.pricingMode]}
+                        </span>
+                      </div>
                     </div>
                     <p className="mt-1 text-sm tabular-nums text-muted">
                       Usadas <strong className="text-text">{pkg.sessionsUsed}</strong> de{" "}
                       {pkg.totalSessions} · Restantes{" "}
-                      <strong className="text-text">{remaining}</strong>
+                      <strong className="text-text">{Math.max(0, remaining)}</strong>
                     </p>
-                    {canWriteNursing && remaining > 0 ? (
+
+                    {pkg.uses.length > 0 ? (
+                      <div className="mt-3 grid gap-1.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                          Sesiones registradas
+                        </p>
+                        {pkg.uses.map((use) => (
+                          <div
+                            key={use.id}
+                            className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-[7px] border border-success/30 bg-success/10 px-3 py-2 text-sm text-success"
+                          >
+                            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                            <span className="font-semibold">
+                              Sesión {use.sessionNumber}/{pkg.totalSessions}
+                            </span>
+                            <span className="tabular-nums">· {formatDateTime(use.appliedAt)}</span>
+                            {use.appliedBy ? (
+                              <span>· {use.appliedBy.name ?? use.appliedBy.email}</span>
+                            ) : null}
+                            {use.notes ? (
+                              <span className="w-full text-success/90">{use.notes}</span>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {canWriteNursing && remaining > 0 && pkg.status === "active" ? (
                       <NoticeForm
                         action={consumeServiceSessionAction}
                         notice="Sesión registrada"
@@ -155,14 +284,19 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
                         <input type="hidden" name="packageId" value={pkg.id} />
                         <input type="hidden" name="visitId" value={item.visit.id} />
                         <input type="hidden" name="workItemId" value={item.id} />
-                        <Field label="Nota de la sesión (opcional)">
-                          <input className={internalInputClassName} name="notes" />
+                        <Field label="Fecha y hora de la sesión">
+                          <DateTimePickerField name="appliedAt" />
                         </Field>
-                        <FormActions className="justify-end">
-                          <SubmitButton variant="outline">
-                            Registrar sesión {pkg.sessionsUsed + 1}/{pkg.totalSessions}
-                          </SubmitButton>
-                        </FormActions>
+                        <Field label="Nota / detalle de la sesión (opcional)">
+                          <textarea
+                            className={`${internalInputClassName} min-h-24 py-2`}
+                            name="notes"
+                            placeholder="Describe lo que se le aplicó al paciente: medicación, dosis, observaciones…"
+                          />
+                        </Field>
+                        <SubmitButton className="w-full">
+                          Registrar sesión {pkg.sessionsUsed + 1}/{pkg.totalSessions}
+                        </SubmitButton>
                       </NoticeForm>
                     ) : null}
                   </div>
@@ -173,89 +307,182 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
         ) : null}
 
         <Card className="max-sm:order-3">
+          {item.visit.vitalSigns.length > 0 ? (
+            <div className="mb-4 grid gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                Signos vitales registrados
+              </p>
+              {item.visit.vitalSigns.map((vs) => (
+                <CollapsibleSection
+                  key={vs.id}
+                  title={formatDateTime(vs.recordedAt)}
+                  description={formatVitalsSummary(vs)}
+                  className="rounded-[9px] border border-border bg-background"
+                >
+                  {canWriteNursing ? (
+                    <NoticeForm
+                      action={updateVitalSignsAction}
+                      notice="Signos vitales actualizados"
+                      className="grid gap-3"
+                    >
+                      <input type="hidden" name="id" value={vs.id} />
+                      <input type="hidden" name="patientId" value={patient.id} />
+                      <input type="hidden" name="visitId" value={item.visit.id} />
+                      <input type="hidden" name="workItemId" value={item.id} />
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <Field label="Temperatura (°C)">
+                          <input className={internalInputClassName} name="temperatureCelsius" inputMode="decimal" defaultValue={vs.temperatureCelsius?.toString() ?? ""} />
+                        </Field>
+                        <Field label="Saturación O₂ (%)">
+                          <input className={internalInputClassName} name="oxygenSaturation" inputMode="numeric" defaultValue={vs.oxygenSaturation?.toString() ?? ""} />
+                        </Field>
+                        <Field label="Presión sistólica (mmHg)">
+                          <input className={internalInputClassName} name="systolicPressureMmHg" inputMode="numeric" defaultValue={vs.systolicPressureMmHg?.toString() ?? ""} />
+                        </Field>
+                        <Field label="Presión diastólica (mmHg)">
+                          <input className={internalInputClassName} name="diastolicPressureMmHg" inputMode="numeric" defaultValue={vs.diastolicPressureMmHg?.toString() ?? ""} />
+                        </Field>
+                        <Field label="Pulso (lpm)">
+                          <input className={internalInputClassName} name="heartRateBpm" inputMode="numeric" defaultValue={vs.heartRateBpm?.toString() ?? ""} />
+                        </Field>
+                        <Field label="Respiración (rpm)">
+                          <input className={internalInputClassName} name="respiratoryRateRpm" inputMode="numeric" defaultValue={vs.respiratoryRateRpm?.toString() ?? ""} />
+                        </Field>
+                        <Field label="Peso (kg)">
+                          <input className={internalInputClassName} name="weightKg" inputMode="decimal" defaultValue={vs.weightKg?.toString() ?? ""} />
+                        </Field>
+                        <Field label="Talla (cm)">
+                          <input className={internalInputClassName} name="heightCm" inputMode="decimal" defaultValue={vs.heightCm?.toString() ?? ""} />
+                        </Field>
+                      </div>
+                      <Field label="Observaciones">
+                        <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" defaultValue={vs.notes ?? ""} />
+                      </Field>
+                      <SubmitButton variant="outline" className="w-full">Guardar cambios</SubmitButton>
+                    </NoticeForm>
+                  ) : (
+                    <p className="text-sm text-muted">{formatVitalsSummary(vs)}</p>
+                  )}
+                </CollapsibleSection>
+              ))}
+            </div>
+          ) : null}
           <CollapsibleSection
-            title="Signos vitales"
+            title="Agregar signos vitales"
             description="Registrar cuando la orden o la atención lo requieran."
-            defaultOpen={order?.type === "vital_signs"}
+            defaultOpen={order?.type === "vital_signs" && item.visit.vitalSigns.length === 0}
             className="border-0 bg-transparent open:bg-transparent"
           >
           <NoticeForm action={createVitalSignsAction} notice="Signos vitales guardados" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
             <input type="hidden" name="workItemId" value={item.id} />
+            <p className="text-xs text-muted">
+              Registra los que tengas; no es obligatorio llenarlos todos.
+            </p>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Field label="Temperatura C">
-                <input className={internalInputClassName} name="temperatureCelsius" inputMode="decimal" />
+              <Field label="Temperatura (°C)">
+                <input className={internalInputClassName} name="temperatureCelsius" inputMode="decimal" placeholder="36.5" />
               </Field>
-              <Field label="Saturación O2">
-                <input className={internalInputClassName} name="oxygenSaturation" inputMode="numeric" />
+              <Field label="Saturación O₂ (%)">
+                <input className={internalInputClassName} name="oxygenSaturation" inputMode="numeric" placeholder="98" />
               </Field>
-              <Field label="Presión sistólica">
-                <input className={internalInputClassName} name="systolicPressureMmHg" inputMode="numeric" />
+              <Field label="Presión sistólica (mmHg)">
+                <input className={internalInputClassName} name="systolicPressureMmHg" inputMode="numeric" placeholder="120" />
               </Field>
-              <Field label="Presión diastólica">
-                <input className={internalInputClassName} name="diastolicPressureMmHg" inputMode="numeric" />
+              <Field label="Presión diastólica (mmHg)">
+                <input className={internalInputClassName} name="diastolicPressureMmHg" inputMode="numeric" placeholder="80" />
               </Field>
-              <Field label="Pulso">
-                <input className={internalInputClassName} name="heartRateBpm" inputMode="numeric" />
+              <Field label="Pulso (lpm)">
+                <input className={internalInputClassName} name="heartRateBpm" inputMode="numeric" placeholder="72" />
               </Field>
-              <Field label="Respiración">
-                <input className={internalInputClassName} name="respiratoryRateRpm" inputMode="numeric" />
+              <Field label="Respiración (rpm)">
+                <input className={internalInputClassName} name="respiratoryRateRpm" inputMode="numeric" placeholder="16" />
               </Field>
-              <Field label="Peso kg">
-                <input className={internalInputClassName} name="weightKg" inputMode="decimal" />
+              <Field label="Peso (kg)">
+                <input className={internalInputClassName} name="weightKg" inputMode="decimal" placeholder="70" />
               </Field>
-              <Field label="Talla cm">
-                <input className={internalInputClassName} name="heightCm" inputMode="decimal" />
+              <Field label="Talla (cm)">
+                <input className={internalInputClassName} name="heightCm" inputMode="decimal" placeholder="170" />
               </Field>
             </div>
             <Field label="Observaciones">
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
-            <div className="flex justify-end">
-              <SubmitButton variant="outline">Guardar signos</SubmitButton>
-            </div>
+            <SubmitButton className="w-full">Guardar signos vitales</SubmitButton>
           </NoticeForm>
           </CollapsibleSection>
         </Card>
 
         <Card className="max-sm:order-2">
+          {item.nursingApplications.length > 0 ? (
+            <div className="mb-4 grid gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                Aplicaciones registradas
+              </p>
+              {item.nursingApplications.map((app) => (
+                <div
+                  key={app.id}
+                  className="rounded-[9px] border border-success/30 bg-success/10 px-3 py-2 text-sm text-success"
+                >
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span className="font-semibold">{app.medication}</span>
+                    {app.quantityUnits != null ? <span>· {app.quantityUnits} u</span> : null}
+                    {app.route ? <span>· {app.route}</span> : null}
+                    <span className="tabular-nums">· {formatDateTime(app.appliedAt)}</span>
+                    {app.responsible ? (
+                      <span>· {app.responsible.name ?? app.responsible.email}</span>
+                    ) : null}
+                  </div>
+                  {app.notes ? <p className="mt-1 text-success/90">{app.notes}</p> : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
           <CollapsibleSection
-            title="Aplicación clínica"
-            description="La indicación médica ya viene prellenada."
-            defaultOpen={order ? applicationOrderTypes.includes(order.type) : false}
+            title="Aplicación clínica (inyectables / procedimientos)"
+            description="Solo inyectables y procedimientos. No incluye sueroterapia, ozonoterapia ni estudios."
+            defaultOpen={Boolean(injectableOrder) || item.nursingApplications.length > 0}
             className="border-0 bg-transparent open:bg-transparent"
           >
           <NoticeForm action={createNursingApplicationAction} notice="Aplicación registrada" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
             <input type="hidden" name="workItemId" value={item.id} />
-            <input type="hidden" name="clinicalOrderId" value={order?.id ?? ""} />
-            <Field label="Medicamento o insumo">
+            <input type="hidden" name="clinicalOrderId" value={injectableOrder?.id ?? ""} />
+            <Field label="Producto inyectable (opcional, descuenta stock)">
+              <select className={internalInputClassName} name="inventoryItemId" defaultValue="">
+                <option value="">— Ninguno / procedimiento —</option>
+                {injectableProducts.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} · stock {product.currentStock} {product.unit}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Medicamento / insumo o procedimiento">
               <input
                 className={internalInputClassName}
                 name="medication"
-                defaultValue={order?.title ?? ""}
+                defaultValue=""
+                placeholder="Si no es un producto del inventario, escríbelo aquí (ej. curación, nebulización)"
                 required
               />
             </Field>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Cantidad">
-                <input className={internalInputClassName} name="quantity" />
-              </Field>
-              <Field label="Vía">
-                <input className={internalInputClassName} name="route" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Cantidad (unidades)">
+                <input className={internalInputClassName} name="quantityUnits" inputMode="numeric" placeholder="1" />
               </Field>
               <Field label="Hora">
                 <DateTimePickerField name="appliedAt" />
               </Field>
             </div>
+            <NursingRouteField />
             <Field label="Observaciones">
               <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
             </Field>
-            <FormActions className="justify-end border-t-0 pt-0">
-              <SubmitButton>Registrar aplicación</SubmitButton>
-            </FormActions>
+            <SubmitButton className="w-full">Registrar aplicación</SubmitButton>
           </NoticeForm>
           </CollapsibleSection>
         </Card>
@@ -338,74 +565,55 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
         roleHasPermission(user.role, "area_time_write") ? (
           <AreaTimeControl state={areaTiming} compact />
         ) : null}
-        {isActiveVisitStatus(item.visit.status) &&
-        canRecordDiscontinuation ? (
-          <Card className="max-sm:order-4">
-            <CardHeader
-              title="No continuará"
-              description="Guarda el motivo y bloquea lo que quedó sin realizar."
-            />
-            <VisitDiscontinuationForm
-              visitId={item.visit.id}
-              patientName={patient.fullName}
-              defaultPendingTypes={[
-                ...(studyOrders.some(
-                  (studyOrder) => studyOrder.status !== "completed"
-                )
-                  ? (["study"] as const)
-                  : []),
-                ...(item.clinicalOrders.some((clinicalOrder) =>
-                  applicationOrderTypes.includes(clinicalOrder.type)
-                ) && item.status !== "completed"
-                  ? (["application"] as const)
-                  : [])
-              ]}
-              compact
-            />
-          </Card>
-        ) : null}
         <Card className="max-sm:order-5">
-          {query.error === "estudios-incompletos" ? (
-            <p className="mb-3 rounded-[7px] bg-warning/10 p-3 text-sm text-warning">Registra el resultado de todos los estudios antes de devolver al paciente.</p>
-          ) : null}
-          {studyOrders.length > 0 ? (
-            <NoticeForm action={returnStudiesToDoctorAction} notice="Paciente devuelto al médico" className="mb-4">
-              <input type="hidden" name="workItemId" value={item.id} />
-              <input type="hidden" name="visitId" value={item.visit.id} />
-              <SubmitButton className="w-full" disabled={!studiesCompleted}>Finalizar análisis y devolver al médico</SubmitButton>
-            </NoticeForm>
-          ) : null}
-          <CardHeader
-            title="Estado de la tarea"
-            description="Registra el avance operativo o devuelve los estudios finalizados al médico."
-          />
-          <NoticeForm action={updateNursingWorkItemAction} notice="Tarea actualizada" className="grid gap-3">
-            <input type="hidden" name="workItemId" value={item.id} />
-            <Field label="Estado">
-              <select
-                className={internalInputClassName}
-                name="status"
-                defaultValue={item.status === "pending" ? "acknowledged" : item.status}
-              >
-                {workItemStatusOptions.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Nota">
-              <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
-            </Field>
-            <SubmitButton>Actualizar tarea</SubmitButton>
-          </NoticeForm>
-        </Card>
-
-        <Card className="max-sm:order-6">
           <CardHeader
             title="Nota de enfermería"
-            description="Añade una observación clínica al historial permanente del paciente."
+            description="Se guarda en el historial permanente del paciente y el médico también la verá al recibirlo."
           />
+          {item.visit.nursingNotes.length > 0 ? (
+            <div className="mb-4 grid gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                Notas registradas
+              </p>
+              {item.visit.nursingNotes.map((note) => (
+                <div
+                  key={note.id}
+                  className="flex items-start gap-2 rounded-[9px] border border-border bg-background px-3 py-2 text-sm text-text"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="whitespace-pre-line break-words">{note.note}</p>
+                    <p className="mt-1 text-xs tabular-nums text-muted">
+                      {formatDateTime(note.createdAt)}
+                      {note.user ? ` · ${note.user.name ?? note.user.email}` : ""}
+                    </p>
+                  </div>
+                  {canWriteNursing ? (
+                    <ConfirmForm
+                      action={deleteNursingNoteAction}
+                      notice="Nota eliminada"
+                      confirmTitle="Eliminar nota"
+                      confirmDescription="Esta acción no se puede deshacer. La nota se borrará del historial del paciente."
+                      confirmLabel="Eliminar"
+                      confirmAtAllWidths
+                      className="shrink-0"
+                    >
+                      <input type="hidden" name="noteId" value={note.id} />
+                      <input type="hidden" name="workItemId" value={item.id} />
+                      <input type="hidden" name="patientId" value={patient.id} />
+                      <button
+                        type="submit"
+                        aria-label="Eliminar nota"
+                        title="Eliminar nota"
+                        className="focus-ring flex size-7 items-center justify-center rounded-full text-muted transition hover:bg-error/10 hover:text-error"
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </ConfirmForm>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
           <NoticeForm action={createNursingNoteAction} notice="Nota guardada" className="grid gap-3">
             <input type="hidden" name="patientId" value={patient.id} />
             <input type="hidden" name="visitId" value={item.visit.id} />
@@ -415,6 +623,41 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
             <SubmitButton variant="outline">Guardar nota</SubmitButton>
           </NoticeForm>
         </Card>
+
+        {canWriteNursing ? (
+          <Card className="max-sm:order-6">
+            <CardHeader
+              title="Derivar al paciente"
+              description="Al médico: se devuelve con todo lo registrado (signos, aplicaciones, estudios y notas). A Administración: para cobrar algo adicional que el paciente solicitó; al pagar, vuelve a Enfermería."
+            />
+            {query.error === "invalid-charge" ? (
+              <p className="mb-3 rounded-[7px] bg-error/10 p-3 text-sm text-error">No se pudo generar la orden de cobro. Revisa los ítems seleccionados.</p>
+            ) : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PaidStudyOrderDialog
+                visitId={item.visit.id}
+                action={createNursingChargeOrderAction}
+                studies={chargeStudyOptions}
+                triggerLabel="Derivar a Administración"
+                title="Derivar a Administración"
+                description="Selecciona los estudios, servicios o productos que el paciente solicitó. Se genera la orden de cobro y la ficha pasa a Administración; al pagar, vuelve a Enfermería."
+                emptyMessage="No hay ítems disponibles para cobrar."
+              />
+              <NoticeForm action={deriveNursingToDoctorAction} notice="Paciente derivado al médico">
+                <input type="hidden" name="workItemId" value={item.id} />
+                <input type="hidden" name="visitId" value={item.visit.id} />
+                <SubmitButton
+                  variant="primary"
+                  size="md"
+                  className="min-h-16 w-full gap-2 text-[15px] font-semibold shadow-sm"
+                >
+                  <Stethoscope className="h-5 w-5" aria-hidden="true" />
+                  Derivar al médico
+                </SubmitButton>
+              </NoticeForm>
+            </div>
+          </Card>
+        ) : null}
       </div>
     </div>
   );

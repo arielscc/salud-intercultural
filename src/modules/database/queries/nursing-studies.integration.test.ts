@@ -3,11 +3,11 @@ import { hashPassword } from "@/features/internal-auth/password";
 import { prisma } from "@/modules/database";
 import { createClinicalOrderRecord } from "@/modules/database/queries/clinical-care";
 import {
+  assignNursingWorkItem,
   createNursingApplicationRecord,
   createVitalSignsRecord,
   getNursingWorkItemById,
-  getNursingWorkItems,
-  updateNursingWorkItemStatus
+  getNursingWorkItems
 } from "@/modules/database/queries/nursing";
 import { createPatientRecord, getPatientById } from "@/modules/database/queries/patients";
 import { createStudyRecord, getStudiesForVisit } from "@/modules/database/queries/studies";
@@ -203,11 +203,9 @@ describe("nursing and studies integration", () => {
     });
     const workItem = (await getNursingWorkItems())[0];
 
-    await updateNursingWorkItemStatus({
+    await assignNursingWorkItem({
       workItemId: workItem.id,
-      userId: nurse.id,
-      status: "in_progress",
-      notes: "Tarea tomada"
+      userId: nurse.id
     });
     await createVitalSignsRecord({
       patientId: patient.id,

@@ -62,41 +62,83 @@ export async function createPaidStudyOrder(
   input: PaidStudyOrderInput & {
     doctorId?: string;
     requestedById?: string;
-    source?: "consultation" | "reception";
+    source?: "consultation" | "reception" | "nursing";
   }
 ) {
   return withDatabaseError("createPaidStudyOrder", () =>
     prisma.$transaction(async (tx) => {
       const visit = await tx.visit.findUniqueOrThrow({ where: { id: input.visitId }, include: { patient: true } });
-      const catalogIds = [...new Set(input.studies.map((study) => study.catalogItemId))];
-      // Se admiten estudios y servicios que se ejecutan en Enfermería.
-      const catalogItems = await tx.serviceCatalogItem.findMany({
-        where: {
-          id: { in: catalogIds },
-          active: true,
-          OR: [{ kind: "study" }, { requiresNursing: true }]
-        },
-        select: {
-          id: true,
-          name: true,
-          kind: true,
-          supportsSessions: true,
-          sessionCount: true
-        }
-      });
-      const itemById = new Map(catalogItems.map((item) => [item.id, item]));
-      if (itemById.size !== catalogIds.length) {
+
+      const catalogIds = [
+        ...new Set(
+          input.studies
+            .map((study) => study.catalogItemId)
+            .filter((id): id is string => Boolean(id))
+        )
+      ];
+      const inventoryIds = [
+        ...new Set(
+          input.studies
+            .map((study) => study.inventoryItemId)
+            .filter((id): id is string => Boolean(id))
+        )
+      ];
+
+      // Se admiten estudios y servicios que se ejecutan en Enfermería, más
+      // productos de inventario (p. ej. inyectables solicitados por el paciente).
+      const [catalogItems, inventoryItems] = await Promise.all([
+        catalogIds.length > 0
+          ? tx.serviceCatalogItem.findMany({
+              where: {
+                id: { in: catalogIds },
+                active: true,
+                OR: [{ kind: "study" }, { requiresNursing: true }]
+              },
+              select: {
+                id: true,
+                name: true,
+                kind: true,
+                supportsSessions: true,
+                sessionCount: true
+              }
+            })
+          : Promise.resolve([]),
+        inventoryIds.length > 0
+          ? tx.inventoryItem.findMany({
+              where: { id: { in: inventoryIds }, active: true },
+              select: { id: true, name: true }
+            })
+          : Promise.resolve([])
+      ]);
+
+      const catalogById = new Map(catalogItems.map((item) => [item.id, item]));
+      const inventoryById = new Map(inventoryItems.map((item) => [item.id, item]));
+      if (catalogById.size !== catalogIds.length || inventoryById.size !== inventoryIds.length) {
         throw new PaidStudyCatalogError("invalid-study");
       }
+
       const lines = input.studies.map((study) => {
-        const item = itemById.get(study.catalogItemId)!;
         const quantity = Math.max(1, study.quantity ?? 1);
+        const unitPriceCents = toCents(study.price);
+        if (study.inventoryItemId) {
+          const product = inventoryById.get(study.inventoryItemId)!;
+          return {
+            catalogItemId: undefined,
+            title: product.name,
+            unitPriceCents,
+            quantity,
+            kind: "product" as const,
+            supportsSessions: false,
+            sessionCount: null as number | null
+          };
+        }
+        const item = catalogById.get(study.catalogItemId!)!;
         return {
           catalogItemId: study.catalogItemId,
           title: item.name,
-          unitPriceCents: toCents(study.price),
+          unitPriceCents,
           quantity,
-          isStudy: item.kind === "study",
+          kind: item.kind === "study" ? ("study" as const) : ("service" as const),
           supportsSessions: item.supportsSessions,
           sessionCount: item.sessionCount
         };
@@ -126,7 +168,7 @@ export async function createPaidStudyOrder(
           patientId: visit.patientId,
           doctorId: input.doctorId,
           workItemId: workItem.id,
-          type: line.isStudy ? ("study" as const) : ("nursing_application" as const),
+          type: line.kind === "study" ? ("study" as const) : ("nursing_application" as const),
           targetArea: "enfermeria" as const,
           title: line.title,
           details: input.details
@@ -145,10 +187,17 @@ export async function createPaidStudyOrder(
           notes:
             input.source === "reception"
               ? "Orden de cobro de enfermería generada desde recepción"
-              : "Orden de cobro de enfermería generada desde consulta médica",
+              : input.source === "nursing"
+                ? "Orden de cobro solicitada por Enfermería (servicio adicional)"
+                : "Orden de cobro de enfermería generada desde consulta médica",
           items: {
             create: lines.map((line) => ({
-              type: line.isStudy ? ("study" as const) : ("service" as const),
+              type:
+                line.kind === "study"
+                  ? ("study" as const)
+                  : line.kind === "product"
+                    ? ("product" as const)
+                    : ("service" as const),
               description: line.title,
               quantity: line.quantity,
               unitPriceCents: line.unitPriceCents,
@@ -157,9 +206,13 @@ export async function createPaidStudyOrder(
           }
         }
       });
-      // Servicios por sesiones (sueroterapia, ozono): paquete pagado por adelantado.
+      // Servicios por sesiones (sueroterapia, ozono): la cantidad pedida en la
+      // orden es el número de sesiones (p. ej. Ozonoterapia ×3 = 3 sesiones), y lo
+      // pagado es el precio unitario × esa cantidad.
       for (const line of lines) {
         if (!line.supportsSessions) continue;
+        const sessions = Math.max(1, line.quantity);
+        const paidCents = line.unitPriceCents * sessions;
         await tx.serviceSessionPackage.create({
           data: {
             patientId: visit.patientId,
@@ -168,9 +221,10 @@ export async function createPaidStudyOrder(
             originVisitId: visit.id,
             saleId: sale.id,
             pricingMode: "package",
-            totalSessions: Math.max(1, line.sessionCount ?? 1),
-            packagePriceCents: line.unitPriceCents,
-            totalPaidCents: line.unitPriceCents
+            totalSessions: sessions,
+            packagePriceCents: paidCents,
+            sessionPriceCents: line.unitPriceCents,
+            totalPaidCents: paidCents
           }
         });
       }
@@ -200,19 +254,56 @@ export async function releasePaidStudiesToNursing(input: { workItemId: string; u
         (order) => order.type === "study" || order.type === "nursing_application"
       );
       if (orders.length === 0) throw new Error("STUDY_ORDERS_REQUIRED");
-      const nursing = await tx.visitWorkItem.create({
-        data: {
+      // Si la enfermera ya tiene una tarea abierta para esta visita (p. ej. derivó
+      // a Administración sin cerrarla), se reutiliza para no duplicar al paciente
+      // en la cola. Si no existe (flujo desde consulta/recepción), se crea una.
+      const existingNursing = await tx.visitWorkItem.findFirst({
+        where: {
           visitId: billing.visitId,
-          createdById: input.userId,
           area: "enfermeria",
-          title: "Realizar estudios/servicios pagados",
-          description: orders.map((order) => order.title).join(", ")
-        }
+          status: { in: ["pending", "acknowledged", "in_progress", "blocked"] }
+        },
+        orderBy: { createdAt: "asc" }
       });
+      const nursing =
+        existingNursing ??
+        (await tx.visitWorkItem.create({
+          data: {
+            visitId: billing.visitId,
+            createdById: input.userId,
+            area: "enfermeria",
+            title: "Realizar estudios/servicios pagados",
+            description: orders.map((order) => order.title).join(", ")
+          }
+        }));
       await tx.clinicalOrder.updateMany({ where: { id: { in: orders.map((order) => order.id) } }, data: { workItemId: nursing.id } });
       await tx.visitWorkItem.update({ where: { id: billing.id }, data: { status: "completed", completedAt: new Date() } });
       await moveVisit(tx, { visitId: billing.visitId, userId: input.userId, status: "in_nursing", area: "enfermeria", note: "Pago confirmado; enviado a enfermería" });
       return nursing;
+    })
+  );
+}
+
+// Derivación general de Enfermería al médico: cierra la tarea de enfermería y
+// devuelve la visita a consulta. Sin candado de estudios: manda al paciente con
+// todo lo registrado (signos, aplicaciones, estudios ya visibles para el médico).
+export async function deriveNursingPatientToDoctor(input: { workItemId: string; userId?: string }) {
+  return withDatabaseError("deriveNursingPatientToDoctor", () =>
+    prisma.$transaction(async (tx) => {
+      const nursing = await tx.visitWorkItem.findUniqueOrThrow({
+        where: { id: input.workItemId }
+      });
+      await tx.visitWorkItem.update({
+        where: { id: nursing.id },
+        data: { status: "completed", completedAt: new Date() }
+      });
+      await moveVisit(tx, {
+        visitId: nursing.visitId,
+        userId: input.userId,
+        status: "in_consultation",
+        area: "medico",
+        note: "Enfermería devolvió el paciente al médico"
+      });
     })
   );
 }
