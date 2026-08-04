@@ -170,6 +170,8 @@ export async function saveDoctorOrder(input: {
   visitId: string;
   doctorId: string;
   indications?: string;
+  chargeBaseCents?: number;
+  orderDiscountCents?: number;
   lines: DoctorOrderLineInput[];
   submit: boolean;
 }) {
@@ -185,17 +187,12 @@ export async function saveDoctorOrder(input: {
       }
       if (input.submit) {
         if (input.lines.length === 0) throw new DoctorOrderError("empty-order");
-        if (visit.clinicalConsultation?.status !== "finalized") {
-          throw new DoctorOrderError("consultation-not-finalized");
-        }
         if (visit.status !== "in_consultation" && visit.status !== "in_administration") {
           throw new DoctorOrderError("visit-not-in-consultation");
         }
       }
 
-      // Resolver topes desde la base y validar el descuento total.
-      let totalDiscount = 0;
-      let totalCap = 0;
+      // El descuento es libre (lo definen el médico y Administración): sin tope.
       const resolvedLines = [] as Array<
         DoctorOrderLineInput & {
           maxDiscountCents: number;
@@ -205,19 +202,14 @@ export async function saveDoctorOrder(input: {
       >;
       for (const [position, line] of input.lines.entries()) {
         const meta = await resolveLineMeta(tx, line);
-        const lineCap = meta.perUnitCapCents * line.quantity;
-        totalDiscount += line.discountCents;
-        totalCap += lineCap;
         resolvedLines.push({
           ...line,
-          maxDiscountCents: lineCap,
+          maxDiscountCents: 0,
           requiresNursing: meta.requiresNursing,
           position
         });
       }
-      if (totalDiscount > totalCap) {
-        throw new DoctorOrderError("discount-over-cap");
-      }
+      const orderDiscountCents = Math.max(0, input.orderDiscountCents ?? 0);
 
       const order = await tx.doctorOrder.upsert({
         where: { visitId: input.visitId },
@@ -226,12 +218,16 @@ export async function saveDoctorOrder(input: {
           patientId: visit.patientId,
           doctorId: input.doctorId,
           indications: input.indications,
+          chargeBaseCents: input.chargeBaseCents ?? null,
+          orderDiscountCents,
           status: input.submit ? "submitted" : "draft",
           submittedAt: input.submit ? new Date() : null
         },
         update: {
           doctorId: input.doctorId,
           indications: input.indications,
+          chargeBaseCents: input.chargeBaseCents ?? null,
+          orderDiscountCents,
           status: input.submit ? "submitted" : "draft",
           submittedAt: input.submit ? new Date() : null
         }

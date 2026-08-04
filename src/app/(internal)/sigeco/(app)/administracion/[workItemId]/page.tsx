@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
+import { Printer } from "lucide-react";
 import type { SaleItemType } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { NoticeForm } from "@/components/internal/NoticeForm";
@@ -8,6 +9,7 @@ import { PaymentMethodChips } from "@/components/internal/PaymentMethodChips";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
+import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -16,11 +18,13 @@ import { FormActions } from "@/components/internal/ui/FormActions";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import {
+  applySaleDiscountAction,
   confirmDoctorOrderSaleAction,
   createPaymentAction,
   createSaleAction,
   sendPaidStudiesToNursingAction
 } from "@/features/sales/actions";
+import { SaleDiscountForm } from "@/features/sales/components/SaleDiscountForm";
 import { DoctorOrderConfirmPanel } from "@/features/doctor-orders/components/DoctorOrderConfirmPanel";
 import { releaseDoctorOrderToNursingAction } from "@/features/doctor-orders/doctor-order-actions";
 import { doctorOrderStatusLabels } from "@/features/doctor-orders/labels";
@@ -75,11 +79,29 @@ export default async function AdministrationWorkItemPage({
   const proposalOutcome = order?.treatmentProposalOutcome;
   const doctorOrder = item.visit.doctorOrder;
   const orderHasNursing = doctorOrder?.lines.some((line) => line.requiresNursing) ?? false;
+  // Total definido por el médico (base editable − descuento libre). Se calcula en
+  // el servidor; a Administración solo le llega el total, no los costos por producto.
+  const doctorOrderTotalCents = doctorOrder
+    ? (() => {
+        const lineSum = doctorOrder.lines.reduce(
+          (sum, line) => sum + line.unitPriceCents * line.quantity,
+          0
+        );
+        const base = doctorOrder.chargeBaseCents ?? lineSum;
+        const discount = Math.min(Math.max(0, doctorOrder.orderDiscountCents), base);
+        return Math.max(0, base - discount);
+      })()
+    : 0;
   const doctorOrderSale = doctorOrder
     ? item.sales.find((sale) => sale.doctorOrderId === doctorOrder.id)
     : undefined;
   const generatedSale = item.sales[0];
-  const isPaidStudyOrder = Boolean(generatedSale && item.clinicalOrders.some((entry) => entry.type === "study"));
+  const isPaidStudyOrder = Boolean(
+    generatedSale &&
+      item.clinicalOrders.some(
+        (entry) => entry.type === "study" || entry.type === "nursing_application"
+      )
+  );
   const canRecordDiscontinuation = roleHasPermission(
     user.role,
     "visit_discontinuations_write"
@@ -96,6 +118,14 @@ export default async function AdministrationWorkItemPage({
           >
             Venta creada desde el pedido del médico. Si incluye suero o servicio, cóbralo y
             envíalo a Enfermería aquí.
+          </div>
+        ) : null}
+        {query.aviso === "descuento-aplicado" ? (
+          <div
+            className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text max-sm:order-1"
+            role="status"
+          >
+            Descuento aplicado. Revisa el nuevo total y saldo antes de cobrar.
           </div>
         ) : null}
         {query.error === "insufficient-stock" ? (
@@ -207,25 +237,91 @@ export default async function AdministrationWorkItemPage({
         {isPaidStudyOrder && generatedSale ? (
           <Card className="max-sm:order-2">
             <CardHeader
-              title="Cobro de estudios solicitados"
-              description={`Cuenta generada desde Consulta · Total: ${formatMoney(generatedSale.totalCents)} · Saldo: ${formatMoney(generatedSale.balanceCents)}`}
+              title="Cobro de estudios / servicios"
+              description="Derivado a Enfermería (pago previo). Revisa lo que se realizará, cobra y envía a Enfermería."
+              action={
+                <a
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                  href={`/sigeco/api/sales/${generatedSale.id}/recibo?purpose=print`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Printer className="h-4 w-4" aria-hidden="true" />
+                  Imprimir recibo
+                </a>
+              }
             />
-            {generatedSale.balanceCents > 0 ? (
-              <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
-                <input type="hidden" name="idempotencyKey" value={randomUUID()} />
-                <input type="hidden" name="saleId" value={generatedSale.id} />
-                <input type="hidden" name="workItemId" value={item.id} />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Monto Bs">
-                    <input className={internalInputClassName} name="amount" inputMode="decimal" defaultValue={(generatedSale.balanceCents / 100).toFixed(2)} required />
-                  </Field>
-                  <PaymentMethodChips />
+
+            <div className="grid gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                Estudios y servicios a realizar
+              </p>
+              {generatedSale.items.map((saleItem, index) => (
+                <div
+                  key={saleItem.id}
+                  className="flex items-center gap-3 rounded-[9px] border border-border bg-surface px-3 py-2.5"
+                >
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold tabular-nums text-primary-dark">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-text">{saleItem.description}</p>
+                    <p className="text-xs text-muted">{saleItemTypeLabels[saleItem.type]}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-surface-soft px-2.5 py-1 text-xs font-semibold tabular-nums text-text">
+                    × {saleItem.quantity}
+                  </span>
                 </div>
-                <Field label="Referencia"><input className={internalInputClassName} name="reference" /></Field>
-                <SubmitButton>Registrar pago completo</SubmitButton>
-              </NoticeForm>
+              ))}
+            </div>
+
+            <div className="mt-4 rounded-[9px] border border-border bg-background p-3 text-sm">
+              <dl className="grid gap-1.5 tabular-nums">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted">Total</dt>
+                  <dd className="text-text">{formatMoney(generatedSale.totalCents)}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted">Pagado</dt>
+                  <dd className="text-text">{formatMoney(generatedSale.paidCents)}</dd>
+                </div>
+                <div className="flex justify-between gap-2 border-t border-border pt-1.5 font-bold text-text">
+                  <dt>Saldo</dt>
+                  <dd>{formatMoney(generatedSale.balanceCents)}</dd>
+                </div>
+              </dl>
+              <p className="mt-2 text-xs text-muted">
+                El detalle de costos por producto es de uso exclusivo del médico.
+              </p>
+            </div>
+
+            {generatedSale.balanceCents > 0 ? (
+              <div className="mt-4 grid gap-4">
+                <SaleDiscountForm
+                  action={applySaleDiscountAction}
+                  saleId={generatedSale.id}
+                  workItemId={item.id}
+                />
+                <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
+                  <input type="hidden" name="idempotencyKey" value={randomUUID()} />
+                  <input type="hidden" name="saleId" value={generatedSale.id} />
+                  <input type="hidden" name="workItemId" value={item.id} />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Monto Bs">
+                      <input className={internalInputClassName} name="amount" inputMode="decimal" defaultValue={(generatedSale.balanceCents / 100).toFixed(2)} required />
+                    </Field>
+                    <PaymentMethodChips />
+                  </div>
+                  <Field label="Referencia"><input className={internalInputClassName} name="reference" /></Field>
+                  <SubmitButton>Registrar pago completo</SubmitButton>
+                </NoticeForm>
+              </div>
             ) : (
-              <NoticeForm action={sendPaidStudiesToNursingAction} notice="Paciente enviado a Enfermería">
+              <NoticeForm
+                action={sendPaidStudiesToNursingAction}
+                notice="Paciente enviado a Enfermería"
+                className="mt-4"
+              >
                 <input type="hidden" name="workItemId" value={item.id} />
                 <SubmitButton className="w-full">Pago confirmado · Enviar a Enfermería</SubmitButton>
               </NoticeForm>
@@ -235,7 +331,7 @@ export default async function AdministrationWorkItemPage({
           <Card className="max-sm:order-2">
             <CardHeader
               title="Confirmar pedido del médico"
-              description="Revisa las líneas, valida el descuento pedido por el paciente y crea la venta. No se cobra sin confirmar."
+              description="Revisa el detalle de lo que se entrega al paciente, aplica descuento si corresponde y crea la venta. No se cobra sin confirmar."
               action={
                 <Chip tone="primary" dot>
                   {doctorOrderStatusLabels[doctorOrder.status]}
@@ -251,14 +347,12 @@ export default async function AdministrationWorkItemPage({
                 doctorOrder.doctor?.name ?? doctorOrder.doctor?.email ?? "Médico"
               }
               indications={doctorOrder.indications}
+              totalCents={doctorOrderTotalCents}
               lines={doctorOrder.lines.map((line) => ({
                 id: line.id,
                 source: line.source,
                 description: line.description,
-                quantity: line.quantity,
-                unitPriceCents: line.unitPriceCents,
-                discountCents: line.discountCents,
-                maxDiscountCents: line.maxDiscountCents
+                quantity: line.quantity
               }))}
             />
           </Card>

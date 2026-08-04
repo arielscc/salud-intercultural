@@ -322,17 +322,17 @@ export function findDoctorOrderSaleError(error: unknown): DoctorOrderSaleError |
 }
 
 /**
- * Convierte un pedido del médico (Tarea 2) en una venta con varias líneas
- * (Tarea 3). Administración aprueba o rechaza el descuento; si lo rechaza se
- * cobra el precio completo. Es idempotente por pedido: si ya existe la venta la
- * devuelve. No supera nunca el tope (suma de umbrales por producto).
+ * Convierte un pedido del médico en una venta con varias líneas. El médico ya
+ * fijó el total editable (base) y el descuento (con su tope); Administración solo
+ * confirma y cobra ese total, sin ver los costos por producto. Es idempotente por
+ * pedido: si ya existe la venta la devuelve.
  */
 export async function confirmDoctorOrderSale(input: {
   doctorOrderId: string;
-  approveDiscount: boolean;
   workItemId?: string;
   createdById?: string;
   branchCode?: string;
+  adminDiscountCents?: number;
   initialPaymentCents?: number;
   paymentMethodCode?: string;
   paymentReference?: string;
@@ -357,18 +357,20 @@ export async function confirmDoctorOrderSale(input: {
 
       const branchCode = order.visit?.branchCode ?? input.branchCode ?? "el-alto";
 
-      let subtotalCents = 0;
-      let discountCents = 0;
-      let capCents = 0;
+      let lineSumCents = 0;
       for (const line of order.lines) {
-        subtotalCents += line.unitPriceCents * line.quantity;
-        capCents += line.maxDiscountCents;
-        if (input.approveDiscount) {
-          discountCents += Math.min(line.discountCents, line.maxDiscountCents);
-        }
+        lineSumCents += line.unitPriceCents * line.quantity;
       }
-      if (discountCents > capCents) throw new DoctorOrderSaleError("discount-over-cap");
-      discountCents = Math.min(discountCents, subtotalCents);
+      // Total editable del médico (base) y descuento libre (sin tope), acotado al
+      // subtotal. Administración puede aplicar un descuento adicional al cobrar,
+      // que se resta del total del médico (nunca deja el total en negativo).
+      const subtotalCents = order.chargeBaseCents ?? lineSumCents;
+      const doctorDiscountCents = Math.min(Math.max(0, order.orderDiscountCents), subtotalCents);
+      const adminDiscountCents = Math.min(
+        Math.max(0, input.adminDiscountCents ?? 0),
+        subtotalCents - doctorDiscountCents
+      );
+      const discountCents = doctorDiscountCents + adminDiscountCents;
       const totalCents = Math.max(0, subtotalCents - discountCents);
       const initialPaymentCents = Math.min(Math.max(0, input.initialPaymentCents ?? 0), totalCents);
       const status = getSaleStatus(totalCents, initialPaymentCents);
@@ -470,9 +472,9 @@ export async function confirmDoctorOrderSale(input: {
         data: {
           status: "confirmed",
           confirmedAt: new Date(),
-          discountApproved: input.approveDiscount,
-          discountDecidedById: input.createdById,
-          discountDecidedAt: new Date()
+          discountApproved: discountCents > 0 ? true : null,
+          discountDecidedById: discountCents > 0 ? input.createdById : null,
+          discountDecidedAt: discountCents > 0 ? new Date() : null
         }
       });
 
@@ -486,6 +488,36 @@ export async function confirmDoctorOrderSale(input: {
       }
 
       return { sale, requiresNursing };
+    });
+  });
+}
+
+/**
+ * Aplica un descuento adicional (de Administración) a una venta ya creada —p. ej.
+ * el cobro de estudios/servicios de Enfermería (pago previo)—. El descuento se
+ * acota al saldo pendiente (no se puede descontar por debajo de lo ya pagado) y
+ * recalcula total, saldo y estado. Es aditivo sobre el descuento existente.
+ */
+export async function applyAdminDiscountToSale(input: {
+  saleId: string;
+  discountCents: number;
+  userId?: string;
+}) {
+  return withDatabaseError("applyAdminDiscountToSale", async () => {
+    return prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUniqueOrThrow({ where: { id: input.saleId } });
+      const add = Math.min(Math.max(0, input.discountCents), sale.balanceCents);
+      if (add === 0) return sale;
+
+      const totalCents = Math.max(0, sale.totalCents - add);
+      const discountCents = sale.discountCents + add;
+      const balanceCents = Math.max(0, totalCents - sale.paidCents);
+      const status = totalCents === 0 ? "paid" : getSaleStatus(totalCents, sale.paidCents);
+
+      return tx.sale.update({
+        where: { id: sale.id },
+        data: { discountCents, totalCents, balanceCents, status }
+      });
     });
   });
 }

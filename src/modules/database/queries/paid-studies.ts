@@ -69,41 +69,66 @@ export async function createPaidStudyOrder(
     prisma.$transaction(async (tx) => {
       const visit = await tx.visit.findUniqueOrThrow({ where: { id: input.visitId }, include: { patient: true } });
       const catalogIds = [...new Set(input.studies.map((study) => study.catalogItemId))];
+      // Se admiten estudios y servicios que se ejecutan en Enfermería.
       const catalogItems = await tx.serviceCatalogItem.findMany({
-        where: { id: { in: catalogIds }, kind: "study", active: true },
-        select: { id: true, name: true }
+        where: {
+          id: { in: catalogIds },
+          active: true,
+          OR: [{ kind: "study" }, { requiresNursing: true }]
+        },
+        select: {
+          id: true,
+          name: true,
+          kind: true,
+          supportsSessions: true,
+          sessionCount: true
+        }
       });
-      const nameById = new Map(catalogItems.map((item) => [item.id, item.name]));
-      if (nameById.size !== catalogIds.length) {
+      const itemById = new Map(catalogItems.map((item) => [item.id, item]));
+      if (itemById.size !== catalogIds.length) {
         throw new PaidStudyCatalogError("invalid-study");
       }
-      const studies = input.studies.map((study) => ({
-        title: nameById.get(study.catalogItemId) ?? "Estudio",
-        unitPriceCents: toCents(study.price)
-      }));
-      const subtotalCents = studies.reduce((total, study) => total + study.unitPriceCents, 0);
-      const discountCents = Math.min(toCents(input.discount), subtotalCents);
-      const totalCents = subtotalCents - discountCents;
-      const description = studies.map((study) => study.title).join(", ");
+      const lines = input.studies.map((study) => {
+        const item = itemById.get(study.catalogItemId)!;
+        const quantity = Math.max(1, study.quantity ?? 1);
+        return {
+          catalogItemId: study.catalogItemId,
+          title: item.name,
+          unitPriceCents: toCents(study.price),
+          quantity,
+          isStudy: item.kind === "study",
+          supportsSessions: item.supportsSessions,
+          sessionCount: item.sessionCount
+        };
+      });
+      const lineSumCents = lines.reduce(
+        (total, line) => total + line.unitPriceCents * line.quantity,
+        0
+      );
+      // Total editable del médico (base) y descuento libre (sin tope), acotado al subtotal.
+      const subtotalCents = input.total ? toCents(input.total) : lineSumCents;
+      const discountCents = Math.min(Math.max(0, toCents(input.discount)), subtotalCents);
+      const totalCents = Math.max(0, subtotalCents - discountCents);
+      const description = lines.map((line) => line.title).join(", ");
 
       const workItem = await tx.visitWorkItem.create({
         data: {
           visitId: visit.id,
           createdById: input.requestedById ?? input.doctorId,
           area: "administracion",
-          title: "Cobro de estudios",
+          title: "Cobro de estudios/servicios",
           description
         }
       });
       await tx.clinicalOrder.createMany({
-        data: studies.map((study) => ({
+        data: lines.map((line) => ({
           visitId: visit.id,
           patientId: visit.patientId,
           doctorId: input.doctorId,
           workItemId: workItem.id,
-          type: "study",
-          targetArea: "enfermeria",
-          title: study.title,
+          type: line.isStudy ? ("study" as const) : ("nursing_application" as const),
+          targetArea: "enfermeria" as const,
+          title: line.title,
           details: input.details
         }))
       });
@@ -119,11 +144,36 @@ export async function createPaidStudyOrder(
           balanceCents: totalCents,
           notes:
             input.source === "reception"
-              ? "Orden de cobro por estudios generada desde recepción"
-              : "Orden de cobro generada desde consulta médica",
-          items: { create: studies.map((study) => ({ type: "study", description: study.title, quantity: 1, unitPriceCents: study.unitPriceCents, totalCents: study.unitPriceCents })) }
+              ? "Orden de cobro de enfermería generada desde recepción"
+              : "Orden de cobro de enfermería generada desde consulta médica",
+          items: {
+            create: lines.map((line) => ({
+              type: line.isStudy ? ("study" as const) : ("service" as const),
+              description: line.title,
+              quantity: line.quantity,
+              unitPriceCents: line.unitPriceCents,
+              totalCents: line.unitPriceCents * line.quantity
+            }))
+          }
         }
       });
+      // Servicios por sesiones (sueroterapia, ozono): paquete pagado por adelantado.
+      for (const line of lines) {
+        if (!line.supportsSessions) continue;
+        await tx.serviceSessionPackage.create({
+          data: {
+            patientId: visit.patientId,
+            catalogItemId: line.catalogItemId,
+            serviceName: line.title,
+            originVisitId: visit.id,
+            saleId: sale.id,
+            pricingMode: "package",
+            totalSessions: Math.max(1, line.sessionCount ?? 1),
+            packagePriceCents: line.unitPriceCents,
+            totalPaidCents: line.unitPriceCents
+          }
+        });
+      }
       await moveVisit(tx, {
         visitId: visit.id,
         userId: input.requestedById ?? input.doctorId,
@@ -146,14 +196,16 @@ export async function releasePaidStudiesToNursing(input: { workItemId: string; u
       if (billing.sales.length === 0 || billing.sales.some((sale) => sale.balanceCents > 0)) {
         throw new Error("STUDY_PAYMENT_REQUIRED");
       }
-      const orders = billing.clinicalOrders.filter((order) => order.type === "study");
+      const orders = billing.clinicalOrders.filter(
+        (order) => order.type === "study" || order.type === "nursing_application"
+      );
       if (orders.length === 0) throw new Error("STUDY_ORDERS_REQUIRED");
       const nursing = await tx.visitWorkItem.create({
         data: {
           visitId: billing.visitId,
           createdById: input.userId,
           area: "enfermeria",
-          title: "Realizar estudios pagados",
+          title: "Realizar estudios/servicios pagados",
           description: orders.map((order) => order.title).join(", ")
         }
       });

@@ -11,11 +11,18 @@ export const paidStudyOrderSchema = z.object({
     .transform((value) => (value.length > 0 ? value : undefined))
     .optional(),
   discount: money,
+  // Total editable definido por el médico (base antes de descuento). Opcional.
+  total: z
+    .string()
+    .trim()
+    .transform((value) => (value.length > 0 ? value : undefined))
+    .pipe(money.optional()),
   studies: z
     .array(
       z.object({
         catalogItemId: z.string().min(1),
-        price: money
+        price: money,
+        quantity: z.coerce.number().int().positive().max(99).default(1)
       })
     )
     .min(1, "Selecciona al menos un estudio")
@@ -32,13 +39,16 @@ export type PaidStudyOrderInput = z.infer<typeof paidStudyOrderSchema>;
 export function parsePaidStudyForm(formData: FormData) {
   const catalogItemIds = formData.getAll("studyCatalogItemId").map(String);
   const prices = formData.getAll("studyPrice").map(String);
+  const quantities = formData.getAll("studyQuantity").map(String);
   return {
     visitId: String(formData.get("visitId") ?? ""),
     details: String(formData.get("details") ?? ""),
     discount: String(formData.get("discount") ?? "0"),
+    total: String(formData.get("total") ?? ""),
     studies: catalogItemIds.map((catalogItemId, index) => ({
       catalogItemId,
-      price: prices[index] ?? "0"
+      price: prices[index] ?? "0",
+      quantity: quantities[index] ?? "1"
     }))
   };
 }

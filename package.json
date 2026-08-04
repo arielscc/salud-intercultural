@@ -29,6 +29,7 @@
     "env:check": "node --import tsx scripts/validate-environment.ts",
     "seed": "pnpm payload:seed",
     "seed:demo": "node --import dotenv/config --import tsx scripts/seed-demo-catalog.ts",
+    "seed:demo-consultas": "node --import dotenv/config --import tsx scripts/seed-demo-consultations.ts",
     "db:studio": "prisma studio",
     "payload": "payload",
     "payload:seed": "node --import tsx scripts/seed-payload.ts",

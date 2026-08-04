@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import {
+  applyAdminDiscountToSale,
   confirmDoctorOrderSale,
   createPaymentRecord,
   createSaleRecord,
@@ -19,6 +20,7 @@ import {
   releasePaidStudiesToNursing
 } from "@/modules/database/queries/paid-studies";
 import {
+  applySaleDiscountSchema,
   confirmDoctorOrderSchema,
   createPaymentSchema,
   createSaleSchema,
@@ -137,10 +139,10 @@ export async function confirmDoctorOrderSaleAction(formData: FormData) {
       try {
         created = await confirmDoctorOrderSale({
           doctorOrderId: parsed.data.doctorOrderId,
-          approveDiscount: parsed.data.approveDiscount,
           workItemId: parsed.data.workItemId,
           createdById: user.id,
           branchCode: activeBranch.code,
+          adminDiscountCents: moneyToCents(parsed.data.discount),
           initialPaymentCents: moneyToCents(parsed.data.initialPayment),
           paymentMethodCode: parsed.data.paymentMethodCode,
           paymentReference: parsed.data.paymentReference,
@@ -162,7 +164,6 @@ export async function confirmDoctorOrderSaleAction(formData: FormData) {
         entityId: created.sale.id,
         context: {
           doctorOrderId: parsed.data.doctorOrderId,
-          approveDiscount: parsed.data.approveDiscount,
           discountCents: created.sale.discountCents,
           totalCents: created.sale.totalCents,
           requiresNursing: created.requiresNursing,
@@ -181,6 +182,46 @@ export async function confirmDoctorOrderSaleAction(formData: FormData) {
     redirect(`/sigeco/administracion/${workItemId}?aviso=venta-creada`);
   }
   redirect(`/sigeco/administracion/ventas/${result.sale.id}?aviso=venta-creada`);
+}
+
+export async function applySaleDiscountAction(formData: FormData) {
+  const workItemId = String(formData.get("workItemId") ?? "");
+  const saleId = String(formData.get("saleId") ?? "");
+  const target = workItemId
+    ? `/sigeco/administracion/${workItemId}`
+    : `/sigeco/administracion/ventas/${saleId}`;
+  await runAuditedAction(
+    {
+      permission: "sales_write",
+      action: "sale.discount.apply",
+      entityType: "sale",
+      entityId: saleId || undefined,
+      context: { workItemId: workItemId || undefined }
+    },
+    async (user) => {
+      const parsed = applySaleDiscountSchema.safeParse(parseFormData(formData));
+      if (!parsed.success) redirect(`${target}?error=invalid-sale`);
+
+      const updated = await applyAdminDiscountToSale({
+        saleId: parsed.data.saleId,
+        discountCents: moneyToCents(parsed.data.discount),
+        userId: user.id
+      });
+      return auditedResult(updated, {
+        entityId: parsed.data.saleId,
+        context: {
+          workItemId: parsed.data.workItemId,
+          discountCents: updated.discountCents,
+          totalCents: updated.totalCents
+        }
+      });
+    }
+  );
+
+  revalidatePath("/sigeco/administracion");
+  if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
+  revalidatePath(`/sigeco/administracion/ventas/${saleId}`);
+  redirect(`${target}?aviso=descuento-aplicado`);
 }
 
 export async function createPaymentAction(formData: FormData) {

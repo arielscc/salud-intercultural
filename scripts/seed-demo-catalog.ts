@@ -194,7 +194,7 @@ async function seedCatalog(userId?: string) {
     { code: "DEMO-TRT-GASTRO", name: "Tratamiento gástrico", category: "Tratamientos", description: "Paquete para molestias gástricas.", basePriceCents: 8000, requiresNursing: false, components: [...component("DEMO-P015", 1), ...component("DEMO-P010", 1)] },
     { code: "DEMO-TRT-DOLOR", name: "Tratamiento del dolor", category: "Tratamientos", description: "Manejo del dolor con inyectables.", basePriceCents: 7000, requiresNursing: true, components: [...component("DEMO-P007", 1), ...component("DEMO-P008", 1), ...component("DEMO-P006", 1)] },
     { code: "DEMO-TRT-HIDRATACION", name: "Hidratación intravenosa", category: "Tratamientos", description: "Hidratación IV con complejo B.", basePriceCents: 9000, requiresNursing: true, components: [...component("DEMO-P001", 1), ...component("DEMO-P004", 1), ...component("DEMO-P023", 1)] }
-  ] as const;
+  ];
 
   const studies = [
     { code: "DEMO-EST-GLUCOSA", name: "Glucosa en sangre", category: "Estudios", description: "Medición de glucosa.", basePriceCents: 3000, ownMaxDiscountCents: 0, requiresNursing: true },

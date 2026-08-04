@@ -3084,6 +3084,11 @@ model DoctorOrder {
   status             DoctorOrderStatus @default(draft)
   indications        String?
   submittedAt        DateTime?
+  /// Total editable definido por el médico (base antes de descuento). Si es null,
+  /// se usa la suma de las líneas. El descuento (tope: suma de umbrales) se resta
+  /// de esta base. Administración solo ve el total, no los costos por producto.
+  chargeBaseCents    Int?
+  orderDiscountCents Int               @default(0)
   /// Decisión de Administración sobre el descuento aplicado por el médico:
   /// null = sin decidir; true = aprobado; false = rechazado (se cobra completo).
   discountApproved   Boolean?

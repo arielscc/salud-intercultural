@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Printer } from "lucide-react";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { PaymentMethodChips } from "@/components/internal/PaymentMethodChips";
 import { SubmitButton } from "@/components/internal/SubmitButton";
+import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
@@ -51,6 +53,15 @@ export default async function SaleDetailPage({
 
   const hasBalance = sale.balanceCents > 0;
   const canGenerateReceipt = roleHasPermission(user.role, "sales_write");
+  // Los costos por producto solo los ve el médico (y super admin). En ventas del
+  // pedido del médico, Administración/Enfermería ven detalle + cantidad + total.
+  const canSeeLineCosts = user.role === "medico" || user.role === "super_admin";
+  const hidesLineCosts =
+    !canSeeLineCosts &&
+    (Boolean(sale.doctorOrderId) ||
+      sale.items.every((item) =>
+        ["study", "service", "serum", "treatment"].includes(item.type)
+      ));
 
   return (
     <div className={cn("grid items-start gap-4", hasBalance && "xl:grid-cols-[1.5fr_1fr]")}>
@@ -95,6 +106,16 @@ export default async function SaleDetailPage({
             className="mb-0 p-[18px] pb-3"
             title="Conceptos cobrados"
             description="Productos, servicios o estudios incluidos en este comprobante."
+            action={
+              <Link
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+                href={`/sigeco/api/sales/${sale.id}/recibo?purpose=print`}
+                target="_blank"
+              >
+                <Printer className="h-4 w-4" aria-hidden="true" />
+                Imprimir recibo
+              </Link>
+            }
           />
           <RecordList>
             {sale.items.map((item) => (
@@ -102,15 +123,19 @@ export default async function SaleDetailPage({
                 key={item.id}
                 title={item.description}
                 status={
-                  <span className="text-sm font-semibold tabular-nums text-text">
-                    {formatMoney(item.totalCents)}
-                  </span>
+                  hidesLineCosts ? undefined : (
+                    <span className="text-sm font-semibold tabular-nums text-text">
+                      {formatMoney(item.totalCents)}
+                    </span>
+                  )
                 }
               >
                 <span>
                   {saleItemTypeLabels[item.type]} ·{" "}
                   <span className="tabular-nums">
-                    {item.quantity} x {formatMoney(item.unitPriceCents)}
+                    {hidesLineCosts
+                      ? `cantidad ${item.quantity}`
+                      : `${item.quantity} x ${formatMoney(item.unitPriceCents)}`}
                   </span>
                 </span>
               </RecordItem>
@@ -123,8 +148,12 @@ export default async function SaleDetailPage({
                   <Th>Descripción</Th>
                   <Th>Tipo</Th>
                   <Th className="text-right">Cantidad</Th>
-                  <Th className="text-right">Precio unit.</Th>
-                  <Th className="text-right">Total</Th>
+                  {hidesLineCosts ? null : (
+                    <>
+                      <Th className="text-right">Precio unit.</Th>
+                      <Th className="text-right">Total</Th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -133,8 +162,12 @@ export default async function SaleDetailPage({
                     <Td className="font-medium text-text">{item.description}</Td>
                     <Td>{saleItemTypeLabels[item.type]}</Td>
                     <Td className="text-right tabular-nums">{item.quantity}</Td>
-                    <Td className="text-right tabular-nums">{formatMoney(item.unitPriceCents)}</Td>
-                    <Td className="text-right tabular-nums">{formatMoney(item.totalCents)}</Td>
+                    {hidesLineCosts ? null : (
+                      <>
+                        <Td className="text-right tabular-nums">{formatMoney(item.unitPriceCents)}</Td>
+                        <Td className="text-right tabular-nums">{formatMoney(item.totalCents)}</Td>
+                      </>
+                    )}
                   </Tr>
                 ))}
               </tbody>
@@ -142,8 +175,12 @@ export default async function SaleDetailPage({
           </RecordTable>
           <div className="border-t border-border px-[18px] py-4">
             <dl className="ml-auto grid w-full max-w-[280px] gap-1.5 text-sm">
-              <SummaryRow label="Subtotal" value={formatMoney(sale.subtotalCents)} />
-              <SummaryRow label="Descuento" value={formatMoney(sale.discountCents)} />
+              {hidesLineCosts ? null : (
+                <>
+                  <SummaryRow label="Subtotal" value={formatMoney(sale.subtotalCents)} />
+                  <SummaryRow label="Descuento" value={formatMoney(sale.discountCents)} />
+                </>
+              )}
               <SummaryRow label="Total" value={formatMoney(sale.totalCents)} strong />
               <SummaryRow label="Pagado" value={formatMoney(sale.paidCents)} />
               <SummaryRow

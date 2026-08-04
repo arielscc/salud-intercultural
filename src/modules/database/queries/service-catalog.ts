@@ -401,7 +401,7 @@ export async function getActiveStudyCatalogItems() {
   return withDatabaseError("getActiveStudyCatalogItems", () =>
     prisma.serviceCatalogItem.findMany({
       where: { active: true, kind: "study" },
-      select: { id: true, name: true, basePriceCents: true },
+      select: { id: true, name: true, basePriceCents: true, ownMaxDiscountCents: true },
       orderBy: { name: "asc" }
     })
   );

@@ -1,21 +1,3 @@
-import { randomUUID } from "node:crypto";
-import Link from "next/link";
-import {
-  ArrowLeftRight,
-  Banknote,
-  Camera,
-  ExternalLink,
-  HandCoins,
-  History,
-  LockKeyhole,
-  Printer,
-  ReceiptText,
-  WalletCards
-} from "lucide-react";
-import type {
-  CashChannel,
-  CashMovementType
-} from "@/generated/prisma/client";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
@@ -24,6 +6,7 @@ import { Chip } from "@/components/internal/ui/Chip";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { getBranchContext } from "@/features/branches/context";
 import {
   approveCashSessionCloseAction,
   createOtherCashExpenseAction,
@@ -47,6 +30,10 @@ import {
 } from "@/features/cash/policy";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { formatMoney } from "@/features/sales/labels";
+import type {
+  CashChannel,
+  CashMovementType
+} from "@/generated/prisma/client";
 import { cn } from "@/lib/cn";
 import {
   formatDateOnly,
@@ -58,7 +45,20 @@ import {
   getCashPersonnel
 } from "@/modules/database/queries/cash";
 import { requirePermission } from "@/modules/permissions";
-import { getBranchContext } from "@/features/branches/context";
+import {
+  ArrowLeftRight,
+  Banknote,
+  Camera,
+  ExternalLink,
+  HandCoins,
+  History,
+  LockKeyhole,
+  Printer,
+  ReceiptText,
+  WalletCards
+} from "lucide-react";
+import Link from "next/link";
+import { randomUUID } from "node:crypto";
 
 type CashPageProps = {
   searchParams: Promise<{

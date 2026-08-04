@@ -96,6 +96,7 @@ describe("nursing and studies integration", () => {
       kind: "study",
       basePriceCents: 7500,
       requiresNursing: true,
+      ownMaxDiscountCents: 1000,
       userId: doctor.id
     });
 
@@ -112,7 +113,7 @@ describe("nursing and studies integration", () => {
       source: "consultation",
       discount: "5.00",
       details: "Paciente en ayunas",
-      studies: [{ catalogItemId: catalogItem.id, price: "75.00" }]
+      studies: [{ catalogItemId: catalogItem.id, price: "75.00", quantity: 1 }]
     });
 
     expect(sale).toMatchObject({

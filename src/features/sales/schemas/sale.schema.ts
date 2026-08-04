@@ -67,14 +67,19 @@ export const createPaymentSchema = z.object({
 export const confirmDoctorOrderSchema = z.object({
   doctorOrderId: z.string().min(1),
   workItemId: optionalText,
-  approveDiscount: z
-    .enum(["true", "false"])
-    .default("true")
-    .transform((value) => value === "true"),
+  // Descuento adicional que aplica Administración al cobrar (se resta del total
+  // definido por el médico). Por defecto 0.
+  discount: optionalMoneyString,
   initialPayment: optionalMoneyString,
   paymentMethodCode: paymentMethodCodeSchema.default("cash"),
   paymentReference: optionalText,
   notes: optionalText
+});
+
+export const applySaleDiscountSchema = z.object({
+  saleId: z.string().min(1),
+  workItemId: optionalText,
+  discount: moneyString
 });
 
 export function moneyToCents(value?: string) {

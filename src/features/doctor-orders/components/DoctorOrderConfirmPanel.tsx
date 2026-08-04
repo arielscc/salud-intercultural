@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PackageCheck } from "lucide-react";
 import type { DoctorOrderLineSource } from "@/generated/prisma/client";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
@@ -8,19 +9,16 @@ import { PaymentMethodChips } from "@/components/internal/PaymentMethodChips";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import {
   doctorOrderLineSourceLabels,
-  doctorOrderLineTotalCents,
   formatDoctorOrderMoney
 } from "@/features/doctor-orders/labels";
-import { cn } from "@/lib/cn";
 
+// Administración NO ve los costos por producto; solo el detalle, la cantidad y el
+// total. Los costos por línea los ve únicamente el médico.
 type ConfirmLine = {
   id: string;
   source: DoctorOrderLineSource;
   description: string;
   quantity: number;
-  unitPriceCents: number;
-  discountCents: number;
-  maxDiscountCents: number;
 };
 
 type DoctorOrderConfirmPanelProps = {
@@ -29,9 +27,27 @@ type DoctorOrderConfirmPanelProps = {
   workItemId: string;
   patientName: string;
   lines: ConfirmLine[];
+  totalCents: number;
   indications: string | null;
   doctorName: string;
 };
+
+function toCents(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
+}
+
+// Solo dígitos y un punto decimal, con máximo 2 decimales (ej. "50.20").
+function sanitizeMoney(value: string) {
+  let v = value.replace(/[^\d.]/g, "");
+  const dot = v.indexOf(".");
+  if (dot !== -1) {
+    const intPart = v.slice(0, dot);
+    const decPart = v.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+    v = `${intPart}.${decPart}`;
+  }
+  return v;
+}
 
 export function DoctorOrderConfirmPanel({
   action,
@@ -39,56 +55,58 @@ export function DoctorOrderConfirmPanel({
   workItemId,
   patientName,
   lines,
+  totalCents,
   indications,
   doctorName
 }: DoctorOrderConfirmPanelProps) {
-  const subtotalCents = lines.reduce(
-    (total, line) => total + line.unitPriceCents * line.quantity,
-    0
-  );
-  const requestedDiscountCents = lines.reduce(
-    (total, line) => total + Math.min(line.discountCents, line.maxDiscountCents),
-    0
-  );
-  const capCents = lines.reduce((total, line) => total + line.maxDiscountCents, 0);
-  const hasDiscount = requestedDiscountCents > 0;
+  const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [discount, setDiscount] = useState("0.00");
 
-  const [approveDiscount, setApproveDiscount] = useState(true);
-  const appliedDiscountCents = approveDiscount ? requestedDiscountCents : 0;
-  const totalCents = Math.max(0, subtotalCents - appliedDiscountCents);
+  const adminDiscountCents = discountEnabled
+    ? Math.min(Math.max(0, toCents(discount)), totalCents)
+    : 0;
+  const finalTotalCents = Math.max(0, totalCents - adminDiscountCents);
 
   return (
     <ConfirmForm
       action={action}
       notice="Venta creada desde el pedido del médico"
       confirmTitle="Confirmar pedido y crear venta"
-      confirmDescription={`Se creará la venta de ${patientName} por ${formatDoctorOrderMoney(
-        totalCents
-      )}${hasDiscount ? (approveDiscount ? " (descuento aprobado)" : " (descuento rechazado, precio completo)") : ""}. El cobro se registra en Caja.`}
+      confirmDescription={`Se creará la venta de ${patientName} por ${formatDoctorOrderMoney(finalTotalCents)}. El cobro se registra en Caja.`}
       confirmLabel="Confirmar y crear venta"
       confirmAtAllWidths
       className="grid gap-4"
     >
       <input type="hidden" name="doctorOrderId" value={orderId} />
       <input type="hidden" name="workItemId" value={workItemId} />
-      <input type="hidden" name="approveDiscount" value={String(approveDiscount)} />
+      <input
+        type="hidden"
+        name="discount"
+        value={(adminDiscountCents / 100).toFixed(2)}
+      />
 
       <div className="grid gap-2">
-        {lines.map((line) => (
-          <div key={line.id} className="rounded-[9px] border border-border px-3 py-2 text-sm">
-            <div className="flex flex-wrap justify-between gap-2">
-              <span className="font-semibold text-text">{line.description}</span>
-              <span className="tabular-nums text-text">
-                {formatDoctorOrderMoney(doctorOrderLineTotalCents(line))}
-              </span>
+        <div className="flex items-center gap-2">
+          <PackageCheck className="h-4 w-4 text-primary-dark" aria-hidden="true" />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+            Productos y servicios a entregar
+          </p>
+        </div>
+        {lines.map((line, index) => (
+          <div
+            key={line.id}
+            className="flex items-center gap-3 rounded-[9px] border border-border bg-surface px-3 py-2.5"
+          >
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold tabular-nums text-primary-dark">
+              {index + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-text">{line.description}</p>
+              <p className="text-xs text-muted">{doctorOrderLineSourceLabels[line.source]}</p>
             </div>
-            <p className="mt-0.5 text-xs text-muted">
-              {doctorOrderLineSourceLabels[line.source]} · {line.quantity} ×{" "}
-              {formatDoctorOrderMoney(line.unitPriceCents)}
-              {line.discountCents > 0
-                ? ` · desc. ${formatDoctorOrderMoney(line.discountCents)} (tope ${formatDoctorOrderMoney(line.maxDiscountCents)})`
-                : ""}
-            </p>
+            <span className="shrink-0 rounded-full bg-surface-soft px-2.5 py-1 text-xs font-semibold tabular-nums text-text">
+              × {line.quantity}
+            </span>
           </div>
         ))}
       </div>
@@ -97,51 +115,46 @@ export function DoctorOrderConfirmPanel({
         <p className="rounded-[9px] bg-surface-soft px-3 py-2 text-sm text-muted">{indications}</p>
       ) : null}
 
-      {hasDiscount ? (
-        <fieldset className="grid gap-2 rounded-[9px] border border-border p-3">
-          <legend className="px-1 text-sm font-semibold text-text">
-            Validar descuento pedido por el paciente
-          </legend>
-          <p className="text-xs text-muted">
-            El médico aplicó {formatDoctorOrderMoney(requestedDiscountCents)} de descuento (tope{" "}
-            {formatDoctorOrderMoney(capCents)}). Administración aprueba o rechaza.
-          </p>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="approveDiscountChoice"
-              checked={approveDiscount}
-              onChange={() => setApproveDiscount(true)}
-            />
-            Aprobar descuento ({formatDoctorOrderMoney(requestedDiscountCents)})
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="approveDiscountChoice"
-              checked={!approveDiscount}
-              onChange={() => setApproveDiscount(false)}
-            />
-            Rechazar descuento (cobrar precio completo)
-          </label>
-        </fieldset>
+      <label className="flex items-center gap-2 text-sm text-text">
+        <input
+          type="checkbox"
+          className="size-4"
+          checked={discountEnabled}
+          onChange={(event) => setDiscountEnabled(event.target.checked)}
+        />
+        Aplicar descuento
+      </label>
+      {discountEnabled ? (
+        <Field label="Descuento Bs">
+          <input
+            className={internalInputClassName}
+            inputMode="decimal"
+            value={discount}
+            onChange={(event) => setDiscount(sanitizeMoney(event.target.value))}
+          />
+        </Field>
       ) : null}
 
       <div className="rounded-[9px] border border-border bg-background p-3 text-sm">
-        <div className="flex justify-between gap-2">
-          <span className="text-muted">Subtotal</span>
-          <span className="tabular-nums text-text">{formatDoctorOrderMoney(subtotalCents)}</span>
-        </div>
-        <div className="mt-1 flex justify-between gap-2">
-          <span className="text-muted">Descuento aplicado</span>
-          <span className="tabular-nums text-text">
-            − {formatDoctorOrderMoney(appliedDiscountCents)}
-          </span>
-        </div>
-        <div className="mt-1 flex justify-between gap-2 border-t border-border pt-1">
-          <span className="font-semibold text-text">Total a cobrar</span>
-          <strong className="tabular-nums text-text">{formatDoctorOrderMoney(totalCents)}</strong>
-        </div>
+        <dl className="grid gap-1.5 tabular-nums">
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted">Total del pedido</dt>
+            <dd className="text-text">{formatDoctorOrderMoney(totalCents)}</dd>
+          </div>
+          {adminDiscountCents > 0 ? (
+            <div className="flex justify-between gap-2">
+              <dt className="text-muted">Descuento</dt>
+              <dd className="text-text">-{formatDoctorOrderMoney(adminDiscountCents)}</dd>
+            </div>
+          ) : null}
+          <div className="flex justify-between gap-2 border-t border-border pt-1.5 text-base font-bold text-text">
+            <dt>Total a cobrar</dt>
+            <dd>{formatDoctorOrderMoney(finalTotalCents)}</dd>
+          </div>
+        </dl>
+        <p className="mt-2 text-xs text-muted">
+          El detalle de costos por producto es de uso exclusivo del médico.
+        </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -159,9 +172,9 @@ export function DoctorOrderConfirmPanel({
         <input className={internalInputClassName} name="paymentReference" />
       </Field>
 
-      <p className={cn("text-xs text-muted")}>
-        Pedido armado por {doctorName}. Al confirmar se crea la venta con líneas; el saldo se cobra
-        después en la venta.
+      <p className="text-xs text-muted">
+        Pedido enviado por {doctorName}. Al confirmar se crea la venta; el saldo se cobra después en
+        la venta.
       </p>
       <SubmitButton className="w-full">Confirmar y crear venta</SubmitButton>
     </ConfirmForm>

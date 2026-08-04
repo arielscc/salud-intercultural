@@ -45,7 +45,7 @@ import { followUpTypeLabels } from "@/features/follow-ups/labels";
 import { createDoctorVisitFollowUpAction } from "@/features/follow-ups/actions";
 import { getVisitLatestSale } from "@/modules/database/queries/sales";
 import { applyVisitFlowAction } from "@/features/visits/actions";
-import { DoctorOrderBuilder } from "@/features/doctor-orders/components/DoctorOrderBuilder";
+import { AdministrationOrderDialog } from "@/features/doctor-orders/components/AdministrationOrderDialog";
 import { saveDoctorOrderAction } from "@/features/doctor-orders/doctor-order-actions";
 import {
   doctorOrderLineSourceLabels,
@@ -212,11 +212,47 @@ export default async function ConsultationDetailPage({
     visit.status === "in_consultation" &&
     visit.clinicalConsultation?.status === "finalized" &&
     latestProposalOutcome?.status !== "accepted";
-  const canEditDoctorOrder =
+  const canDerivePatient =
     canWriteClinical &&
-    doctorOrder?.status !== "confirmed" &&
     (visit.status === "in_consultation" || visit.status === "in_administration");
-  const doctorOrderCanSubmit = visit.clinicalConsultation?.status === "finalized";
+  // Administración: tratamientos (siempre) + servicios NO de enfermería + productos.
+  const administrationOptions = [
+    ...doctorOrderOptions.catalogOptions
+      .filter((option) => option.source === "treatment" || !option.requiresNursing)
+      .map((option) => ({
+        source: option.source as "service" | "treatment",
+        catalogItemId: option.catalogItemId,
+        label: option.label,
+        group: option.source === "treatment" ? "Tratamientos" : "Servicios",
+        unitPriceCents: option.unitPriceCents,
+        perUnitCapCents: option.perUnitCapCents
+      })),
+    ...doctorOrderOptions.productOptions.map((option) => ({
+      source: "product" as const,
+      inventoryItemId: option.inventoryItemId,
+      label: option.label,
+      group: "Productos",
+      unitPriceCents: option.unitPriceCents,
+      perUnitCapCents: option.perUnitCapCents
+    }))
+  ];
+  // Enfermería: estudios + servicios que se ejecutan en enfermería.
+  const nursingOptions = [
+    ...studyCatalogItems.map((study) => ({
+      id: study.id,
+      label: study.name,
+      referenceCents: study.basePriceCents,
+      capCents: study.ownMaxDiscountCents
+    })),
+    ...doctorOrderOptions.catalogOptions
+      .filter((option) => option.source === "service" && option.requiresNursing)
+      .map((option) => ({
+        id: option.catalogItemId,
+        label: option.label,
+        referenceCents: option.packagePriceCents ?? option.unitPriceCents,
+        capCents: option.perUnitCapCents
+      }))
+  ];
   const clinicalSnapshot = {
     motive: consultationMotive,
     primaryDiagnosis: primaryDiagnosis?.name ?? "",
@@ -811,99 +847,70 @@ export default async function ConsultationDetailPage({
           <AreaTimeControl state={areaTiming} compact />
         ) : null}
 
-        <Card className="max-sm:order-2">
-          <CardHeader
-            title="Pedido para Administración"
-            description="El médico arma el pedido (servicios, tratamientos y productos) con precio y descuento. No cobra: Administración lo confirma y cobra."
-            action={
-              doctorOrder ? (
-                <Chip
-                  tone={
-                    doctorOrder.status === "confirmed"
-                      ? "success"
-                      : doctorOrder.status === "submitted"
-                        ? "primary"
-                        : "neutral"
-                  }
-                  dot
-                >
-                  {doctorOrderStatusLabels[doctorOrder.status]}
-                </Chip>
-              ) : undefined
-            }
-          />
-          {canEditDoctorOrder ? (
-            <DoctorOrderBuilder
-              action={saveDoctorOrderAction}
-              visitId={visit.id}
-              catalogOptions={doctorOrderOptions.catalogOptions.map((option) => ({
-                source: option.source,
-                catalogItemId: option.catalogItemId,
-                label: option.label,
-                unitPriceCents: option.unitPriceCents,
-                perUnitCapCents: option.perUnitCapCents,
-                supportsSessions: option.supportsSessions,
-                sessionCount: option.sessionCount,
-                packagePriceCents: option.packagePriceCents,
-                sessionPriceCents: option.sessionPriceCents
-              }))}
-              productOptions={doctorOrderOptions.productOptions.map((option) => ({
-                inventoryItemId: option.inventoryItemId,
-                label: option.label,
-                unitPriceCents: option.unitPriceCents,
-                perUnitCapCents: option.perUnitCapCents
-              }))}
-              existingLines={(doctorOrder?.lines ?? []).map((line) => ({
-                source: line.source,
-                catalogItemId: line.catalogItemId,
-                inventoryItemId: line.inventoryItemId,
-                description: line.description,
-                unitPriceCents: line.unitPriceCents,
-                discountCents: line.discountCents,
-                quantity: line.quantity,
-                sessionCount: line.sessionCount,
-                pricingMode: line.pricingMode,
-                maxDiscountCents: line.maxDiscountCents,
-                notes: line.notes
-              }))}
-              indications={doctorOrder?.indications ?? ""}
-              canSubmit={doctorOrderCanSubmit}
+        {canWriteClinical ? (
+          <Card className="max-sm:order-2">
+            <CardHeader
+              title="Derivar al paciente"
+              description="Enfermería: estudios y servicios que se ejecutan ahí (pago previo). Administración: tratamientos, productos y consultas para cobrar. El médico no cobra."
             />
-          ) : doctorOrder && doctorOrder.lines.length > 0 ? (
-            <div className="grid gap-2">
-              {doctorOrder.lines.map((line) => (
-                <div
-                  key={line.id}
-                  className="rounded-[9px] border border-border px-3 py-2 text-sm"
-                >
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <span className="font-semibold text-text">{line.description}</span>
-                    <span className="tabular-nums text-text">
-                      {formatDoctorOrderMoney(doctorOrderLineTotalCents(line))}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted">
-                    {doctorOrderLineSourceLabels[line.source]} · {line.quantity} ×{" "}
-                    {formatDoctorOrderMoney(line.unitPriceCents)}
-                    {line.discountCents > 0
-                      ? ` · desc. ${formatDoctorOrderMoney(line.discountCents)}`
-                      : ""}
-                  </p>
-                  {line.notes ? <p className="mt-0.5 text-xs text-muted">{line.notes}</p> : null}
+            {canDerivePatient ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <PaidStudyOrderDialog
+                  visitId={visit.id}
+                  action={createPaidStudyOrderAction}
+                  studies={nursingOptions}
+                />
+                <AdministrationOrderDialog
+                  visitId={visit.id}
+                  action={saveDoctorOrderAction}
+                  options={administrationOptions}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-muted">
+                La visita ya no está activa para derivar.
+              </p>
+            )}
+
+            {doctorOrder && doctorOrder.lines.length > 0 ? (
+              <div className="mt-4 border-t border-border pt-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                    Pedido a Administración
+                  </span>
+                  <Chip
+                    tone={
+                      doctorOrder.status === "confirmed"
+                        ? "success"
+                        : doctorOrder.status === "submitted"
+                          ? "primary"
+                          : "neutral"
+                    }
+                    dot
+                  >
+                    {doctorOrderStatusLabels[doctorOrder.status]}
+                  </Chip>
                 </div>
-              ))}
-              {doctorOrder.indications ? (
-                <p className="rounded-[9px] bg-surface-soft px-3 py-2 text-sm text-muted">
-                  {doctorOrder.indications}
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-sm text-muted">
-              Todavía no se armó un pedido para esta visita.
-            </p>
-          )}
-        </Card>
+                <div className="grid gap-1.5">
+                  {doctorOrder.lines.map((line) => (
+                    <div
+                      key={line.id}
+                      className="flex flex-wrap justify-between gap-2 text-sm text-muted"
+                    >
+                      <span>
+                        {doctorOrderLineSourceLabels[line.source]} · {line.description} ×{" "}
+                        {line.quantity}
+                      </span>
+                      <span className="tabular-nums text-text">
+                        {formatDoctorOrderMoney(doctorOrderLineTotalCents(line))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </Card>
+        ) : null}
 
         <Card className="max-sm:order-2">
           <CardHeader
@@ -1110,15 +1117,6 @@ export default async function ConsultationDetailPage({
               description="Al terminar la consulta el paciente puede seguir a otra área o irse."
             />
             <div className="grid gap-2">
-              <PaidStudyOrderDialog
-                visitId={visit.id}
-                action={createPaidStudyOrderAction}
-                studies={studyCatalogItems.map((study) => ({
-                  id: study.id,
-                  label: study.name,
-                  referenceCents: study.basePriceCents
-                }))}
-              />
               {visit.clinicalConsultation?.status === "finalized" ? (
                 <ConfirmForm
                   action={applyVisitFlowAction}

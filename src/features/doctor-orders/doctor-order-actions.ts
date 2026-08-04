@@ -33,6 +33,8 @@ export async function saveDoctorOrderAction(formData: FormData) {
           visitId,
           intent: formData.get("intent") ?? "save",
           indications: formData.get("indications") ?? "",
+          chargeBase: formData.get("chargeBase") ?? "",
+          orderDiscount: formData.get("orderDiscount") ?? "0",
           lines: parseDoctorOrderLines(formData)
         });
         if (!parsed.success) redirect(`${consultaPath}?error=pedido-invalido`);
@@ -56,6 +58,10 @@ export async function saveDoctorOrderAction(formData: FormData) {
           visitId: parsed.data.visitId,
           doctorId: user.id,
           indications: parsed.data.indications,
+          chargeBaseCents: parsed.data.chargeBase
+            ? doctorOrderMoneyToCents(parsed.data.chargeBase)
+            : undefined,
+          orderDiscountCents: doctorOrderMoneyToCents(parsed.data.orderDiscount),
           lines,
           submit
         });

@@ -61,6 +61,12 @@ export const doctorOrderLineSchema = z
     }
   });
 
+const optionalMoney = z
+  .string()
+  .trim()
+  .transform((value) => (value.length > 0 ? value : undefined))
+  .pipe(moneyString.optional());
+
 export const doctorOrderSchema = z.object({
   visitId: z.string().min(1),
   intent: z.enum(["save", "submit"]).default("save"),
@@ -70,6 +76,10 @@ export const doctorOrderSchema = z.object({
     .max(700)
     .transform((value) => (value.length > 0 ? value : undefined))
     .optional(),
+  // Total editable definido por el médico (base antes de descuento).
+  chargeBase: optionalMoney,
+  // Descuento a nivel de orden (se valida contra el tope en el servidor).
+  orderDiscount: moneyString.default("0"),
   lines: z.array(doctorOrderLineSchema).max(50)
 });
 
