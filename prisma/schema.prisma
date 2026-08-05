@@ -1551,6 +1551,22 @@ model IndicationCatalogItem {
   @@index([usageCount])
 }
 
+/// Catálogo de diagnósticos frecuentes para la consulta. Igual que las indicaciones:
+/// se siembra con una lista mínima y crece con el uso (cada diagnóstico principal o
+/// secundario escrito/elegido al guardar suma a `usageCount`). `normalized`
+/// (minúsculas, espacios colapsados) evita duplicados.
+model DiagnosisCatalogItem {
+  id         String   @id @default(cuid())
+  text       String
+  normalized String   @unique
+  usageCount Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([usageCount])
+}
+
 model ClinicalEvolution {
   id        String        @id @default(cuid())
   visitId   String

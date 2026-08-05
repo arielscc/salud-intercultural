@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   assignConsultationVisit,
   createClinicalOrderRecord,
+  recordDiagnosisCatalogUsage,
   recordIndicationCatalogUsage,
   upsertClinicalConsultationRecord
 } from "@/modules/database/queries/clinical-care";
@@ -107,8 +108,12 @@ export async function saveClinicalConsultationAction(formData: FormData) {
           ...input,
           doctorId: user.id
         });
-        // El catálogo de indicaciones crece con el uso (best-effort).
+        // Los catálogos de indicaciones y diagnósticos crecen con el uso (best-effort).
         await recordIndicationCatalogUsage(input.indications);
+        await recordDiagnosisCatalogUsage([
+          input.primaryDiagnosis,
+          input.secondaryDiagnosis
+        ]);
         return auditedResult(consultation, {
           entityId: consultation.id,
           context: {

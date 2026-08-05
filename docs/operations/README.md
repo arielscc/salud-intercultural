@@ -58,6 +58,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 43. [Móvil y conectividad lenta](./mobile-slow-connectivity.md)
 44. [Integración segura Payload-SIGECO](./payload-sigeco-integration.md)
 45. [Operación multi-sucursal](./multi-branch-operations.md)
+46. [Guía reproducible del piloto completo con el personal](./staff-pilot.md)
 
 ## Flujo recomendado
 

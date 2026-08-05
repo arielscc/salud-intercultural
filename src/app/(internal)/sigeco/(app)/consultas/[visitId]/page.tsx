@@ -59,6 +59,7 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import {
   getClinicalVisitById,
+  getDiagnosisCatalog,
   getIndicationCatalog,
   getMedicationOptions,
   getPatientConsultationHistory,
@@ -67,6 +68,7 @@ import {
 } from "@/modules/database/queries/clinical-care";
 import { PrescriptionEditor } from "@/components/internal/PrescriptionEditor";
 import { IndicationField } from "@/components/internal/IndicationField";
+import { DiagnosisField } from "@/components/internal/DiagnosisField";
 import {
   getDoctorOrderByVisit,
   getDoctorOrderOptions
@@ -170,7 +172,8 @@ export default async function ConsultationDetailPage({
     studyCatalogItems,
     medicationOptions,
     currentPrescriptionItems,
-    indicationCatalog
+    indicationCatalog,
+    diagnosisCatalog
   ] =
     await Promise.all([
       getClinicalVisitById(visitId),
@@ -181,7 +184,8 @@ export default async function ConsultationDetailPage({
       getActiveStudyCatalogItems(),
       getMedicationOptions(),
       getVisitCurrentPrescriptionItems(visitId),
-      getIndicationCatalog()
+      getIndicationCatalog(),
+      getDiagnosisCatalog()
     ]);
 
   if (!visit) notFound();
@@ -746,18 +750,18 @@ export default async function ConsultationDetailPage({
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Diagnóstico principal">
-                    <input
-                      className={internalInputClassName}
+                    <DiagnosisField
                       name="primaryDiagnosis"
                       defaultValue={primaryDiagnosis?.name}
+                      catalog={diagnosisCatalog}
                       required
                     />
                   </Field>
                   <Field label="Diagnóstico secundario">
-                    <input
-                      className={internalInputClassName}
+                    <DiagnosisField
                       name="secondaryDiagnosis"
                       defaultValue={secondaryDiagnosis?.name}
+                      catalog={diagnosisCatalog}
                     />
                   </Field>
                 </div>

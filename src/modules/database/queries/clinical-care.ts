@@ -101,7 +101,7 @@ export type IndicationCatalogOption = {
 };
 
 /** Normaliza una indicación para deduplicar en el catálogo (minúsculas, sin dobles espacios). */
-function normalizeIndication(text: string): string {
+function normalizeCatalogText(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
@@ -131,7 +131,7 @@ export async function recordIndicationCatalogUsage(indications?: string | null):
   const seen = new Set<string>();
   const unique: string[] = [];
   for (const line of lines) {
-    const key = normalizeIndication(line);
+    const key = normalizeCatalogText(line);
     if (!key || seen.has(key)) continue;
     seen.add(key);
     unique.push(line);
@@ -140,10 +140,59 @@ export async function recordIndicationCatalogUsage(indications?: string | null):
 
   await withDatabaseError("recordIndicationCatalogUsage", async () => {
     for (const line of unique) {
-      const normalized = normalizeIndication(line);
+      const normalized = normalizeCatalogText(line);
       await prisma.indicationCatalogItem.upsert({
         where: { normalized },
         create: { text: line, normalized, usageCount: 1 },
+        update: { usageCount: { increment: 1 } }
+      });
+    }
+  });
+}
+
+export type DiagnosisCatalogOption = {
+  id: string;
+  text: string;
+};
+
+/** Catálogo de diagnósticos frecuentes para el buscador (más usados primero). */
+export async function getDiagnosisCatalog(): Promise<DiagnosisCatalogOption[]> {
+  return withDatabaseError("getDiagnosisCatalog", async () => {
+    return prisma.diagnosisCatalogItem.findMany({
+      where: { active: true },
+      select: { id: true, text: true },
+      orderBy: [{ usageCount: "desc" }, { text: "asc" }],
+      take: 300
+    });
+  });
+}
+
+/**
+ * Registra el uso de los diagnósticos de una consulta (principal y secundario):
+ * crea la entrada en el catálogo si es nueva o suma a su `usageCount`. Así el
+ * catálogo se siembra mínimo y crece con el uso. Best-effort.
+ */
+export async function recordDiagnosisCatalogUsage(
+  diagnoses: Array<string | null | undefined>
+): Promise<void> {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const raw of diagnoses) {
+    const text = raw?.trim();
+    if (!text) continue;
+    const key = normalizeCatalogText(text);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(text);
+  }
+  if (unique.length === 0) return;
+
+  await withDatabaseError("recordDiagnosisCatalogUsage", async () => {
+    for (const text of unique) {
+      const normalized = normalizeCatalogText(text);
+      await prisma.diagnosisCatalogItem.upsert({
+        where: { normalized },
+        create: { text, normalized, usageCount: 1 },
         update: { usageCount: { increment: 1 } }
       });
     }
