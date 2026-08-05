@@ -368,6 +368,112 @@ export async function autoAbandonExpiredNursingVisits(input: {
   });
 }
 
+/**
+ * Cierra como abandono ("no atendido") las visitas que Recepción derivó al médico
+ * pero que no entraron a la consulta dentro de su día de atención (00:00–23:59,
+ * hora de Bolivia): siguen en consulta, sin consulta clínica registrada, y su
+ * última derivación al médico ocurrió antes de hoy. Barrido perezoso al cargar la
+ * bandeja de Consultas; idempotente y tolerante a carreras. El actor es el sistema.
+ */
+export async function autoAbandonUnattendedConsultationVisits(input: {
+  branchCode?: string;
+  now?: Date;
+} = {}) {
+  return withDatabaseError("autoAbandonUnattendedConsultationVisits", async () => {
+    const now = input.now ?? new Date();
+    // Inicio del día boliviano actual: todo lo derivado antes de esto y aún sin
+    // atender cuenta como abandono del día anterior.
+    const { start: startOfToday } = dayRange(now);
+
+    const candidates = await prisma.visit.findMany({
+      where: {
+        branchCode: input.branchCode,
+        status: "in_consultation",
+        discontinuation: null,
+        // "No entró a la consulta": no hay consulta clínica registrada.
+        clinicalConsultation: { is: null }
+      },
+      select: {
+        id: true,
+        // Última vez que fue derivada al médico.
+        statusHistory: {
+          where: { toStatus: "in_consultation" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { createdAt: true }
+        },
+        checkedInAt: true
+      }
+    });
+
+    // Solo las cuya última derivación al médico fue antes de hoy.
+    const expired = candidates.filter((visit) => {
+      const derivedAt = visit.statusHistory[0]?.createdAt ?? visit.checkedInAt;
+      return derivedAt < startOfToday;
+    });
+
+    let abandoned = 0;
+    for (const { id: visitId } of expired) {
+      try {
+        await prisma.$transaction(
+          async (tx) => {
+            const visit = await tx.visit.findUniqueOrThrow({
+              where: { id: visitId },
+              include: {
+                discontinuation: { select: { id: true } },
+                clinicalConsultation: { select: { id: true } }
+              }
+            });
+            // Otra ejecución (o el médico) pudo cerrarla/atenderla ya.
+            if (
+              visit.status !== "in_consultation" ||
+              visit.discontinuation ||
+              visit.clinicalConsultation
+            ) {
+              return;
+            }
+
+            await tx.clinicalOrder.updateMany({
+              where: {
+                visitId: visit.id,
+                status: { in: ["pending", "acknowledged"] }
+              },
+              data: { status: "blocked" }
+            });
+
+            await updateVisitRouteStatusInTransaction(tx, {
+              visitId: visit.id,
+              status: "left_without_care",
+              area: "medico",
+              note: "Abandono automático: no entró a la consulta dentro de su día.",
+              workItemTitle: "Visita interrumpida",
+              workItemDescription: "Derivado al médico pero no atendido dentro del día."
+            });
+
+            await tx.visitDiscontinuation.create({
+              data: {
+                visitId: visit.id,
+                fromStatus: "in_consultation",
+                area: "medico",
+                reason: "no_show",
+                pendingTypes: ["consultation"],
+                note: "Abandono automático: derivado al médico pero no atendido dentro del día.",
+                recordedById: null
+              }
+            });
+            abandoned += 1;
+          },
+          { isolationLevel: "Serializable" }
+        );
+      } catch {
+        // Carrera con otra transacción que ya cerró la visita: se ignora.
+      }
+    }
+
+    return { abandoned };
+  });
+}
+
 export type VisitDiscontinuationReportFilters = {
   reason?: VisitDiscontinuationReason;
   occurredFrom?: Date;

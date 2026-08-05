@@ -13,6 +13,7 @@ export const visitDiscontinuationReasonLabels: Record<
   emergency: "Emergencia",
   missing_supply: "Falta de insumo",
   referral: "Derivación a otro lugar",
+  no_show: "No atendido (abandonó)",
   other: "Otro motivo"
 };
 

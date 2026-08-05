@@ -563,7 +563,7 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
         />
         {areaTiming?.area === "enfermeria" &&
         roleHasPermission(user.role, "area_time_write") ? (
-          <AreaTimeControl state={areaTiming} compact />
+          <AreaTimeControl state={areaTiming} compact hideStartAttention />
         ) : null}
         <Card className="max-sm:order-5">
           <CardHeader

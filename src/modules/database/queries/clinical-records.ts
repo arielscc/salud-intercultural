@@ -7,15 +7,20 @@ import {
 } from "@/features/clinical-records/policy";
 import { prisma, withDatabaseError } from "@/modules/database";
 
+export type PrescriptionItemRecordInput = {
+  inventoryItemId?: string | null;
+  medication: string;
+  dose?: string | null;
+  frequency?: string | null;
+  duration?: string | null;
+  observations?: string | null;
+};
+
 export type UpsertClinicalConsultationRecordInput = ClinicalSnapshot & {
   visitId: string;
   doctorId: string;
   expectedRevision: number;
-  prescriptionMedication?: string;
-  prescriptionDose?: string;
-  prescriptionFrequency?: string;
-  prescriptionDuration?: string;
-  prescriptionObservations?: string;
+  prescriptionItems?: PrescriptionItemRecordInput[];
   evolutionNote?: string;
 };
 
@@ -167,25 +172,31 @@ async function appendPrescriptionWhenChanged(
   input: UpsertClinicalConsultationRecordInput,
   patientId: string
 ) {
-  if (!input.prescriptionMedication) return;
+  const items = (input.prescriptionItems ?? []).filter((item) =>
+    normalize(item.medication)
+  );
+  if (items.length === 0) return;
 
   const latest = await tx.prescription.findFirst({
     where: { visitId: input.visitId },
     orderBy: { createdAt: "desc" },
-    include: { items: { take: 1, orderBy: { createdAt: "asc" } } }
+    include: { items: { orderBy: { createdAt: "asc" } } }
   });
-  const latestItem = latest?.items[0];
-  const unchanged =
-    normalize(latestItem?.medication) ===
-      normalize(input.prescriptionMedication) &&
-    normalize(latestItem?.dose) === normalize(input.prescriptionDose) &&
-    normalize(latestItem?.frequency) ===
-      normalize(input.prescriptionFrequency) &&
-    normalize(latestItem?.duration) ===
-      normalize(input.prescriptionDuration) &&
-    normalize(latestItem?.observations) ===
-      normalize(input.prescriptionObservations);
 
+  // Se crea una nueva versión solo si la receta cambió respecto a la última.
+  const unchanged =
+    latest != null &&
+    latest.items.length === items.length &&
+    latest.items.every((existing, index) => {
+      const next = items[index];
+      return (
+        normalize(existing.medication) === normalize(next.medication) &&
+        normalize(existing.dose) === normalize(next.dose) &&
+        normalize(existing.frequency) === normalize(next.frequency) &&
+        normalize(existing.duration) === normalize(next.duration) &&
+        normalize(existing.observations) === normalize(next.observations)
+      );
+    });
   if (unchanged) return;
 
   const prescription = await tx.prescription.create({
@@ -198,18 +209,19 @@ async function appendPrescriptionWhenChanged(
       correctionReason: latest
         ? "Actualización registrada antes del cierre de la consulta"
         : null,
-      notes: input.prescriptionObservations
+      notes: null
     }
   });
-  await tx.prescriptionItem.create({
-    data: {
+  await tx.prescriptionItem.createMany({
+    data: items.map((item) => ({
       prescriptionId: prescription.id,
-      medication: input.prescriptionMedication,
-      dose: input.prescriptionDose,
-      frequency: input.prescriptionFrequency,
-      duration: input.prescriptionDuration,
-      observations: input.prescriptionObservations
-    }
+      inventoryItemId: item.inventoryItemId ?? null,
+      medication: item.medication.trim(),
+      dose: normalize(item.dose),
+      frequency: normalize(item.frequency),
+      duration: normalize(item.duration),
+      observations: normalize(item.observations)
+    }))
   });
 }
 

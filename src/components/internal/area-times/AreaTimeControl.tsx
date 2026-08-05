@@ -28,11 +28,15 @@ export type AreaTimeControlState = {
 export function AreaTimeControl({
   state,
   now = new Date(),
-  compact = false
+  compact = false,
+  hideStartAttention = false
 }: {
   state: AreaTimeControlState;
   now?: Date;
   compact?: boolean;
+  // En áreas con "Atender a este paciente" (Consultas, Enfermería) el claim inicia
+  // la atención, así que se oculta el botón redundante "Iniciar atención".
+  hideStartAttention?: boolean;
 }) {
   const phaseElapsed = Math.max(
     0,
@@ -99,7 +103,7 @@ export function AreaTimeControl({
       ) : null}
 
       <div className="mt-3 grid gap-2">
-        {state.phase === "waiting" ? (
+        {state.phase === "waiting" && !hideStartAttention ? (
           <NoticeForm
             action={recordAreaTimeTransitionAction}
             notice="Atención iniciada"

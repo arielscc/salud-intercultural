@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  assignConsultationVisit,
   createClinicalOrderRecord,
+  recordIndicationCatalogUsage,
   upsertClinicalConsultationRecord
 } from "@/modules/database/queries/clinical-care";
+import { recordAreaTimeTransition } from "@/modules/database/queries/area-times";
 import {
   correctClinicalConsultation,
   finalizeClinicalConsultation,
@@ -38,6 +41,44 @@ function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
 }
 
+export async function assignConsultationVisitAction(formData: FormData) {
+  const visitId = String(formData.get("visitId") ?? "");
+  const release = String(formData.get("intent") ?? "") === "release";
+  await runAuditedAction(
+    {
+      permission: "clinical_write",
+      action: release ? "clinical.consultation.release" : "clinical.consultation.claim",
+      entityType: "visit",
+      entityId: visitId || undefined
+    },
+    async (user) => {
+      if (!visitId) redirect("/sigeco/consultas?error=invalid-claim");
+      const updated = await assignConsultationVisit({
+        visitId,
+        userId: user.id,
+        release
+      });
+      // Al tomar al paciente se inicia también el cronómetro de atención
+      // (best-effort: si ya está iniciado o la medición no aplica, se ignora).
+      if (!release) {
+        try {
+          await recordAreaTimeTransition({
+            data: { visitId, action: "start_attention" },
+            userId: user.id,
+            userRole: user.role
+          });
+        } catch {
+          // El reloj puede no estar en "espera" o la medición no aplica.
+        }
+      }
+      return auditedResult(updated, { entityId: visitId, context: { release } });
+    }
+  );
+
+  revalidatePath("/sigeco/consultas");
+  revalidatePath(`/sigeco/consultas/${visitId}`);
+}
+
 export async function saveClinicalConsultationAction(formData: FormData) {
   const visitId = String(formData.get("visitId") ?? "");
   try {
@@ -66,6 +107,8 @@ export async function saveClinicalConsultationAction(formData: FormData) {
           ...input,
           doctorId: user.id
         });
+        // El catálogo de indicaciones crece con el uso (best-effort).
+        await recordIndicationCatalogUsage(input.indications);
         return auditedResult(consultation, {
           entityId: consultation.id,
           context: {

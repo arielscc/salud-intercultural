@@ -287,6 +287,7 @@ enum VisitDiscontinuationReason {
   emergency
   missing_supply
   referral
+  no_show
   other
 }
 
@@ -741,6 +742,7 @@ model InternalUser {
   statusChanges                  LeadStatusHistory[]
   patientNotes                   PatientNote[]
   createdVisits                  Visit[]                         @relation("VisitCreatedBy")
+  attendedVisits                 Visit[]                         @relation("VisitAttendingUser")
   visitStatusChanges             VisitStatusHistory[]
   receptionCheckIns              ReceptionCheckIn[]
   createdWorkItems               VisitWorkItem[]         @relation("WorkItemCreatedBy")
@@ -1198,6 +1200,8 @@ model Visit {
   originCountry             String                        @default("No informado")
   originMatchesPatient      Boolean                       @default(true)
   createdById               String?
+  attendingUserId           String?
+  attendingAt               DateTime?
   checkedInAt               DateTime                      @default(now())
   completedAt               DateTime?
   cancelledAt               DateTime?
@@ -1206,6 +1210,7 @@ model Visit {
   patient                   Patient                       @relation(fields: [patientId], references: [id], onDelete: Restrict)
   branch                    ClinicBranch                  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   createdBy                 InternalUser?                 @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  attendingUser             InternalUser?                 @relation("VisitAttendingUser", fields: [attendingUserId], references: [id], onDelete: SetNull)
   checkIn                   ReceptionCheckIn?
   route                     PatientRoute?
   statusHistory             VisitStatusHistory[]
@@ -1243,6 +1248,7 @@ model Visit {
   @@index([originDepartment, originCity, checkedInAt])
   @@index([originCountry, checkedInAt])
   @@index([createdById])
+  @@index([attendingUserId])
   @@index([checkedInAt])
 }
 
@@ -1513,17 +1519,36 @@ model Prescription {
 }
 
 model PrescriptionItem {
-  id             String       @id @default(cuid())
-  prescriptionId String
-  medication     String
-  dose           String?
-  frequency      String?
-  duration       String?
-  observations   String?
-  createdAt      DateTime     @default(now())
-  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  id              String         @id @default(cuid())
+  prescriptionId  String
+  inventoryItemId String?
+  medication      String
+  dose            String?
+  frequency       String?
+  duration        String?
+  observations    String?
+  createdAt       DateTime       @default(now())
+  prescription    Prescription   @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
 
   @@index([prescriptionId])
+  @@index([inventoryItemId])
+}
+
+/// Catálogo de indicaciones frecuentes para la consulta. Se siembra con una lista
+/// mínima y crece con el uso: cada indicación escrita/seleccionada al guardar una
+/// consulta suma a `usageCount`. `normalized` (minúsculas, espacios colapsados)
+/// evita duplicados.
+model IndicationCatalogItem {
+  id         String   @id @default(cuid())
+  text       String
+  normalized String   @unique
+  usageCount Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([usageCount])
 }
 
 model ClinicalEvolution {
@@ -2557,6 +2582,7 @@ model InventoryItem {
   serviceComponents  ServiceCatalogComponent[]
   doctorOrderLines   DoctorOrderLine[]
   nursingApplications NursingApplication[]
+  prescriptionItems  PrescriptionItem[]
   movements          InventoryMovement[]
   adjustments        InventoryAdjustment[]
   alerts             InventoryAlert[]

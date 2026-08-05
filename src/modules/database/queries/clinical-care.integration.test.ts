@@ -92,10 +92,14 @@ describe("clinical care integration", () => {
       secondaryDiagnosis: "Diagnostico secundario",
       treatmentPlanText: "Plan de tratamiento",
       indications: "Indicaciones generales",
-      prescriptionMedication: "Suero ABC",
-      prescriptionDose: "1 unidad",
-      prescriptionFrequency: "Una vez",
-      prescriptionDuration: "Hoy",
+      prescriptionItems: [
+        {
+          medication: "Suero ABC",
+          dose: "1 unidad",
+          frequency: "Una vez",
+          duration: "Hoy"
+        }
+      ],
       evolutionNote: "Paciente estable"
     });
 

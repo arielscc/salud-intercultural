@@ -1,76 +1,83 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ChevronDown } from "lucide-react";
-import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/client";
+import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
+import { ClinicalConsultationCorrectionForm } from "@/components/internal/clinical-records/ClinicalConsultationCorrectionForm";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { Field, internalInputClassName } from "@/components/internal/Field";
-import { NoticeForm } from "@/components/internal/NoticeForm";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { PaidStudyOrderDialog } from "@/components/internal/PaidStudyOrderDialog";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { TreatmentProposalOutcomeForm } from "@/components/internal/treatment-proposals/TreatmentProposalOutcomeForm";
-import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
-import { ClinicalConsultationCorrectionForm } from "@/components/internal/clinical-records/ClinicalConsultationCorrectionForm";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
-import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { Chip } from "@/components/internal/ui/Chip";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
+import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
+import { getBranchContext } from "@/features/branches/context";
 import {
+  assignConsultationVisitAction,
   createClinicalOrderAction,
   createPaidStudyOrderAction,
   finalizeClinicalConsultationAction,
   saveClinicalConsultationAction
 } from "@/features/clinical-care/actions";
+import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
+import { clinicalRecordStatusLabels } from "@/features/clinical-records/labels";
+import { AdministrationOrderDialog } from "@/features/doctor-orders/components/AdministrationOrderDialog";
+import { saveDoctorOrderAction } from "@/features/doctor-orders/doctor-order-actions";
+import {
+  doctorOrderLineSourceLabels,
+  doctorOrderLineTotalCents,
+  doctorOrderStatusLabels,
+  formatDoctorOrderMoney
+} from "@/features/doctor-orders/labels";
+import { createDoctorVisitFollowUpAction } from "@/features/follow-ups/actions";
+import { followUpTypeLabels } from "@/features/follow-ups/labels";
 import {
   correctPrescriptionAction,
   generatePrescriptionDocumentAction
 } from "@/features/generated-documents/actions";
-import { clinicalOrderStatusLabels, clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
-import { clinicalRecordStatusLabels } from "@/features/clinical-records/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { symptomDurationUnitLabels, visitIntakeTypeLabels } from "@/features/reception/labels";
+import { formatMoney } from "@/features/sales/labels";
+import {
+  formatServiceSessionMoney,
+  serviceSessionPricingModeLabels
+} from "@/features/service-sessions/labels";
 import { studyStatusLabels, studyTypeLabels } from "@/features/studies/labels";
 import {
   treatmentProposalOutcomeReasonLabels,
   treatmentProposalOutcomeStatusLabels
 } from "@/features/treatment-proposals/labels";
-import { formatMoney } from "@/features/sales/labels";
-import { followUpTypeLabels } from "@/features/follow-ups/labels";
-import { createDoctorVisitFollowUpAction } from "@/features/follow-ups/actions";
-import { getVisitLatestSale } from "@/modules/database/queries/sales";
 import { applyVisitFlowAction } from "@/features/visits/actions";
-import { AdministrationOrderDialog } from "@/features/doctor-orders/components/AdministrationOrderDialog";
-import { saveDoctorOrderAction } from "@/features/doctor-orders/doctor-order-actions";
-import {
-  doctorOrderLineSourceLabels,
-  doctorOrderStatusLabels,
-  formatDoctorOrderMoney,
-  doctorOrderLineTotalCents
-} from "@/features/doctor-orders/labels";
-import { formatDateTime } from "@/lib/dates";
+import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/client";
+import { formatDate, formatDateTime } from "@/lib/dates";
+import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import {
   getClinicalVisitById,
-  getPatientConsultationHistory
+  getIndicationCatalog,
+  getMedicationOptions,
+  getPatientConsultationHistory,
+  getPatientPreviousPrescriptionItems,
+  getVisitCurrentPrescriptionItems
 } from "@/modules/database/queries/clinical-care";
-import {
-  formatServiceSessionMoney,
-  serviceSessionPricingModeLabels
-} from "@/features/service-sessions/labels";
+import { PrescriptionEditor } from "@/components/internal/PrescriptionEditor";
+import { IndicationField } from "@/components/internal/IndicationField";
 import {
   getDoctorOrderByVisit,
   getDoctorOrderOptions
 } from "@/modules/database/queries/doctor-orders";
+import { getVisitLatestSale } from "@/modules/database/queries/sales";
 import { getActiveStudyCatalogItems } from "@/modules/database/queries/service-catalog";
-import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import { getPrescriptionDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
-import { getBranchContext } from "@/features/branches/context";
+import { ChevronDown, HeartPulse, Paperclip } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
 // El suero se ordena por el pedido para Administración (pago previo, Tarea 4),
 // no por la derivación directa a Enfermería.
@@ -160,7 +167,10 @@ export default async function ConsultationDetailPage({
     areaTiming,
     doctorOrder,
     doctorOrderOptions,
-    studyCatalogItems
+    studyCatalogItems,
+    medicationOptions,
+    currentPrescriptionItems,
+    indicationCatalog
   ] =
     await Promise.all([
       getClinicalVisitById(visitId),
@@ -168,24 +178,25 @@ export default async function ConsultationDetailPage({
       getVisitAreaTimingState(visitId),
       getDoctorOrderByVisit(visitId),
       getDoctorOrderOptions(),
-      getActiveStudyCatalogItems()
+      getActiveStudyCatalogItems(),
+      getMedicationOptions(),
+      getVisitCurrentPrescriptionItems(visitId),
+      getIndicationCatalog()
     ]);
 
   if (!visit) notFound();
   if (visit.branchCode !== activeBranch.code) notFound();
 
   const consultationHistory = await getPatientConsultationHistory(visit.patient.id, visit.id);
+  const previousPrescriptionItems = await getPatientPreviousPrescriptionItems(
+    visit.patient.id,
+    visit.id
+  );
   const latestVisitSale = await getVisitLatestSale(visit.id);
 
   const primaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "primary");
   const secondaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "secondary");
   const prescriptionItem = visit.prescriptions[0]?.items[0];
-  // Precarga de "Receta rápida" desde la consulta anterior (Tarea 6); vacía en
-  // la primera visita. La receta de la visita actual siempre tiene prioridad.
-  const previousPrescriptionItem = consultationHistory
-    .map((entry) => entry.prescriptions[0]?.items[0])
-    .find((entry) => Boolean(entry));
-  const recetaDefault = prescriptionItem ?? previousPrescriptionItem;
   const age = calculatePatientAge(visit.patient.birthDate);
   const symptomDuration =
     visit.symptomDurationValue && visit.symptomDurationUnit
@@ -263,6 +274,27 @@ export default async function ConsultationDetailPage({
     indications: visit.clinicalConsultation?.indications
   };
 
+  // Todo lo que el paciente trae desde Enfermería en esta visita.
+  const hasNursingData =
+    visit.studies.length > 0 ||
+    visit.vitalSigns.length > 0 ||
+    visit.nursingApplications.length > 0 ||
+    visit.serviceSessionUses.length > 0 ||
+    visit.nursingNotes.length > 0;
+
+  // Fecha en la que se realizó lo de Enfermería (la actividad más reciente).
+  const nursingActivityDates = [
+    ...visit.studies.map((s) => s.performedAt ?? s.createdAt),
+    ...visit.vitalSigns.map((v) => v.recordedAt),
+    ...visit.nursingApplications.map((a) => a.appliedAt),
+    ...visit.serviceSessionUses.map((u) => u.appliedAt),
+    ...visit.nursingNotes.map((n) => n.createdAt)
+  ];
+  const nursingDate =
+    nursingActivityDates.length > 0
+      ? new Date(Math.max(...nursingActivityDates.map((d) => d.getTime())))
+      : null;
+
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
       <MobileBackLink href="/sigeco/consultas" label="Volver a Consulta" />
@@ -302,6 +334,33 @@ export default async function ConsultationDetailPage({
             </div>
             <VisitStatusPill status={visit.status} />
           </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[9px] border border-primary/25 bg-primary/5 p-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                Médico a cargo
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-text">
+                {visit.attendingUser?.name ?? visit.attendingUser?.email ?? "Sin asignar"}
+              </p>
+            </div>
+            {canWriteClinical ? (
+              visit.attendingUserId === user.id ? (
+                <NoticeForm action={assignConsultationVisitAction} notice="Dejaste de atender">
+                  <input type="hidden" name="visitId" value={visit.id} />
+                  <input type="hidden" name="intent" value="release" />
+                  <SubmitButton variant="outline">Dejar de atender</SubmitButton>
+                </NoticeForm>
+              ) : (
+                <NoticeForm action={assignConsultationVisitAction} notice="Estás atendiendo al paciente">
+                  <input type="hidden" name="visitId" value={visit.id} />
+                  <input type="hidden" name="intent" value="claim" />
+                  <SubmitButton>
+                    {visit.attendingUserId ? "Tomar el relevo" : "Atender a este paciente"}
+                  </SubmitButton>
+                </NoticeForm>
+              )
+            ) : null}
+          </div>
           <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
             <InfoRow label="Motivo de consulta" value={visit.reason} wide />
             <InfoRow label="Desde cuándo" value={symptomDuration} />
@@ -314,6 +373,235 @@ export default async function ConsultationDetailPage({
             <InfoRow label="Medicación actual" value={visit.patient.currentMedication} wide />
           </dl>
         </Card>
+
+        {hasNursingData ? (
+          <Card className="max-sm:order-1 border-primary/30 bg-primary/[0.03]">
+            <div className="flex items-start gap-2">
+              <HeartPulse className="mt-0.5 h-5 w-5 shrink-0 text-primary-dark" aria-hidden="true" />
+              <CardHeader
+                className="mb-0"
+                title="Estudios y procedimientos realizados en Enfermería"
+                description={
+                  nursingDate
+                    ? `Realizados el ${formatDate(nursingDate)}. Lo que el paciente trae desde Enfermería en esta visita.`
+                    : "Lo que el paciente trae desde Enfermería en esta visita."
+                }
+              />
+            </div>
+
+            <div className="mt-4 grid gap-4">
+              {visit.studies.length > 0 ? (
+                <CollapsibleSection
+                  title={`Estudios y resultados (${visit.studies.length})`}
+                >
+                  {visit.studies.map((study) => (
+                    <div key={study.id} className="rounded-[9px] border border-border bg-surface p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold text-text">{study.title}</span>
+                        <Chip
+                          tone={
+                            study.status === "performed"
+                              ? "success"
+                              : study.status === "cancelled"
+                                ? "error"
+                                : "neutral"
+                          }
+                          dot
+                        >
+                          {studyStatusLabels[study.status]}
+                        </Chip>
+                      </div>
+                      <p className="mt-0.5 text-xs tabular-nums text-muted">
+                        {studyTypeLabels[study.type]} ·{" "}
+                        {formatDateTime(study.performedAt ?? study.createdAt)}
+                        {study.recordedBy
+                          ? ` · ${study.recordedBy.name ?? study.recordedBy.email}`
+                          : ""}
+                      </p>
+                      {study.resultSummary ? (
+                        <p className="mt-2 text-sm text-text">{study.resultSummary}</p>
+                      ) : null}
+                      {study.findings ? (
+                        <p className="mt-1 text-sm text-muted">{study.findings}</p>
+                      ) : null}
+                      {study.attachments.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {study.attachments.map((file) => (
+                            <span
+                              key={file.id}
+                              className="inline-flex items-center gap-1 rounded-full bg-surface-soft px-2 py-0.5 text-[11px] text-muted"
+                            >
+                              <Paperclip className="h-3 w-3" aria-hidden="true" />
+                              {file.label ?? "Archivo"}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </CollapsibleSection>
+              ) : null}
+
+              {visit.vitalSigns.length > 0 ? (
+                <CollapsibleSection
+                  title={`Signos vitales (${visit.vitalSigns.length}${
+                    visit.vitalSigns.length > 1 ? " mediciones" : ""
+                  })`}
+                >
+                  {visit.vitalSigns.map((vs, index) => {
+                    // Más recientes primero: la medición más nueva lleva el número mayor.
+                    const measurementNumber = visit.vitalSigns.length - index;
+                    const values = [
+                      vs.temperatureCelsius != null
+                        ? ["Temperatura", `${vs.temperatureCelsius} °C`]
+                        : null,
+                      vs.systolicPressureMmHg != null || vs.diastolicPressureMmHg != null
+                        ? ["Presión arterial", `${vs.systolicPressureMmHg ?? "-"}/${vs.diastolicPressureMmHg ?? "-"} mmHg`]
+                        : null,
+                      vs.heartRateBpm != null
+                        ? ["Frecuencia cardíaca", `${vs.heartRateBpm} lpm`]
+                        : null,
+                      vs.respiratoryRateRpm != null
+                        ? ["Frecuencia respiratoria", `${vs.respiratoryRateRpm} rpm`]
+                        : null,
+                      vs.oxygenSaturation != null
+                        ? ["Saturación de oxígeno", `${vs.oxygenSaturation} %`]
+                        : null,
+                      vs.weightKg != null ? ["Peso", `${vs.weightKg} kg`] : null,
+                      vs.heightCm != null ? ["Talla", `${vs.heightCm} cm`] : null
+                    ].filter((item): item is [string, string] => item !== null);
+                    return (
+                      <div key={vs.id} className="overflow-hidden rounded-[9px] border border-border bg-surface">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-soft px-3 py-2">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold tabular-nums text-primary-dark">
+                              {measurementNumber}
+                            </span>
+                            <span className="text-xs font-semibold text-text">
+                              Medición {measurementNumber}
+                            </span>
+                          </span>
+                          <span className="text-xs font-medium tabular-nums text-muted">
+                            {formatDateTime(vs.recordedAt)}
+                          </span>
+                        </div>
+                        <div className="p-3">
+                          {values.length > 0 ? (
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm tabular-nums text-text">
+                              {values.map(([label, value]) => (
+                                <span key={label}>
+                                  <span className="text-muted">{label}</span> {value}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted">Sin valores registrados.</p>
+                          )}
+                          {vs.notes ? (
+                            <p className="mt-2 text-sm text-muted">{vs.notes}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CollapsibleSection>
+              ) : null}
+
+              {visit.nursingApplications.length > 0 ? (
+                <CollapsibleSection
+                  title={`Aplicaciones e inyectables (${visit.nursingApplications.length})`}
+                >
+                  {visit.nursingApplications.map((app) => {
+                    const productName = app.inventoryItem?.name ?? null;
+                    const title = productName ?? app.medication;
+                    const showMedicationDetail =
+                      Boolean(productName) && app.medication && app.medication !== productName;
+                    const details = [
+                      app.quantityUnits != null
+                        ? ["Cantidad", `${app.quantityUnits} u`]
+                        : null,
+                      app.quantity ? ["Dosis", app.quantity] : null,
+                      app.route ? ["Vía", app.route] : null
+                    ].filter((item): item is [string, string] => item !== null);
+                    return (
+                      <div key={app.id} className="rounded-[9px] border border-border bg-surface p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-semibold text-text">{title}</span>
+                          <span className="text-xs tabular-nums text-muted">
+                            {formatDateTime(app.appliedAt)}
+                          </span>
+                        </div>
+                        {showMedicationDetail ? (
+                          <p className="mt-0.5 text-sm text-muted">{app.medication}</p>
+                        ) : null}
+                        {details.length > 0 ? (
+                          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-text">
+                            {details.map(([label, value]) => (
+                              <span key={label}>
+                                <span className="text-muted">{label}</span> {value}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        {app.responsible ? (
+                          <p className="mt-1 text-xs text-muted">
+                            Aplicó: {app.responsible.name ?? app.responsible.email}
+                          </p>
+                        ) : null}
+                        {app.notes ? (
+                          <p className="mt-1 text-sm text-muted">{app.notes}</p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </CollapsibleSection>
+              ) : null}
+
+              {visit.serviceSessionUses.length > 0 ? (
+                <CollapsibleSection
+                  title={`Sueroterapia, ozonoterapia y sesiones (${visit.serviceSessionUses.length})`}
+                >
+                  {visit.serviceSessionUses.map((use) => (
+                    <div key={use.id} className="rounded-[9px] border border-border bg-surface p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold text-text">{use.package.serviceName}</span>
+                        <span className="text-xs tabular-nums text-muted">
+                          {formatDateTime(use.appliedAt)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-sm text-muted">
+                        Sesión {use.sessionNumber}
+                        {use.appliedBy
+                          ? ` · ${use.appliedBy.name ?? use.appliedBy.email}`
+                          : ""}
+                      </p>
+                      {use.notes ? (
+                        <p className="mt-1 text-sm text-muted">{use.notes}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </CollapsibleSection>
+              ) : null}
+
+              {visit.nursingNotes.length > 0 ? (
+                <section className="grid gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-dark">
+                    Notas de enfermería
+                  </p>
+                  {visit.nursingNotes.map((note) => (
+                    <div key={note.id} className="rounded-[9px] border border-border bg-surface p-3">
+                      <p className="whitespace-pre-line text-sm text-text">{note.note}</p>
+                      <p className="mt-1 text-xs tabular-nums text-muted">
+                        {formatDateTime(note.createdAt)}
+                        {note.user ? ` · ${note.user.name ?? note.user.email}` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </section>
+              ) : null}
+            </div>
+          </Card>
+        ) : null}
 
         {consultationHistory.length > 0 ? (
           <Card className="max-sm:order-2 p-0">
@@ -501,62 +789,12 @@ export default async function ConsultationDetailPage({
                   />
                 </Field>
                 <Field label="Indicaciones">
-                  <textarea
-                    className={`${internalInputClassName} min-h-28 py-3`}
+                  <IndicationField
                     name="indications"
-                    defaultValue={
-                      visit.clinicalConsultation?.indications ?? ""
-                    }
+                    defaultValue={visit.clinicalConsultation?.indications ?? ""}
+                    catalog={indicationCatalog}
                   />
                 </Field>
-
-                <CollapsibleSection
-                  title="Receta rápida"
-                  description={
-                    !prescriptionItem && previousPrescriptionItem
-                      ? "Precargada desde la consulta anterior; edítala si cambió."
-                      : "Abrir solo cuando se indique medicación."
-                  }
-                  defaultOpen={Boolean(recetaDefault)}
-                >
-                  <Field label="Medicamento">
-                    <input
-                      className={internalInputClassName}
-                      name="prescriptionMedication"
-                      defaultValue={recetaDefault?.medication}
-                    />
-                  </Field>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Dosis">
-                      <input
-                        className={internalInputClassName}
-                        name="prescriptionDose"
-                        defaultValue={recetaDefault?.dose ?? ""}
-                      />
-                    </Field>
-                    <Field label="Frecuencia">
-                      <input
-                        className={internalInputClassName}
-                        name="prescriptionFrequency"
-                        defaultValue={recetaDefault?.frequency ?? ""}
-                      />
-                    </Field>
-                    <Field label="Duración">
-                      <input
-                        className={internalInputClassName}
-                        name="prescriptionDuration"
-                        defaultValue={recetaDefault?.duration ?? ""}
-                      />
-                    </Field>
-                  </div>
-                  <Field label="Observaciones de receta">
-                    <input
-                      className={internalInputClassName}
-                      name="prescriptionObservations"
-                      defaultValue={recetaDefault?.observations ?? ""}
-                    />
-                  </Field>
-                </CollapsibleSection>
 
                 <CollapsibleSection
                   title="Evolución"
@@ -569,6 +807,18 @@ export default async function ConsultationDetailPage({
                       name="evolutionNote"
                     />
                   </Field>
+                </CollapsibleSection>
+
+                <CollapsibleSection
+                  title="Receta"
+                  description="Agrega los medicamentos indicados, cada uno con su frecuencia y duración."
+                  defaultOpen={currentPrescriptionItems.length > 0}
+                >
+                  <PrescriptionEditor
+                    medications={medicationOptions}
+                    previousItems={previousPrescriptionItems}
+                    initialItems={currentPrescriptionItems}
+                  />
                 </CollapsibleSection>
                 <FormActions className="justify-end">
                   <SubmitButton>Guardar borrador</SubmitButton>
@@ -844,7 +1094,7 @@ export default async function ConsultationDetailPage({
         />
         {areaTiming?.area === "medico" &&
         roleHasPermission(user.role, "area_time_write") ? (
-          <AreaTimeControl state={areaTiming} compact />
+          <AreaTimeControl state={areaTiming} compact hideStartAttention />
         ) : null}
 
         {canWriteClinical ? (
@@ -1220,69 +1470,6 @@ export default async function ConsultationDetailPage({
           </div>
         </Card>
 
-        <Card className="max-sm:order-6">
-          <CardHeader
-            title="Resultados de estudios y enfermería"
-            description="Resultados y actuaciones recibidos desde las áreas de apoyo clínico."
-          />
-          <div className="grid gap-0">
-            {visit.studies.map((study) => (
-              <TimelineItem
-                key={study.id}
-                title={study.title}
-                meta={`${studyTypeLabels[study.type]} · ${formatDateTime(study.performedAt ?? study.createdAt)}`}
-                aside={studyStatusLabels[study.status]}
-                body={
-                  study.resultSummary || study.findings ? (
-                    <>
-                      {study.resultSummary ? <span className="block">{study.resultSummary}</span> : null}
-                      {study.findings ? <span className="mt-1 block">{study.findings}</span> : null}
-                    </>
-                  ) : undefined
-                }
-              />
-            ))}
-            {visit.vitalSigns.slice(0, 3).map((item) => (
-              <TimelineItem
-                key={item.id}
-                title="Signos vitales"
-                body={
-                  <span className="tabular-nums">
-                    PA {item.systolicPressureMmHg ?? "-"}/{item.diastolicPressureMmHg ?? "-"} · Pulso{" "}
-                    {item.heartRateBpm ?? "-"} · Sat {item.oxygenSaturation ?? "-"}
-                  </span>
-                }
-              />
-            ))}
-            {visit.nursingApplications.slice(0, 3).map((item) => (
-              <TimelineItem
-                key={item.id}
-                title={item.medication}
-                meta={formatDateTime(item.appliedAt)}
-                body={`${item.quantity ?? "Sin cantidad"} · ${item.route ?? "Sin vía"}`}
-              />
-            ))}
-            {visit.nursingNotes.slice(0, 3).map((item) => (
-              <TimelineItem
-                key={item.id}
-                title="Nota de enfermería"
-                meta={`${formatDateTime(item.createdAt)}${
-                  item.user ? ` · ${item.user.name ?? item.user.email}` : ""
-                }`}
-                body={item.note}
-              />
-            ))}
-            {visit.studies.length +
-              visit.vitalSigns.length +
-              visit.nursingApplications.length +
-              visit.nursingNotes.length ===
-            0 ? (
-              <p className="py-2 text-sm text-muted">
-                Sin estudios ni registros de enfermería en esta visita.
-              </p>
-            ) : null}
-          </div>
-        </Card>
       </div>
     </div>
   );

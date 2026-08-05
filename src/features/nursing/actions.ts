@@ -18,6 +18,7 @@ import {
   returnCompletedStudiesToDoctor
 } from "@/modules/database/queries/paid-studies";
 import { findInsufficientStockError } from "@/modules/database/queries/inventory";
+import { recordAreaTimeTransition } from "@/modules/database/queries/area-times";
 import {
   createNursingApplicationSchema,
   createNursingNoteSchema,
@@ -51,6 +52,19 @@ export async function assignNursingWorkItemAction(formData: FormData) {
         userId: user.id,
         release
       });
+      // Al tomar al paciente se inicia también el cronómetro de atención
+      // (best-effort: si ya está iniciado o la medición no aplica, se ignora).
+      if (!release && updated?.visitId) {
+        try {
+          await recordAreaTimeTransition({
+            data: { visitId: updated.visitId, action: "start_attention" },
+            userId: user.id,
+            userRole: user.role
+          });
+        } catch {
+          // El reloj puede no estar en "espera" o la medición no aplica.
+        }
+      }
       return auditedResult(updated, { entityId: workItemId, context: { release } });
     }
   );
