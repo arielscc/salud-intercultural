@@ -7,6 +7,8 @@ import { internalInputClassName } from "@/components/internal/Field";
 export type DiagnosisCatalogOption = {
   id: string;
   text: string;
+  planTemplate?: string | null;
+  indicationsTemplate?: string | null;
 };
 
 /**
@@ -14,19 +16,27 @@ export type DiagnosisCatalogOption = {
  * 2+ letras y elige un diagnóstico del catálogo, o escribe uno nuevo libremente:
  * cada diagnóstico se guarda en el catálogo al guardar la consulta y crece con el
  * uso. Es un valor único (name="primaryDiagnosis"/"secondaryDiagnosis").
+ *
+ * Si el diagnóstico elegido tiene plantilla, avisa por `onApplyTemplate` para que
+ * el contenedor agregue (sin sobrescribir) el plan e indicaciones sugeridos.
  */
 export function DiagnosisField({
   name,
   defaultValue,
   catalog,
   required,
-  placeholder
+  placeholder,
+  onApplyTemplate
 }: {
   name: string;
   defaultValue?: string | null;
   catalog: DiagnosisCatalogOption[];
   required?: boolean;
   placeholder?: string;
+  onApplyTemplate?: (template: {
+    plan?: string | null;
+    indications?: string | null;
+  }) => void;
 }) {
   const [value, setValue] = useState(defaultValue ?? "");
   const [open, setOpen] = useState(false);
@@ -71,6 +81,15 @@ export function DiagnosisField({
                   event.preventDefault();
                   setValue(option.text);
                   setOpen(false);
+                  if (
+                    onApplyTemplate &&
+                    (option.planTemplate || option.indicationsTemplate)
+                  ) {
+                    onApplyTemplate({
+                      plan: option.planTemplate,
+                      indications: option.indicationsTemplate
+                    });
+                  }
                 }}
               >
                 <Stethoscope className="h-4 w-4 shrink-0 text-primary-dark" aria-hidden="true" />

@@ -32,6 +32,7 @@
     "seed:demo-consultas": "node --import dotenv/config --import tsx scripts/seed-demo-consultations.ts",
     "seed:indications": "node --import dotenv/config --import tsx scripts/seed-indication-catalog.ts",
     "seed:diagnoses": "node --import dotenv/config --import tsx scripts/seed-diagnosis-catalog.ts",
+    "seed:diagnosis-templates": "node --import dotenv/config --import tsx scripts/seed-diagnosis-templates.ts",
     "db:studio": "prisma studio",
     "payload": "payload",
     "payload:seed": "node --import tsx scripts/seed-payload.ts",

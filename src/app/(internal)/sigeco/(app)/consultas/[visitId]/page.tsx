@@ -67,8 +67,7 @@ import {
   getVisitCurrentPrescriptionItems
 } from "@/modules/database/queries/clinical-care";
 import { PrescriptionEditor } from "@/components/internal/PrescriptionEditor";
-import { IndicationField } from "@/components/internal/IndicationField";
-import { DiagnosisField } from "@/components/internal/DiagnosisField";
+import { ClinicalConsultationFields } from "@/components/internal/ClinicalConsultationFields";
 import {
   getDoctorOrderByVisit,
   getDoctorOrderOptions
@@ -748,57 +747,18 @@ export default async function ConsultationDetailPage({
                   name="motive"
                   value={consultationMotive}
                 />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Diagnóstico principal">
-                    <DiagnosisField
-                      name="primaryDiagnosis"
-                      defaultValue={primaryDiagnosis?.name}
-                      catalog={diagnosisCatalog}
-                      required
-                    />
-                  </Field>
-                  <Field label="Diagnóstico secundario">
-                    <DiagnosisField
-                      name="secondaryDiagnosis"
-                      defaultValue={secondaryDiagnosis?.name}
-                      catalog={diagnosisCatalog}
-                    />
-                  </Field>
-                </div>
-                <Field label="Hallazgos">
-                  <textarea
-                    className={`${internalInputClassName} min-h-24 py-3`}
-                    name="findings"
-                    defaultValue={
-                      visit.clinicalConsultation?.findings ?? ""
-                    }
-                  />
-                </Field>
-                <Field label="Observaciones">
-                  <textarea
-                    className={`${internalInputClassName} min-h-24 py-3`}
-                    name="observations"
-                    defaultValue={
-                      visit.clinicalConsultation?.observations ?? ""
-                    }
-                  />
-                </Field>
-                <Field label="Plan de tratamiento">
-                  <textarea
-                    className={`${internalInputClassName} min-h-28 py-3`}
-                    name="treatmentPlanText"
-                    defaultValue={
-                      visit.clinicalConsultation?.treatmentPlanText ?? ""
-                    }
-                  />
-                </Field>
-                <Field label="Indicaciones">
-                  <IndicationField
-                    name="indications"
-                    defaultValue={visit.clinicalConsultation?.indications ?? ""}
-                    catalog={indicationCatalog}
-                  />
-                </Field>
+                <ClinicalConsultationFields
+                  diagnosisCatalog={diagnosisCatalog}
+                  indicationCatalog={indicationCatalog}
+                  defaults={{
+                    primaryDiagnosis: primaryDiagnosis?.name,
+                    secondaryDiagnosis: secondaryDiagnosis?.name,
+                    findings: visit.clinicalConsultation?.findings,
+                    observations: visit.clinicalConsultation?.observations,
+                    treatmentPlanText: visit.clinicalConsultation?.treatmentPlanText,
+                    indications: visit.clinicalConsultation?.indications
+                  }}
+                />
 
                 <CollapsibleSection
                   title="Evolución"

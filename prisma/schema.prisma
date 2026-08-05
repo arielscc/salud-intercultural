@@ -1556,13 +1556,18 @@ model IndicationCatalogItem {
 /// secundario escrito/elegido al guardar suma a `usageCount`). `normalized`
 /// (minúsculas, espacios colapsados) evita duplicados.
 model DiagnosisCatalogItem {
-  id         String   @id @default(cuid())
-  text       String
-  normalized String   @unique
-  usageCount Int      @default(0)
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  text               String
+  normalized         String   @unique
+  usageCount         Int      @default(0)
+  active             Boolean  @default(true)
+  // Plantilla opcional: al elegir este diagnóstico se agrega (sin sobrescribir) el
+  // plan e indicaciones sugeridos, que el médico puede editar. Las indicaciones van
+  // una por línea.
+  planTemplate       String?
+  indicationsTemplate String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([usageCount])
 }

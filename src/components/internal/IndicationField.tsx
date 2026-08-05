@@ -15,17 +15,22 @@ export type IndicationCatalogOption = {
  * que se agrega como una línea. También puede escribir libremente: cada indicación
  * nueva se guarda en el catálogo al guardar la consulta. El textarea acumula una
  * indicación por línea y es lo que viaja al server (name="indications").
+ *
+ * Es controlado por el contenedor (value/onValueChange) para que las plantillas por
+ * diagnóstico puedan agregarle líneas.
  */
 export function IndicationField({
   name,
-  defaultValue,
+  value,
+  onValueChange,
   catalog
 }: {
   name: string;
-  defaultValue?: string | null;
+  value: string;
+  onValueChange: (value: string) => void;
   catalog: IndicationCatalogOption[];
 }) {
-  const [value, setValue] = useState(defaultValue ?? "");
+  const setValue = onValueChange;
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -52,10 +57,8 @@ export function IndicationField({
   function appendLine(text: string) {
     const clean = text.trim();
     if (!clean) return;
-    setValue((current) => {
-      const base = current.replace(/\s+$/, "");
-      return base ? `${base}\n${clean}` : clean;
-    });
+    const base = value.replace(/\s+$/, "");
+    setValue(base ? `${base}\n${clean}` : clean);
     setQuery("");
     setOpen(false);
     textareaRef.current?.focus();

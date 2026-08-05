@@ -153,6 +153,8 @@ export async function recordIndicationCatalogUsage(indications?: string | null):
 export type DiagnosisCatalogOption = {
   id: string;
   text: string;
+  planTemplate: string | null;
+  indicationsTemplate: string | null;
 };
 
 /** Catálogo de diagnósticos frecuentes para el buscador (más usados primero). */
@@ -160,7 +162,7 @@ export async function getDiagnosisCatalog(): Promise<DiagnosisCatalogOption[]> {
   return withDatabaseError("getDiagnosisCatalog", async () => {
     return prisma.diagnosisCatalogItem.findMany({
       where: { active: true },
-      select: { id: true, text: true },
+      select: { id: true, text: true, planTemplate: true, indicationsTemplate: true },
       orderBy: [{ usageCount: "desc" }, { text: "asc" }],
       take: 300
     });
