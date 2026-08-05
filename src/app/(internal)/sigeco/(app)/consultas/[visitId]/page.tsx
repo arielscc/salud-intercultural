@@ -58,6 +58,7 @@ import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/cli
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import {
+  getClinicalNoteCatalogs,
   getClinicalVisitById,
   getDiagnosisCatalog,
   getIndicationCatalog,
@@ -172,7 +173,8 @@ export default async function ConsultationDetailPage({
     medicationOptions,
     currentPrescriptionItems,
     indicationCatalog,
-    diagnosisCatalog
+    diagnosisCatalog,
+    clinicalNoteCatalogs
   ] =
     await Promise.all([
       getClinicalVisitById(visitId),
@@ -184,7 +186,8 @@ export default async function ConsultationDetailPage({
       getMedicationOptions(),
       getVisitCurrentPrescriptionItems(visitId),
       getIndicationCatalog(),
-      getDiagnosisCatalog()
+      getDiagnosisCatalog(),
+      getClinicalNoteCatalogs()
     ]);
 
   if (!visit) notFound();
@@ -750,6 +753,8 @@ export default async function ConsultationDetailPage({
                 <ClinicalConsultationFields
                   diagnosisCatalog={diagnosisCatalog}
                   indicationCatalog={indicationCatalog}
+                  findingCatalog={clinicalNoteCatalogs.findings}
+                  observationCatalog={clinicalNoteCatalogs.observations}
                   defaults={{
                     primaryDiagnosis: primaryDiagnosis?.name,
                     secondaryDiagnosis: secondaryDiagnosis?.name,

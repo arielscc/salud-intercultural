@@ -10,6 +10,10 @@ import {
   IndicationField,
   type IndicationCatalogOption
 } from "@/components/internal/IndicationField";
+import {
+  CatalogLinesField,
+  type CatalogOption
+} from "@/components/internal/CatalogLinesField";
 
 type Defaults = {
   primaryDiagnosis?: string | null;
@@ -55,14 +59,20 @@ function appendIndicationTemplate(current: string, template: string): string {
 export function ClinicalConsultationFields({
   diagnosisCatalog,
   indicationCatalog,
+  findingCatalog,
+  observationCatalog,
   defaults
 }: {
   diagnosisCatalog: DiagnosisCatalogOption[];
   indicationCatalog: IndicationCatalogOption[];
+  findingCatalog: CatalogOption[];
+  observationCatalog: CatalogOption[];
   defaults: Defaults;
 }) {
   const [plan, setPlan] = useState(defaults.treatmentPlanText ?? "");
   const [indications, setIndications] = useState(defaults.indications ?? "");
+  const [findings, setFindings] = useState(defaults.findings ?? "");
+  const [observations, setObservations] = useState(defaults.observations ?? "");
   const [detailsOpen, setDetailsOpen] = useState(
     Boolean(defaults.findings?.trim() || defaults.observations?.trim())
   );
@@ -128,17 +138,27 @@ export function ClinicalConsultationFields({
         </button>
         <div className={detailsOpen ? "grid gap-4 border-t border-border p-3.5" : "hidden"}>
           <Field label="Hallazgos">
-            <textarea
-              className={`${internalInputClassName} min-h-24 py-3`}
+            <CatalogLinesField
               name="findings"
-              defaultValue={defaults.findings ?? ""}
+              value={findings}
+              onValueChange={setFindings}
+              catalog={findingCatalog}
+              itemNoun="hallazgo"
+              searchPlaceholder="Busca un hallazgo frecuente o escribe uno nuevo"
+              textareaPlaceholder="Un hallazgo por línea. Puedes editarlos libremente."
+              hint="Cada hallazgo se guarda en el catálogo para reutilizarlo después."
             />
           </Field>
           <Field label="Observaciones">
-            <textarea
-              className={`${internalInputClassName} min-h-24 py-3`}
+            <CatalogLinesField
               name="observations"
-              defaultValue={defaults.observations ?? ""}
+              value={observations}
+              onValueChange={setObservations}
+              catalog={observationCatalog}
+              itemNoun="observación"
+              searchPlaceholder="Busca una observación frecuente o escribe una nueva"
+              textareaPlaceholder="Una observación por línea. Puedes editarlas libremente."
+              hint="Cada observación se guarda en el catálogo para reutilizarla después."
             />
           </Field>
         </div>

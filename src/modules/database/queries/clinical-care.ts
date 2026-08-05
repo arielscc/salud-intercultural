@@ -201,6 +201,66 @@ export async function recordDiagnosisCatalogUsage(
   });
 }
 
+export type ClinicalNoteCatalogOption = {
+  id: string;
+  text: string;
+};
+
+/** Catálogos de hallazgos y observaciones frecuentes (más usados primero). */
+export async function getClinicalNoteCatalogs(): Promise<{
+  findings: ClinicalNoteCatalogOption[];
+  observations: ClinicalNoteCatalogOption[];
+}> {
+  return withDatabaseError("getClinicalNoteCatalogs", async () => {
+    const items = await prisma.clinicalNoteCatalogItem.findMany({
+      where: { active: true },
+      select: { id: true, text: true, field: true },
+      orderBy: [{ usageCount: "desc" }, { text: "asc" }],
+      take: 600
+    });
+    return {
+      findings: items
+        .filter((item) => item.field === "finding")
+        .map(({ id, text }) => ({ id, text })),
+      observations: items
+        .filter((item) => item.field === "observation")
+        .map(({ id, text }) => ({ id, text }))
+    };
+  });
+}
+
+/**
+ * Registra el uso de hallazgos u observaciones de una consulta: por cada línea,
+ * crea la entrada en el catálogo del campo indicado (si es nueva) o suma a su
+ * `usageCount`. Best-effort.
+ */
+export async function recordClinicalNoteCatalogUsage(
+  field: "finding" | "observation",
+  text?: string | null
+): Promise<void> {
+  if (!text) return;
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const line of text.split("\n").map((value) => value.trim())) {
+    const key = normalizeCatalogText(line);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(line);
+  }
+  if (unique.length === 0) return;
+
+  await withDatabaseError("recordClinicalNoteCatalogUsage", async () => {
+    for (const line of unique) {
+      const normalized = normalizeCatalogText(line);
+      await prisma.clinicalNoteCatalogItem.upsert({
+        where: { field_normalized: { field, normalized } },
+        create: { field, text: line, normalized, usageCount: 1 },
+        update: { usageCount: { increment: 1 } }
+      });
+    }
+  });
+}
+
 export async function getConsultationVisits(
   input: PaginationInput & { branchCode?: string } = {}
 ) {

@@ -1572,6 +1572,29 @@ model DiagnosisCatalogItem {
   @@index([usageCount])
 }
 
+enum ClinicalNoteCatalogField {
+  finding
+  observation
+}
+
+/// Catálogo de hallazgos y observaciones frecuentes para la consulta. Una sola tabla
+/// con discriminador `field` (hallazgo/observación). Igual que los demás catálogos:
+/// se siembra mínimo y crece con el uso (cada línea escrita/elegida al guardar suma a
+/// `usageCount`). `normalized` es único por `field`.
+model ClinicalNoteCatalogItem {
+  id         String                   @id @default(cuid())
+  field      ClinicalNoteCatalogField
+  text       String
+  normalized String
+  usageCount Int                      @default(0)
+  active     Boolean                  @default(true)
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+
+  @@unique([field, normalized])
+  @@index([field, usageCount])
+}
+
 model ClinicalEvolution {
   id        String        @id @default(cuid())
   visitId   String
