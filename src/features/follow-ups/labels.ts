@@ -9,6 +9,7 @@ import type {
 
 export const followUpStatusLabels: Record<FollowUpStatus, string> = {
   pending: "Pendiente",
+  awaiting_payment: "En espera de pago",
   done: "Realizado",
   improved: "Mejoró",
   not_improved: "No mejoró",

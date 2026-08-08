@@ -121,6 +121,11 @@ class Writer {
     this.y -= 17;
   }
 
+  gap(height: number) {
+    this.ensure(height);
+    this.y -= height;
+  }
+
   rule(gap = 14) {
     this.ensure(gap + 1);
     this.page.drawLine({
@@ -192,18 +197,27 @@ function drawPrescription(
   });
   writer.rule(22);
   writer.line(
-    `${snapshot.professional.professionalTitle} ${snapshot.professional.displayName}`,
+    [snapshot.professional.professionalTitle, snapshot.professional.displayName]
+      .filter(Boolean)
+      .join(" "),
     { size: 11, bold: true, gap: 2 }
   );
-  writer.line(`Especialidad: ${snapshot.professional.specialty}`, { size: 9 });
-  writer.line(
-    `Registro Ministerio de Salud: ${snapshot.professional.ministryRegistration}`,
-    { size: 9 }
-  );
-  writer.line(
-    `Registro Colegio Medico: ${snapshot.professional.medicalCollegeRegistration}`,
-    { size: 9, gap: 28 }
-  );
+  if (snapshot.professional.specialty) {
+    writer.line(`Especialidad: ${snapshot.professional.specialty}`, { size: 9 });
+  }
+  if (snapshot.professional.ministryRegistration) {
+    writer.line(
+      `Registro Ministerio de Salud: ${snapshot.professional.ministryRegistration}`,
+      { size: 9 }
+    );
+  }
+  if (snapshot.professional.medicalCollegeRegistration) {
+    writer.line(
+      `Registro Colegio Medico: ${snapshot.professional.medicalCollegeRegistration}`,
+      { size: 9 }
+    );
+  }
+  writer.gap(28);
   writer.line("Firma y sello del profesional", {
     size: 9,
     color: MUTED,

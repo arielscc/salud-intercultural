@@ -1,4 +1,4 @@
-import type { ClinicalOrderType, PatientRouteArea } from "@/generated/prisma/client";
+import type { ClinicalOrderType, PatientRouteArea, Prisma } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 import { dayRange } from "@/lib/dates";
@@ -15,17 +15,35 @@ export type MedicationOption = {
   currentStock: number;
 };
 
+// Categorías de inventario que NO son medicamentos recetables (insumos, descartables).
+// Se excluyen del buscador de receta; el resto de lo vendible se considera medicina.
+const NON_MEDICATION_CATEGORIES = new Set(["insumos", "descartables"]);
+
+function normalizeCategory(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
 /**
- * Medicamentos disponibles para el buscador de receta: ítems de inventario cuya
- * categoría contiene "medicament", activos. Incluye el stock para mostrarlo.
+ * Medicamentos disponibles para el buscador de receta: ítems de inventario vendibles
+ * al paciente (usage sale/both), activos, excluyendo insumos y descartables. Incluye
+ * el stock para mostrarlo. El inventario no tiene una categoría única "medicamentos"
+ * (usa categorías finas como Antibióticos, Analgésicos, etc.), así que el criterio es
+ * por descarte de lo que claramente no es recetable.
  */
 export async function getMedicationOptions(): Promise<MedicationOption[]> {
   return withDatabaseError("getMedicationOptions", async () => {
-    return prisma.inventoryItem.findMany({
-      where: { active: true, category: { contains: "medicament", mode: "insensitive" } },
-      select: { id: true, name: true, currentStock: true },
+    const items = await prisma.inventoryItem.findMany({
+      where: { active: true, usage: { in: ["sale", "both"] } },
+      select: { id: true, name: true, currentStock: true, category: true },
       orderBy: { name: "asc" }
     });
+    return items
+      .filter((item) => !NON_MEDICATION_CATEGORIES.has(normalizeCategory(item.category)))
+      .map(({ id, name, currentStock }) => ({ id, name, currentStock }));
   });
 }
 
@@ -147,6 +165,13 @@ export async function recordIndicationCatalogUsage(indications?: string | null):
         update: { usageCount: { increment: 1 } }
       });
     }
+  });
+}
+
+/** Elimina una indicación del catálogo (borrado definitivo). */
+export async function deleteIndicationCatalogItem(id: string): Promise<void> {
+  await withDatabaseError("deleteIndicationCatalogItem", async () => {
+    await prisma.indicationCatalogItem.deleteMany({ where: { id } });
   });
 }
 
@@ -497,38 +522,45 @@ export async function getClinicalVisitById(visitId: string) {
  */
 export async function getPatientConsultationHistory(patientId: string, excludeVisitId: string) {
   return withDatabaseError("getPatientConsultationHistory", async () => {
-    return prisma.visit.findMany({
-      where: {
-        patientId,
-        id: { not: excludeVisitId },
-        OR: [
-          { clinicalConsultation: { isNot: null } },
-          { sales: { some: {} } },
-          { serviceSessionPackages: { some: {} } }
-        ]
-      },
-      include: {
-        clinicalConsultation: {
-          include: {
-            diagnoses: { orderBy: [{ kind: "asc" }, { createdAt: "asc" }] }
+    const where = {
+      patientId,
+      id: { not: excludeVisitId },
+      OR: [
+        { clinicalConsultation: { isNot: null } },
+        { sales: { some: {} } },
+        { serviceSessionPackages: { some: {} } }
+      ]
+    } satisfies Prisma.VisitWhereInput;
+    // El conteo total permite numerar las visitas ("1ra", "2da") aunque el
+    // listado se corte en las 20 más recientes.
+    const [visits, totalCount] = await Promise.all([
+      prisma.visit.findMany({
+        where,
+        include: {
+          clinicalConsultation: {
+            include: {
+              diagnoses: { orderBy: [{ kind: "asc" }, { createdAt: "asc" }] }
+            }
+          },
+          prescriptions: {
+            orderBy: [{ version: "desc" }, { createdAt: "desc" }],
+            include: { items: { orderBy: { createdAt: "asc" } } },
+            take: 1
+          },
+          sales: {
+            include: { items: { orderBy: { createdAt: "asc" } } },
+            orderBy: { createdAt: "desc" }
+          },
+          serviceSessionPackages: {
+            orderBy: { createdAt: "desc" }
           }
         },
-        prescriptions: {
-          orderBy: [{ version: "desc" }, { createdAt: "desc" }],
-          include: { items: true },
-          take: 1
-        },
-        sales: {
-          include: { items: true },
-          orderBy: { createdAt: "desc" }
-        },
-        serviceSessionPackages: {
-          orderBy: { createdAt: "desc" }
-        }
-      },
-      orderBy: [{ checkedInAt: "desc" }, { createdAt: "desc" }],
-      take: 20
-    });
+        orderBy: [{ checkedInAt: "desc" }, { createdAt: "desc" }],
+        take: 20
+      }),
+      prisma.visit.count({ where })
+    ]);
+    return { visits, totalCount };
   });
 }
 

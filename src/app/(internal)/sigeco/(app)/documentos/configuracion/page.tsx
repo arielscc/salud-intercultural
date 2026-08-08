@@ -1,4 +1,5 @@
 import { Field, internalInputClassName } from "@/components/internal/Field";
+import { NoticeForm } from "@/components/internal/NoticeForm";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -10,7 +11,7 @@ import { requirePermission } from "@/modules/permissions";
 export default async function DocumentConfigurationPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; aviso?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   await requirePermission("documents_configure");
   const query = await searchParams;
@@ -26,11 +27,6 @@ export default async function DocumentConfigurationPage({
       {query.error ? (
         <div className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
           Revisa todos los datos profesionales obligatorios.
-        </div>
-      ) : null}
-      {query.aviso === "perfil-guardado" ? (
-        <div className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
-          Identidad profesional actualizada.
         </div>
       ) : null}
 
@@ -56,7 +52,11 @@ export default async function DocumentConfigurationPage({
                   </Chip>
                 }
               />
-              <form action={configureProfessionalProfileAction} className="grid gap-3">
+              <NoticeForm
+                action={configureProfessionalProfileAction}
+                notice="Identidad profesional actualizada"
+                className="grid gap-3"
+              >
                 <input type="hidden" name="userId" value={doctor.id} />
                 <Field label="Nombre que aparecerá">
                   <input
@@ -66,39 +66,12 @@ export default async function DocumentConfigurationPage({
                     required
                   />
                 </Field>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Título profesional">
-                    <input
-                      className={internalInputClassName}
-                      name="professionalTitle"
-                      defaultValue={profile?.professionalTitle ?? "Dr."}
-                      placeholder="Dr. / Dra."
-                      required
-                    />
-                  </Field>
-                  <Field label="Especialidad">
-                    <input
-                      className={internalInputClassName}
-                      name="specialty"
-                      defaultValue={profile?.specialty ?? ""}
-                      required
-                    />
-                  </Field>
-                </div>
-                <Field label="Registro del Ministerio de Salud">
+                <Field label="Título profesional">
                   <input
                     className={internalInputClassName}
-                    name="ministryRegistration"
-                    defaultValue={profile?.ministryRegistration ?? ""}
-                    required
-                  />
-                </Field>
-                <Field label="Registro del Colegio Médico">
-                  <input
-                    className={internalInputClassName}
-                    name="medicalCollegeRegistration"
-                    defaultValue={profile?.medicalCollegeRegistration ?? ""}
-                    required
+                    name="professionalTitle"
+                    defaultValue={profile?.professionalTitle ?? "Medico Tradicional"}
+                    placeholder="Medico Tradicional"
                   />
                 </Field>
                 <label className="flex min-h-11 items-center gap-3 rounded-[9px] border border-border px-3 text-sm text-text">
@@ -113,7 +86,7 @@ export default async function DocumentConfigurationPage({
                 <SubmitButton className="w-full sm:w-auto">
                   Guardar identidad
                 </SubmitButton>
-              </form>
+              </NoticeForm>
             </Card>
           );
         })}

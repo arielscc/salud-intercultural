@@ -26,6 +26,12 @@ export async function GET(
   if (!document) {
     return NextResponse.json({ error: "Documento no encontrado." }, { status: 404 });
   }
+  if (document.annulledAt) {
+    return NextResponse.json(
+      { error: "Este documento fue anulado y ya no puede emitirse." },
+      { status: 410 }
+    );
+  }
   const canReadDocument =
     document.kind === "prescription"
       ? roleHasPermission(user.role, "clinical_read")
@@ -73,7 +79,10 @@ export async function GET(
         "Content-Disposition": `${disposition}; filename="${downloadName(document.documentNumber)}"`,
         "Cache-Control": "private, no-store, max-age=0",
         "X-Content-Type-Options": "nosniff",
-        "Content-Security-Policy": "default-src 'none'; sandbox"
+        // Sin el token `sandbox`: con él, el visor de PDF del navegador (PDFium)
+        // queda bloqueado y el iframe se ve en blanco. Se mantiene el bloqueo de
+        // subrecursos y se limita el embebido a nuestro propio origen.
+        "Content-Security-Policy": "default-src 'none'; frame-ancestors 'self'"
       }
     });
   } catch {

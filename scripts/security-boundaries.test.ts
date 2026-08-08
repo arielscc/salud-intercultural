@@ -183,6 +183,8 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   configureProfessionalProfileAction: "documents_configure",
   confirmDoctorOrderSaleAction: "sales_write",
   cancelFeedbackRequestAction: "feedback_manage",
+  annulPrescriptionDocumentAction: "clinical_correct",
+  restorePrescriptionDocumentAction: "clinical_correct",
   correctClinicalConsultationAction: "clinical_correct",
   correctPrescriptionAction: "clinical_correct",
   createClinicalOrderAction: "clinical_write",

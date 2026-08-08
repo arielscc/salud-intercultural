@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { ListPlus, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ListPlus, Plus, X } from "lucide-react";
 import { internalInputClassName } from "@/components/internal/Field";
+import { ConfirmDialog } from "@/components/internal/ConfirmDialog";
 
 export type CatalogOption = {
   id: string;
@@ -28,7 +29,8 @@ export function CatalogLinesField({
   searchPlaceholder,
   textareaPlaceholder,
   hint,
-  minQueryLength = 3
+  addMinLength = 2,
+  onDeleteOption
 }: {
   name: string;
   value: string;
@@ -39,17 +41,51 @@ export function CatalogLinesField({
   searchPlaceholder: string;
   textareaPlaceholder: string;
   hint: string;
-  minQueryLength?: number;
+  /** Longitud mínima para ofrecer "Agregar «…»" como entrada nueva. */
+  addMinLength?: number;
+  /** Si se pasa, cada opción del catálogo muestra una X para borrarla del catálogo. */
+  onDeleteOption?: (id: string) => void | Promise<void>;
 }) {
   const setValue = onValueChange;
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
+  const [pendingDelete, setPendingDelete] = useState<CatalogOption | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // El textarea crece según el contenido (una fila por indicación).
+  useEffect(() => {
+    const element = textareaRef.current;
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${element.scrollHeight}px`;
+  }, [value]);
+
+  function confirmDelete() {
+    const option = pendingDelete;
+    setPendingDelete(null);
+    if (!option || !onDeleteOption) return;
+    setRemovedIds((current) => new Set(current).add(option.id));
+    void onDeleteOption(option.id);
+  }
+  // Cierre diferido en blur; se cancela al reenfocar para que un clic no lo apague.
+  const closeTimer = useRef<number | null>(null);
+  function cancelClose() {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+  function scheduleClose() {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 150);
+  }
+
   const trimmedQuery = query.trim();
+  // Al enfocar (sin texto) se muestran todas las opciones disponibles; al escribir
+  // se filtran. Se excluyen las que ya están agregadas en el textarea.
   const matches = useMemo(() => {
     const normalized = trimmedQuery.toLowerCase();
-    if (normalized.length < minQueryLength) return [];
     const existing = new Set(
       value
         .split("\n")
@@ -59,11 +95,12 @@ export function CatalogLinesField({
     return catalog
       .filter(
         (option) =>
-          option.text.toLowerCase().includes(normalized) &&
-          !existing.has(option.text.trim().toLowerCase())
+          !removedIds.has(option.id) &&
+          !existing.has(option.text.trim().toLowerCase()) &&
+          (normalized.length === 0 || option.text.toLowerCase().includes(normalized))
       )
-      .slice(0, 8);
-  }, [catalog, trimmedQuery, value, minQueryLength]);
+      .slice(0, 50);
+  }, [catalog, trimmedQuery, value, removedIds]);
 
   function appendLine(text: string) {
     const clean = text.trim();
@@ -78,22 +115,31 @@ export function CatalogLinesField({
   const exactMatch = catalog.some(
     (option) => option.text.trim().toLowerCase() === trimmedQuery.toLowerCase()
   );
-  const canAddNew = trimmedQuery.length >= minQueryLength && !exactMatch;
+  const canAddNew = trimmedQuery.length >= addMinLength && !exactMatch;
 
   return (
     <div className="grid gap-2">
       <div className="relative">
         <input
-          className={internalInputClassName}
+          className={query ? `${internalInputClassName} pr-9` : internalInputClassName}
           value={query}
           autoComplete="off"
           placeholder={searchPlaceholder}
           onChange={(event) => {
             setQuery(event.target.value);
+            cancelClose();
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+          onFocus={() => {
+            cancelClose();
+            setOpen(true);
+          }}
+          onMouseDown={() => {
+            // Alterna: un segundo clic cierra el desplegable.
+            cancelClose();
+            setOpen((current) => !current);
+          }}
+          onBlur={scheduleClose}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
@@ -102,13 +148,29 @@ export function CatalogLinesField({
             }
           }}
         />
+        {query ? (
+          <button
+            type="button"
+            aria-label="Limpiar búsqueda"
+            title="Limpiar"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              setQuery("");
+              cancelClose();
+              setOpen(true);
+            }}
+            className="focus-ring absolute right-2 top-2.5 flex size-6 items-center justify-center rounded-full text-muted transition hover:bg-surface-soft hover:text-text"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        ) : null}
         {open && (matches.length > 0 || canAddNew) ? (
           <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-[9px] border border-border bg-surface shadow-lg">
             {matches.map((option) => (
-              <li key={option.id}>
+              <li key={option.id} className="flex items-center">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text hover:bg-surface-soft"
+                  className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm text-text hover:bg-surface-soft"
                   onMouseDown={(event) => {
                     event.preventDefault();
                     appendLine(option.text);
@@ -117,6 +179,20 @@ export function CatalogLinesField({
                   <ListPlus className="h-4 w-4 shrink-0 text-primary-dark" aria-hidden="true" />
                   <span className="min-w-0">{option.text}</span>
                 </button>
+                {onDeleteOption ? (
+                  <button
+                    type="button"
+                    aria-label={`Eliminar «${option.text}» del catálogo`}
+                    title="Eliminar del catálogo"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      setPendingDelete(option);
+                    }}
+                    className="focus-ring mr-1 flex size-7 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-error/10 hover:text-error"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                ) : null}
               </li>
             ))}
             {canAddNew ? (
@@ -142,13 +218,26 @@ export function CatalogLinesField({
 
       <textarea
         ref={textareaRef}
-        className={`${internalInputClassName} min-h-24 py-3`}
+        className={`${internalInputClassName} min-h-24 resize-none overflow-hidden py-3`}
         name={name}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder={textareaPlaceholder}
       />
       {value.trim() ? <p className="text-xs text-muted">{hint}</p> : null}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setPendingDelete(null);
+        }}
+        title="Eliminar del catálogo"
+        description={
+          <>¿Eliminar «{pendingDelete?.text}» del catálogo? Dejará de aparecer en las sugerencias.</>
+        }
+        confirmLabel="Eliminar"
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

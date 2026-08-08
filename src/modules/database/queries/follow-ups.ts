@@ -114,10 +114,14 @@ export async function createFollowUpTaskRecord(input: {
   title: string;
   notes?: string;
   dueAt: Date;
+  /** Estado inicial. Por defecto `pending`; `awaiting_payment` para los que el
+   * médico agenda y se activan al pagar el tratamiento. */
+  status?: FollowUpStatus;
 }) {
   return withDatabaseError("createFollowUpTaskRecord", async () => {
     return prisma.$transaction(async (tx) => {
       const type = input.type ?? "administrative";
+      const initialStatus = input.status ?? "pending";
       const assignedToId = await resolveFollowUpAssignee(tx, {
         type,
         requestedAssigneeId: input.assignedToId,
@@ -137,7 +141,7 @@ export async function createFollowUpTaskRecord(input: {
           type,
           domain: followUpDomainByType[type],
           priority,
-          status: "pending"
+          status: initialStatus
         }
       });
 
@@ -145,7 +149,7 @@ export async function createFollowUpTaskRecord(input: {
         data: {
           taskId: task.id,
           userId: input.createdById,
-          toStatus: "pending",
+          toStatus: initialStatus,
           note: input.notes
         }
       });
@@ -171,7 +175,10 @@ function buildFollowUpTaskWhere(
   const today = dayRange();
   return {
     ...followUpVisibilityWhere(input.viewerRole),
-    status: input.status ?? (input.filter === "all" ? undefined : "pending"),
+    // Los que esperan pago no entran a la bandeja hasta activarse al cobrar.
+    status:
+      input.status ??
+      (input.filter === "all" ? { not: "awaiting_payment" } : "pending"),
     assignedToId: input.unassigned ? null : input.assignedToId,
     type: input.type,
     priority: input.priority,

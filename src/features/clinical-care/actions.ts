@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   assignConsultationVisit,
   createClinicalOrderRecord,
+  deleteIndicationCatalogItem,
   recordClinicalNoteCatalogUsage,
   recordDiagnosisCatalogUsage,
   recordIndicationCatalogUsage,
@@ -81,6 +82,22 @@ export async function assignConsultationVisitAction(formData: FormData) {
   revalidatePath(`/sigeco/consultas/${visitId}`);
 }
 
+export async function deleteIndicationCatalogItemAction(id: string) {
+  await runAuditedAction(
+    {
+      permission: "clinical_write",
+      action: "clinical.indication_catalog.delete",
+      entityType: "indication_catalog_item",
+      entityId: id || undefined
+    },
+    async () => {
+      if (!id) denyAuditedAction("invalid_input");
+      await deleteIndicationCatalogItem(id);
+      return auditedResult(undefined, { entityId: id });
+    }
+  );
+}
+
 export async function saveClinicalConsultationAction(formData: FormData) {
   const visitId = String(formData.get("visitId") ?? "");
   try {
@@ -105,6 +122,17 @@ export async function saveClinicalConsultationAction(formData: FormData) {
         }
 
         const input = sanitizeClinicalConsultationInput(parsed.data);
+
+        // No se puede recetar el mismo medicamento (por nombre) dos veces.
+        const medicationKeys = input.prescriptionItems.map((item) =>
+          item.medication.trim().toLowerCase()
+        );
+        if (new Set(medicationKeys).size !== medicationKeys.length) {
+          redirect(
+            `/sigeco/consultas/${encodeURIComponent(visitId)}?error=receta-duplicada`
+          );
+        }
+
         const consultation = await upsertClinicalConsultationRecord({
           ...input,
           doctorId: user.id

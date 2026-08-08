@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { Download, Printer } from "lucide-react";
+import { Download } from "lucide-react";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { PdfPreviewFrame } from "@/components/internal/generated-documents/PdfPreviewFrame";
+import { PdfPrintButton } from "@/components/internal/generated-documents/PdfPrintButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { formatMoney } from "@/features/sales/labels";
 import { formatDateTime } from "@/lib/dates";
@@ -40,14 +42,7 @@ export function GeneratedDocumentPreview({
               <Download className="h-4 w-4" aria-hidden="true" />
               Descargar PDF
             </Link>
-            <Link
-              className={buttonVariants({ size: "sm" })}
-              href={`${pdfBase}?purpose=print`}
-              target="_blank"
-            >
-              <Printer className="h-4 w-4" aria-hidden="true" />
-              Imprimir copia
-            </Link>
+            <PdfPrintButton src={pdfBase} />
           </>
         }
         actionsClassName="w-full flex-wrap sm:w-auto"
@@ -78,9 +73,8 @@ export function GeneratedDocumentPreview({
       </Card>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="hidden min-h-[720px] overflow-hidden p-0 md:block">
-          <iframe
-            className="h-[78vh] min-h-[720px] w-full border-0"
+        <Card className="overflow-hidden p-0">
+          <PdfPreviewFrame
             src={pdfBase}
             title={`Vista previa ${snapshot.documentNumber}`}
           />
@@ -143,14 +137,6 @@ export function GeneratedDocumentPreview({
               </dl>
             </Card>
           )}
-
-          <Card className="md:hidden">
-            <p className="text-sm text-muted">
-              En teléfono se muestra este resumen para evitar una vista PDF
-              pequeña. Usa “Descargar PDF” o “Imprimir copia” cuando necesites el
-              documento completo.
-            </p>
-          </Card>
 
           <Card>
             <p className="text-xs leading-relaxed text-muted">

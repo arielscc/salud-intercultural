@@ -4,6 +4,7 @@ import {
   CatalogLinesField,
   type CatalogOption
 } from "@/components/internal/CatalogLinesField";
+import { deleteIndicationCatalogItemAction } from "@/features/clinical-care/actions";
 
 export type IndicationCatalogOption = CatalogOption;
 
@@ -34,6 +35,7 @@ export function IndicationField({
       searchPlaceholder="Busca una indicación frecuente (ej. agua) o escribe una nueva"
       textareaPlaceholder="Una indicación por línea. Puedes editarlas libremente."
       hint="Cada indicación se guarda en el catálogo para reutilizarla después."
+      onDeleteOption={(id) => deleteIndicationCatalogItemAction(id)}
     />
   );
 }

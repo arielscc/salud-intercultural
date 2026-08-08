@@ -179,7 +179,10 @@ export async function saveDoctorOrder(input: {
     prisma.$transaction(async (tx) => {
       const visit = await tx.visit.findUniqueOrThrow({
         where: { id: input.visitId },
-        include: { clinicalConsultation: { select: { status: true } }, doctorOrder: true }
+        include: {
+          clinicalConsultation: { select: { id: true, status: true } },
+          doctorOrder: true
+        }
       });
 
       if (visit.doctorOrder?.status === "confirmed") {
@@ -254,6 +257,32 @@ export async function saveDoctorOrder(input: {
             position: line.position
           }
         });
+      }
+
+      // Derivar a Administración (enviar el pedido) registra automáticamente el
+      // resultado de la propuesta como "aceptado", con la instrucción del pedido,
+      // para alimentar los reportes sin un formulario aparte. No se duplica la
+      // orden: el DoctorOrder ya es la orden a Administración.
+      // Pendiente: capturar los demás estados (rechazado, necesita tiempo, no
+      // aplica, sin decisión) desde otras acciones del proceso de atención.
+      if (input.submit && visit.clinicalConsultation?.status === "finalized") {
+        const latestOutcome = await tx.treatmentProposalOutcome.findFirst({
+          where: { visitId: visit.id },
+          orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }]
+        });
+        if (latestOutcome?.status !== "accepted") {
+          await tx.treatmentProposalOutcome.create({
+            data: {
+              consultationId: visit.clinicalConsultation.id,
+              visitId: visit.id,
+              doctorId: input.doctorId,
+              status: "accepted",
+              reason: "agreed_to_start",
+              administrationInstruction: input.indications || null,
+              supersedesId: latestOutcome?.id
+            }
+          });
+        }
       }
 
       return tx.doctorOrder.findUniqueOrThrow({

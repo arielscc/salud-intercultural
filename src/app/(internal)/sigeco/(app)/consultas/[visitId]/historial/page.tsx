@@ -57,9 +57,11 @@ export default async function ClinicalHistoryPage({
   const consultation = await getClinicalConsultationVersionHistory(visitId);
   if (!consultation) notFound();
 
-  const versions = [...consultation.versions].sort(
-    (left, right) => right.version - left.version
-  );
+  // Los guardados de borrador no cuentan como registro: solo se listan y comparan
+  // las versiones firmadas (cierre y firma) y sus correcciones.
+  const versions = consultation.versions
+    .filter((version) => version.kind !== "draft")
+    .sort((left, right) => right.version - left.version);
   const latest = selectVersion(versions, query.hasta, 0);
   const previous = selectVersion(versions, query.desde, 1);
 

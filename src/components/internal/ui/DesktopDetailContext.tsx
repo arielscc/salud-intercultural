@@ -2,12 +2,15 @@ export function DesktopDetailContext({
   eyebrow,
   title,
   meta,
-  status
+  status,
+  aside
 }: {
   eyebrow: string;
   title: string;
   meta?: string | null;
   status?: React.ReactNode;
+  /** Contenido breve a la derecha del paciente, ej. el cronómetro del área. */
+  aside?: React.ReactNode;
 }) {
   return (
     <section className="sticky top-0 z-10 hidden border-b border-border bg-background pb-3 xl:block">
@@ -19,7 +22,12 @@ export function DesktopDetailContext({
           <h3 className="mt-0.5 truncate font-sora text-base font-bold text-text">{title}</h3>
           {meta ? <p className="mt-0.5 truncate text-xs text-muted">{meta}</p> : null}
         </div>
-        {status ? <div className="shrink-0">{status}</div> : null}
+        {status || aside ? (
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {status}
+            {aside}
+          </div>
+        ) : null}
       </div>
     </section>
   );

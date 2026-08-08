@@ -4,6 +4,10 @@ import type {
   Prisma
 } from "@/generated/prisma/client";
 import { clinic } from "@/data/clinic";
+import {
+  assignableInternalRoles,
+  roleHasPermission
+} from "@/features/internal-auth/permissions";
 import { prisma, withDatabaseError } from "@/modules/database";
 import {
   generatedDocumentSnapshotSchema,
@@ -19,6 +23,8 @@ export class GeneratedDocumentError extends Error {
       | "DOCUMENT_PROFESSIONAL_PROFILE_REQUIRED"
       | "DOCUMENT_SOURCE_INCONSISTENT"
       | "PRESCRIPTION_NO_CHANGES"
+      | "PRESCRIPTION_DUPLICATE_MEDICATION"
+      | "DOCUMENT_ANNULLED"
       | "DOCUMENT_WRONG_KIND"
   ) {
     super(code);
@@ -182,7 +188,14 @@ export async function generatePrescriptionDocument(input: {
           }
         }
       });
-      if (existing) return existing;
+      if (existing) {
+        // La versión idéntica ya existe pero fue anulada: no puede reemitirse igual
+        // (restricción de unicidad); hay que corregir la receta para cambiarla.
+        if (existing.annulledAt) {
+          throw new GeneratedDocumentError("DOCUMENT_ANNULLED");
+        }
+        return existing;
+      }
 
       const latest = await tx.generatedDocument.findFirst({
         where: { seriesKey },
@@ -422,6 +435,56 @@ export async function getPrescriptionDocuments(visitId: string) {
   );
 }
 
+// Anula una versión emitida por error: conserva la fila (evidencia) y solo marca
+// los campos annulled*. El trigger de BD permite exactamente esta transición.
+export async function annulGeneratedDocument(input: {
+  documentId: string;
+  annulledById: string;
+  reason?: string;
+}) {
+  return withDatabaseError("annulGeneratedDocument", async () => {
+    const existing = await prisma.generatedDocument.findUnique({
+      where: { id: input.documentId },
+      select: { id: true, annulledAt: true }
+    });
+    if (!existing) {
+      throw new GeneratedDocumentError("DOCUMENT_SOURCE_NOT_FOUND");
+    }
+    if (existing.annulledAt) return existing; // Ya anulado: idempotente.
+    return prisma.generatedDocument.update({
+      where: { id: input.documentId },
+      data: {
+        annulledAt: new Date(),
+        annulledById: input.annulledById,
+        annulmentReason: input.reason?.trim() || null
+      }
+    });
+  });
+}
+
+// Vuelve a habilitar una versión anulada: limpia los campos annulled* y la versión
+// puede imprimirse otra vez. El trigger permite este cambio controlado.
+export async function restoreGeneratedDocument(input: { documentId: string }) {
+  return withDatabaseError("restoreGeneratedDocument", async () => {
+    const existing = await prisma.generatedDocument.findUnique({
+      where: { id: input.documentId },
+      select: { id: true, annulledAt: true }
+    });
+    if (!existing) {
+      throw new GeneratedDocumentError("DOCUMENT_SOURCE_NOT_FOUND");
+    }
+    if (!existing.annulledAt) return existing; // Ya activo: idempotente.
+    return prisma.generatedDocument.update({
+      where: { id: input.documentId },
+      data: {
+        annulledAt: null,
+        annulledById: null,
+        annulmentReason: null
+      }
+    });
+  });
+}
+
 export async function getSaleReceiptDocuments(saleId: string) {
   return withDatabaseError("getSaleReceiptDocuments", () =>
     prisma.generatedDocument.findMany({
@@ -435,11 +498,14 @@ export async function correctPrescription(input: {
   visitId: string;
   doctorId: string;
   reason: string;
-  medication: string;
-  dose?: string;
-  frequency?: string;
-  duration?: string;
-  observations?: string;
+  items: Array<{
+    inventoryItemId?: string | null;
+    medication: string;
+    dose?: string;
+    frequency?: string;
+    duration?: string;
+    observations?: string;
+  }>;
 }) {
   return withDatabaseError("correctPrescription", async () => {
     return serializableDocumentTransaction(async (tx) => {
@@ -450,7 +516,7 @@ export async function correctPrescription(input: {
           prescriptions: {
             orderBy: [{ version: "desc" }, { createdAt: "desc" }],
             take: 1,
-            include: { items: { orderBy: { createdAt: "asc" }, take: 1 } }
+            include: { items: { orderBy: { createdAt: "asc" } } }
           }
         }
       });
@@ -463,16 +529,45 @@ export async function correctPrescription(input: {
       }
       const normalize = (value: string | null | undefined) =>
         value?.trim() || null;
-      const latestItem = latest.items[0];
-      if (
-        normalize(latestItem?.medication) === normalize(input.medication) &&
-        normalize(latestItem?.dose) === normalize(input.dose) &&
-        normalize(latestItem?.frequency) === normalize(input.frequency) &&
-        normalize(latestItem?.duration) === normalize(input.duration) &&
-        normalize(latestItem?.observations) === normalize(input.observations)
-      ) {
-        throw new GeneratedDocumentError("PRESCRIPTION_NO_CHANGES");
+      const medicationKey = (value: string | null | undefined) =>
+        value?.trim().toLowerCase() ?? "";
+
+      // Los ítems que llegan son los NUEVOS que se agregan a la receta vigente.
+      const additions = input.items.filter((item) => normalize(item.medication));
+      if (additions.length === 0) {
+        throw new GeneratedDocumentError("DOCUMENT_SOURCE_NOT_FOUND");
       }
+
+      // Un medicamento que ya está en la receta no puede volver a agregarse.
+      const existingKeys = new Set(
+        latest.items.map((item) => medicationKey(item.medication))
+      );
+      const hasDuplicate = additions.some((item) =>
+        existingKeys.has(medicationKey(item.medication))
+      );
+      if (hasDuplicate) {
+        throw new GeneratedDocumentError("PRESCRIPTION_DUPLICATE_MEDICATION");
+      }
+
+      // La nueva versión conserva lo que ya había y suma los medicamentos nuevos.
+      const mergedItems = [
+        ...latest.items.map((item) => ({
+          inventoryItemId: item.inventoryItemId ?? null,
+          medication: item.medication.trim(),
+          dose: normalize(item.dose),
+          frequency: normalize(item.frequency),
+          duration: normalize(item.duration),
+          observations: normalize(item.observations)
+        })),
+        ...additions.map((item) => ({
+          inventoryItemId: item.inventoryItemId ?? null,
+          medication: item.medication.trim(),
+          dose: normalize(item.dose),
+          frequency: normalize(item.frequency),
+          duration: normalize(item.duration),
+          observations: normalize(item.observations)
+        }))
+      ];
 
       return tx.prescription.create({
         data: {
@@ -482,16 +577,8 @@ export async function correctPrescription(input: {
           version: latest.version + 1,
           supersedesId: latest.id,
           correctionReason: input.reason.trim(),
-          notes: normalize(input.observations),
-          items: {
-            create: {
-              medication: input.medication.trim(),
-              dose: normalize(input.dose),
-              frequency: normalize(input.frequency),
-              duration: normalize(input.duration),
-              observations: normalize(input.observations)
-            }
-          }
+          notes: null,
+          items: { create: mergedItems }
         },
         include: { items: true }
       });
@@ -499,10 +586,16 @@ export async function correctPrescription(input: {
   });
 }
 
+// Todo rol que puede escribir la consulta clínica (y por tanto emitir receta)
+// necesita identidad profesional: médico y super administrador.
+const prescribingRoles = assignableInternalRoles.filter((role) =>
+  roleHasPermission(role, "clinical_write")
+);
+
 export async function getClinicalProfessionalProfiles() {
   return withDatabaseError("getClinicalProfessionalProfiles", async () => {
     return prisma.internalUser.findMany({
-      where: { role: "medico", active: true },
+      where: { role: { in: prescribingRoles }, active: true },
       select: {
         id: true,
         name: true,
@@ -526,7 +619,7 @@ export async function configureClinicalProfessionalProfile(input: {
 }) {
   return withDatabaseError("configureClinicalProfessionalProfile", async () => {
     const doctor = await prisma.internalUser.findFirst({
-      where: { id: input.userId, role: "medico", active: true },
+      where: { id: input.userId, role: { in: prescribingRoles }, active: true },
       select: { id: true }
     });
     if (!doctor) {

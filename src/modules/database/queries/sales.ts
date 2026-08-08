@@ -22,6 +22,31 @@ function getSaleStatus(totalCents: number, paidCents: number) {
   return "paid";
 }
 
+// Al quedar saldada una venta de la visita se activan los seguimientos que el
+// médico dejó en espera de pago: pasan a `pending` y recién ahí los ve Recepción.
+async function activateAwaitingPaymentFollowUps(
+  tx: Prisma.TransactionClient,
+  visitId: string | null | undefined
+) {
+  if (!visitId) return;
+  const pending = await tx.followUpTask.findMany({
+    where: { visitId, status: "awaiting_payment" },
+    select: { id: true }
+  });
+  if (pending.length === 0) return;
+  await tx.followUpTask.updateMany({
+    where: { visitId, status: "awaiting_payment" },
+    data: { status: "pending" }
+  });
+  await tx.followUpStatusHistory.createMany({
+    data: pending.map((task) => ({
+      taskId: task.id,
+      toStatus: "pending" as const,
+      note: "Activado al pagar el tratamiento."
+    }))
+  });
+}
+
 async function ensurePaymentMethod(tx: Prisma.TransactionClient, code: string) {
   return tx.paymentMethod.upsert({
     where: { code },
@@ -290,6 +315,10 @@ export async function createSaleRecord(input: {
         });
       }
 
+      if (status === "paid") {
+        await activateAwaitingPaymentFollowUps(tx, input.visitId);
+      }
+
       if (input.workItemId && status === "paid") {
         await tx.visitWorkItem.update({
           where: { id: input.workItemId },
@@ -478,6 +507,10 @@ export async function confirmDoctorOrderSale(input: {
         }
       });
 
+      if (status === "paid") {
+        await activateAwaitingPaymentFollowUps(tx, order.visitId);
+      }
+
       // Si el pedido va a Enfermería, la tarea se cierra recién al derivar
       // (Tarea 4); si no, se completa al quedar pagada.
       if (input.workItemId && status === "paid" && !requiresNursing) {
@@ -614,6 +647,10 @@ export async function createPaymentRecord(input: {
             }
           });
         }
+      }
+
+      if (balanceCents === 0) {
+        await activateAwaitingPaymentFollowUps(tx, sale.visitId);
       }
 
       return payment;

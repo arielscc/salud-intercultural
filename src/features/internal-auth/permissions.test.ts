@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
+import { InternalPermission } from "@/generated/prisma/enums";
 import {
   assignableInternalRoles,
   roleHasPermission
 } from "@/features/internal-auth/permissions";
 
 describe("internal role permissions", () => {
-  it("keeps lead permissions out of every role after the simplification", () => {
-    expect(roleHasPermission("super_admin", "leads_read")).toBe(false);
+  it("gives the super administrator every permission", () => {
+    for (const permission of Object.values(InternalPermission)) {
+      expect(roleHasPermission("super_admin", permission)).toBe(true);
+    }
+  });
+
+  it("keeps lead permissions out of the non-admin roles after the simplification", () => {
     expect(roleHasPermission("direccion", "leads_read")).toBe(false);
     expect(roleHasPermission("recepcion", "leads_create")).toBe(false);
     expect(roleHasPermission("captacion", "leads_read")).toBe(false);

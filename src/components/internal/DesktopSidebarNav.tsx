@@ -59,9 +59,27 @@ export function DesktopSidebarNav({ role }: { role: InternalRole }) {
     roleHasPermission(role, item.permission)
   );
 
+  // Todo item permitido que no esté asignado a un grupo se muestra igual en una
+  // sección "Más" (antes de "Cuenta"), para que el menú de escritorio nunca
+  // oculte un módulo que el rol sí puede abrir.
+  const groupedHrefs = new Set(navGroups.flatMap((group) => group.hrefs));
+  const ungrouped = permittedItems.filter((item) => !groupedHrefs.has(item.href));
+  const accountIndex = navGroups.findIndex((group) =>
+    group.hrefs.includes("/sigeco/mi-cuenta")
+  );
+  const insertAt = accountIndex === -1 ? navGroups.length : accountIndex;
+  const resolvedGroups =
+    ungrouped.length === 0
+      ? navGroups
+      : [
+          ...navGroups.slice(0, insertAt),
+          { label: "Más", hrefs: ungrouped.map((item) => item.href) },
+          ...navGroups.slice(insertAt)
+        ];
+
   return (
     <nav className="hidden px-3 lg:block" aria-label="Módulos de Sigeco">
-      {navGroups.map((group, index) => {
+      {resolvedGroups.map((group, index) => {
         const items = group.hrefs
           .map((href) => permittedItems.find((item) => item.href === href))
           .filter((item): item is SigecoNavItem => Boolean(item));

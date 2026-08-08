@@ -383,3 +383,43 @@ Pedido del usuario: que "Buscar paciente" y "Registrar llegada" ocupen 50% y 50%
 Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
 
 **Commit sugerido:** `style(sigeco): stretch dashboard header actions half width each on mobile`
+
+## Simplificacion De La Pantalla Del Medico (2026-08-05)
+
+Cuatro cambios pedidos por el usuario para aligerar `/sigeco/consultas/[visitId]` (menos secciones y menos tiempo de decision para el medico). Se ejecutaron desde un documento de planificacion que luego se borro por pedido del usuario; su contenido queda resumido aqui. Contexto previo de la misma sesion: se quito el bloque "Resultado de la propuesta" y el estado "aceptado" se auto-registra al derivar a Administracion (ver memoria `treatment-proposal-outcome-simplification`). Modo de trabajo vigente: solo `lint` + `typecheck` por tarea; `pnpm test` / `test:integration` / `build` quedan pendientes para el cierre.
+
+### Tarea 3 y 4 — Eliminar "Indicacion para otra area" y "Ordenes clinicas emitidas"
+
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: se eliminaron ambos `Card` de la columna derecha (el form manual `createClinicalOrderAction` y la lista `visit.clinicalOrders`). Se limpiaron consts e imports huerfanos (`orderTypeOptions`, `targetAreaOptions`, `TimelineItem`, `createClinicalOrderAction`, `clinicalOrderStatusLabels`/`clinicalOrderTypeLabels`, `routeAreaLabels`, tipos `ClinicalOrderType`/`PatientRouteArea`).
+- **No se toco backend:** `ClinicalOrder`, `createClinicalOrderAction` y el include `clinicalOrders` se conservan; solo se retiro la UI del medico. Las ordenes siguen visibles/accionables en sus areas destino.
+
+**Commit sugerido:** `feat(sigeco): remove manual clinical order and emitted orders blocks`
+
+### Tarea 2 — Resumir "Salida del paciente"
+
+- `src/components/internal/visit-discontinuations/VisitDiscontinuationForm.tsx`: el motivo pasa de `<select>` de 8 opciones a **chips** (radios estilados con `peer`, un toque, validacion nativa). Se elimino la grilla de 6 checkboxes "¿que queda pendiente?" porque el server ya los auto-detecta (`deriveVisitPendingTypes`). La prop `defaultPendingTypes` se conserva pero ahora viaja como **hidden inputs** (las otras pantallas que la usan —admin workitem y recepcion visita— no cambian de comportamiento). Se mantuvieron el seguimiento de recuperacion (es de abandono, distinto al de la Tarea 1) y la nota opcional.
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: la llamada ya no pasa `defaultPendingTypes` (el server detecta "consultation" pendiente solo).
+
+**Commit sugerido:** `feat(sigeco): condense patient-exit block to reason chips`
+
+### Tarea 1 — Seguimiento que se activa al pagar el tratamiento
+
+Antes el bloque "Agendar seguimiento" solo funcionaba con una venta ya registrada. Ahora el medico lo agenda en la consulta y Recepcion lo ve solo cuando el paciente paga.
+
+- `prisma/schema.prisma` + `prisma/migrations/20260805150000_follow_up_awaiting_payment/`: valor nuevo `awaiting_payment` en el enum `FollowUpStatus` (aditivo, `ADD VALUE IF NOT EXISTS`).
+- `src/modules/database/queries/follow-ups.ts`: `createFollowUpTaskRecord` acepta un `status` opcional (default `pending`) usado en el create y en el historial. `buildFollowUpTaskWhere` excluye `awaiting_payment` de la bandeja (los conteos ya filtraban por `pending`).
+- `src/features/follow-ups/actions.ts`: `createDoctorVisitFollowUpAction` deja de exigir venta (`getVisitLatestSale` retirado) y crea la tarea con `status: "awaiting_payment"` sin `saleId`.
+- `src/features/follow-ups/labels.ts`: label "En espera de pago" para el estado nuevo.
+- `src/modules/database/queries/sales.ts`: helper `activateAwaitingPaymentFollowUps(tx, visitId)` (idempotente, deja historial) enganchado en los tres puntos donde una venta de la visita queda saldada (`balanceCents === 0`): `createPaymentRecord`, `createSaleRecord` y `confirmDoctorOrderSale`. Al saldar, los seguimientos en espera pasan a `pending` y recien ahi entran a la bandeja de Recepcion.
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: el form se muestra siempre (sin candado de venta); agrega el **medio de contacto** que el paciente indico en el funnel (`Patient.followUpPreference`, con `contactPreferenceLabels`) y un aviso de que se activara al pagar.
+
+**Decisiones tomadas (aprobadas en el doc de planificacion):** activacion al **pago total** (balance 0), no abono parcial; almacenamiento con estado `awaiting_payment` (reuso del modelo `FollowUpTask`).
+
+**Commit sugerido:** `feat(sigeco): schedule visit follow-up that activates on treatment payment`
+
+### Validaciones y pendientes (para las 4 tareas)
+
+- Ejecutado por tarea: `lint` + `typecheck` (verdes). Migraciones `20260805150000_follow_up_awaiting_payment` y las de anulacion aplicadas al dev; cliente Prisma regenerado.
+- **Pendiente:** `pnpm test`, `pnpm test:integration` y `pnpm run build` — importante por la Tarea 1 (toca el flujo de dinero: `sales.ts`) y por el filtrado de bandeja de seguimientos. Verificar en navegador el flujo completo: agendar seguimiento en consulta -> pagar la venta -> aparece en Recepcion.
+- **Mejora anotada, no aplicada:** reemplazar el `datetime-local` obligatorio por chips de "cuando" relativos calculando `dueAt` desde la fecha de pago.
+- Visitas que nunca pagan dejan el seguimiento en `awaiting_payment` indefinidamente; definir despues su limpieza al cerrar/abandonar la visita.

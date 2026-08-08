@@ -128,10 +128,14 @@ describe("versioned generated documents integration", () => {
     await correctPrescription({
       visitId: fixture.visit.id,
       doctorId: fixture.doctor.id,
-      reason: "Se corrigió la frecuencia indicada",
-      medication: "Tratamiento inicial",
-      dose: "Una medida",
-      frequency: "Cada 12 horas"
+      reason: "Se agregó un medicamento a la receta",
+      items: [
+        {
+          medication: "Tratamiento adicional",
+          dose: "Una medida",
+          frequency: "Cada 12 horas"
+        }
+      ]
     });
     const second = await generatePrescriptionDocument({
       visitId: fixture.visit.id,

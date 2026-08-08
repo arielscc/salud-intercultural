@@ -81,7 +81,8 @@ export const createDoctorVisitFollowUpSchema = z.object({
   visitId: z.string().min(1),
   patientId: z.string().min(1),
   type: z.enum(["return", "evolution", "treatment_recovery"]).default("return"),
-  title: z.string().trim().min(2).max(180),
+  // El motivo ya no se captura: si no llega, la acción usa el tipo como título.
+  title: z.string().trim().min(2).max(180).optional(),
   notes: optionalText,
   dueAt: dateInput
 });

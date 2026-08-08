@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format, parse, isValid } from "date-fns";
+import { addDays, format, isSameDay, parse, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
@@ -19,6 +19,44 @@ function parseDateValue(value: string) {
   if (!value) return undefined;
   const parsed = parse(value, DATE_VALUE_FORMAT, new Date());
   return isValid(parsed) ? parsed : undefined;
+}
+
+function slotToMinutes(slot: string) {
+  const [hours, minutes] = slot.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesNow() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function computeInitialDateTime({
+  defaultDate,
+  timeSlots,
+  disablePast,
+  startOfToday
+}: {
+  defaultDate?: Date;
+  timeSlots?: string[];
+  disablePast?: boolean;
+  startOfToday: Date;
+}): { date: Date; time: string } {
+  const base = defaultDate ?? new Date();
+  if (!timeSlots || timeSlots.length === 0) {
+    return { date: base, time: format(base, "HH:mm") };
+  }
+  if (!disablePast) {
+    const current = format(base, "HH:mm");
+    return {
+      date: base,
+      time: timeSlots.includes(current) ? current : timeSlots[0]
+    };
+  }
+  // Solo futuro: primer horario después de ahora; si no queda hoy, mañana.
+  const futureToday = timeSlots.find((slot) => slotToMinutes(slot) > minutesNow());
+  if (futureToday) return { date: startOfToday, time: futureToday };
+  return { date: addDays(startOfToday, 1), time: timeSlots[0] };
 }
 
 /*
@@ -167,16 +205,49 @@ export function DateRangePickerField({
 export function DateTimePickerField({
   name,
   defaultDate,
-  required
+  required,
+  timeSlots,
+  disablePast,
+  longLabel
 }: {
   name: string;
   defaultDate?: Date;
   required?: boolean;
+  /** Si se pasa, la hora es un desplegable con estos horarios ("HH:mm") en vez
+   * del input de hora nativo. Útil para agendas con franjas fijas. */
+  timeSlots?: string[];
+  /** Deshabilita las fechas anteriores a hoy (para agendar a futuro). */
+  disablePast?: boolean;
+  /** Muestra la fecha con la frase completa ("5 de agosto de 2026"). */
+  longLabel?: boolean;
 }) {
-  const initial = defaultDate ?? new Date();
-  const [date, setDate] = React.useState<Date | undefined>(initial);
-  const [time, setTime] = React.useState(format(initial, "HH:mm"));
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  // Valor por defecto: si se piden solo fechas futuras con franjas, arranca en el
+  // próximo horario disponible (hoy si queda alguno; si no, mañana).
+  const [date, setDate] = React.useState<Date | undefined>(
+    () =>
+      computeInitialDateTime({ defaultDate, timeSlots, disablePast, startOfToday })
+        .date
+  );
+  const [time, setTime] = React.useState(
+    () =>
+      computeInitialDateTime({ defaultDate, timeSlots, disablePast, startOfToday })
+        .time
+  );
   const [open, setOpen] = React.useState(false);
+
+  // Para hoy con fechas futuras, el desplegable oculta las horas ya pasadas.
+  const effectiveSlots = React.useMemo(() => {
+    if (!timeSlots || timeSlots.length === 0) return undefined;
+    if (disablePast && date && isSameDay(date, new Date())) {
+      const cutoff = minutesNow();
+      const future = timeSlots.filter((slot) => slotToMinutes(slot) > cutoff);
+      return future.length > 0 ? future : timeSlots;
+    }
+    return timeSlots;
+  }, [timeSlots, disablePast, date]);
 
   const isoValue = date ? `${format(date, DATE_VALUE_FORMAT)}T${time || "00:00"}` : "";
 
@@ -193,7 +264,11 @@ export function DateTimePickerField({
           )}
         >
           <span className="truncate">
-            {date ? format(date, "d MMM yyyy", { locale: es }) : "Fecha"}
+            {date
+              ? format(date, longLabel ? DATE_DISPLAY_FORMAT : "d MMM yyyy", {
+                  locale: es
+                })
+              : "Fecha"}
           </span>
           <CalendarIcon className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
         </PopoverTrigger>
@@ -203,20 +278,52 @@ export function DateTimePickerField({
             locale={es}
             selected={date}
             defaultMonth={date}
+            disabled={disablePast ? { before: startOfToday } : undefined}
             onSelect={(selectedDate) => {
               setDate(selectedDate);
               setOpen(false);
+              // Si al elegir hoy la hora quedaría en el pasado, salta al próximo horario.
+              if (
+                selectedDate &&
+                disablePast &&
+                timeSlots &&
+                isSameDay(selectedDate, new Date())
+              ) {
+                const future = timeSlots.filter(
+                  (slot) => slotToMinutes(slot) > minutesNow()
+                );
+                if (future.length > 0 && !future.includes(time)) {
+                  setTime(future[0]);
+                }
+              }
             }}
           />
         </PopoverContent>
       </Popover>
-      <input
-        type="time"
-        value={time}
-        onChange={(event) => setTime(event.target.value)}
-        aria-label="Hora"
-        className={cn(internalInputClassName, "w-28 shrink-0 tabular-nums")}
-      />
+      {effectiveSlots ? (
+        <select
+          value={time}
+          onChange={(event) => setTime(event.target.value)}
+          aria-label="Hora"
+          className={cn(internalInputClassName, "w-28 shrink-0 tabular-nums")}
+        >
+          {(effectiveSlots.includes(time) ? effectiveSlots : [time, ...effectiveSlots]).map(
+            (slot) => (
+              <option key={slot} value={slot}>
+                {slot}
+              </option>
+            )
+          )}
+        </select>
+      ) : (
+        <input
+          type="time"
+          value={time}
+          onChange={(event) => setTime(event.target.value)}
+          aria-label="Hora"
+          className={cn(internalInputClassName, "w-28 shrink-0 tabular-nums")}
+        />
+      )}
     </div>
   );
 }

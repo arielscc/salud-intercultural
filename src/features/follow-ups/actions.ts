@@ -20,7 +20,7 @@ import {
   createFollowUpTaskSchema
 } from "@/features/follow-ups/schemas/follow-up.schema";
 import { canRoleCreateFollowUpType } from "@/features/follow-ups/policy";
-import { getVisitLatestSale } from "@/modules/database/queries/sales";
+import { followUpTypeLabels } from "@/features/follow-ups/labels";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -89,31 +89,35 @@ export async function createDoctorVisitFollowUpAction(formData: FormData) {
         redirect(`${consultaPath}?error=seguimiento-invalido`);
       }
 
-      // Tarea 7: solo con venta registrada en la visita.
-      const sale = await getVisitLatestSale(parsed.data.visitId);
-      if (!sale) {
-        denyAuditedAction("follow_up_requires_sale");
+      // La fecha del seguimiento debe ser a futuro (hoy o después, no un día pasado).
+      const startToday = new Date();
+      startToday.setHours(0, 0, 0, 0);
+      if (parsed.data.dueAt.getTime() < startToday.getTime()) {
+        redirect(`${consultaPath}?error=seguimiento-fecha-pasada`);
       }
 
+      // El médico agenda el seguimiento en la consulta; queda en espera de pago y
+      // Recepción lo verá solo cuando el paciente pague el tratamiento (la venta
+      // de la visita se activa al quedar saldada).
       const created = await createFollowUpTaskRecord({
         patientId: parsed.data.patientId,
         visitId: parsed.data.visitId,
-        saleId: sale.id,
         type: parsed.data.type,
         priority: "normal",
-        title: parsed.data.title,
+        title: parsed.data.title ?? followUpTypeLabels[parsed.data.type],
         notes: parsed.data.notes,
         dueAt: parsed.data.dueAt,
-        createdById: user.id
+        createdById: user.id,
+        status: "awaiting_payment"
       });
       return auditedResult(created, {
         entityId: created.id,
         context: {
           patientId: parsed.data.patientId,
           visitId: parsed.data.visitId,
-          saleId: sale.id,
           followUpType: created.type,
-          assignedToId: created.assignedToId
+          assignedToId: created.assignedToId,
+          awaitingPayment: true
         }
       });
     }

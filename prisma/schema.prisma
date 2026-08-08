@@ -485,6 +485,9 @@ enum CashExpenseCategory {
 
 enum FollowUpStatus {
   pending
+  // Agendado por el médico pero aún no visible para Recepción: se activa (pasa a
+  // `pending`) cuando el paciente paga el tratamiento de la visita.
+  awaiting_payment
   done
   improved
   not_improved
@@ -2028,6 +2031,11 @@ model GeneratedDocument {
   sourceFingerprint String
   snapshot          Json
   generatedAt       DateTime              @default(now())
+  // Anulación: la evidencia se conserva, pero una versión emitida por error se
+  // marca como anulada (no se borra) y deja de poder imprimirse.
+  annulledAt        DateTime?
+  annulledById      String?
+  annulmentReason   String?
   patient           Patient               @relation(fields: [patientId], references: [id], onDelete: Restrict)
   visit             Visit?                @relation(fields: [visitId], references: [id], onDelete: Restrict)
   prescription      Prescription?         @relation(fields: [prescriptionId], references: [id], onDelete: Restrict)
