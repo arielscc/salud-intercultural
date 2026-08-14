@@ -12,20 +12,21 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { StaleCashSessionModal } from "@/components/internal/cash/StaleCashSessionModal";
-import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
-import { TimelineItem } from "@/components/internal/ui/TimelineItem";
 import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import {
   applySaleDiscountAction,
   confirmDoctorOrderSaleAction,
   createPaymentAction,
+  createSaleOrderAction,
   createSaleAction,
   sendPaidStudiesToNursingAction
 } from "@/features/sales/actions";
 import { SaleDiscountForm } from "@/features/sales/components/SaleDiscountForm";
+import { AdministrationChargeDialog } from "@/features/sales/components/AdministrationChargeDialog";
+import { PatientSalesHistory } from "@/features/sales/components/PatientSalesHistory";
 import { DoctorOrderConfirmPanel } from "@/features/doctor-orders/components/DoctorOrderConfirmPanel";
 import { releaseDoctorOrderToNursingAction } from "@/features/doctor-orders/doctor-order-actions";
 import { doctorOrderStatusLabels } from "@/features/doctor-orders/labels";
@@ -38,8 +39,11 @@ import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { getInventoryItems } from "@/modules/database/queries/inventory";
-import { getAdministrationWorkItemById } from "@/modules/database/queries/sales";
-import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
+import {
+  getAdministrationWorkItemById,
+  getPatientSales
+} from "@/modules/database/queries/sales";
+import { getActiveServiceCatalogItems } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
 import { getBranchContext } from "@/features/branches/context";
 
@@ -61,21 +65,22 @@ export default async function AdministrationWorkItemPage({
   const { activeBranch } = await getBranchContext(user);
   const { workItemId } = await params;
   const query = await searchParams;
-  const [item, inventoryItems] = await Promise.all([
+  const [item, inventoryItems, catalogItems] = await Promise.all([
     getAdministrationWorkItemById(workItemId),
     getInventoryItems({
       pageSize: 100,
       status: "active",
       usage: "sale",
       branchCode: activeBranch.code
-    })
+    }),
+    getActiveServiceCatalogItems()
   ]);
 
   if (!item) notFound();
   if (item.visit.branchCode !== activeBranch.code) notFound();
-  const areaTiming = await getVisitAreaTimingState(item.visit.id);
 
   const patient = item.visit.patient;
+  const patientSales = await getPatientSales(patient.id);
   const order = item.clinicalOrders[0];
   const proposalOutcome = order?.treatmentProposalOutcome;
   const doctorOrder = item.visit.doctorOrder;
@@ -525,12 +530,31 @@ export default async function AdministrationWorkItemPage({
           meta={patient.phone}
           status={<VisitStatusPill status={item.visit.status} />}
         />
-        {areaTiming?.area === "administracion" &&
-        roleHasPermission(user.role, "area_time_write") ? (
-          <AreaTimeControl state={areaTiming} compact />
-        ) : null}
+        <Card className="max-sm:order-3">
+          <CardHeader
+            title="Asignar cobro"
+            description="Crea una venta desde el catálogo y luego registra el pago."
+          />
+          <AdministrationChargeDialog
+            action={createSaleOrderAction}
+            patientId={patient.id}
+            visitId={item.visit.id}
+            workItemId={item.id}
+            catalogItems={catalogItems.map((catalogItem) => ({
+              id: catalogItem.id,
+              name: catalogItem.name,
+              kind: catalogItem.kind === "treatment" ? "treatment" : "service",
+              basePriceCents: catalogItem.packagePriceCents ?? catalogItem.basePriceCents
+            }))}
+            inventoryItems={inventoryItems.map((inventoryItem) => ({
+              id: inventoryItem.id,
+              name: inventoryItem.name,
+              salePriceCents: inventoryItem.salePriceCents
+            }))}
+          />
+        </Card>
         {isActiveVisitStatus(item.visit.status) && !isPaidStudyOrder ? (
-          <Card className="max-sm:order-3">
+          <Card className="max-sm:order-4">
             <CardHeader
               title="Salida del paciente"
               description="Cuando el paciente ya pagó o solo vino a comprar, cierra la visita aquí."
@@ -574,29 +598,34 @@ export default async function AdministrationWorkItemPage({
 
         <Card className="max-sm:order-4">
           <CardHeader
-            title="Ventas asociadas a la tarea"
-            description="Comprobantes, estado de pago y saldo pendiente de esta atención."
+            title="Ventas del paciente"
+            description="Historial resumido de tratamientos, sueros, servicios y productos vendidos."
           />
-          <div className="grid gap-0">
-            {item.sales.map((sale) => (
-              <TimelineItem
-                key={sale.id}
-                title={
-                  <a
-                    href={`/sigeco/administracion/ventas/${sale.id}`}
-                    className="focus-ring rounded-[7px] tabular-nums hover:text-primary-dark hover:underline"
-                  >
-                    {formatMoney(sale.totalCents)}
-                  </a>
-                }
-                aside={saleStatusLabels[sale.status]}
-                body={<span className="tabular-nums">Saldo: {formatMoney(sale.balanceCents)}</span>}
-              />
-            ))}
-            {item.sales.length === 0 ? (
-              <p className="py-2 text-sm text-muted">Sin ventas registradas para esta tarea.</p>
-            ) : null}
-          </div>
+          <PatientSalesHistory
+            sales={patientSales.map((sale) => ({
+              id: sale.id,
+              status: sale.status,
+              totalCents: sale.totalCents,
+              paidCents: sale.paidCents,
+              balanceCents: sale.balanceCents,
+              createdAt: sale.createdAt.toISOString(),
+              items: sale.items.map((saleItem) => ({
+                id: saleItem.id,
+                type: saleItem.type,
+                description: saleItem.description,
+                quantity: saleItem.quantity,
+                unitPriceCents: saleItem.unitPriceCents,
+                totalCents: saleItem.totalCents
+              })),
+              payments: sale.payments.map((payment) => ({
+                id: payment.id,
+                amountCents: payment.amountCents,
+                paidAt: payment.paidAt.toISOString(),
+                reference: payment.reference,
+                method: { name: payment.method.name }
+              }))
+            }))}
+          />
         </Card>
       </div>
     </div>

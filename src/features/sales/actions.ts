@@ -7,6 +7,7 @@ import {
   applyAdminDiscountToSale,
   confirmDoctorOrderSale,
   createPaymentRecord,
+  createSaleOrderRecord,
   createSaleRecord,
   findDoctorOrderSaleError
 } from "@/modules/database/queries/sales";
@@ -22,9 +23,11 @@ import {
 import {
   applySaleDiscountSchema,
   confirmDoctorOrderSchema,
+  createSaleOrderSchema,
   createPaymentSchema,
   createSaleSchema,
-  moneyToCents
+  moneyToCents,
+  parseSaleOrderForm
 } from "@/features/sales/schemas/sale.schema";
 import { getBranchContext } from "@/features/branches/context";
 
@@ -116,6 +119,79 @@ export async function createSaleAction(formData: FormData) {
           workItemId: parsed.data.workItemId,
           itemType: parsed.data.itemType,
           quantity: parsed.data.quantity,
+          totalCents: created.totalCents
+        }
+      });
+    }
+  );
+
+  revalidatePath("/sigeco/administracion");
+  if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
+  revalidatePath(`/sigeco/recepcion/pacientes/${patientId}`);
+  redirect(`/sigeco/administracion/ventas/${sale.id}?aviso=venta-creada`);
+}
+
+export async function createSaleOrderAction(formData: FormData) {
+  const workItemId = String(formData.get("workItemId") ?? "");
+  const patientId = String(formData.get("patientId") ?? "");
+  const sale = await runAuditedAction(
+    {
+      permission: "sales_write",
+      action: "sale.order.create",
+      entityType: "sale",
+      context: {
+        patientId: patientId || undefined,
+        workItemId: workItemId || undefined
+      }
+    },
+    async (user) => {
+      const { activeBranch } = await getBranchContext(user);
+      const parsed = createSaleOrderSchema.safeParse(parseSaleOrderForm(formData));
+      const target = workItemId
+        ? `/sigeco/administracion/${workItemId}`
+        : "/sigeco/administracion";
+      if (!parsed.success) redirect(`${target}?error=invalid-sale`);
+
+      let created;
+      try {
+        created = await createSaleOrderRecord({
+          idempotencyKey: parsed.data.idempotencyKey,
+          patientId: parsed.data.patientId,
+          visitId: parsed.data.visitId,
+          workItemId: parsed.data.workItemId,
+          createdById: user.id,
+          branchCode: activeBranch.code,
+          subtotalCents: moneyToCents(parsed.data.total),
+          discountCents: moneyToCents(parsed.data.discount),
+          notes: parsed.data.notes,
+          lines: parsed.data.lines.map((line) => ({
+            itemType: line.itemType,
+            inventoryItemId: line.inventoryItemId,
+            description: line.description,
+            quantity: line.quantity,
+            unitPriceCents: moneyToCents(line.unitPrice)
+          }))
+        });
+      } catch (error) {
+        const stockError = findInsufficientStockError(error);
+        const target = parsed.data.workItemId
+          ? `/sigeco/administracion/${parsed.data.workItemId}`
+          : "/sigeco/administracion";
+        const catalogError = findInventoryCatalogError(error);
+        if (catalogError?.code === "inactive-item" || catalogError?.code === "not-for-sale") {
+          redirect(`${target}?error=unavailable-product`);
+        }
+        if (!stockError) throw error;
+        redirect(`${target}?error=insufficient-stock`);
+      }
+
+      return auditedResult(created, {
+        entityId: created.id,
+        context: {
+          patientId: parsed.data.patientId,
+          visitId: parsed.data.visitId,
+          workItemId: parsed.data.workItemId,
+          lineCount: parsed.data.lines.length,
           totalCents: created.totalCents
         }
       });

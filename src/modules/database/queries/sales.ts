@@ -329,6 +329,116 @@ export async function createSaleRecord(input: {
   });
 }
 
+export async function createSaleOrderRecord(input: {
+  idempotencyKey?: string;
+  patientId: string;
+  visitId?: string;
+  workItemId?: string;
+  createdById?: string;
+  branchCode?: string;
+  subtotalCents: number;
+  discountCents?: number;
+  notes?: string;
+  lines: Array<{
+    itemType: SaleItemType;
+    inventoryItemId?: string;
+    description: string;
+    quantity: number;
+    unitPriceCents: number;
+  }>;
+}) {
+  return withDatabaseError("createSaleOrderRecord", async () => {
+    return prisma.$transaction(async (tx) => {
+      if (input.idempotencyKey) {
+        const reused = await tx.sale.findUnique({
+          where: { idempotencyKey: input.idempotencyKey },
+          include: { items: true }
+        });
+        if (reused) return reused;
+      }
+
+      if (input.lines.length === 0) throw new Error("EMPTY_SALE_LINES");
+
+      const visitBranch = input.visitId
+        ? await tx.visit.findUnique({
+            where: { id: input.visitId },
+            select: { branchCode: true }
+          })
+        : null;
+      const branchCode = visitBranch?.branchCode ?? input.branchCode ?? "el-alto";
+      if (visitBranch && input.branchCode && visitBranch.branchCode !== input.branchCode) {
+        throw new Error("BRANCH_MISMATCH");
+      }
+
+      const lineSumCents = input.lines.reduce(
+        (sum, line) => sum + line.unitPriceCents * line.quantity,
+        0
+      );
+      const subtotalCents = Math.max(0, input.subtotalCents || lineSumCents);
+      const discountCents = Math.min(input.discountCents ?? 0, subtotalCents);
+      const totalCents = Math.max(0, subtotalCents - discountCents);
+
+      const sale = await tx.sale.create({
+        data: {
+          idempotencyKey: input.idempotencyKey,
+          patientId: input.patientId,
+          visitId: input.visitId,
+          workItemId: input.workItemId,
+          createdById: input.createdById,
+          branchCode,
+          status: getSaleStatus(totalCents, 0),
+          subtotalCents,
+          discountCents,
+          totalCents,
+          paidCents: 0,
+          balanceCents: totalCents,
+          notes: input.notes,
+          items: {
+            create: input.lines.map((line) => ({
+              inventoryItemId: line.inventoryItemId,
+              type: line.itemType,
+              description: line.description,
+              quantity: line.quantity,
+              unitPriceCents: line.unitPriceCents,
+              totalCents: line.unitPriceCents * line.quantity
+            }))
+          }
+        },
+        include: { items: true }
+      });
+
+      for (const line of input.lines) {
+        if (!line.inventoryItemId) continue;
+        const saleItem = sale.items.find(
+          (candidate) => candidate.inventoryItemId === line.inventoryItemId
+        );
+        await applyInventoryMovement(tx, {
+          itemId: line.inventoryItemId,
+          saleId: sale.id,
+          saleItemId: saleItem?.id,
+          userId: input.createdById,
+          branchCode,
+          type: "automatic_sale_exit",
+          quantityDelta: -line.quantity,
+          reason: `Salida automática por venta ${sale.id}`
+        });
+        await tx.deliveredProduct.create({
+          data: {
+            saleId: sale.id,
+            saleItemId: saleItem?.id,
+            patientId: input.patientId,
+            visitId: input.visitId,
+            description: line.description,
+            quantity: line.quantity
+          }
+        });
+      }
+
+      return sale;
+    });
+  });
+}
+
 export class DoctorOrderSaleError extends Error {
   constructor(public readonly code: "not-submitted" | "empty-order" | "discount-over-cap") {
     super(code);
