@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createCallLink,
   createContextualWhatsAppLink,
+  createDirectWhatsAppLink,
   createWhatsAppLink,
   createWhatsAppMessage
 } from "@/lib/whatsapp";
@@ -25,10 +26,20 @@ describe("whatsapp helpers", () => {
     expect(createWhatsAppLink("Hola mundo", "+591 700-000-00")).toBe(
       "https://wa.me/59170000000?text=Hola%20mundo"
     );
+    expect(createWhatsAppLink("Hola mundo", "70000000")).toBe(
+      "https://wa.me/59170000000?text=Hola%20mundo"
+    );
     expect(createContextualWhatsAppLink({ service: "consulta" }, "+591 700 000 00")).toContain(
       "https://wa.me/59170000000?text="
     );
     expect(createCallLink("+591 700 000 00")).toBe("tel:+59170000000");
+  });
+
+  it("builds direct WhatsApp links with optional message text", () => {
+    expect(createDirectWhatsAppLink("54353453")).toBe("https://wa.me/59154353453");
+    expect(createDirectWhatsAppLink("54353453", "Hola Canela")).toBe(
+      "https://wa.me/59154353453?text=Hola%20Canela"
+    );
   });
 
   it("neutralizes WhatsApp and call links in staging", () => {
@@ -37,6 +48,7 @@ describe("whatsapp helpers", () => {
     expect(createWhatsAppLink("Mensaje", "+59170000000")).toBe(
       "#staging-contact-blocked"
     );
+    expect(createDirectWhatsAppLink("70000000")).toBe("#staging-contact-blocked");
     expect(createCallLink("+59170000000")).toBe("#staging-contact-blocked");
   });
 });

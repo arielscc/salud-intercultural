@@ -4,7 +4,6 @@ import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueR
 import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
 import { DesktopPreviewDismiss } from "@/components/internal/reception/DesktopPreviewDismiss";
-import { DateRangePickerField } from "@/components/internal/ui/DatePickerField";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -20,16 +19,12 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
-import {
-  boliviaDepartments,
-  geographicOriginLabel
-} from "@/features/geography/origin";
+import { geographicOriginLabel } from "@/features/geography/origin";
 import { visitAttributionSummary } from "@/features/attribution/catalog";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
-import type { VisitStatus } from "@/generated/prisma/client";
 import { cn } from "@/lib/cn";
-import { dateOnlyRange, dayRange, formatDateTime } from "@/lib/dates";
+import { dayRange, formatDateTime } from "@/lib/dates";
 import { parsePage } from "@/modules/database/pagination";
 import {
   countPatients,
@@ -41,40 +36,36 @@ import { getBranchContext } from "@/features/branches/context";
 import { CircleOff, ScanSearch, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 
-const statusOptions = Object.entries(visitStatusLabels) as Array<
-  [VisitStatus, string]
->;
-
 type ReceptionPageProps = {
   searchParams: Promise<{
     vista?: string;
-    status?: VisitStatus | "all";
+    status?: ReceptionStatusFilter;
     page?: string;
     visita?: string;
-    periodo?: string;
-    desde?: string;
-    hasta?: string;
-    ciudad?: string;
-    departamento?: string;
+    periodo?: VisitPeriod;
   }>;
 };
 
-type VisitPeriod = "all" | "today" | "7days" | "30days" | "custom";
+type VisitPeriod = "all" | "today" | "7days" | "30days";
+type ReceptionStatusFilter = "active" | "all" | "completed" | "left_without_care";
 
 const periodOptions: Array<{ value: VisitPeriod; label: string }> = [
-  { value: "all", label: "Cualquier fecha" },
   { value: "today", label: "Hoy" },
   { value: "7days", label: "Últimos 7 días" },
   { value: "30days", label: "Últimos 30 días" },
-  { value: "custom", label: "Rango personalizado" },
+  { value: "all", label: "Cualquier fecha" },
+];
+
+const receptionStatusOptions: Array<{ value: ReceptionStatusFilter; label: string }> = [
+  { value: "active", label: "Activas" },
+  { value: "all", label: "Todas" },
+  { value: "completed", label: "Finalizadas" },
+  { value: "left_without_care", label: "Abandonos" },
 ];
 
 function visitDateRange(
-  period: VisitPeriod,
-  from?: string,
-  to?: string,
+  period: VisitPeriod
 ): { start?: Date; end?: Date } {
-  if (period === "custom") return dateOnlyRange(from, to);
   if (period === "all") return {};
   const today = dayRange();
   const days = period === "today" ? 1 : period === "7days" ? 7 : 30;
@@ -86,22 +77,14 @@ function visitDateRange(
 
 function receptionSelectionHref(
   filters: {
-    status?: VisitStatus | "all";
+    status?: ReceptionStatusFilter;
     periodo?: string;
-    desde?: string;
-    hasta?: string;
-    ciudad?: string;
-    departamento?: string;
   },
   visitId?: string,
 ) {
   const query = new URLSearchParams();
-  if (filters.status) query.set("status", filters.status);
+  if (filters.status && filters.status !== "active") query.set("status", filters.status);
   if (filters.periodo && filters.periodo !== "all") query.set("periodo", filters.periodo);
-  if (filters.desde) query.set("desde", filters.desde);
-  if (filters.hasta) query.set("hasta", filters.hasta);
-  if (filters.ciudad) query.set("ciudad", filters.ciudad);
-  if (filters.departamento) query.set("departamento", filters.departamento);
   if (visitId) query.set("visita", visitId);
   const search = query.toString();
   return search ? `/sigeco/recepcion?${search}` : "/sigeco/recepcion";
@@ -188,16 +171,15 @@ export default async function ReceptionPage({
   const period: VisitPeriod = periodOptions.some((option) => option.value === params.periodo)
     ? (params.periodo as VisitPeriod)
     : "all";
-  const dateRange = visitDateRange(period, params.desde, params.hasta);
-  const selectedStatus =
-    params.status === "all" || statusOptions.some(([status]) => status === params.status)
-      ? params.status
+  const dateRange = visitDateRange(period);
+  const selectedStatus = receptionStatusOptions.some((option) => option.value === params.status)
+    ? (params.status as ReceptionStatusFilter)
+    : "active";
+  const statusFilter =
+    selectedStatus === "completed" || selectedStatus === "left_without_care"
+      ? selectedStatus
       : undefined;
-  const statusFilter = selectedStatus === "all" ? undefined : selectedStatus;
-  const activeOnly = !selectedStatus;
-  const cityFilter = params.ciudad?.trim().slice(0, 120) || undefined;
-  const departmentFilter =
-    params.departamento?.trim().slice(0, 120) || undefined;
+  const activeOnly = selectedStatus === "active";
 
   const user =
     vista === "pacientes"
@@ -227,8 +209,6 @@ export default async function ReceptionPage({
           pageSize,
           checkedInFrom: dateRange.start,
           checkedInTo: dateRange.end,
-          originCity: cityFilter,
-          originDepartment: departmentFilter,
           branchCode: activeBranch.code,
         }),
         countVisits({
@@ -236,8 +216,6 @@ export default async function ReceptionPage({
           activeOnly,
           checkedInFrom: dateRange.start,
           checkedInTo: dateRange.end,
-          originCity: cityFilter,
-          originDepartment: departmentFilter,
           branchCode: activeBranch.code,
         }),
       ])
@@ -247,14 +225,9 @@ export default async function ReceptionPage({
       ? await Promise.all([
           getPatients({
             page,
-            pageSize,
-            city: cityFilter,
-            department: departmentFilter
+            pageSize
           }),
-          countPatients({
-            city: cityFilter,
-            department: departmentFilter
-          }),
+          countPatients(),
         ])
       : null;
   const patients = patientPage?.[0] ?? [];
@@ -265,10 +238,6 @@ export default async function ReceptionPage({
   const visitFilters = {
     status: selectedStatus,
     periodo: period,
-    desde: period === "custom" ? params.desde : undefined,
-    hasta: period === "custom" ? params.hasta : undefined,
-    ciudad: cityFilter,
-    departamento: departmentFilter,
   };
   const clearSelectionHref = receptionSelectionHref(visitFilters);
 
@@ -380,7 +349,7 @@ export default async function ReceptionPage({
         }
         filters={
           vista === "visitas" ? (
-            <form className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <form className="flex min-w-0 flex-1 items-center gap-2">
               <label className="sr-only" htmlFor="desktop-reception-status">
                 Filtrar visitas por estado
               </label>
@@ -391,14 +360,10 @@ export default async function ReceptionPage({
                   "h-9 min-h-9 max-w-64 py-1.5 text-[13px]",
                 )}
                 name="status"
-                defaultValue={selectedStatus ?? ""}
+                defaultValue={selectedStatus}
               >
-                <option value="">Solo activas</option>
-                <option value="all">Todos los estados</option>
-                {statusOptions.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
+                {receptionStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
               <label className="sr-only" htmlFor="desktop-reception-period">
@@ -414,84 +379,16 @@ export default async function ReceptionPage({
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-              <DateRangePickerField
-                fromName="desde"
-                toName="hasta"
-                defaultFrom={params.desde}
-                defaultTo={params.hasta}
-                className="w-72"
-                triggerClassName="h-9 min-h-9 py-1.5 text-[13px]"
-              />
-              <input
-                className={cn(
-                  internalInputClassName,
-                  "h-9 min-h-9 max-w-40 py-1.5 text-[13px]"
-                )}
-                type="search"
-                name="ciudad"
-                defaultValue={cityFilter}
-                placeholder="Ciudad de llegada"
-                aria-label="Filtrar por ciudad de procedencia"
-              />
-              <select
-                className={cn(
-                  internalInputClassName,
-                  "h-9 min-h-9 max-w-44 py-1.5 text-[13px]"
-                )}
-                name="departamento"
-                defaultValue={departmentFilter ?? ""}
-                aria-label="Filtrar por departamento de procedencia"
-              >
-                <option value="">Todos los departamentos</option>
-                {boliviaDepartments.map((department) => (
-                  <option key={department} value={department}>
-                    {department}
-                  </option>
-                ))}
-              </select>
               <Button type="submit" variant="outline" size="sm">
                 Filtrar
               </Button>
             </form>
           ) : (
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="min-w-0 flex-1">
               <PatientAutocomplete
                 mode="navigate"
                 className="min-w-0 flex-1"
               />
-              <form className="flex items-center gap-2">
-                <input type="hidden" name="vista" value="pacientes" />
-                <input
-                  className={cn(
-                    internalInputClassName,
-                    "h-9 min-h-9 max-w-40 py-1.5 text-[13px]"
-                  )}
-                  type="search"
-                  name="ciudad"
-                  defaultValue={cityFilter}
-                  placeholder="Ciudad"
-                  aria-label="Filtrar pacientes por ciudad habitual"
-                />
-                <select
-                  className={cn(
-                    internalInputClassName,
-                    "h-9 min-h-9 max-w-44 py-1.5 text-[13px]"
-                  )}
-                  name="departamento"
-                  defaultValue={departmentFilter ?? ""}
-                  aria-label="Filtrar pacientes por departamento habitual"
-                >
-                  <option value="">Todos los departamentos</option>
-                  {boliviaDepartments.map((department) => (
-                    <option key={department} value={department}>
-                      {department}
-                    </option>
-                  ))}
-                </select>
-                <Button type="submit" variant="outline" size="sm">
-                  Filtrar
-                </Button>
-              </form>
             </div>
           )
         }
@@ -527,90 +424,47 @@ export default async function ReceptionPage({
       {vista === "visitas" ? (
         <>
           <Card className="sm:hidden">
-            <form className="grid gap-3">
-              <p className="text-sm font-semibold text-text">Filtrar visitas</p>
-              <select className={internalInputClassName} name="status" defaultValue={selectedStatus ?? ""} aria-label="Estado">
-                <option value="">Solo activas</option>
-                <option value="all">Todos los estados</option>
-                {statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-              <select className={internalInputClassName} name="periodo" defaultValue={period} aria-label="Período">
-                {periodOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <DateRangePickerField
-                fromName="desde"
-                toName="hasta"
-                defaultFrom={params.desde}
-                defaultTo={params.hasta}
-              />
-              <input
-                className={internalInputClassName}
-                type="search"
-                name="ciudad"
-                defaultValue={cityFilter}
-                placeholder="Ciudad de procedencia"
-              />
+            <form className="grid gap-2">
+              <p className="text-sm font-semibold text-text">Filtros rápidos</p>
               <select
                 className={internalInputClassName}
-                name="departamento"
-                defaultValue={departmentFilter ?? ""}
-                aria-label="Departamento de procedencia"
+                name="status"
+                defaultValue={selectedStatus}
+                aria-label="Estado"
               >
-                <option value="">Todos los departamentos</option>
-                {boliviaDepartments.map((department) => (
-                  <option key={department} value={department}>
-                    {department}
-                  </option>
+                {receptionStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <select
+                className={internalInputClassName}
+                name="periodo"
+                defaultValue={period}
+                aria-label="Período"
+              >
+                {periodOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
               <Button type="submit" variant="outline">Aplicar filtros</Button>
             </form>
           </Card>
           <Card className="hidden sm:block lg:hidden">
-            <form className="grid gap-3 sm:grid-cols-2">
+            <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
               <select
                 className={internalInputClassName}
                 name="status"
-                defaultValue={selectedStatus ?? ""}
+                defaultValue={selectedStatus}
+                aria-label="Estado"
               >
-                <option value="">Solo activas</option>
-                <option value="all">Todos los estados</option>
-                {statusOptions.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
+                {receptionStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
               <select className={internalInputClassName} name="periodo" defaultValue={period} aria-label="Período">
                 {periodOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
-              <DateRangePickerField
-                fromName="desde"
-                toName="hasta"
-                defaultFrom={params.desde}
-                defaultTo={params.hasta}
-                className="sm:col-span-2"
-              />
-              <input
-                className={internalInputClassName}
-                type="search"
-                name="ciudad"
-                defaultValue={cityFilter}
-                placeholder="Ciudad de procedencia"
-              />
-              <select
-                className={internalInputClassName}
-                name="departamento"
-                defaultValue={departmentFilter ?? ""}
-              >
-                <option value="">Todos los departamentos</option>
-                {boliviaDepartments.map((department) => (
-                  <option key={department} value={department}>
-                    {department}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" variant="outline" className="sm:col-span-2">Aplicar filtros</Button>
+              <Button type="submit" variant="outline">Aplicar filtros</Button>
             </form>
           </Card>
 
@@ -654,7 +508,7 @@ export default async function ReceptionPage({
                     }) || "Sin registrar"}
                   </span>
                   <span>
-                    Fuente: {visitAttributionSummary(visit.attribution)}
+                    Cómo nos conoció: {visitAttributionSummary(visit.attribution)}
                   </span>
                   {visit.workItems.length > 0 ? (
                     <span>
@@ -677,7 +531,7 @@ export default async function ReceptionPage({
                     <Th className="lg:hidden xl:table-cell">Teléfono</Th>
                     <Th className="lg:hidden xl:table-cell">Llegada</Th>
                     <Th>Procedencia</Th>
-                    <Th>Fuente</Th>
+                    <Th>Cómo nos conoció</Th>
                     <Th>Área actual</Th>
                     <Th>Tareas</Th>
                     <Th>Estado</Th>
@@ -766,12 +620,8 @@ export default async function ReceptionPage({
               totalItems={totalVisits}
               pathname="/sigeco/recepcion"
               searchParams={{
-                status: selectedStatus,
+                status: selectedStatus === "active" ? undefined : selectedStatus,
                 periodo: period === "all" ? undefined : period,
-                desde: period === "custom" ? params.desde : undefined,
-                hasta: period === "custom" ? params.hasta : undefined,
-                ciudad: cityFilter,
-                departamento: departmentFilter,
               }}
             />
           </Card>
@@ -845,12 +695,8 @@ export default async function ReceptionPage({
                 totalItems={totalVisits}
                 pathname="/sigeco/recepcion"
                 searchParams={{
-                  status: selectedStatus,
+                  status: selectedStatus === "active" ? undefined : selectedStatus,
                   periodo: period === "all" ? undefined : period,
-                  desde: period === "custom" ? params.desde : undefined,
-                  hasta: period === "custom" ? params.hasta : undefined,
-                  ciudad: cityFilter,
-                  departamento: departmentFilter,
                 }}
               />
             </section>
@@ -890,7 +736,7 @@ export default async function ReceptionPage({
                     </div>
                     <div>
                       <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                        Fuente
+                        Cómo nos conoció
                       </dt>
                       <dd className="mt-0.5 text-text">
                         {visitAttributionSummary(selectedVisit.attribution)}
@@ -961,61 +807,9 @@ export default async function ReceptionPage({
         <>
           <Card className="sm:hidden">
             <PatientAutocomplete mode="navigate" />
-            <form className="mt-3 grid gap-2 border-t border-border pt-3">
-              <input type="hidden" name="vista" value="pacientes" />
-              <input
-                className={internalInputClassName}
-                type="search"
-                name="ciudad"
-                defaultValue={cityFilter}
-                placeholder="Ciudad habitual"
-              />
-              <select
-                className={internalInputClassName}
-                name="departamento"
-                defaultValue={departmentFilter ?? ""}
-                aria-label="Departamento habitual"
-              >
-                <option value="">Todos los departamentos</option>
-                {boliviaDepartments.map((department) => (
-                  <option key={department} value={department}>
-                    {department}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" variant="outline">
-                Filtrar procedencia
-              </Button>
-            </form>
           </Card>
           <Card className="hidden sm:block lg:hidden">
             <PatientAutocomplete mode="navigate" />
-            <form className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-[1fr_1fr_auto]">
-              <input type="hidden" name="vista" value="pacientes" />
-              <input
-                className={internalInputClassName}
-                type="search"
-                name="ciudad"
-                defaultValue={cityFilter}
-                placeholder="Ciudad habitual"
-              />
-              <select
-                className={internalInputClassName}
-                name="departamento"
-                defaultValue={departmentFilter ?? ""}
-                aria-label="Departamento habitual"
-              >
-                <option value="">Todos los departamentos</option>
-                {boliviaDepartments.map((department) => (
-                  <option key={department} value={department}>
-                    {department}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" variant="outline">
-                Filtrar
-              </Button>
-            </form>
           </Card>
 
           <Card className="min-w-0 p-0">
@@ -1092,9 +886,7 @@ export default async function ReceptionPage({
               totalItems={totalPatients}
               pathname="/sigeco/recepcion"
               searchParams={{
-                vista: "pacientes",
-                ciudad: cityFilter,
-                departamento: departmentFilter
+                vista: "pacientes"
               }}
             />
           </Card>

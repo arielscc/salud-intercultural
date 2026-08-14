@@ -53,6 +53,7 @@ export const visitFlowSchema = z.object({
   visitId: z.string().min(1),
   flow: z.enum([
     "complete",
+    "to_reception",
     "to_consultation",
     "to_nursing",
     "to_administration"

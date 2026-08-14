@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { PencilLine, UserRoundPlus } from "lucide-react";
-import type { FollowUpType } from "@/generated/prisma/client";
-import { Field, internalInputClassName } from "@/components/internal/Field";
+import {
+  CalendarClock,
+  MessageCircle,
+  PencilLine,
+  Phone,
+  UserRound,
+  UserRoundPlus
+} from "lucide-react";
 import { ClinicalAttachmentsPanel } from "@/components/internal/clinical-attachments/ClinicalAttachmentsPanel";
-import { PatientConsentPanel } from "@/components/internal/patient-consents/PatientConsentPanel";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { VisitStatusPill } from "@/components/internal/StatusPill";
-import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
-import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
 import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import {
   DesktopSectionPanel,
@@ -26,7 +28,6 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { TimelineItem } from "@/components/internal/ui/TimelineItem";
-import { createFollowUpTaskAction } from "@/features/follow-ups/actions";
 import {
   followUpPriorityLabels,
   followUpResultLabels,
@@ -44,6 +45,7 @@ import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { geographicOriginLabel } from "@/features/geography/origin";
 import { visitAttributionSummary } from "@/features/attribution/catalog";
 import { formatDateTime } from "@/lib/dates";
+import { createDirectWhatsAppLink } from "@/lib/whatsapp";
 import { getPatientById } from "@/modules/database/queries/patients";
 import { getPatientServiceSessionPackages } from "@/modules/database/queries/service-sessions";
 import {
@@ -60,11 +62,36 @@ import { cn } from "@/lib/cn";
 type PatientDetailPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
-    consentimiento?: string;
-    decision?: string;
     aviso?: string;
   }>;
 };
+
+function followUpStatusTone(
+  status: string
+): React.ComponentProps<typeof Chip>["tone"] {
+  if (status === "pending" || status === "awaiting_payment") return "warning";
+  if (
+    status === "done" ||
+    status === "improved" ||
+    status === "wants_return" ||
+    status === "requires_new_visit"
+  ) {
+    return "success";
+  }
+  if (status === "no_answer" || status === "not_improved" || status === "requires_doctor_call") {
+    return "error";
+  }
+  return "neutral";
+}
+
+function followUpWhatsAppMessage(task: {
+  title: string;
+  notes: string | null;
+  type: keyof typeof followUpTypeLabels;
+}) {
+  const subject = task.notes?.trim() || task.title.trim() || followUpTypeLabels[task.type];
+  return `Hola, le escribimos de Salud Intercultural por su seguimiento: ${subject}`;
+}
 
 export default async function PatientDetailPage({
   params,
@@ -80,9 +107,6 @@ export default async function PatientDetailPage({
     redirect(`/sigeco/recepcion/pacientes/${patient.mergedInto.id}`);
   }
 
-  const followUpConsent = patient.consents.find(
-    (consent) => consent.purpose === "follow_up"
-  );
   const canReadAttachments = roleHasPermission(user.role, "attachments_read");
   const attachments = canReadAttachments
     ? await getClinicalAttachmentsForPatient(patient.id)
@@ -101,14 +125,9 @@ export default async function PatientDetailPage({
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const followUpCreationTypes = (
-    Object.keys(followUpTypeLabels) as FollowUpType[]
-  ).filter((type) => {
-    if (user.role === "administracion") {
-      return type === "administrative";
-    }
-    return true;
-  });
+  const pendingFollowUps = patient.followUpTasks.filter((task) =>
+    ["pending", "awaiting_payment"].includes(task.status)
+  );
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
@@ -125,73 +144,92 @@ export default async function PatientDetailPage({
         </div>
       ) : null}
       <div className="grid gap-4 max-sm:contents">
-        <Card className="max-sm:order-1">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3.5">
-              <span
-                aria-hidden="true"
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-soft font-sora text-lg font-bold text-primary-dark"
-              >
-                {initials}
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold tabular-nums text-primary-dark">
-                  {patient.internalCode}
-                </p>
-                <h2 className="font-sora text-2xl font-bold leading-tight tracking-tight text-text">
-                  {patient.fullName}
-                </h2>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {age !== null ? <Chip>{age} años</Chip> : null}
-                  {patient.gender !== "unknown" ? (
-                    <Chip>{patientGenderLabels[patient.gender]}</Chip>
-                  ) : null}
-                  {patient.city ? <Chip>{patient.city}</Chip> : null}
+        <Card className="max-sm:order-1 overflow-hidden border-primary/30 bg-surface p-0 shadow-sm">
+          <div className="border-b border-primary/20 bg-primary/10 px-4 py-4 sm:px-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex min-w-0 gap-3">
+                <span
+                  aria-hidden="true"
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-primary font-sora text-lg font-bold text-white shadow-sm"
+                >
+                  {initials || <UserRound className="h-6 w-6" />}
+                </span>
+                <div className="min-w-0">
+                  <p className="inline-flex rounded-full bg-surface px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-dark shadow-sm">
+                    {patient.internalCode}
+                  </p>
+                  <h2 className="mt-2 font-sora text-2xl font-bold leading-tight text-text sm:text-3xl">
+                    {patient.fullName}
+                  </h2>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {age !== null ? <Chip>{age} años</Chip> : null}
+                    {patient.gender !== "unknown" ? (
+                      <Chip>{patientGenderLabels[patient.gender]}</Chip>
+                    ) : null}
+                    {patient.city ? <Chip>{patient.city}</Chip> : null}
+                  </div>
                 </div>
               </div>
+              {roleHasPermission(user.role, "patients_update") ? (
+                <Link
+                  href={`/sigeco/recepcion/pacientes/${patient.id}/editar`}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "bg-surface")}
+                >
+                  <PencilLine className="h-4 w-4" aria-hidden="true" />
+                  Editar ficha
+                </Link>
+              ) : null}
             </div>
-            {roleHasPermission(user.role, "patients_update") ? (
-              <Link
-                href={`/sigeco/recepcion/pacientes/${patient.id}/editar`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-              >
-                <PencilLine className="h-4 w-4" aria-hidden="true" />
-                Editar ficha
-              </Link>
-            ) : null}
           </div>
-          <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
-            <InfoRow label="Teléfono" value={patient.phone} />
-            {patient.secondaryPhone ? (
-              <InfoRow label="Alternativo" value={patient.secondaryPhone} />
-            ) : null}
-            <InfoRow
-              label="Procedencia habitual"
-              value={patientOrigin || "Sin registrar"}
-              wide
-            />
-            <InfoRow
-              label="Fuente original"
-              value={
-                originalAttribution
-                  ? visitAttributionSummary(originalAttribution)
-                  : patient.captureSources.length > 0
-                  ? patient.captureSources
-                      .map((source) => patientCaptureSourceLabels[source])
-                      .join(" · ")
-                  : patientCaptureSourceLabels[patient.captureSource]
-              }
-            />
-            {patient.aliases.length > 0 ? (
+          <div className="p-[18px]">
+            <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                  <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                  Celular
+                </dt>
+                <dd className="m-0 mt-1">
+                  <a
+                    href={createDirectWhatsAppLink(patient.phone)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="focus-ring inline-flex rounded-[7px] font-semibold tabular-nums text-primary-dark hover:underline"
+                  >
+                    {patient.phone}
+                  </a>
+                </dd>
+              </div>
+              {patient.secondaryPhone ? (
+                <InfoRow label="Alternativo" value={patient.secondaryPhone} />
+              ) : null}
               <InfoRow
-                label="Códigos anteriores"
-                value={patient.aliases
-                  .map((alias) => alias.internalCode)
-                  .join(" · ")}
+                label="Procedencia habitual"
+                value={patientOrigin || "Sin registrar"}
                 wide
               />
-            ) : null}
-          </dl>
+              <InfoRow
+                label="Cómo nos conoció"
+                value={
+                  originalAttribution
+                    ? visitAttributionSummary(originalAttribution)
+                    : patient.captureSources.length > 0
+                    ? patient.captureSources
+                        .map((source) => patientCaptureSourceLabels[source])
+                        .join(" · ")
+                    : patientCaptureSourceLabels[patient.captureSource]
+                }
+              />
+              {patient.aliases.length > 0 ? (
+                <InfoRow
+                  label="Códigos anteriores"
+                  value={patient.aliases
+                    .map((alias) => alias.internalCode)
+                    .join(" · ")}
+                  wide
+                />
+              ) : null}
+            </dl>
+          </div>
         </Card>
 
         {patient.aliases.length > 0 ? (
@@ -244,35 +282,6 @@ export default async function PatientDetailPage({
               ))}
             </div>
           </Card>
-        ) : null}
-
-        {roleHasPermission(user.role, "patient_consents_read") ? (
-          <PatientConsentPanel
-            patientId={patient.id}
-            consents={patient.consents}
-            role={user.role}
-            purposeFilter={
-              [
-                "follow_up",
-                "reminders",
-                "education",
-                "promotions",
-                "image_voice"
-              ].includes(filters.consentimiento ?? "")
-                ? (filters.consentimiento as
-                    | "follow_up"
-                    | "reminders"
-                    | "education"
-                    | "promotions"
-                    | "image_voice")
-                : undefined
-            }
-            decisionFilter={
-              ["granted", "denied", "withdrawn"].includes(filters.decision ?? "")
-                ? (filters.decision as "granted" | "denied" | "withdrawn")
-                : undefined
-            }
-          />
         ) : null}
 
         <Card className="max-sm:order-4 xl:hidden">
@@ -341,7 +350,7 @@ export default async function PatientDetailPage({
                   }) || "Sin registrar"}
                 </span>
                 <span>
-                  Fuentes: {visitAttributionSummary(visit.attribution)}
+                  Cómo nos conoció: {visitAttributionSummary(visit.attribution)}
                 </span>
               </RecordItem>
             ))}
@@ -359,7 +368,7 @@ export default async function PatientDetailPage({
                 <tr>
                   <Th>Llegada</Th>
                   <Th>Procedencia de la visita</Th>
-                  <Th>Fuentes de la llegada</Th>
+                  <Th>Cómo nos conoció</Th>
                   <Th>Área actual</Th>
                   <Th>Estado</Th>
                 </tr>
@@ -686,84 +695,66 @@ export default async function PatientDetailPage({
           </Card>
         ) : null}
 
-        {roleHasPermission(user.role, "followups_write") ? (
+        {roleHasPermission(user.role, "followups_read") ? (
           <Card className="max-sm:order-3">
             <CardHeader
-              title="Crear seguimiento"
-              description="Programa una tarea de contacto posterior con el paciente."
+              title="Seguimientos programados"
+              description="Recepción realiza los contactos creados por el área responsable."
             />
-            {followUpConsent?.decision !== "granted" ? (
-              <div className="mb-3 rounded-[9px] bg-warning/10 px-4 py-3 text-sm">
-                <p className="flex items-center gap-1.5 font-semibold text-warning">
-                  <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-                  No hay autorización vigente para contactar
-                </p>
-                <p className="mt-1 text-muted">
-                  Puedes preparar la tarea, pero SIGECO bloqueará llamadas y WhatsApp
-                  hasta registrar la decisión del paciente.
-                </p>
-              </div>
-            ) : null}
-            <form action={createFollowUpTaskAction} className="grid gap-3">
-              <input type="hidden" name="patientId" value={patient.id} />
-              <Field label="Tipo de seguimiento">
-                <select
-                  className={internalInputClassName}
-                  name="type"
-                  defaultValue={
-                    followUpCreationTypes.includes("evolution")
-                      ? "evolution"
-                      : "administrative"
-                  }
+            <div className="grid gap-2">
+              {pendingFollowUps.map((task) => (
+                <section
+                  key={task.id}
+                  className="rounded-[9px] border border-border bg-surface-soft/35 p-3"
                 >
-                  {followUpCreationTypes.map((value) => (
-                    <option key={value} value={value}>
-                      {followUpTypeLabels[value]}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Prioridad">
-                <select
-                  className={internalInputClassName}
-                  name="priority"
-                  defaultValue="normal"
-                >
-                  {Object.entries(followUpPriorityLabels).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    )
-                  )}
-                </select>
-              </Field>
-              <Field label="Título">
-                <input
-                  className={internalInputClassName}
-                  name="title"
-                  defaultValue="Seguimiento a paciente"
-                  required
-                />
-              </Field>
-              <Field label="Fecha y hora">
-                <DateTimePickerField name="dueAt" required />
-              </Field>
-              <Field label="Notas">
-                <textarea
-                  className={`${internalInputClassName} min-h-20 py-3`}
-                  name="notes"
-                  placeholder="Ej. preguntar cómo sigue del dolor y si está tomando la medicación"
-                />
-              </Field>
-              <p className="text-xs leading-relaxed text-muted">
-                Evolución, retorno y recuperación se asignan a
-                Recepción/Marlen. Las llamadas médicas se asignan al médico.
-                Los seguimientos administrativos pueden quedar con quien los
-                crea.
-              </p>
-              <SubmitButton variant="outline">Crear seguimiento</SubmitButton>
-            </form>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-text">
+                        {task.title}
+                      </p>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-xs tabular-nums text-muted">
+                        <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                        {formatDateTime(task.dueAt)}
+                      </p>
+                    </div>
+                    <Chip tone={followUpStatusTone(task.status)} dot>
+                      {followUpStatusLabels[task.status]}
+                    </Chip>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <Chip tone="primary">{followUpTypeLabels[task.type]}</Chip>
+                    <Chip>
+                      Prioridad {followUpPriorityLabels[task.priority].toLocaleLowerCase("es-BO")}
+                    </Chip>
+                  </div>
+                  {task.notes ? (
+                    <p className="mt-2 line-clamp-2 text-sm text-muted">{task.notes}</p>
+                  ) : null}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <a
+                      href={createDirectWhatsAppLink(patient.phone, followUpWhatsAppMessage(task))}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={cn(buttonVariants({ size: "sm" }), "w-full")}
+                    >
+                      <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                      WhatsApp
+                    </a>
+                    <Link
+                      href={`/sigeco/seguimientos/${task.id}`}
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full")}
+                    >
+                      Registrar contacto
+                    </Link>
+                  </div>
+                </section>
+              ))}
+              {pendingFollowUps.length === 0 ? (
+                <p className="rounded-[9px] border border-border bg-surface-soft/35 px-3 py-3 text-sm text-muted">
+                  No hay seguimientos pendientes para realizar.
+                </p>
+              ) : null}
+            </div>
           </Card>
         ) : null}
       </div>

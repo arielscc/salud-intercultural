@@ -23,6 +23,13 @@ function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
 }
 
+function isActiveBillingWorkItem(item: {
+  title: string;
+  sales: { id: string }[];
+}) {
+  return item.sales.length > 0 || item.title.toLowerCase().includes("cobro");
+}
+
 export async function createVisitAction(formData: FormData) {
   const patientId = String(formData.get("patientId") ?? "");
   const visit = await runAuditedAction(
@@ -65,6 +72,7 @@ export async function createVisitAction(formData: FormData) {
  */
 export async function applyVisitFlowAction(formData: FormData) {
   const visitId = String(formData.get("visitId") ?? "");
+  let successRedirect: string | null = null;
   await runAuditedAction(
     {
       permission: "visits_update",
@@ -90,12 +98,21 @@ export async function applyVisitFlowAction(formData: FormData) {
         redirect(`/sigeco/recepcion/visitas/${parsedVisitId}?error=cerrada`);
       }
 
+      if (flow === "to_reception" && visit.workItems.some(isActiveBillingWorkItem)) {
+        redirect(`/sigeco/recepcion/visitas/${parsedVisitId}?error=cobro-activo`);
+      }
+
       const currentArea = visit.route?.currentArea ?? "recepcion";
       const transitions: Record<
         typeof flow,
         { status: VisitStatus; area: PatientRouteArea; note: string }
       > = {
         complete: { status: "completed", area: "cierre", note: note ?? "Visita cerrada" },
+        to_reception: {
+          status: "in_reception",
+          area: "recepcion",
+          note: note ?? "Devuelto a recepción para corregir derivación"
+        },
         to_consultation: {
           status: "in_consultation",
           area: "medico",
@@ -152,6 +169,12 @@ export async function applyVisitFlowAction(formData: FormData) {
   revalidatePath(`/sigeco/consultas/${visitId}`);
   revalidatePath("/sigeco/administracion");
   revalidatePath("/sigeco/enfermeria");
+
+  const redirectTo = String(formData.get("redirectTo") ?? "");
+  if (redirectTo.startsWith("/sigeco/")) {
+    successRedirect = redirectTo;
+  }
+  if (successRedirect) redirect(successRedirect);
 }
 
 export async function updateVisitStatusAction(formData: FormData) {

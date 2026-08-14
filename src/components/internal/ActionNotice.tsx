@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { ActionSuccessOverlay } from "@/components/internal/ActionSuccessOverlay";
 import {
   clearSigecoSessionKey,
   PURCHASE_SAFE_DRAFT_KEY
@@ -42,7 +43,35 @@ const noticeMessages: Record<string, string> = {
   "pago-compra-registrado": "Pago de compra registrado",
   "recepcion-registrada": "Recepción y stock registrados",
   "compra-anulada": "Compra anulada",
-  "lote-ajustado": "Ajuste de lote registrado"
+  "lote-ajustado": "Ajuste de lote registrado",
+  "orden-estudios-enviada": "Paciente derivado a análisis",
+  "paciente-enviado-consulta": "Paciente derivado a consulta",
+  "paciente-enviado-administracion": "Paciente derivado a administración",
+  "paciente-devuelto-recepcion": "Paciente devuelto a recepción",
+  "visita-cerrada": "Atención cerrada"
+};
+
+const centeredNotices: Record<string, { title: string; description: string }> = {
+  "orden-estudios-enviada": {
+    title: "Derivado a análisis",
+    description: "El paciente salió de recepción y la orden quedó registrada."
+  },
+  "paciente-enviado-consulta": {
+    title: "Derivado a consulta",
+    description: "El paciente fue enviado al panel del médico."
+  },
+  "paciente-enviado-administracion": {
+    title: "Derivado a administración",
+    description: "El paciente fue enviado para gestión administrativa."
+  },
+  "paciente-devuelto-recepcion": {
+    title: "De vuelta en recepción",
+    description: "La derivación fue corregida y el paciente volvió a recepción."
+  },
+  "visita-cerrada": {
+    title: "Atención completada",
+    description: "La visita salió de las bandejas activas."
+  }
 };
 
 export function ActionNotice() {
@@ -50,6 +79,7 @@ export function ActionNotice() {
   const pathname = usePathname();
   const router = useRouter();
   const aviso = searchParams.get("aviso");
+  const centeredNotice = aviso ? centeredNotices[aviso] : undefined;
 
   useEffect(() => {
     if (!aviso) return;
@@ -62,12 +92,25 @@ export function ActionNotice() {
       );
     }
     const message = noticeMessages[aviso];
-    if (message) toast.success(message);
+    const centered = centeredNotices[aviso];
+    if (!centered && message) {
+      toast.success(message);
+    }
     const params = new URLSearchParams(searchParams);
     params.delete("aviso");
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    const target = query ? `${pathname}?${query}` : pathname;
+    const timeout = window.setTimeout(() => {
+      router.replace(target, { scroll: false });
+    }, centered ? 1450 : 0);
+    return () => window.clearTimeout(timeout);
   }, [aviso, pathname, router, searchParams]);
 
-  return null;
+  return (
+    <ActionSuccessOverlay
+      open={Boolean(centeredNotice)}
+      title={centeredNotice?.title ?? ""}
+      description={centeredNotice?.description ?? ""}
+    />
+  );
 }

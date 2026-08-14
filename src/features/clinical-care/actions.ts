@@ -408,7 +408,5 @@ export async function createReceptionPaidStudyOrderAction(formData: FormData) {
   revalidatePath("/sigeco/recepcion");
   revalidatePath("/sigeco/administracion");
   revalidatePath(`/sigeco/recepcion/visitas/${visitId}`);
-  redirect(
-    `/sigeco/recepcion/visitas/${visitId}?aviso=orden-estudios-enviada`
-  );
+  redirect("/sigeco/recepcion?aviso=orden-estudios-enviada");
 }

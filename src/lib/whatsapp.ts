@@ -27,6 +27,11 @@ function normalizePhoneNumber(phone: string) {
   return phone.replace(/[^\d]/g, "");
 }
 
+function normalizeWhatsAppPhoneNumber(phone: string) {
+  const digits = normalizePhoneNumber(phone);
+  return digits.length === 8 ? `591${digits}` : digits;
+}
+
 export function createWhatsAppMessage(context: WhatsAppMessageContext = {}) {
   if (context.service) {
     return `Hola, quiero consultar por ${context.service}.`;
@@ -49,8 +54,19 @@ export function createWhatsAppLink(
 ) {
   if (contactsAreBlocked()) return blockedStagingContactHref;
 
-  const phone = normalizePhoneNumber(phoneNumber);
+  const phone = normalizeWhatsAppPhoneNumber(phoneNumber);
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+export function createDirectWhatsAppLink(
+  phoneNumber: string,
+  message?: string | null
+) {
+  if (contactsAreBlocked()) return blockedStagingContactHref;
+
+  const phone = normalizeWhatsAppPhoneNumber(phoneNumber);
+  const text = message?.trim();
+  return text ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : `https://wa.me/${phone}`;
 }
 
 export function createContextualWhatsAppLink(

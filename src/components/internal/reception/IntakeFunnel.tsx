@@ -69,6 +69,9 @@ export function IntakeFunnel({
   captureSourceOptions: CaptureSourceOption[];
 }) {
   const [step, setStep] = useState(initialPatient ? 1 : 0);
+  const howTheyKnewOptions = captureSourceOptions.filter(
+    (source) => source.category !== "messaging" && source.code !== "whatsapp"
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<PatientMatch[] | null>(null);
@@ -655,15 +658,14 @@ export function IntakeFunnel({
         </div>
         <div className="grid gap-2 text-[13px] font-medium text-text lg:col-span-2">
           <span>
-            ¿Dónde conoció la clínica por primera vez?
+            ¿Cómo nos conoció?
             <RequiredMark />
           </span>
           <p className="text-xs font-normal leading-relaxed text-muted">
-            Haz esta pregunta con palabras simples. Por ejemplo: “¿Fue por
-            Facebook, TikTok, una recomendación u otro medio?”.
+            Pregunta de forma simple: “¿Dónde escuchó de nosotros por primera vez?”.
           </p>
           <div className="flex flex-wrap gap-2">
-            {captureSourceOptions.map((source) => (
+            {howTheyKnewOptions.map((source) => (
               <ChipOption
                 key={source.id}
                 selected={capturePrimarySource === source.code}

@@ -3,6 +3,7 @@ import type {
   Prisma,
   SymptomDurationUnit,
   VisitIntakeType,
+  VisitWorkItemStatus,
   VisitStatus
 } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
@@ -11,6 +12,13 @@ import {
   appendAreaExitedEvents
 } from "@/modules/database/queries/area-times";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
+
+const activeWorkItemStatuses: VisitWorkItemStatus[] = [
+  "pending",
+  "acknowledged",
+  "in_progress",
+  "blocked"
+];
 
 export class ClosedVisitTransitionError extends Error {
   constructor(public readonly visitId: string) {
@@ -226,7 +234,7 @@ export async function getVisits(
         workItems: {
           where: {
             status: {
-              in: ["pending", "acknowledged", "in_progress"]
+              in: activeWorkItemStatuses
             }
           },
           orderBy: {
@@ -312,6 +320,11 @@ export async function getVisitById(id: string) {
           }
         },
         workItems: {
+          include: {
+            sales: {
+              select: { id: true, balanceCents: true }
+            }
+          },
           orderBy: { createdAt: "desc" }
         }
       }
@@ -328,6 +341,17 @@ export async function getVisitFlowState(id: string) {
         status: true,
         route: {
           select: { currentArea: true }
+        },
+        workItems: {
+          where: {
+            area: "administracion",
+            status: { in: activeWorkItemStatuses }
+          },
+          select: {
+            id: true,
+            title: true,
+            sales: { select: { id: true } }
+          }
         }
       }
     });

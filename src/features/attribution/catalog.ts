@@ -78,19 +78,31 @@ export function captureSourceSummaryLabel(source: {
 export function visitAttributionSummary(attribution: {
   touches: Array<{
     role: "primary" | "support";
-    source: { patientLabel: string; internalLabel: string };
+    source: {
+      code?: string;
+      patientLabel: string;
+      internalLabel: string;
+      category?: CaptureSourceCategory;
+    };
   }>;
 } | null | undefined) {
-  if (!attribution) return "Sin atribución histórica";
-  const primary = attribution.touches.find((touch) => touch.role === "primary");
-  const supports = attribution.touches.filter(
+  if (!attribution) return "Sin registrar";
+  const knownUsTouches = attribution.touches.filter(
+    (touch) =>
+      touch.source.category !== "messaging" &&
+      normalizeCaptureCode(touch.source.code ?? touch.source.patientLabel) !== "whatsapp"
+  );
+  const primary = knownUsTouches.find((touch) => touch.role === "primary");
+  const supports = knownUsTouches.filter(
     (touch) => touch.role === "support"
   );
 
-  return [
-    primary?.source.patientLabel ?? "Sin fuente principal",
+  const labels = [
+    primary?.source.patientLabel,
     ...supports.map((touch) => touch.source.patientLabel)
-  ].join(" + ");
+  ].filter((label): label is string => Boolean(label));
+
+  return labels.length > 0 ? labels.join(" + ") : "Sin registrar";
 }
 
 export function verifiedAttributionDetail(attribution: {

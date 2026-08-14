@@ -20,21 +20,31 @@ describe("capture attribution helpers", () => {
     expect(toCompatiblePatientCaptureSource("radio")).toBe("other");
   });
 
-  it("shows primary and support sources without erasing either one", () => {
+  it("shows how the patient knew the clinic without contact channels", () => {
     expect(
       visitAttributionSummary({
         touches: [
           {
             role: "primary",
-            source: { patientLabel: "TikTok", internalLabel: "TikTok" }
+            source: {
+              code: "tiktok",
+              patientLabel: "TikTok",
+              internalLabel: "TikTok",
+              category: "social"
+            }
           },
           {
             role: "support",
-            source: { patientLabel: "WhatsApp", internalLabel: "WhatsApp" }
+            source: {
+              code: "whatsapp",
+              patientLabel: "WhatsApp",
+              internalLabel: "WhatsApp",
+              category: "messaging"
+            }
           }
         ]
       })
-    ).toBe("TikTok + WhatsApp");
+    ).toBe("TikTok");
   });
 
   it("shows exact account and traffic only when campaign evidence exists", () => {

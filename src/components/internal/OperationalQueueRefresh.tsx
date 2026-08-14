@@ -60,6 +60,7 @@ export function OperationalQueueRefresh({
   const refreshStartedAtRef = useRef<number | null>(null);
   const previousServerUpdateRef = useRef(serverUpdatedAt);
   const requestTimeoutRef = useRef<number | null>(null);
+  const hasUserEditedRef = useRef(false);
   const intervalMs = queueRefreshInterval(isMobile);
   const parsedServerUpdate = Date.parse(serverUpdatedAt);
   const lastUpdatedAt = Number.isNaN(parsedServerUpdate)
@@ -67,9 +68,15 @@ export function OperationalQueueRefresh({
     : parsedServerUpdate;
   const stale = isQueueRefreshStale(lastUpdatedAt, now, intervalMs);
 
+  const hasDirtyQueueState = useCallback(() => {
+    const markedDirty = document.querySelector('[data-queue-refresh-dirty="true"]');
+    if (markedDirty) return true;
+    return hasUserEditedRef.current && hasUnsavedQueueInput();
+  }, []);
+
   const refreshQueue = useCallback(
     (origin: "automatic" | "manual") => {
-      const dirty = hasUnsavedQueueInput();
+      const dirty = hasDirtyQueueState();
       setIsDirty(dirty);
       if (dirty) {
         setFeedback("dirty");
@@ -112,7 +119,7 @@ export function OperationalQueueRefresh({
         recordQueueRefreshMetric(queueKey, "failed");
       }, QUEUE_REFRESH_REQUEST_TIMEOUT_MS);
     },
-    [queueKey, router]
+    [hasDirtyQueueState, queueKey, router]
   );
 
   useEffect(() => {
@@ -171,14 +178,17 @@ export function OperationalQueueRefresh({
   }, []);
 
   useEffect(() => {
-    const updateDirtyState = () => {
+    const updateDirtyState = (event?: Event) => {
+      if (event) hasUserEditedRef.current = true;
       window.setTimeout(() => {
-        const dirty = hasUnsavedQueueInput();
+        const dirty = hasDirtyQueueState();
         setIsDirty(dirty);
-        if (!dirty) setFeedback(null);
+        if (!dirty) {
+          hasUserEditedRef.current = false;
+          setFeedback(null);
+        }
       }, 0);
     };
-    updateDirtyState();
     document.addEventListener("input", updateDirtyState, true);
     document.addEventListener("change", updateDirtyState, true);
     document.addEventListener("reset", updateDirtyState, true);
@@ -187,7 +197,7 @@ export function OperationalQueueRefresh({
       document.removeEventListener("change", updateDirtyState, true);
       document.removeEventListener("reset", updateDirtyState, true);
     };
-  }, [serverUpdatedAt]);
+  }, [hasDirtyQueueState, serverUpdatedAt]);
 
   useEffect(() => {
     const clock = window.setInterval(() => setNow(Date.now()), 10_000);

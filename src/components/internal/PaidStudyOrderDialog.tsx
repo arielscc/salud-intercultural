@@ -32,6 +32,8 @@ export function PaidStudyOrderDialog({
   action,
   studies,
   compactTrigger = false,
+  triggerClassName,
+  triggerDisabled = false,
   triggerLabel = "Derivar a enfermería",
   title = "Derivar a enfermería",
   description = "Toca una tarjeta para agregar el estudio o servicio. La ficha pasa primero a Administración para el cobro.",
@@ -43,6 +45,8 @@ export function PaidStudyOrderDialog({
   action: (formData: FormData) => Promise<void>;
   studies: PaidStudyOption[];
   compactTrigger?: boolean;
+  triggerClassName?: string;
+  triggerDisabled?: boolean;
   triggerLabel?: string;
   title?: string;
   description?: string;
@@ -80,6 +84,8 @@ export function PaidStudyOrderDialog({
       triggerIcon={
         <HeartPulse className={compactTrigger ? "h-4 w-4" : "h-5 w-5"} aria-hidden="true" />
       }
+      triggerClassName={triggerClassName}
+      triggerDisabled={triggerDisabled}
       compactTrigger={compactTrigger}
       submitLabel={submitLabel}
     />

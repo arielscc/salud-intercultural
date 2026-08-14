@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Check, Minus, Pencil, Plus, Search, X } from "lucide-react";
+import { Check, Minus, Plus, Search, X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { internalInputClassName } from "@/components/internal/Field";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Button } from "@/components/internal/ui/Button";
-import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { cn } from "@/lib/cn";
 
 export type OrderPickerItem = {
@@ -70,9 +69,9 @@ function normalize(value: string) {
  * Selector de ítems para derivar al paciente (Enfermería o Administración).
  *
  * Pensado primero para el celular del médico: el nombre del ítem ocupa su propia
- * línea (antes se truncaba a ~27px entre los dos inputs), lo elegido sube a una
- * sección propia arriba, hay buscador con filtros por grupo, y el total y el
- * botón de envío viven en un pie fijo. Desde `sm` la fila vuelve a una sola línea.
+ * línea, hay buscador con filtros por grupo, el catálogo conserva los ítems
+ * marcados para poder desmarcarlos ahí mismo, y el detalle editable queda al
+ * final junto al descuento y el total. Desde `sm` la fila vuelve a una sola línea.
  *
  * El modal no conoce el contrato del servidor: cada pantalla pasa sus `formFields`
  * (ocultos del formulario) y `lineFields` (ocultos por línea elegida).
@@ -91,6 +90,8 @@ export function OrderPickerDialog({
   emptyMessage,
   triggerLabel,
   triggerIcon,
+  triggerClassName,
+  triggerDisabled = false,
   compactTrigger = false,
   submitLabel,
   groupNotes,
@@ -115,6 +116,8 @@ export function OrderPickerDialog({
   emptyMessage: string;
   triggerLabel: string;
   triggerIcon: ReactNode;
+  triggerClassName?: string;
+  triggerDisabled?: boolean;
   compactTrigger?: boolean;
   submitLabel: string;
   /** Aclaración corta bajo el encabezado de un grupo. */
@@ -133,7 +136,6 @@ export function OrderPickerDialog({
   const [priceOpen, setPriceOpen] = useState<Record<string, boolean>>({});
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState(ALL_FILTER);
-  const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discount, setDiscount] = useState("0.00");
   const [totalStr, setTotalStr] = useState("");
   const [totalDirty, setTotalDirty] = useState(false);
@@ -144,7 +146,7 @@ export function OrderPickerDialog({
   }, 0);
 
   const baseCents = totalDirty ? toCents(totalStr) : lineSumCents;
-  const requestedDiscount = discountEnabled ? toCents(discount) : 0;
+  const requestedDiscount = toCents(discount);
   // Descuento libre (sin tope): solo se acota al total para no dar negativo.
   const appliedDiscount = Math.min(Math.max(0, requestedDiscount), baseCents);
   const chargeCents = Math.max(0, baseCents - appliedDiscount);
@@ -159,16 +161,15 @@ export function OrderPickerDialog({
   const showSearch = items.length >= 8;
   const showFilters = groups.length > 1 || Boolean(badgeLabel);
 
-  // Lo elegido vive arriba (es el "carrito"): la búsqueda y los chips solo
-  // filtran el catálogo de abajo para que nunca se pierda de vista.
-  const available = items.filter((item) => {
-    if (selected[item.key]) return false;
+  const catalogItems = items.filter((item) => {
     if (filter === BADGE_FILTER && !item.badge) return false;
     if (filter !== ALL_FILTER && filter !== BADGE_FILTER && item.group !== filter) return false;
     if (normalizedQuery && !normalize(item.label).includes(normalizedQuery)) return false;
     return true;
   });
-  const visibleGroups = groups.filter((group) => available.some((item) => item.group === group));
+  const visibleGroups = groups.filter((group) =>
+    catalogItems.some((item) => item.group === group)
+  );
 
   function toggle(key: string) {
     const wasSelected = Boolean(selected[key]);
@@ -187,12 +188,9 @@ export function OrderPickerDialog({
     }));
   }
 
-  function renderRow(item: OrderPickerItem) {
+  function renderCatalogRow(item: OrderPickerItem) {
     const key = item.key;
     const enabled = Boolean(selected[key]);
-    const price = prices[key] ?? "";
-    const quantity = qty[key] ?? 1;
-    const invalid = enabled && !isValidMoney(price);
     return (
       <div
         key={key}
@@ -201,114 +199,133 @@ export function OrderPickerDialog({
           enabled ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border"
         )}
       >
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          {/* El nombre es el área táctil grande; los controles quedan fuera del
-              botón para no anidar controles interactivos. */}
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={enabled}
+          onClick={() => toggle(key)}
+          className="focus-ring flex min-h-11 w-full min-w-0 items-center gap-3 rounded-[7px] text-left"
+        >
+          <span
+            className={cn(
+              "flex size-5 shrink-0 items-center justify-center rounded-[6px] border",
+              enabled ? "border-primary bg-primary text-white" : "border-border text-transparent"
+            )}
+            aria-hidden="true"
+          >
+            <Check size={14} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-text">{item.label}</span>
+            {item.badge ? (
+              <span className="mt-0.5 inline-block rounded-[5px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-primary-dark">
+                {item.badge}
+              </span>
+            ) : null}
+          </span>
+          <span className="shrink-0 text-sm tabular-nums text-muted">
+            {enabled
+              ? "Seleccionado"
+              : item.unitPriceCents > 0
+                ? formatBs(item.unitPriceCents)
+                : "Sin precio"}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  function renderSelectedLine(item: OrderPickerItem) {
+    const key = item.key;
+    const price = prices[key] ?? "";
+    const quantity = qty[key] ?? 1;
+    const invalid = !isValidMoney(price);
+
+    return (
+      <div
+        key={key}
+        className={cn(
+          "rounded-[9px] border bg-surface p-2.5 transition",
+          invalid ? "border-error/50 ring-1 ring-error/20" : "border-border"
+        )}
+      >
+        <div className="flex items-start gap-2">
+          <p className="min-w-0 flex-1 text-sm font-semibold leading-5 text-text">
+            {item.label}
+          </p>
           <button
             type="button"
-            role="checkbox"
-            aria-checked={enabled}
+            className="focus-ring flex size-8 shrink-0 items-center justify-center rounded-[7px] text-muted hover:bg-error/10 hover:text-error"
             onClick={() => toggle(key)}
-            className="focus-ring flex min-h-11 w-full min-w-0 flex-1 basis-full items-center gap-3 rounded-[7px] text-left sm:basis-0"
+            aria-label={`Quitar ${item.label}`}
           >
-            <span
-              className={cn(
-                "flex size-5 shrink-0 items-center justify-center rounded-[6px] border",
-                enabled ? "border-primary bg-primary text-white" : "border-border text-transparent"
-              )}
-              aria-hidden="true"
-            >
-              <Check size={14} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium text-text">{item.label}</span>
-              {item.badge ? (
-                <span className="mt-0.5 inline-block rounded-[5px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-primary-dark">
-                  {item.badge}
-                </span>
-              ) : null}
-            </span>
-            {enabled ? null : (
-              <span className="shrink-0 text-sm tabular-nums text-muted">
-                {item.unitPriceCents > 0 ? formatBs(item.unitPriceCents) : "Sin precio"}
-              </span>
-            )}
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
-
-          {enabled ? (
-            <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
-              <div className="flex items-center rounded-[7px] border border-border bg-surface">
-                <button
-                  type="button"
-                  className="focus-ring flex size-11 items-center justify-center rounded-l-[7px] text-muted hover:text-text disabled:opacity-40 sm:size-9"
-                  onClick={() => changeQuantity(key, -1)}
-                  disabled={quantity <= 1}
-                  aria-label={`Quitar una unidad de ${item.label}`}
-                >
-                  <Minus className="h-4 w-4" aria-hidden="true" />
-                </button>
-                <input
-                  className="h-11 w-10 border-x border-border bg-transparent text-center text-sm font-semibold tabular-nums text-text focus:outline-none sm:h-9"
-                  inputMode="numeric"
-                  aria-label={`Cantidad de ${item.label}`}
-                  value={quantity}
-                  onChange={(event) =>
-                    setQty((current) => ({
-                      ...current,
-                      [key]: Math.min(
-                        maxQuantity,
-                        Math.max(1, Number(event.target.value.replace(/\D/g, "")) || 1)
-                      )
-                    }))
-                  }
-                />
-                <button
-                  type="button"
-                  className="focus-ring flex size-11 items-center justify-center rounded-r-[7px] text-muted hover:text-text sm:size-9"
-                  onClick={() => changeQuantity(key, 1)}
-                  aria-label={`Agregar una unidad de ${item.label}`}
-                >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-
-              {priceOpen[key] || invalid ? (
-                <div className="w-24">
-                  <input
-                    className={cn(
-                      internalInputClassName,
-                      "px-2 text-right",
-                      invalid && "border-error text-error focus:border-error focus:ring-error/10"
-                    )}
-                    inputMode="decimal"
-                    autoFocus={priceOpen[key]}
-                    aria-label={`Precio de ${item.label}`}
-                    aria-invalid={invalid}
-                    value={price}
-                    onChange={(event) =>
-                      setPrices((current) => ({
-                        ...current,
-                        [key]: sanitizeMoney(event.target.value)
-                      }))
-                    }
-                  />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="focus-ring flex min-h-11 items-center gap-1.5 rounded-[7px] px-2 text-sm tabular-nums text-text hover:text-primary-dark sm:min-h-9"
-                  onClick={() => setPriceOpen((current) => ({ ...current, [key]: true }))}
-                  aria-label={`Editar el precio de ${item.label}`}
-                >
-                  {formatBs(toCents(price))}
-                  <Pencil className="h-3.5 w-3.5 text-muted" aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          ) : null}
         </div>
 
-        {enabled ? lineFields(item, { price: price || "0", quantity }) : null}
+        <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+          <label className="grid min-w-0 gap-1">
+            <span className="text-xs font-medium text-muted">Cantidad</span>
+            <span className="flex h-10 min-w-0 items-center rounded-[7px] border border-border bg-surface">
+              <button
+                type="button"
+                className="focus-ring flex h-10 w-8 shrink-0 items-center justify-center rounded-l-[7px] text-muted hover:text-text disabled:opacity-40"
+                onClick={() => changeQuantity(key, -1)}
+                disabled={quantity <= 1}
+                aria-label={`Quitar una unidad de ${item.label}`}
+              >
+                <Minus className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <input
+                className="h-10 min-w-0 flex-1 border-x border-border bg-transparent text-center text-sm font-semibold tabular-nums text-text focus:outline-none"
+                inputMode="numeric"
+                aria-label={`Cantidad de ${item.label}`}
+                value={quantity}
+                onChange={(event) =>
+                  setQty((current) => ({
+                    ...current,
+                    [key]: Math.min(
+                      maxQuantity,
+                      Math.max(1, Number(event.target.value.replace(/\D/g, "")) || 1)
+                    )
+                  }))
+                }
+              />
+              <button
+                type="button"
+                className="focus-ring flex h-10 w-8 shrink-0 items-center justify-center rounded-r-[7px] text-muted hover:text-text"
+                onClick={() => changeQuantity(key, 1)}
+                aria-label={`Agregar una unidad de ${item.label}`}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </span>
+          </label>
+
+          <label className="grid min-w-0 gap-1">
+            <span className="text-xs font-medium text-muted">Costo Bs</span>
+            <input
+              className={cn(
+                internalInputClassName,
+                "h-10 min-w-0 px-2 text-right text-sm",
+                invalid && "border-error text-error focus:border-error focus:ring-error/10"
+              )}
+              inputMode="decimal"
+              autoFocus={priceOpen[key]}
+              aria-label={`Costo de ${item.label}`}
+              aria-invalid={invalid}
+              value={price}
+              onChange={(event) =>
+                setPrices((current) => ({
+                  ...current,
+                  [key]: sanitizeMoney(event.target.value)
+                }))
+              }
+            />
+          </label>
+        </div>
+
+        {lineFields(item, { price: price || "0", quantity })}
       </div>
     );
   }
@@ -320,9 +337,11 @@ export function OrderPickerDialog({
           type="button"
           variant="primary"
           size={compactTrigger ? "sm" : "md"}
-          className={
-            compactTrigger ? "gap-2" : "min-h-16 w-full gap-2 text-[15px] font-semibold shadow-sm"
-          }
+          disabled={triggerDisabled}
+          className={cn(
+            compactTrigger ? "gap-2" : "min-h-16 w-full gap-2 text-[15px] font-semibold shadow-sm",
+            triggerClassName
+          )}
         >
           {triggerIcon}
           {triggerLabel}
@@ -430,20 +449,9 @@ export function OrderPickerDialog({
               </header>
 
               <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-                {hasSelection ? (
-                  <section className="mb-4 grid gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                      Seleccionados ({chosen.length})
-                    </p>
-                    {chosen.map((item) => renderRow(item))}
-                  </section>
-                ) : null}
-
-                {available.length === 0 ? (
+                {catalogItems.length === 0 ? (
                   <p className="rounded-[9px] border border-border px-4 py-6 text-center text-sm text-muted">
-                    {hasSelection && !normalizedQuery
-                      ? "No queda nada más para agregar con este filtro."
-                      : "Ningún ítem coincide con la búsqueda."}
+                    Ningún ítem coincide con la búsqueda.
                   </p>
                 ) : (
                   <div className="grid gap-3">
@@ -459,7 +467,9 @@ export function OrderPickerDialog({
                             ) : null}
                           </div>
                         ) : null}
-                        {available.filter((item) => item.group === group).map((item) => renderRow(item))}
+                        {catalogItems
+                          .filter((item) => item.group === group)
+                          .map((item) => renderCatalogRow(item))}
                       </section>
                     ))}
                   </div>
@@ -474,68 +484,84 @@ export function OrderPickerDialog({
                     />
                   </label>
 
-                  <CollapsibleSection
-                    title="Ajustar descuento y total"
-                    description="Opcional: el precio del catálogo ya viene aplicado."
-                  >
-                    <label className="flex items-center gap-2 text-sm text-text">
-                      <input
-                        type="checkbox"
-                        className="size-4"
-                        checked={discountEnabled}
-                        onChange={(event) => setDiscountEnabled(event.target.checked)}
-                      />
-                      Aplicar descuento
-                    </label>
-                    {discountEnabled ? (
-                      <label className="grid gap-1.5">
-                        <span className="text-[13px] font-medium text-text">Descuento Bs</span>
-                        <input
-                          className={internalInputClassName}
-                          inputMode="decimal"
-                          value={discount}
-                          onChange={(event) => setDiscount(sanitizeMoney(event.target.value))}
-                        />
-                      </label>
-                    ) : null}
-                    <label className="grid gap-1.5">
-                      <span className="text-[13px] font-medium text-text">Total Bs (editable)</span>
-                      <input
-                        className={internalInputClassName}
-                        inputMode="decimal"
-                        aria-label="Total editable"
-                        value={totalDirty ? totalStr : (lineSumCents / 100).toFixed(2)}
-                        onChange={(event) => {
-                          setTotalDirty(true);
-                          setTotalStr(sanitizeMoney(event.target.value));
-                        }}
-                      />
-                    </label>
-                    <dl className="grid gap-1 text-sm tabular-nums">
+                  <section className="grid gap-3 rounded-[10px] border border-border bg-surface-soft p-3 sm:p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        Seleccionados
+                      </p>
+                      {hasSelection ? (
+                        <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold tabular-nums text-muted">
+                          {chosen.length}
+                        </span>
+                      ) : null}
+                    </div>
+                    {hasSelection ? (
+                      <div className="grid gap-2 lg:grid-cols-2">
+                        {chosen.map((item) => renderSelectedLine(item))}
+                      </div>
+                    ) : (
+                      <p className="rounded-[9px] border border-dashed border-border bg-surface px-4 py-5 text-center text-sm text-muted">
+                        Selecciona uno o más ítems del catálogo.
+                      </p>
+                    )}
+                  </section>
+
+                  <section className="grid gap-3 rounded-[10px] border border-border bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:p-4">
+                    <div className="grid gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="grid gap-1.5">
+                          <span className="text-[13px] font-medium text-text">Descuento Bs</span>
+                          <input
+                            className={internalInputClassName}
+                            inputMode="decimal"
+                            value={discount}
+                            onChange={(event) => setDiscount(sanitizeMoney(event.target.value))}
+                          />
+                        </label>
+                        <label className="grid gap-1.5">
+                          <span className="text-[13px] font-medium text-text">
+                            Total Bs (editable)
+                          </span>
+                          <input
+                            className={internalInputClassName}
+                            inputMode="decimal"
+                            aria-label="Total editable"
+                            value={totalDirty ? totalStr : (lineSumCents / 100).toFixed(2)}
+                            onChange={(event) => {
+                              setTotalDirty(true);
+                              setTotalStr(sanitizeMoney(event.target.value));
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {totalDirty ? (
+                        <button
+                          type="button"
+                          className="justify-self-start text-xs font-semibold text-primary-dark hover:underline"
+                          onClick={() => {
+                            setTotalDirty(false);
+                            setTotalStr("");
+                          }}
+                        >
+                          Recalcular total desde los ítems
+                        </button>
+                      ) : null}
+                    </div>
+                    <dl className="grid content-center gap-1 text-sm tabular-nums">
                       <div className="flex justify-between gap-4">
                         <dt className="text-muted">Suma de ítems</dt>
                         <dd>{formatBs(lineSumCents)}</dd>
                       </div>
-                      {discountEnabled ? (
-                        <div className="flex justify-between gap-4">
-                          <dt className="text-muted">Descuento</dt>
-                          <dd>-{formatBs(appliedDiscount)}</dd>
-                        </div>
-                      ) : null}
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-muted">Descuento</dt>
+                        <dd>-{formatBs(appliedDiscount)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4 border-t border-border pt-1.5 text-base font-bold text-text">
+                        <dt>Total</dt>
+                        <dd>{formatBs(chargeCents)}</dd>
+                      </div>
                     </dl>
-                    {totalDirty ? (
-                      <button
-                        type="button"
-                        className="justify-self-start text-xs font-semibold text-primary-dark hover:underline"
-                        onClick={() => {
-                          setTotalDirty(false);
-                          setTotalStr("");
-                        }}
-                      >
-                        Recalcular total desde los ítems
-                      </button>
-                    ) : null}
-                  </CollapsibleSection>
+                  </section>
                 </div>
               </div>
 

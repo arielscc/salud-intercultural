@@ -45,6 +45,9 @@ describe("visit schemas", () => {
     expect(
       visitFlowSchema.parse({ visitId: "visit_1", flow: "to_consultation" })
     ).toMatchObject({ visitId: "visit_1", flow: "to_consultation" });
+    expect(
+      visitFlowSchema.parse({ visitId: "visit_1", flow: "to_reception" })
+    ).toMatchObject({ visitId: "visit_1", flow: "to_reception" });
   });
 
   it("requires the detailed discontinuation action for abandonment", () => {
