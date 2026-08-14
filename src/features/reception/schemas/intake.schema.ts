@@ -32,6 +32,24 @@ const optionalPlaceText = z.preprocess(
   emptyToUndefined,
   z.string().trim().max(120).optional()
 );
+const bolivianMobilePhoneSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/\D/g, ""))
+  .refine((value) => /^\d{8}$/.test(value), {
+    message: "Ingresa un celular boliviano de 8 digitos, sin +591."
+  });
+const optionalFixedPhoneSchema = z.preprocess(
+  emptyToUndefined,
+  z
+    .string()
+    .trim()
+    .transform((value) => value.replace(/\D/g, ""))
+    .refine((value) => /^\d{7,8}$/.test(value), {
+      message: "Ingresa un telefono fijo valido o deja el campo vacio."
+    })
+    .optional()
+);
 
 /* El form serializa las fuentes de apoyo como "a,b,c" en un input oculto. */
 const captureSupportSourcesSchema = z.preprocess(
@@ -48,12 +66,8 @@ export const receptionIntakeSchema = z
     idempotencyKey: z.string().uuid().default(() => crypto.randomUUID()),
     patientId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     fullName: z.string().trim().min(2, "Ingresa el nombre completo.").max(160),
-    phone: z
-      .string()
-      .trim()
-      .min(6, "Ingresa un telefono valido.")
-      .max(30)
-      .regex(/^[+()\d\s-]+$/, "Ingresa un telefono valido."),
+    phone: bolivianMobilePhoneSchema,
+    secondaryPhone: optionalFixedPhoneSchema,
     birthDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
     gender: patientGenderSchema.default("unknown"),
     city: requiredPlaceText,
@@ -208,6 +222,7 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
     patient: {
       fullName: cleanText(input.fullName),
       phone: cleanText(input.phone),
+      secondaryPhone: input.secondaryPhone ? cleanText(input.secondaryPhone) : undefined,
       birthDate: input.birthDate,
       gender: input.gender,
       city: patientOrigin.city,

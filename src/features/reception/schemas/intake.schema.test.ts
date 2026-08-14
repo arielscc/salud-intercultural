@@ -10,7 +10,7 @@ describe("reception intake schema", () => {
   it("accepts the minimal funnel with a classified geographic origin", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
-      phone: "+591 71234567",
+      phone: "55435344",
       reason: "Dolor de espalda",
       city: "El Alto",
       department: "La Paz",
@@ -29,7 +29,7 @@ describe("reception intake schema", () => {
   it("rejects a funnel without reason", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
-      phone: "+591 71234567",
+      phone: "71234567",
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
@@ -43,7 +43,7 @@ describe("reception intake schema", () => {
   it("rejects symptom duration with value but no unit", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
-      phone: "+591 71234567",
+      phone: "71234567",
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
@@ -60,7 +60,8 @@ describe("reception intake schema", () => {
     const parsed = receptionIntakeSchema.safeParse({
       patientId: "",
       fullName: "  Maria   Quispe ",
-      phone: " +591 71234567 ",
+      phone: " 71234567 ",
+      secondaryPhone: " 2245678 ",
       birthDate: "1988-04-12",
       gender: "female",
       city: "El Alto",
@@ -86,7 +87,8 @@ describe("reception intake schema", () => {
     const record = toReceptionIntakeRecord(parsed.data);
     expect(record.patientId).toBeUndefined();
     expect(record.patient.fullName).toBe("Maria Quispe");
-    expect(record.patient.phone).toBe("+591 71234567");
+    expect(record.patient.phone).toBe("71234567");
+    expect(record.patient.secondaryPhone).toBe("2245678");
     expect(record.patient.department).toBe("La Paz");
     expect(record.patient.country).toBe("Bolivia");
     expect(record.visit.originCity).toBe("El Alto");
@@ -113,7 +115,7 @@ describe("reception intake schema", () => {
   it("leaves unanswered yes/no questions undefined", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
-      phone: "+591 71234567",
+      phone: "71234567",
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
@@ -134,7 +136,7 @@ describe("reception intake schema", () => {
   it("stores Facebook as a general patient-reported source", () => {
     const parsed = receptionIntakeSchema.parse({
       fullName: "Maria Quispe",
-      phone: "+591 71234567",
+      phone: "71234567",
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
@@ -149,7 +151,7 @@ describe("reception intake schema", () => {
   it("preserves a different origin for the current visit", () => {
     const parsed = receptionIntakeSchema.parse({
       fullName: "Maria Quispe",
-      phone: "+591 71234567",
+      phone: "71234567",
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
@@ -172,7 +174,7 @@ describe("reception intake schema", () => {
   it("rejects an unclassified Bolivian origin", () => {
     const parsed = receptionIntakeSchema.safeParse({
       fullName: "Maria Quispe",
-      phone: "+591 71234567",
+      phone: "71234567",
       city: "Tiquipaya",
       department: "",
       country: "Bolivia",
@@ -181,6 +183,33 @@ describe("reception intake schema", () => {
     });
 
     expect(parsed.success).toBe(false);
+  });
+
+  it("rejects WhatsApp numbers that are not exactly eight digits and invalid fixed phones", () => {
+    expect(
+      receptionIntakeSchema.safeParse({
+        fullName: "Maria Quispe",
+        phone: "+591 71234567",
+        city: "El Alto",
+        department: "La Paz",
+        country: "Bolivia",
+        capturePrimarySource: "other",
+        reason: "Control"
+      }).success
+    ).toBe(false);
+
+    expect(
+      receptionIntakeSchema.safeParse({
+        fullName: "Maria Quispe",
+        phone: "1234567",
+        secondaryPhone: "abc",
+        city: "El Alto",
+        department: "La Paz",
+        country: "Bolivia",
+        capturePrimarySource: "other",
+        reason: "Control"
+      }).success
+    ).toBe(false);
   });
 });
 

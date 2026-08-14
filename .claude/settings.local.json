@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/home/ariel/.codex/skills/gstack/browse/dist/browse js *)",
+      "Bash(/home/ariel/.codex/skills/gstack/browse/dist/browse viewport *)",
+      "Bash(/home/ariel/.codex/skills/gstack/browse/dist/browse screenshot *)",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm test *)",
+      "Bash(/home/ariel/.codex/skills/gstack/browse/dist/browse goto *)",
+      "Bash(pnpm -v)",
+      "Bash(/home/ariel/.codex/skills/gstack/browse/dist/browse click *)",
+      "Bash(/home/ariel/.codex/skills/gstack/browse/dist/browse snapshot *)",
+      "Bash(node *)",
+      "Bash(pnpm add *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"tsc: $?\")",
+      "Bash(echo \"tsc real exit: $?\")",
+      "Bash(npx eslint *)",
+      "Bash(npx prisma *)",
+      "Bash(pnpm seed:diagnosis-templates)"
+    ]
+  }
+}

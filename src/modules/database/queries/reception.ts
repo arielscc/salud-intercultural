@@ -26,6 +26,7 @@ export type ReceptionIntakeRecordInput = {
   patient: {
     fullName: string;
     phone: string;
+    secondaryPhone?: string;
     birthDate?: Date;
     gender?: PatientGender;
     city?: string;
@@ -97,7 +98,10 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
           data: {
             ...patientProfile,
             normalizedName: normalizePatientName(patientProfile.fullName),
-            normalizedPhone: normalizePatientPhone(patientProfile.phone)
+            normalizedPhone: normalizePatientPhone(patientProfile.phone),
+            normalizedSecondaryPhone: patientProfile.secondaryPhone
+              ? normalizePatientPhone(patientProfile.secondaryPhone)
+              : ""
           }
         });
       } else {
@@ -108,6 +112,9 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
             ...patientProfile,
             normalizedName: normalizePatientName(patientProfile.fullName),
             normalizedPhone: normalizePatientPhone(patientProfile.phone),
+            normalizedSecondaryPhone: patientProfile.secondaryPhone
+              ? normalizePatientPhone(patientProfile.secondaryPhone)
+              : "",
             gender: input.patient.gender ?? "unknown",
             captureSource: captureSource ?? "other",
             captureSources:
@@ -146,6 +153,7 @@ const receptionPatientSelect = {
   internalCode: true,
   fullName: true,
   phone: true,
+  secondaryPhone: true,
   birthDate: true,
   gender: true,
   city: true,

@@ -139,6 +139,17 @@ export async function createVisitInTransaction(
     occurredAt: routeStep.startedAt,
     recordedById: input.userId
   });
+  await tx.visitAreaTimeEvent.create({
+    data: {
+      visitId: visit.id,
+      routeStepId: routeStep.id,
+      area: "recepcion",
+      type: "attention_started",
+      sequence: 2,
+      occurredAt: routeStep.startedAt,
+      recordedById: input.userId
+    }
+  });
 
   await tx.visitWorkItem.create({
     data: {

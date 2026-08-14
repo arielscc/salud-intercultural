@@ -157,8 +157,7 @@ export function PatientEditForm({
         </div>
         <GeographicOriginFields
           idPrefix="patient-edit-origin"
-          label="Procedencia habitual"
-          description="Lugar donde vive normalmente el paciente."
+          label="Dónde vive"
           value={patientOrigin}
           onChange={setPatientOrigin}
           required

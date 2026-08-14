@@ -3,6 +3,7 @@ import { hashPassword } from "@/features/internal-auth/password";
 import { prisma } from "@/modules/database";
 import {
   getAreaTimeReport,
+  getVisitAreaTimingState,
   recordAreaTimeTransition
 } from "@/modules/database/queries/area-times";
 import { createPatientRecord } from "@/modules/database/queries/patients";
@@ -40,11 +41,9 @@ describe("area time events integration", () => {
       reason: "Medición de atención"
     });
 
-    await recordAreaTimeTransition({
-      data: { visitId: visit.id, action: "start_attention" },
-      userId: user.id,
-      userRole: user.role
-    });
+    const initialState = await getVisitAreaTimingState(visit.id);
+    expect(initialState?.phase).toBe("attention");
+
     await recordAreaTimeTransition({
       data: {
         visitId: visit.id,

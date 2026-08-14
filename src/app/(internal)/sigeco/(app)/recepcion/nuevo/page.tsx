@@ -56,12 +56,10 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
       {params.error === "invalid-attribution" ? (
         <div className="rounded-[9px] bg-error/10 px-4 py-3 text-sm">
           <p className="font-semibold text-error">
-            El código de formulario o campaña no es válido
+            El código de referido o promoción no es válido
           </p>
           <p className="mt-1 text-muted">
-            Comprueba el código registrado en el mensaje, formulario o enlace.
-            No selecciones manualmente una cuenta de TikTok o un tipo de
-            publicidad.
+            Comprueba el código indicado por la persona antes de finalizar el registro.
           </p>
         </div>
       ) : null}

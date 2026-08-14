@@ -9,9 +9,19 @@ export function Field({
   children: React.ReactNode;
   className?: string;
 }) {
+  const required = label.trimEnd().endsWith("*");
+  const labelText = required ? label.trimEnd().slice(0, -1).trimEnd() : label;
+
   return (
     <label className={cn("grid gap-1.5 text-[13px] font-medium text-text", className)}>
-      <span>{label}</span>
+      <span>
+        {labelText}
+        {required ? (
+          <span className="ml-1 text-base font-black leading-none text-error" aria-label="obligatorio">
+            *
+          </span>
+        ) : null}
+      </span>
       {children}
     </label>
   );

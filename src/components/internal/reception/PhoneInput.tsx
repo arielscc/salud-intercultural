@@ -26,27 +26,38 @@ export function PhoneInput({
   value,
   onValueChange,
   className,
-  autoFocus
+  autoFocus,
+  maxDigits = 8,
+  digitsOnly = false,
+  placeholder = "71234567"
 }: {
   value: string;
   onValueChange: (value: string) => void;
   className?: string;
   autoFocus?: boolean;
+  maxDigits?: number;
+  digitsOnly?: boolean;
+  placeholder?: string;
 }) {
   return (
     <input
       className={cn(internalInputClassName, className)}
       type="tel"
-      inputMode="tel"
+      inputMode="numeric"
       autoComplete="tel"
       enterKeyHint="next"
       value={value}
       onChange={(event) => {
         const nextValue = event.target.value;
+        if (digitsOnly) {
+          onValueChange(nextValue.replace(/\D/g, "").slice(0, maxDigits));
+          return;
+        }
         onValueChange(isMobileCoarsePointer() ? formatBolivianPhone(nextValue) : nextValue);
       }}
-      placeholder="7123 4567"
+      placeholder={placeholder}
       autoFocus={autoFocus}
+      maxLength={digitsOnly ? maxDigits : undefined}
     />
   );
 }

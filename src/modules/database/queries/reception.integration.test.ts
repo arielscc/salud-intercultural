@@ -123,6 +123,7 @@ describe("reception intake integration", () => {
       where: { id: result.visit.id },
       include: {
         checkIn: true,
+        areaTimeEvents: { orderBy: { sequence: "asc" } },
         route: { include: { steps: true } },
         statusHistory: true,
         workItems: true,
@@ -148,6 +149,10 @@ describe("reception intake integration", () => {
     expect(visit.originDepartment).toBe("La Paz");
     expect(visit.originCountry).toBe("Bolivia");
     expect(visit.checkIn).not.toBeNull();
+    expect(visit.areaTimeEvents.map((event) => event.type)).toEqual([
+      "entered",
+      "attention_started"
+    ]);
     expect(visit.route?.currentArea).toBe("recepcion");
     expect(visit.route?.steps).toHaveLength(1);
     expect(visit.statusHistory).toHaveLength(1);

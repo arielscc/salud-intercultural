@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useMemo, useRef, useState } from "react";
-import { Search } from "lucide-react";
 import { internalInputClassName } from "@/components/internal/Field";
 import { ChipOption } from "@/components/internal/reception/funnel-fields";
 import {
@@ -51,6 +50,15 @@ export function GeographicOriginFields({
   const commonCountry = commonCountries.find(
     (country) => country === value.country
   );
+  const isFrequentCity = frequentGeographicPlaces.some(
+    (place) =>
+      place.city === value.city &&
+      place.department === value.department &&
+      place.country === value.country
+  );
+  const [customCitySelected, setCustomCitySelected] = useState(
+    value.city !== "" && !isFrequentCity
+  );
   const countryChoice = commonCountry
     ? commonCountry
     : otherCountrySelected || value.country
@@ -66,6 +74,7 @@ export function GeographicOriginFields({
 
   function choosePlace(place: GeographicOriginValue) {
     setOtherCountrySelected(false);
+    setCustomCitySelected(false);
     onChange({ ...place });
   }
 
@@ -77,6 +86,7 @@ export function GeographicOriginFields({
   function changeCountry(country: string) {
     if (country === OTHER_COUNTRY) {
       setOtherCountrySelected(true);
+      setCustomCitySelected(true);
       onChange({ ...value, country: "", department: "" });
       return;
     }
@@ -94,77 +104,17 @@ export function GeographicOriginFields({
     <fieldset className={cn("grid gap-3", className)}>
       <legend className="text-[13px] font-semibold text-text">
         {label}
-        {required ? " *" : ""}
+        {required ? (
+          <span className="ml-1 text-base font-black leading-none text-error" aria-label="obligatorio">
+            *
+          </span>
+        ) : null}
       </legend>
       {description ? (
         <p className="-mt-1 text-xs leading-relaxed text-muted">{description}</p>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        {frequentGeographicPlaces.map((place) => (
-          <ChipOption
-            key={place.city}
-            selected={
-              value.city === place.city &&
-              value.department === place.department &&
-              value.country === place.country
-            }
-            onClick={() => choosePlace(place)}
-          >
-            {place.city}
-          </ChipOption>
-        ))}
-        <ChipOption
-          selected={
-            value.city !== "" &&
-            !frequentGeographicPlaces.some(
-              (place) => place.city === value.city
-            )
-          }
-          onClick={() => {
-            onChange({
-              city: "",
-              department: value.department,
-              country: value.country || BOLIVIA_COUNTRY
-            });
-            window.requestAnimationFrame(() => cityInputRef.current?.focus());
-          }}
-        >
-          Otro
-        </ChipOption>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="grid gap-1.5 text-[13px] font-medium text-text sm:col-span-2">
-          <span>Buscar o escribir ciudad</span>
-          <span className="relative">
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted"
-              aria-hidden="true"
-            />
-            <input
-              ref={cityInputRef}
-              className={cn(internalInputClassName, "pl-10")}
-              type="search"
-              list={listId}
-              value={value.city}
-              onChange={(event) => changeCity(event.target.value)}
-              placeholder="Ej. El Alto, Cochabamba o Tiquipaya"
-              autoComplete="off"
-            />
-          </span>
-          <datalist id={listId}>
-            {matchingPlaces.map((place) => (
-              <option key={place.city} value={place.city}>
-                {place.department}, {place.country}
-              </option>
-            ))}
-          </datalist>
-          <span className="text-xs font-normal text-muted">
-            Si no aparece en la lista, escribe el lugar y completa los campos.
-          </span>
-        </label>
-
         <label className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>País</span>
           <Select value={countryChoice} onValueChange={changeCountry}>
@@ -229,6 +179,62 @@ export function GeographicOriginFields({
           </label>
         )}
       </div>
+
+      <div className="grid gap-1.5 text-[13px] font-medium text-text">
+        <span>Ciudad</span>
+        <div className="flex flex-wrap gap-2">
+          {frequentGeographicPlaces.map((place) => (
+            <ChipOption
+              key={place.city}
+              selected={
+                value.city === place.city &&
+                value.department === place.department &&
+                value.country === place.country
+              }
+              onClick={() => choosePlace(place)}
+            >
+              {place.city}
+            </ChipOption>
+          ))}
+          <ChipOption
+            selected={customCitySelected}
+            onClick={() => {
+              setCustomCitySelected(true);
+              onChange({
+                city: "",
+                department: value.department,
+                country: value.country || BOLIVIA_COUNTRY
+              });
+              window.requestAnimationFrame(() => cityInputRef.current?.focus());
+            }}
+          >
+            Otro
+          </ChipOption>
+        </div>
+      </div>
+
+      {customCitySelected ? (
+        <label className="grid gap-1.5 text-[13px] font-medium text-text">
+          <span>Otra ciudad</span>
+          <input
+            ref={cityInputRef}
+            className={internalInputClassName}
+            type="text"
+            list={listId}
+            value={value.city}
+            onChange={(event) => changeCity(event.target.value)}
+            placeholder="Escribe la ciudad"
+            autoComplete="off"
+          />
+          <datalist id={listId}>
+            {matchingPlaces.map((place) => (
+              <option key={place.city} value={place.city}>
+                {place.department}, {place.country}
+              </option>
+            ))}
+          </datalist>
+        </label>
+      ) : null}
     </fieldset>
   );
 }

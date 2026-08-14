@@ -38,15 +38,24 @@ import {
 import { cn } from "@/lib/cn";
 import { Search, UserRoundPlus } from "lucide-react";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 type PatientMatch = PatientSearchResult;
 
 const stepTitles: Record<number, string> = {
-  1: "Datos y procedencia habitual",
+  1: "Datos y dónde vive",
   2: "¿A qué viene?",
   3: "Antecedentes rápidos",
-  4: "Procedencia de la visita y captación"
+  4: "Captación"
 };
+
+function RequiredMark() {
+  return (
+    <span className="ml-1 text-base font-black leading-none text-error" aria-label="obligatorio">
+      *
+    </span>
+  );
+}
 
 export function IntakeFunnel({
   idempotencyKey,
@@ -60,7 +69,6 @@ export function IntakeFunnel({
   captureSourceOptions: CaptureSourceOption[];
 }) {
   const [step, setStep] = useState(initialPatient ? 1 : 0);
-  const [stepError, setStepError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<PatientMatch[] | null>(null);
@@ -74,6 +82,7 @@ export function IntakeFunnel({
 
   const [fullName, setFullName] = useState(initialPatient?.fullName ?? "");
   const [phone, setPhone] = useState(initialPatient?.phone ?? "");
+  const [secondaryPhone, setSecondaryPhone] = useState(initialPatient?.secondaryPhone ?? "");
   const [birthDate, setBirthDate] = useState(initialPatient?.birthDate ?? "");
   const [gender, setGender] = useState(initialPatient?.gender ?? "unknown");
   const [patientOrigin, setPatientOrigin] = useState<GeographicOriginValue>({
@@ -114,10 +123,8 @@ export function IntakeFunnel({
   const age = calculateAge(birthDate);
   const resolvedAllergies = noKnownAllergies ? NO_KNOWN_ALLERGIES : allergies;
 
-  function toggleCaptureSupportSource(value: string) {
-    setCaptureSupportSources((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
-    );
+  function showStepError(message: string) {
+    toast.error(message, { duration: 5000 });
   }
 
   function choosePrimaryCaptureSource(value: string) {
@@ -131,6 +138,7 @@ export function IntakeFunnel({
     setExistingPatient(patient);
     setFullName(patient.fullName);
     setPhone(patient.phone);
+    setSecondaryPhone(patient.secondaryPhone ?? "");
     setBirthDate(patient.birthDate);
     setGender(patient.gender);
     setPatientOrigin({
@@ -148,7 +156,6 @@ export function IntakeFunnel({
     setCaptureSupportSources([]);
     setAttributionEvidenceCode("");
     setPhoneMatches([]);
-    setStepError(null);
     setStep(1);
   }
 
@@ -163,6 +170,7 @@ export function IntakeFunnel({
     setExistingPatient(null);
     setFullName(looksLikePhone ? "" : term);
     setPhone(looksLikePhone ? term : "");
+    setSecondaryPhone("");
     setBirthDate("");
     setGender("unknown");
     setPatientOrigin({
@@ -180,7 +188,6 @@ export function IntakeFunnel({
     setCaptureSupportSources([]);
     setAttributionEvidenceCode("");
     setPhoneMatches([]);
-    setStepError(null);
     setStep(1);
   }
 
@@ -198,20 +205,21 @@ export function IntakeFunnel({
 
   function continueFromStep1() {
     if (fullName.trim().length < 2) {
-      setStepError("Ingresa el nombre completo.");
+      showStepError("Ingresa el nombre completo.");
       return;
     }
-    if (!/^[+()\d\s-]{6,}$/.test(phone.trim())) {
-      setStepError("Ingresa un teléfono válido.");
+    if (!/^\d{8}$/.test(phone.trim())) {
+      showStepError("Ingresa un celular boliviano de 8 dígitos, sin +591.");
+      return;
+    }
+    if (secondaryPhone.trim() && !/^\d{7,8}$/.test(secondaryPhone.trim())) {
+      showStepError("Ingresa un teléfono fijo válido de 7 u 8 números, o déjalo vacío.");
       return;
     }
     if (!isCompleteGeographicOrigin(patientOrigin)) {
-      setStepError(
-        "Completa la ciudad, el departamento y el país de procedencia habitual."
-      );
+      showStepError("Completa la ciudad, el departamento y el país donde vive.");
       return;
     }
-    setStepError(null);
 
     if (existingPatient || allowDuplicate) {
       setStep(2);
@@ -235,19 +243,17 @@ export function IntakeFunnel({
 
   function continueFromStep2() {
     if (reason.trim().length < 2) {
-      setStepError("Ingresa el motivo de la visita.");
+      showStepError("Ingresa el motivo de la visita.");
       return;
     }
     if ((durationValue !== "") !== (durationUnit !== "")) {
-      setStepError("Para “desde cuándo” completa la cantidad y la unidad, o deja ambas vacías.");
+      showStepError("Para “desde cuándo” completa la cantidad y la unidad, o deja ambas vacías.");
       return;
     }
-    setStepError(null);
     setStep(3);
   }
 
   function goBack() {
-    setStepError(null);
     setPhoneMatches([]);
     setStep((current) => Math.max(0, current - 1));
   }
@@ -266,12 +272,12 @@ export function IntakeFunnel({
           !isCompleteGeographicOrigin(visitOrigin)
         ) {
           event.preventDefault();
-          setStepError("Completa la procedencia desde la que llega hoy.");
+          showStepError("Completa la procedencia desde la que llega hoy.");
           return;
         }
         if (!capturePrimarySource) {
           event.preventDefault();
-          setStepError("Selecciona dónde conoció la clínica por primera vez.");
+          showStepError("Selecciona dónde conoció la clínica por primera vez.");
         }
       }}
     >
@@ -280,6 +286,7 @@ export function IntakeFunnel({
       <input type="hidden" name="patientId" value={existingPatient?.id ?? ""} />
       <input type="hidden" name="fullName" value={fullName} />
       <input type="hidden" name="phone" value={phone} />
+      <input type="hidden" name="secondaryPhone" value={secondaryPhone} />
       <input type="hidden" name="birthDate" value={birthDate} />
       <input type="hidden" name="gender" value={gender} />
       <input type="hidden" name="city" value={patientOrigin.city} />
@@ -442,15 +449,30 @@ export function IntakeFunnel({
           />
         </Field>
         <Field label="Teléfono (WhatsApp) *">
-          <PhoneInput value={phone} onValueChange={setPhone} />
+          <PhoneInput
+            value={phone}
+            onValueChange={setPhone}
+            digitsOnly
+            placeholder="71234567"
+          />
+          <span className="text-xs font-normal leading-relaxed text-muted">
+            Celular boliviano de 8 números, sin +591.
+          </span>
+        </Field>
+        <Field label="Teléfono fijo (opcional)">
+          <PhoneInput
+            value={secondaryPhone}
+            onValueChange={setSecondaryPhone}
+            digitsOnly
+            placeholder="2245678"
+          />
         </Field>
         <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
           <DatePickerField value={birthDate} onChange={setBirthDate} />
         </Field>
         <GeographicOriginFields
           idPrefix="patient-origin"
-          label="Procedencia habitual"
-          description="Lugar donde vive normalmente. No necesariamente es el lugar desde el que llegó hoy."
+          label="Dónde vive"
           value={patientOrigin}
           onChange={setPatientOrigin}
           required
@@ -629,47 +651,13 @@ export function IntakeFunnel({
 
       <Card className={cn("grid gap-4 lg:grid-cols-2", step === 4 ? "" : "hidden")}>
         <div className="grid gap-2 lg:col-span-2">
-          <p className="text-[13px] font-semibold text-text">
-            ¿Hoy llega desde su procedencia habitual?
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <ChipOption
-              selected={visitOriginMode === "same"}
-              onClick={() => setVisitOriginMode("same")}
-            >
-              Sí, desde el mismo lugar
-            </ChipOption>
-            <ChipOption
-              selected={visitOriginMode === "different"}
-              onClick={() => setVisitOriginMode("different")}
-            >
-              No, llega desde otro lugar
-            </ChipOption>
-          </div>
+          <p className="text-[13px] font-semibold text-text">Captación</p>
         </div>
-        {visitOriginMode === "different" ? (
-          <GeographicOriginFields
-            idPrefix="visit-origin"
-            label="Procedencia de esta visita"
-            description="Este dato queda guardado en la visita aunque después cambie la ficha del paciente."
-            value={visitOrigin}
-            onChange={setVisitOrigin}
-            required
-            className="lg:col-span-2"
-          />
-        ) : (
-          <p className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted lg:col-span-2">
-            Esta visita conservará:{" "}
-            <span className="font-semibold text-text">
-              {[patientOrigin.city, patientOrigin.department, patientOrigin.country]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
-            .
-          </p>
-        )}
         <div className="grid gap-2 text-[13px] font-medium text-text lg:col-span-2">
-          <span>¿Dónde conoció la clínica por primera vez? *</span>
+          <span>
+            ¿Dónde conoció la clínica por primera vez?
+            <RequiredMark />
+          </span>
           <p className="text-xs font-normal leading-relaxed text-muted">
             Haz esta pregunta con palabras simples. Por ejemplo: “¿Fue por
             Facebook, TikTok, una recomendación u otro medio?”.
@@ -686,30 +674,8 @@ export function IntakeFunnel({
             ))}
           </div>
         </div>
-        {capturePrimarySource ? (
-          <div className="grid gap-2 text-[13px] font-medium text-text lg:col-span-2">
-            <span>¿Qué otro canal le ayudó a llegar? (opcional)</span>
-            <p className="text-xs font-normal leading-relaxed text-muted">
-              Ejemplo: conoció la clínica por TikTok y después escribió por
-              WhatsApp. WhatsApp queda como apoyo y no borra TikTok.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {captureSourceOptions
-                .filter((source) => source.code !== capturePrimarySource)
-                .map((source) => (
-                  <ChipOption
-                    key={source.id}
-                    selected={captureSupportSources.includes(source.code)}
-                    onClick={() => toggleCaptureSupportSource(source.code)}
-                  >
-                    {source.patientLabel}
-                  </ChipOption>
-                ))}
-            </div>
-          </div>
-        ) : null}
         <Field
-          label="Código de formulario o campaña (opcional)"
+          label="Código de referido o promoción (opcional)"
           className="lg:col-span-2"
         >
           <input
@@ -718,14 +684,12 @@ export function IntakeFunnel({
             onChange={(event) =>
               setAttributionEvidenceCode(event.target.value.toUpperCase())
             }
-            placeholder="Ej. WEB-123 o TIKTOK-DR"
+            placeholder="Ej. REF-123 o PROMO-AGOSTO"
             autoComplete="off"
             maxLength={120}
           />
           <span className="text-xs font-normal leading-relaxed text-muted">
-            Úsalo solo si aparece en el formulario, enlace o registro de
-            campaña. El sistema obtendrá la cuenta y si fue orgánico o pagado;
-            Recepción no debe adivinarlo.
+            Úsalo si la persona trae un código de referido o una promoción vigente.
           </span>
         </Field>
         <div className="rounded-[9px] bg-background px-4 py-3 text-sm text-muted lg:col-span-2">
@@ -734,16 +698,6 @@ export function IntakeFunnel({
           ficha del paciente, leyendo cada autorización por separado.
         </div>
       </Card>
-
-      {stepError ? (
-        <p
-          className="flex items-center gap-1.5 text-sm font-semibold text-error lg:sticky lg:bottom-16 lg:z-[6] lg:rounded-[7px] lg:bg-error/10 lg:px-3 lg:py-2"
-          role="alert"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-          {stepError}
-        </p>
-      ) : null}
 
       {step > 0 ? (
         <FormActions>
