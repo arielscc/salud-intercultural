@@ -21,14 +21,19 @@ describe("cash schemas", () => {
     ).toMatchObject({ branchCode: "el-alto", openingCash: "150.50" });
   });
 
-  it("rejects missing reconciliation channels", () => {
-    expect(
-      closeCashSessionSchema.safeParse({
-        cashSessionId: "session-1",
-        cash: "100.00",
-        qr: "0.00"
-      }).success
-    ).toBe(false);
+  it("accepts only cash and QR reconciliation channels", () => {
+    const parsed = closeCashSessionSchema.parse({
+      cashSessionId: "session-1",
+      cash: "100.00",
+      qr: "0.00",
+      card: "0.00"
+    });
+
+    expect(parsed).toEqual({
+      cashSessionId: "session-1",
+      cash: "100.00",
+      qr: "0.00"
+    });
   });
 
   it("normalizes the inventory flag and exact cents", () => {

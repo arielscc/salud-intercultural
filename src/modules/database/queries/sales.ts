@@ -61,12 +61,7 @@ async function ensurePaymentMethod(tx: Prisma.TransactionClient, code: string) {
 }
 
 function paymentCodeToCashChannel(code: string): CashChannel {
-  return code === "cash" ||
-    code === "qr" ||
-    code === "card" ||
-    code === "transfer"
-    ? code
-    : "other";
+  return code === "qr" ? "qr" : "cash";
 }
 
 export async function getAdministrationWorkItems(

@@ -339,10 +339,7 @@ export async function requestCashSessionCloseAction(formData: FormData) {
           requestedById: user.id,
           reportedByChannel: {
             cash: cashMoneyToCents(parsed.data.cash),
-            qr: cashMoneyToCents(parsed.data.qr),
-            card: cashMoneyToCents(parsed.data.card),
-            transfer: cashMoneyToCents(parsed.data.transfer),
-            other: cashMoneyToCents(parsed.data.other)
+            qr: cashMoneyToCents(parsed.data.qr)
           },
           observation: parsed.data.observation
         });

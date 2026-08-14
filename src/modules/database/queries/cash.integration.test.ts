@@ -92,10 +92,7 @@ describe("cash integration", () => {
       requestedById: admin.id,
       reportedByChannel: {
         cash: 5_000,
-        qr: 0,
-        card: 0,
-        transfer: 0,
-        other: 0
+        qr: 0
       }
     });
     expect(close.requiresApproval).toBe(false);
@@ -144,10 +141,7 @@ describe("cash integration", () => {
       requestedById: admin.id,
       reportedByChannel: {
         cash: 5_000,
-        qr: 0,
-        card: 0,
-        transfer: 0,
-        other: 0
+        qr: 0
       }
     });
 
@@ -195,10 +189,7 @@ describe("cash integration", () => {
       requestedById: admin.id,
       reportedByChannel: {
         cash: 0,
-        qr: 0,
-        card: 0,
-        transfer: 0,
-        other: 0
+        qr: 0
       },
       observation: "El reintegro aún no está físicamente en la caja."
     });

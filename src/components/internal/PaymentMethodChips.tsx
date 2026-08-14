@@ -1,12 +1,9 @@
-import { Banknote, CreditCard, Ellipsis, Landmark, QrCode } from "lucide-react";
+import { Banknote, QrCode } from "lucide-react";
 import { paymentMethodLabels } from "@/features/sales/labels";
 
 const paymentMethods = [
   { value: "cash", icon: Banknote },
-  { value: "qr", icon: QrCode },
-  { value: "card", icon: CreditCard },
-  { value: "transfer", icon: Landmark },
-  { value: "other", icon: Ellipsis }
+  { value: "qr", icon: QrCode }
 ] as const;
 
 export function PaymentMethodChips({ defaultValue = "cash" }: { defaultValue?: string }) {

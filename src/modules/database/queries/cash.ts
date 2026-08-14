@@ -91,6 +91,8 @@ type CashSessionForSummary = {
   }>;
 };
 
+const activePaymentCashChannels = ["cash", "qr"] as const satisfies readonly CashChannel[];
+
 export function calculateCashExpected(session: CashSessionForSummary) {
   const byChannel: Record<CashChannel, number> = {
     cash: session.openingCashCents,
@@ -750,16 +752,14 @@ export async function createOtherCashExpense(input: {
 export async function requestCashSessionClose(input: {
   cashSessionId: string;
   requestedById: string;
-  reportedByChannel: Record<CashChannel, number>;
+  reportedByChannel: Record<(typeof activePaymentCashChannels)[number], number>;
   observation?: string;
 }) {
   return withDatabaseError("requestCashSessionClose", async () =>
     prisma.$transaction(async (tx) => {
       const session = await lockCashSession(tx, input.cashSessionId);
       const expected = calculateCashExpected(session);
-      const reconciliations = (
-        Object.keys(expected) as CashChannel[]
-      ).map((channel) => {
+      const reconciliations = activePaymentCashChannels.map((channel) => {
         const reportedCents = input.reportedByChannel[channel];
         if (
           !Number.isSafeInteger(reportedCents) ||

@@ -47,16 +47,13 @@ import {
 import { requirePermission } from "@/modules/permissions";
 import {
   AlertTriangle,
-  ArrowLeftRight,
   Banknote,
   Camera,
   ExternalLink,
-  HandCoins,
   History,
   LockKeyhole,
   Printer,
-  ReceiptText,
-  WalletCards
+  ReceiptText
 } from "lucide-react";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
@@ -79,10 +76,7 @@ const movementTypes = [
 ] as const satisfies readonly CashMovementType[];
 const cashChannels = [
   "cash",
-  "qr",
-  "card",
-  "transfer",
-  "other"
+  "qr"
 ] as const satisfies readonly CashChannel[];
 
 const cashErrorMessages: Record<string, string> = {
@@ -138,8 +132,10 @@ export default async function CashControlPage({
   const selectedType = movementTypes.includes(query.type as CashMovementType)
     ? (query.type as CashMovementType)
     : undefined;
-  const selectedChannel = cashChannels.includes(query.channel as CashChannel)
-    ? (query.channel as CashChannel)
+  const selectedChannel = cashChannels.includes(
+    query.channel as (typeof cashChannels)[number]
+  )
+    ? (query.channel as (typeof cashChannels)[number])
     : undefined;
   const [dashboard, personnel] = await Promise.all([
     getCashDashboard({
@@ -387,7 +383,7 @@ export default async function CashControlPage({
             </div>
           </Card>
 
-          <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <section className="grid grid-cols-2 gap-2">
             <KpiCard
               icon={Banknote}
               label="Efectivo esperado"
@@ -398,24 +394,6 @@ export default async function CashControlPage({
               icon={ReceiptText}
               label="QR"
               value={formatMoney(expected.qr)}
-              compactMobile
-            />
-            <KpiCard
-              icon={WalletCards}
-              label="Tarjeta"
-              value={formatMoney(expected.card)}
-              compactMobile
-            />
-            <KpiCard
-              icon={ArrowLeftRight}
-              label="Transferencia"
-              value={formatMoney(expected.transfer)}
-              compactMobile
-            />
-            <KpiCard
-              icon={HandCoins}
-              label="Otro medio"
-              value={formatMoney(expected.other)}
               compactMobile
             />
           </section>
@@ -879,7 +857,7 @@ export default async function CashControlPage({
             <Card>
               <CardHeader
                 title="Cerrar y conciliar"
-                description={`Cuenta el efectivo y copia los totales de QR, tarjeta y transferencias. Diferencias mayores a ${formatMoney(
+                description={`Cuenta el efectivo y copia el total de QR. Diferencias mayores a ${formatMoney(
                   threshold
                 )} pasan a Dirección.`}
               />
@@ -892,7 +870,7 @@ export default async function CashControlPage({
                   name="cashSessionId"
                   value={session.id}
                 />
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                <div className="grid grid-cols-2 gap-3">
                   {cashChannels.map((channel) => (
                     <Field
                       key={channel}

@@ -83,9 +83,6 @@ export const closeCashSessionSchema = z.object({
   cashSessionId: identifier,
   cash: moneyString,
   qr: moneyString,
-  card: moneyString,
-  transfer: moneyString,
-  other: moneyString,
   observation: optionalText
 });
 
