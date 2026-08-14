@@ -7,6 +7,7 @@ import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { PaymentMethodChips } from "@/components/internal/PaymentMethodChips";
 import { SubmitButton } from "@/components/internal/SubmitButton";
+import { StaleCashSessionModal } from "@/components/internal/cash/StaleCashSessionModal";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
@@ -67,7 +68,8 @@ export default async function SaleDetailPage({
     <div className={cn("grid items-start gap-4", hasBalance && "xl:grid-cols-[1.5fr_1fr]")}>
       <MobileBackLink href="/sigeco/administracion" label="Volver a Caja" />
       <div className="grid gap-4 max-sm:contents">
-        {query.error ? (
+        {query.error === "cash-session-stale-open" ? <StaleCashSessionModal /> : null}
+        {query.error && query.error !== "cash-session-stale-open" ? (
           <div
             className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
             role="alert"
@@ -75,15 +77,11 @@ export default async function SaleDetailPage({
             <p className="font-semibold">
               {query.error === "cash-session-required"
                 ? "Primero debes abrir la Caja de hoy."
-                : query.error === "cash-session-stale-open"
-                  ? "Hay una Caja abierta de una fecha anterior."
                 : "No se pudo emitir el comprobante."}
             </p>
             <p className="mt-1">
               {query.error === "cash-session-required"
                 ? "El cobro no fue registrado. Abre una sesión en “Control de Caja” y vuelve a intentar."
-                : query.error === "cash-session-stale-open"
-                  ? "El cobro no fue registrado. Cierra o regulariza esa Caja antes de operar hoy."
                 : "Los productos, totales y pagos deben coincidir antes de crear otra versión."}
             </p>
           </div>
