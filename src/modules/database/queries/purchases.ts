@@ -99,6 +99,9 @@ async function lockOpenCashSession(tx: Prisma.TransactionClient, cashSessionId?:
   if (!session || session.status !== "open") {
     throw new PurchaseWorkflowError("cash-session-not-open");
   }
+  if (session.businessDate.getTime() !== todayDatabaseDate().getTime()) {
+    throw new PurchaseWorkflowError("cash-session-not-open");
+  }
   return session;
 }
 
@@ -857,7 +860,7 @@ export async function getPurchaseFormItems() {
 export async function getOpenPurchaseCashSessions(branchCode?: string) {
   return withDatabaseError("getOpenPurchaseCashSessions", () =>
     prisma.cashSession.findMany({
-      where: { branchCode, status: "open" },
+      where: { branchCode, status: "open", businessDate: todayDatabaseDate() },
       select: {
         id: true,
         registerName: true,

@@ -68,14 +68,23 @@ export default async function CashCloseReportPage({
               {cashShiftLabels[session.shift]}
             </p>
           </div>
-          <Chip
-            tone={
-              session.status === "closed" ? "success" : "warning"
-            }
-          >
-            {cashSessionStatusLabels[session.status]}
-          </Chip>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Chip
+              tone={
+                session.status === "closed" ? "success" : "warning"
+              }
+            >
+              {cashSessionStatusLabels[session.status]}
+            </Chip>
+            {session.exceptional ? <Chip tone="warning">Excepcional</Chip> : null}
+          </div>
         </div>
+        {session.exceptional ? (
+          <p className="mt-3 rounded-[7px] border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning print:border-black print:bg-white print:text-black">
+            Caja abierta excepcionalmente después de un cierre previo.
+            {session.exceptionalReason ? ` Motivo: ${session.exceptionalReason}` : ""}
+          </p>
+        ) : null}
         <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-2">
           <div>
             <dt className="text-muted print:text-black">Responsable</dt>

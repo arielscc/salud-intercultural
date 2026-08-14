@@ -46,13 +46,21 @@ function cashErrorTarget(error: unknown, fallback: string): string | null {
   const code =
     workflowError.code === "session_not_open"
       ? "cash-session-required"
-      : workflowError.code === "session_already_open"
-        ? "cash-session-already-open"
-        : workflowError.code === "correction_exceeds_original"
-          ? "cash-correction-exceeds"
-          : workflowError.code === "session_not_pending_approval"
-            ? "cash-close-not-pending"
-            : "cash-invalid-operation";
+      : workflowError.code === "session_stale_open"
+        ? "cash-session-stale-open"
+        : workflowError.code === "session_already_open"
+          ? "cash-session-already-open"
+          : workflowError.code === "session_business_date_required"
+            ? "cash-session-exceptional-required"
+            : workflowError.code === "exceptional_reason_required"
+              ? "cash-exceptional-reason-required"
+              : workflowError.code === "exceptional_requires_prior_close"
+                ? "cash-exceptional-prior-close-required"
+                : workflowError.code === "correction_exceeds_original"
+                  ? "cash-correction-exceeds"
+                  : workflowError.code === "session_not_pending_approval"
+                    ? "cash-close-not-pending"
+                    : "cash-invalid-operation";
   return `${fallback}?error=${code}`;
 }
 
@@ -69,7 +77,8 @@ export async function openCashSessionAction(formData: FormData) {
         context: {
           branchCode: parsed.data.branchCode,
           registerName: parsed.data.registerName,
-          responsibleId: parsed.data.responsibleId
+          responsibleId: parsed.data.responsibleId,
+          exceptional: parsed.data.exceptional
         }
       },
       async (user) => {
@@ -85,11 +94,17 @@ export async function openCashSessionAction(formData: FormData) {
           responsibleId: parsed.data.responsibleId,
           openedById: user.id,
           openingCashCents: cashMoneyToCents(parsed.data.openingCash),
-          idempotencyKey: parsed.data.idempotencyKey
+          idempotencyKey: parsed.data.idempotencyKey,
+          exceptional: parsed.data.exceptional,
+          exceptionalReason: parsed.data.exceptionalReason
         });
         return auditedResult(session, {
           entityId: session.id,
-          context: { openingCashCents: session.openingCashCents }
+          context: {
+            openingCashCents: session.openingCashCents,
+            exceptional: session.exceptional,
+            exceptionalReason: session.exceptionalReason
+          }
         });
       }
     );

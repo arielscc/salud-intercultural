@@ -2194,6 +2194,8 @@ model CashSession {
   closedById         String?
   idempotencyKey     String                      @unique
   status             CashSessionStatus           @default(open)
+  exceptional        Boolean                     @default(false)
+  exceptionalReason  String?
   openingCashCents   Int
   expectedCashCents  Int?
   countedCashCents   Int?

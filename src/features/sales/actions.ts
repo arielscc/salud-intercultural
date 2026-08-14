@@ -32,6 +32,14 @@ function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
 }
 
+function saleCashErrorCode(error: unknown) {
+  const cashError = findCashWorkflowError(error);
+  if (!cashError) return null;
+  if (cashError.code === "session_not_open") return "cash-session-required";
+  if (cashError.code === "session_stale_open") return "cash-session-stale-open";
+  return null;
+}
+
 export async function createSaleAction(formData: FormData) {
   const workItemId = String(formData.get("workItemId") ?? "");
   const patientId = String(formData.get("patientId") ?? "");
@@ -81,12 +89,12 @@ export async function createSaleAction(formData: FormData) {
           notes: parsed.data.notes
         });
       } catch (error) {
-        const cashError = findCashWorkflowError(error);
-        if (cashError?.code === "session_not_open") {
+        const cashErrorCode = saleCashErrorCode(error);
+        if (cashErrorCode) {
           const target = parsed.data.workItemId
             ? `/sigeco/administracion/${parsed.data.workItemId}`
             : "/sigeco/administracion";
-          redirect(`${target}?error=cash-session-required`);
+          redirect(`${target}?error=${cashErrorCode}`);
         }
         const stockError = findInsufficientStockError(error);
         const target = parsed.data.workItemId
@@ -149,10 +157,8 @@ export async function confirmDoctorOrderSaleAction(formData: FormData) {
           notes: parsed.data.notes
         });
       } catch (error) {
-        const cashError = findCashWorkflowError(error);
-        if (cashError?.code === "session_not_open") {
-          redirect(`${target}?error=cash-session-required`);
-        }
+        const cashErrorCode = saleCashErrorCode(error);
+        if (cashErrorCode) redirect(`${target}?error=${cashErrorCode}`);
         const stockError = findInsufficientStockError(error);
         if (stockError) redirect(`${target}?error=insufficient-stock`);
         const orderError = findDoctorOrderSaleError(error);
@@ -258,12 +264,12 @@ export async function createPaymentAction(formData: FormData) {
           branchCode: activeBranch.code
         });
       } catch (error) {
-        const cashError = findCashWorkflowError(error);
-        if (cashError?.code === "session_not_open") {
+        const cashErrorCode = saleCashErrorCode(error);
+        if (cashErrorCode) {
           const target = workItemId
             ? `/sigeco/administracion/${workItemId}`
             : `/sigeco/administracion/ventas/${parsed.data.saleId}`;
-          redirect(`${target}?error=cash-session-required`);
+          redirect(`${target}?error=${cashErrorCode}`);
         }
         throw error;
       }

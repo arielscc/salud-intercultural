@@ -21,7 +21,15 @@ export const openCashSessionSchema = z.object({
   shift: z.enum(["morning", "afternoon", "full_day", "other"]),
   responsibleId: identifier,
   openingCash: moneyString,
+  exceptional: z
+    .union([z.literal("on"), z.literal("true"), z.literal("false")])
+    .optional()
+    .transform((value) => value === "on" || value === "true"),
+  exceptionalReason: optionalText,
   idempotencyKey: z.string().uuid()
+}).refine((value) => !value.exceptional || Boolean(value.exceptionalReason), {
+  message: "La Caja excepcional requiere motivo.",
+  path: ["exceptionalReason"]
 });
 
 export const staffCashExpenseSchema = z.object({

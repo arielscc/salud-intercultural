@@ -46,6 +46,7 @@ import {
 } from "@/modules/database/queries/cash";
 import { requirePermission } from "@/modules/permissions";
 import {
+  AlertTriangle,
   ArrowLeftRight,
   Banknote,
   Camera,
@@ -89,8 +90,16 @@ const cashErrorMessages: Record<string, string> = {
     "Revisa la fecha, el responsable y el efectivo inicial.",
   "cash-session-required":
     "No hay una Caja abierta. Primero abre la sesión del día.",
+  "cash-session-stale-open":
+    "Hay una Caja abierta de una fecha anterior. Debes cerrarla o regularizarla antes de operar hoy.",
   "cash-session-already-open":
     "Esta caja ya tiene una sesión abierta o esperando aprobación.",
+  "cash-session-exceptional-required":
+    "Hoy ya hubo una Caja cerrada. Para volver a cobrar en el mismo día, abre una Caja excepcional con motivo.",
+  "cash-exceptional-reason-required":
+    "La apertura excepcional requiere una descripción del motivo.",
+  "cash-exceptional-prior-close-required":
+    "La Caja excepcional solo se permite después de un cierre previo del mismo día.",
   "cash-invalid-expense": "Revisa los datos y los montos del egreso.",
   "cash-no-beneficiaries":
     "Escribe un monto para al menos un empleado beneficiario.",
@@ -158,6 +167,8 @@ export default async function CashControlPage({
   const isCurrentSession = session?.id === dashboard.activeSessionId;
   const isOpen = isCurrentSession && session?.status === "open";
   const expected = dashboard.expected;
+  const requiresExceptionalOpen =
+    !dashboard.activeSessionId && dashboard.closedTodaySessions.length > 0;
   const errorMessage = query.error
     ? cashErrorMessages[query.error]
     : undefined;
@@ -200,14 +211,41 @@ export default async function CashControlPage({
         </div>
       ) : null}
 
+      {dashboard.staleOpenSession ? (
+        <div
+          className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm"
+          role="alert"
+        >
+          <p className="font-semibold text-warning">
+            Hay una Caja abierta de una fecha anterior.
+          </p>
+          <p className="mt-1 text-text">
+            {dashboard.staleOpenSession.registerName} quedó abierta el{" "}
+            {formatDateOnly(dashboard.staleOpenSession.businessDate)}. Cierra o
+            regulariza esa Caja antes de registrar cobros de hoy.
+          </p>
+        </div>
+      ) : null}
+
       {!dashboard.activeSessionId && canOpen ? (
         <Card>
           <CardHeader
-            title="Abrir la Caja de hoy"
-            description="Registra quién será responsable y cuánto efectivo existe antes del primer cobro."
+            title={
+              requiresExceptionalOpen
+                ? "Abrir Caja excepcional de hoy"
+                : "Abrir la Caja de hoy"
+            }
+            description={
+              requiresExceptionalOpen
+                ? "Ya hubo un cierre hoy. Esta apertura suma al día en curso y queda marcada para auditoría."
+                : "Registra quién será responsable y cuánto efectivo existe antes del primer cobro."
+            }
           />
           <form action={openCashSessionAction} className="grid gap-3">
             <input type="hidden" name="branchCode" value={activeBranch.code} />
+            {requiresExceptionalOpen ? (
+              <input type="hidden" name="exceptional" value="true" />
+            ) : null}
             <input
               type="hidden"
               name="idempotencyKey"
@@ -280,8 +318,18 @@ export default async function CashControlPage({
                 />
               </Field>
             </div>
+            {requiresExceptionalOpen ? (
+              <Field label="Motivo de apertura excepcional">
+                <textarea
+                  className={`${internalInputClassName} min-h-20 py-3`}
+                  name="exceptionalReason"
+                  placeholder="Ej. Venta posterior al cierre ordinario; paciente llegó a las 18:20."
+                  required
+                />
+              </Field>
+            ) : null}
             <SubmitButton className="w-full sm:w-fit">
-              Abrir Caja
+              {requiresExceptionalOpen ? "Abrir Caja excepcional" : "Abrir Caja"}
             </SubmitButton>
           </form>
         </Card>
@@ -308,6 +356,9 @@ export default async function CashControlPage({
                   >
                     {cashSessionStatusLabels[session.status]}
                   </Chip>
+                  {session.exceptional ? (
+                    <Chip tone="warning">Excepcional</Chip>
+                  ) : null}
                 </div>
                 <p className="mt-1 text-sm text-muted">
                   {activeBranch.name} · {formatDateOnly(session.businessDate)} ·{" "}
@@ -317,6 +368,12 @@ export default async function CashControlPage({
                   Responsable: {personName(session.responsible)} · Abierta{" "}
                   {formatDateTime(session.openedAt)}
                 </p>
+                {session.exceptional ? (
+                  <p className="mt-2 rounded-[7px] border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                    Caja abierta excepcionalmente después de un cierre previo.
+                    {session.exceptionalReason ? ` Motivo: ${session.exceptionalReason}` : ""}
+                  </p>
+                ) : null}
               </div>
               {session.status !== "open" ? (
                 <Link
@@ -362,6 +419,31 @@ export default async function CashControlPage({
               compactMobile
             />
           </section>
+
+          {dashboard.dailySummary ? (
+            <section className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <KpiCard
+                icon={ReceiptText}
+                label="Caja ordinaria del día"
+                value={formatMoney(dashboard.dailySummary.regularCents)}
+                note={`${dashboard.dailySummary.regularSessions} caja(s)`}
+                compactMobile
+              />
+              <KpiCard
+                icon={AlertTriangle}
+                label="Caja excepcional del día"
+                value={formatMoney(dashboard.dailySummary.exceptionalCents)}
+                note={`${dashboard.dailySummary.exceptionalSessions} caja(s)`}
+                compactMobile
+              />
+              <KpiCard
+                icon={Banknote}
+                label="Total del día"
+                value={formatMoney(dashboard.dailySummary.totalCents)}
+                compactMobile
+              />
+            </section>
+          ) : null}
 
           {isOpen && canMove ? (
             <Card>
@@ -1115,6 +1197,7 @@ export default async function CashControlPage({
               >
                 {cashSessionStatusLabels[item.status]}
               </Chip>
+              {item.exceptional ? <Chip tone="warning">Excepcional</Chip> : null}
             </Link>
           ))}
           {dashboard.sessions.length === 0 ? (

@@ -181,6 +181,17 @@ export default async function AdministrationWorkItemPage({
             </p>
           </div>
         ) : null}
+        {query.error === "cash-session-stale-open" ? (
+          <div
+            className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
+            role="alert"
+          >
+            <p className="font-semibold">Hay una Caja abierta de una fecha anterior.</p>
+            <p className="mt-1">
+              No se registró ningún cobro. Cierra o regulariza esa Caja antes de operar hoy.
+            </p>
+          </div>
+        ) : null}
         <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>

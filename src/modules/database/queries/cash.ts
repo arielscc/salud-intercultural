@@ -5,11 +5,16 @@ import type {
   Prisma
 } from "@/generated/prisma/client";
 import { getCashCloseApprovalThresholdCents } from "@/features/cash/policy";
+import { todayDatabaseDate } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 
 export type CashWorkflowErrorCode =
   | "session_already_open"
   | "session_not_open"
+  | "session_stale_open"
+  | "session_business_date_required"
+  | "exceptional_reason_required"
+  | "exceptional_requires_prior_close"
   | "session_not_pending_approval"
   | "invalid_authorizer"
   | "invalid_person"
@@ -129,9 +134,10 @@ async function lockCashSession(
 
 export async function getOpenCashSessionForOperation(
   tx: Prisma.TransactionClient,
-  branchCode: string
+  branchCode: string,
+  businessDate: Date = todayDatabaseDate()
 ) {
-  const sessions = await tx.$queryRaw<Array<{ id: string }>>`
+  const sessions = await tx.$queryRaw<Array<{ id: string; businessDate: Date }>>`
     SELECT "id"
     FROM "CashSession"
     WHERE "status" = 'open' AND "branchCode" = ${branchCode}
@@ -144,7 +150,14 @@ export async function getOpenCashSessionForOperation(
     throw new CashWorkflowError("session_not_open");
   }
 
-  return tx.cashSession.findUniqueOrThrow({ where: { id: sessions[0].id } });
+  const session = await tx.cashSession.findUniqueOrThrow({
+    where: { id: sessions[0].id }
+  });
+  if (session.businessDate.getTime() !== businessDate.getTime()) {
+    throw new CashWorkflowError("session_stale_open");
+  }
+
+  return session;
 }
 
 async function assertActivePerson(
@@ -199,6 +212,35 @@ export async function getCashDashboard(input?: {
       select: { id: true, status: true },
       orderBy: { openedAt: "desc" }
     });
+    const today = todayDatabaseDate();
+    const staleOpenSession = await prisma.cashSession.findFirst({
+      where: {
+        branchCode: input?.branchCode,
+        status: "open",
+        businessDate: { not: today }
+      },
+      select: {
+        id: true,
+        registerName: true,
+        businessDate: true,
+        openedAt: true
+      },
+      orderBy: { openedAt: "desc" }
+    });
+    const closedTodaySessions = await prisma.cashSession.findMany({
+      where: {
+        branchCode: input?.branchCode,
+        businessDate: today,
+        status: "closed"
+      },
+      select: {
+        id: true,
+        registerName: true,
+        closedAt: true,
+        exceptional: true
+      },
+      orderBy: { closedAt: "desc" }
+    });
     const selectedSession =
       input?.sessionId
         ? await prisma.cashSession.findFirst({
@@ -219,6 +261,8 @@ export async function getCashDashboard(input?: {
         registerName: true,
         businessDate: true,
         status: true,
+        exceptional: true,
+        exceptionalReason: true,
         openedAt: true,
         closedAt: true,
         responsible: { select: { name: true, email: true } }
@@ -233,7 +277,10 @@ export async function getCashDashboard(input?: {
         sessions,
         expected: null,
         activeSessionId: activeSession?.id ?? null,
-        activeSessionStatus: activeSession?.status ?? null
+        activeSessionStatus: activeSession?.status ?? null,
+        staleOpenSession,
+        closedTodaySessions,
+        dailySummary: null
       };
     }
 
@@ -243,12 +290,53 @@ export async function getCashDashboard(input?: {
         (!input?.channel || movement.channel === input.channel)
     );
 
+    const businessDateSessions = await prisma.cashSession.findMany({
+      where: {
+        branchCode: selectedSession.branchCode,
+        businessDate: selectedSession.businessDate
+      },
+      select: {
+        exceptional: true,
+        movements: {
+          where: { type: "income" },
+          select: { amountCents: true }
+        }
+      }
+    });
+    const dailySummary = businessDateSessions.reduce(
+      (summary, cashSession) => {
+        const income = cashSession.movements.reduce(
+          (total, movement) => total + movement.amountCents,
+          0
+        );
+        if (cashSession.exceptional) {
+          summary.exceptionalCents += income;
+          summary.exceptionalSessions += 1;
+        } else {
+          summary.regularCents += income;
+          summary.regularSessions += 1;
+        }
+        summary.totalCents += income;
+        return summary;
+      },
+      {
+        regularCents: 0,
+        exceptionalCents: 0,
+        totalCents: 0,
+        regularSessions: 0,
+        exceptionalSessions: 0
+      }
+    );
+
     return {
       session: { ...selectedSession, movements: filteredMovements },
       sessions,
       expected: calculateCashExpected(selectedSession),
       activeSessionId: activeSession?.id ?? null,
-      activeSessionStatus: activeSession?.status ?? null
+      activeSessionStatus: activeSession?.status ?? null,
+      staleOpenSession,
+      closedTodaySessions,
+      dailySummary
     };
   });
 }
@@ -296,6 +384,8 @@ export async function openCashSession(input: {
   openedById: string;
   openingCashCents: number;
   idempotencyKey: string;
+  exceptional?: boolean;
+  exceptionalReason?: string;
 }) {
   return withDatabaseError("openCashSession", async () => {
     if (input.openingCashCents < 0) {
@@ -308,6 +398,39 @@ export async function openCashSession(input: {
     if (existing) return existing;
 
     await assertActivePerson(prisma, input.responsibleId);
+    const activeSession = await prisma.cashSession.findFirst({
+      where: {
+        branchCode: input.branchCode,
+        status: { in: ["open", "pending_approval"] }
+      },
+      orderBy: { openedAt: "desc" }
+    });
+    if (activeSession) {
+      throw new CashWorkflowError(
+        activeSession.businessDate.getTime() !== input.businessDate.getTime()
+          ? "session_stale_open"
+          : "session_already_open"
+      );
+    }
+
+    const previousTodayClose = await prisma.cashSession.findFirst({
+      where: {
+        branchCode: input.branchCode,
+        businessDate: input.businessDate,
+        status: "closed"
+      },
+      orderBy: { closedAt: "desc" }
+    });
+    if (input.exceptional) {
+      if (!input.exceptionalReason?.trim()) {
+        throw new CashWorkflowError("exceptional_reason_required");
+      }
+      if (!previousTodayClose) {
+        throw new CashWorkflowError("exceptional_requires_prior_close");
+      }
+    } else if (previousTodayClose) {
+      throw new CashWorkflowError("session_business_date_required");
+    }
 
     try {
       return await prisma.cashSession.create({
@@ -318,6 +441,10 @@ export async function openCashSession(input: {
           shift: input.shift,
           responsibleId: input.responsibleId,
           openedById: input.openedById,
+          exceptional: input.exceptional ?? false,
+          exceptionalReason: input.exceptional
+            ? input.exceptionalReason?.trim()
+            : undefined,
           openingCashCents: input.openingCashCents,
           idempotencyKey: input.idempotencyKey
         }

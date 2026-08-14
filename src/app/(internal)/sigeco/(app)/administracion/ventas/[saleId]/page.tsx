@@ -75,11 +75,15 @@ export default async function SaleDetailPage({
             <p className="font-semibold">
               {query.error === "cash-session-required"
                 ? "Primero debes abrir la Caja de hoy."
+                : query.error === "cash-session-stale-open"
+                  ? "Hay una Caja abierta de una fecha anterior."
                 : "No se pudo emitir el comprobante."}
             </p>
             <p className="mt-1">
               {query.error === "cash-session-required"
                 ? "El cobro no fue registrado. Abre una sesión en “Control de Caja” y vuelve a intentar."
+                : query.error === "cash-session-stale-open"
+                  ? "El cobro no fue registrado. Cierra o regulariza esa Caja antes de operar hoy."
                 : "Los productos, totales y pagos deben coincidir antes de crear otra versión."}
             </p>
           </div>
