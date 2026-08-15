@@ -195,16 +195,14 @@ describe("purchase, receipt, batch and stock integration", () => {
       cashSessionId: fixture.cashSession.id,
       category: "clinical_material",
       itemDescription: "Producto comprado",
-      quantity: 2,
-      unitPriceCents: 150,
+      deliveredAmountCents: 500,
+      returnedChangeCents: 200,
       requestedById: fixture.receiver.id,
       receivedById: fixture.receiver.id,
       deliveredById: fixture.administrator.id,
       registeredById: fixture.administrator.id,
       authorizedById: fixture.direction.id,
-      supplierName: fixture.supplier.name,
       urgencyReason: "Faltaba para la atención del día",
-      requiresInventoryEntry: true,
       idempotencyKey: randomUUID()
     });
     const movementCount = await prisma.cashMovement.count();

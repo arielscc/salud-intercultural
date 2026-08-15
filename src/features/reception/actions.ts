@@ -40,6 +40,16 @@ export async function searchReceptionPatientsAction(query: string) {
   }));
 }
 
+export async function validateAttributionEvidenceCodeAction(code: string) {
+  await requirePermission("visits_create");
+  const result = await resolveAttributionEvidenceSafely(code);
+
+  return {
+    valid: result.status !== "not_found",
+    status: result.status
+  };
+}
+
 export async function submitReceptionIntakeAction(formData: FormData) {
   const result = await runAuditedAction(
     {

@@ -14,7 +14,6 @@ import { VisitStatusPill } from "@/components/internal/StatusPill";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
-import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import {
   DesktopSectionPanel,
   DesktopSectionTabs
@@ -42,6 +41,7 @@ import {
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
 import { studyTypeLabels } from "@/features/studies/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
+import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { geographicOriginLabel } from "@/features/geography/origin";
 import { visitAttributionSummary } from "@/features/attribution/catalog";
 import { formatDateTime } from "@/lib/dates";
@@ -128,6 +128,10 @@ export default async function PatientDetailPage({
   const pendingFollowUps = patient.followUpTasks.filter((task) =>
     ["pending", "awaiting_payment"].includes(task.status)
   );
+  const activeVisit = patient.visits.find((visit) =>
+    isActiveVisitStatus(visit.status)
+  );
+  const activeArea = activeVisit?.route?.currentArea;
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
@@ -181,6 +185,26 @@ export default async function PatientDetailPage({
               ) : null}
             </div>
           </div>
+          {activeVisit && activeArea ? (
+            <div className="border-b border-warning/25 bg-warning/10 px-4 py-3 text-sm sm:px-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-warning">
+                    El paciente está en {routeAreaLabels[activeArea]}
+                  </p>
+                  <p className="mt-0.5 text-muted">
+                    Visita activa desde {formatDateTime(activeVisit.checkedInAt)}.
+                  </p>
+                </div>
+                <Link
+                  href={`/sigeco/recepcion/visitas/${activeVisit.id}`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  Abrir visita
+                </Link>
+              </div>
+            </div>
+          ) : null}
           <div className="p-[18px]">
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               <div>
@@ -671,11 +695,6 @@ export default async function PatientDetailPage({
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
-        <DesktopDetailContext
-          eyebrow={patient.internalCode}
-          title={patient.fullName}
-          meta={patient.phone}
-        />
         {roleHasPermission(user.role, "visits_create") ? (
           <Card className="max-sm:order-2">
             <CardHeader

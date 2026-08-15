@@ -36,23 +36,22 @@ describe("cash schemas", () => {
     });
   });
 
-  it("normalizes the inventory flag and exact cents", () => {
+  it("normalizes urgent purchase amounts", () => {
     const purchase = urgentPurchaseSchema.parse({
       cashSessionId: "session-1",
       category: "clinical_material",
-      itemDescription: "Jeringas",
-      quantity: "3",
-      unitPrice: "4.25",
+      itemDescription: "2 jeringas, 1 algodón",
+      deliveredAmount: "50.00",
+      returnedChange: "25.00",
       requestedById: "user-1",
       receivedById: "user-2",
       deliveredById: "user-3",
       authorizedById: "user-4",
       urgencyReason: "Se acabó el material de atención",
-      requiresInventoryEntry: "on",
       idempotencyKey: "9752389d-e660-42e0-9fdd-957f9b3cfa86"
     });
 
-    expect(purchase.requiresInventoryEntry).toBe(true);
-    expect(cashMoneyToCents(purchase.unitPrice)).toBe(425);
+    expect(cashMoneyToCents(purchase.deliveredAmount)).toBe(5_000);
+    expect(cashMoneyToCents(purchase.returnedChange)).toBe(2_500);
   });
 });

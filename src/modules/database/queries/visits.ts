@@ -240,6 +240,14 @@ export async function getVisits(
           orderBy: {
             createdAt: "desc"
           }
+        },
+        sales: {
+          select: {
+            id: true,
+            status: true,
+            balanceCents: true
+          },
+          orderBy: { createdAt: "desc" }
         }
       },
       orderBy: {

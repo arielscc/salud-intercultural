@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import {
   applyAdminDiscountToSale,
+  assignAdministrationWorkItem,
   confirmDoctorOrderSale,
   createPaymentRecord,
   createSaleOrderRecord,
@@ -20,6 +21,7 @@ import {
   hasPaidStudyFlowError,
   releasePaidStudiesToNursing
 } from "@/modules/database/queries/paid-studies";
+import { recordAreaTimeTransition } from "@/modules/database/queries/area-times";
 import {
   applySaleDiscountSchema,
   confirmDoctorOrderSchema,
@@ -41,6 +43,43 @@ function saleCashErrorCode(error: unknown) {
   if (cashError.code === "session_not_open") return "cash-session-required";
   if (cashError.code === "session_stale_open") return "cash-session-stale-open";
   return null;
+}
+
+export async function attendAdministrationWorkItemAction(formData: FormData) {
+  const workItemId = String(formData.get("workItemId") ?? "");
+  await runAuditedAction(
+    {
+      permission: "sales_write",
+      action: "administration.work_item.claim",
+      entityType: "work_item",
+      entityId: workItemId || undefined
+    },
+    async (user) => {
+      if (!workItemId) redirect("/sigeco/administracion?error=invalid-work-item");
+      const { activeBranch } = await getBranchContext(user);
+      const updated = await assignAdministrationWorkItem({
+        workItemId,
+        userId: user.id,
+        branchCode: activeBranch.code
+      });
+
+      try {
+        await recordAreaTimeTransition({
+          data: { visitId: updated.visitId, action: "start_attention" },
+          userId: user.id,
+          userRole: user.role
+        });
+      } catch {
+        // El reloj puede estar iniciado, bloqueado o no aplicar para esta ruta.
+      }
+
+      return auditedResult(updated, { entityId: workItemId });
+    }
+  );
+
+  revalidatePath("/sigeco/administracion");
+  revalidatePath(`/sigeco/administracion/${workItemId}`);
+  redirect(`/sigeco/administracion/${workItemId}`);
 }
 
 export async function createSaleAction(formData: FormData) {
@@ -258,10 +297,8 @@ export async function confirmDoctorOrderSaleAction(formData: FormData) {
   revalidatePath("/sigeco/administracion");
   if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
   revalidatePath("/sigeco/consultas");
-  // El suero/servicio se deriva a Enfermería desde la tarea; el resto va a la
-  // venta para cobrar el saldo.
-  if (result.requiresNursing && workItemId) {
-    redirect(`/sigeco/administracion/${workItemId}?aviso=venta-creada`);
+  if (result.sale.balanceCents === 0) {
+    redirect("/sigeco/administracion?aviso=tratamiento-pagado");
   }
   redirect(`/sigeco/administracion/ventas/${result.sale.id}?aviso=venta-creada`);
 }
@@ -309,7 +346,7 @@ export async function applySaleDiscountAction(formData: FormData) {
 export async function createPaymentAction(formData: FormData) {
   const workItemId = String(formData.get("workItemId") ?? "");
   const saleId = String(formData.get("saleId") ?? "");
-  await runAuditedAction(
+  const payment = await runAuditedAction(
     {
       permission: "payments_write",
       action: "payment.create",
@@ -359,6 +396,13 @@ export async function createPaymentAction(formData: FormData) {
   revalidatePath("/sigeco/administracion");
   if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
   revalidatePath(`/sigeco/administracion/ventas/${saleId}`);
+  if (
+    workItemId &&
+    payment.sale?.doctorOrderId &&
+    payment.sale.balanceCents === 0
+  ) {
+    redirect("/sigeco/administracion?aviso=tratamiento-pagado");
+  }
 }
 
 export async function sendPaidStudiesToNursingAction(formData: FormData) {

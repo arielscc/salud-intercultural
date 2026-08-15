@@ -1,7 +1,9 @@
 import { internalInputClassName } from "@/components/internal/Field";
 import { MobileTabs } from "@/components/internal/MobileTabs";
 import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueRefresh";
-import { VisitStatusPill } from "@/components/internal/StatusPill";
+import {
+  VisitOperationalStatusPill
+} from "@/components/internal/StatusPill";
 import { PatientAutocomplete } from "@/components/internal/reception/PatientAutocomplete";
 import { DesktopPreviewDismiss } from "@/components/internal/reception/DesktopPreviewDismiss";
 import { Button, buttonVariants } from "@/components/internal/ui/Button";
@@ -57,8 +59,8 @@ const periodOptions: Array<{ value: VisitPeriod; label: string }> = [
 ];
 
 const receptionStatusOptions: Array<{ value: ReceptionStatusFilter; label: string }> = [
-  { value: "active", label: "Activas" },
   { value: "all", label: "Todas" },
+  { value: "active", label: "Activas" },
   { value: "completed", label: "Finalizadas" },
   { value: "left_without_care", label: "Abandonos" },
 ];
@@ -83,8 +85,8 @@ function receptionSelectionHref(
   visitId?: string,
 ) {
   const query = new URLSearchParams();
-  if (filters.status && filters.status !== "active") query.set("status", filters.status);
-  if (filters.periodo && filters.periodo !== "all") query.set("periodo", filters.periodo);
+  if (filters.status && filters.status !== "all") query.set("status", filters.status);
+  if (filters.periodo && filters.periodo !== "today") query.set("periodo", filters.periodo);
   if (visitId) query.set("visita", visitId);
   const search = query.toString();
   return search ? `/sigeco/recepcion?${search}` : "/sigeco/recepcion";
@@ -111,6 +113,12 @@ const emptyPatientsMessage = (
     </span>
   </>
 );
+
+function visitHasPaidSale(visit: {
+  sales?: Array<{ status: string; balanceCents: number }>;
+}) {
+  return visit.sales?.some((sale) => sale.status === "paid" && sale.balanceCents === 0) ?? false;
+}
 
 function VisitDiscontinuationLink({
   visitId,
@@ -170,11 +178,11 @@ export default async function ReceptionPage({
   const pageSize = 30;
   const period: VisitPeriod = periodOptions.some((option) => option.value === params.periodo)
     ? (params.periodo as VisitPeriod)
-    : "all";
+    : "today";
   const dateRange = visitDateRange(period);
   const selectedStatus = receptionStatusOptions.some((option) => option.value === params.status)
     ? (params.status as ReceptionStatusFilter)
-    : "active";
+    : "all";
   const statusFilter =
     selectedStatus === "completed" || selectedStatus === "left_without_care"
       ? selectedStatus
@@ -480,7 +488,12 @@ export default async function ReceptionPage({
                   key={visit.id}
                   href={`/sigeco/recepcion/visitas/${visit.id}`}
                   title={visit.patient.fullName}
-                  status={<VisitStatusPill status={visit.status} />}
+                  status={
+                    <VisitOperationalStatusPill
+                      status={visit.status}
+                      paid={visitHasPaidSale(visit)}
+                    />
+                  }
                   action={
                     isActiveVisitStatus(visit.status) &&
                     canRecordDiscontinuation ? (
@@ -580,7 +593,10 @@ export default async function ReceptionPage({
                         )}
                       </Td>
                       <Td>
-                        <VisitStatusPill status={visit.status} />
+                        <VisitOperationalStatusPill
+                          status={visit.status}
+                          paid={visitHasPaidSale(visit)}
+                        />
                       </Td>
                       <Td>
                         {isActiveVisitStatus(visit.status) &&
@@ -620,8 +636,8 @@ export default async function ReceptionPage({
               totalItems={totalVisits}
               pathname="/sigeco/recepcion"
               searchParams={{
-                status: selectedStatus === "active" ? undefined : selectedStatus,
-                periodo: period === "all" ? undefined : period,
+                status: selectedStatus === "all" ? undefined : selectedStatus,
+                periodo: period === "today" ? undefined : period,
               }}
             />
           </Card>
@@ -663,7 +679,10 @@ export default async function ReceptionPage({
                           {formatDateTime(visit.checkedInAt)}
                         </span>
                       </span>
-                      <VisitStatusPill status={visit.status} />
+                      <VisitOperationalStatusPill
+                        status={visit.status}
+                        paid={visitHasPaidSale(visit)}
+                      />
                       <span className="min-w-0 truncate text-xs text-muted">
                         {visit.route
                           ? routeAreaLabels[visit.route.currentArea]
@@ -695,8 +714,8 @@ export default async function ReceptionPage({
                 totalItems={totalVisits}
                 pathname="/sigeco/recepcion"
                 searchParams={{
-                  status: selectedStatus === "active" ? undefined : selectedStatus,
-                  periodo: period === "all" ? undefined : period,
+                  status: selectedStatus === "all" ? undefined : selectedStatus,
+                  periodo: period === "today" ? undefined : period,
                 }}
               />
             </section>
@@ -720,7 +739,10 @@ export default async function ReceptionPage({
                   </div>
 
                   <div className="mt-4">
-                    <VisitStatusPill status={selectedVisit.status} />
+                    <VisitOperationalStatusPill
+                      status={selectedVisit.status}
+                      paid={visitHasPaidSale(selectedVisit)}
+                    />
                   </div>
 
                   <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-sm">

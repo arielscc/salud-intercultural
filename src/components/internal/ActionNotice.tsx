@@ -19,6 +19,7 @@ const noticeMessages: Record<string, string> = {
   "llegada-registrada": "Llegada registrada",
   "ficha-actualizada": "Ficha actualizada",
   "seguimiento-creado": "Seguimiento creado",
+  "seguimiento-agendado": "Seguimiento agendado",
   "producto-creado": "Producto creado",
   "producto-actualizado": "Producto actualizado",
   "estado-producto-actualizado": "Estado del producto actualizado",
@@ -48,7 +49,8 @@ const noticeMessages: Record<string, string> = {
   "paciente-enviado-consulta": "Paciente derivado a consulta",
   "paciente-enviado-administracion": "Paciente derivado a administración",
   "paciente-devuelto-recepcion": "Paciente devuelto a recepción",
-  "visita-cerrada": "Atención cerrada"
+  "visita-cerrada": "Atención cerrada",
+  "tratamiento-pagado": "Tratamiento pagado"
 };
 
 const centeredNotices: Record<string, { title: string; description: string }> = {
@@ -71,6 +73,14 @@ const centeredNotices: Record<string, { title: string; description: string }> = 
   "visita-cerrada": {
     title: "Atención completada",
     description: "La visita salió de las bandejas activas."
+  },
+  "tratamiento-pagado": {
+    title: "Tratamiento pagado",
+    description: "El cobro quedó registrado, la visita terminó y el seguimiento pasó a Recepción."
+  },
+  "cash-session-closed": {
+    title: "Caja cerrada exitosamente",
+    description: "El cierre quedó registrado y la Caja fue conciliada."
   }
 };
 

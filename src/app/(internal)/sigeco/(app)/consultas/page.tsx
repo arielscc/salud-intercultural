@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { OperationalQueueRefresh } from "@/components/internal/OperationalQueueRefresh";
-import { VisitStatusPill } from "@/components/internal/StatusPill";
+import { VisitOperationalStatusPill } from "@/components/internal/StatusPill";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
@@ -16,7 +16,7 @@ import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { formatDateTime } from "@/lib/dates";
 import {
-  getConsultationAbandonedToday,
+  getConsultationDailyVisits,
   getConsultationVisits
 } from "@/modules/database/queries/clinical-care";
 import { autoAbandonUnattendedConsultationVisits } from "@/modules/database/queries/visit-discontinuations";
@@ -27,12 +27,28 @@ import { getBranchContext } from "@/features/branches/context";
 
 const emptyConsultationsMessage = (
   <>
-    <span className="block font-semibold text-text">No hay pacientes en consulta.</span>
+    <span className="block font-semibold text-text">No hay pacientes registrados hoy.</span>
     <span className="mt-1 block text-sm text-muted">
-      Recepción debe derivar una visita al área médica.
+      Los pacientes aparecerán aquí cuando Recepción registre su llegada.
     </span>
   </>
 );
+
+function visitHasPaidSale(visit: {
+  sales?: Array<{ status: string; balanceCents: number }>;
+}) {
+  return visit.sales?.some((sale) => sale.status === "paid" && sale.balanceCents === 0) ?? false;
+}
+
+function dailyVisitHref(visit: {
+  id: string;
+  status: string;
+  patient: { id: string };
+}) {
+  return visit.status === "in_consultation"
+    ? `/sigeco/consultas/${visit.id}`
+    : `/sigeco/recepcion/pacientes/${visit.patient.id}`;
+}
 
 export default async function ConsultationsPage() {
   const user = await requirePermission("clinical_read");
@@ -41,9 +57,9 @@ export default async function ConsultationsPage() {
   // derivados al médico pero no entraron a la consulta dentro de su día, antes de
   // leer la bandeja para que no aparezcan en la lista del día de hoy.
   await autoAbandonUnattendedConsultationVisits({ branchCode: activeBranch.code });
-  const [visits, abandonedToday, proposalSummary] = await Promise.all([
+  const [visits, dailyVisits, proposalSummary] = await Promise.all([
     getConsultationVisits({ pageSize: 30, branchCode: activeBranch.code }),
-    getConsultationAbandonedToday(activeBranch.code),
+    getConsultationDailyVisits({ pageSize: 80, branchCode: activeBranch.code }),
     getTreatmentProposalOutcomeSummary(new Date(), activeBranch.code)
   ]);
 
@@ -132,24 +148,29 @@ export default async function ConsultationsPage() {
         />
       </section>
 
-      <DesktopTableToolbar count={`${visits.length} pacientes en atención`} />
+      <DesktopTableToolbar count={`${dailyVisits.length} pacientes del día`} />
 
       <Card className="p-0">
         <CardHeader
           className="mb-0 p-[18px] pb-3"
-          title="Pacientes en atención médica"
-          description="Visitas derivadas a consulta que permanecen dentro del flujo clínico."
+          title="Pacientes del día"
+          description="Atendidos, pagados, abandonados y activos en cualquier área durante el día operativo actual."
         />
         <RecordList>
-          {visits.map((visit) => (
+          {dailyVisits.map((visit) => (
             <RecordItem
               key={visit.id}
-              href={`/sigeco/consultas/${visit.id}`}
+              href={dailyVisitHref(visit)}
               title={visit.patient.fullName}
-              status={<VisitStatusPill status={visit.status} />}
+              status={
+                <VisitOperationalStatusPill
+                  status={visit.status}
+                  paid={visitHasPaidSale(visit)}
+                />
+              }
             >
               <span className="tabular-nums">
-                {formatDateTime(visit.derivedToDoctorAt)} ·{" "}
+                {formatDateTime(visit.checkedInAt)} ·{" "}
                 {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
               </span>
               <span className="tabular-nums">{visit.patient.phone}</span>
@@ -169,12 +190,12 @@ export default async function ConsultationsPage() {
               ) : null}
             </RecordItem>
           ))}
-          {visits.length === 0 ? (
+          {dailyVisits.length === 0 ? (
             <RecordListEmpty>{emptyConsultationsMessage}</RecordListEmpty>
           ) : null}
         </RecordList>
         <RecordTable>
-          <Table caption="Pacientes en consulta">
+          <Table caption="Pacientes del día">
             <thead>
               <tr>
                 <Th>Paciente</Th>
@@ -187,18 +208,21 @@ export default async function ConsultationsPage() {
               </tr>
             </thead>
             <tbody>
-              {visits.map((visit) => (
+              {dailyVisits.map((visit) => (
                 <Tr key={visit.id}>
                   <Td className="font-semibold text-text">
                     <Link
-                      href={`/sigeco/consultas/${visit.id}`}
+                      href={dailyVisitHref(visit)}
                       className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
                     >
                       {visit.patient.fullName}
                     </Link>
+                    <span className="block text-[11px] font-normal tabular-nums text-muted">
+                      {visit.patient.internalCode}
+                    </span>
                   </Td>
                   <Td className="tabular-nums lg:hidden xl:table-cell">{visit.patient.phone}</Td>
-                  <Td className="tabular-nums">{formatDateTime(visit.derivedToDoctorAt)}</Td>
+                  <Td className="tabular-nums">{formatDateTime(visit.checkedInAt)}</Td>
                   <Td>{visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}</Td>
                   <Td>
                     {visit.attendingUser ? (
@@ -219,11 +243,14 @@ export default async function ConsultationsPage() {
                     )}
                   </Td>
                   <Td>
-                    <VisitStatusPill status={visit.status} />
+                    <VisitOperationalStatusPill
+                      status={visit.status}
+                      paid={visitHasPaidSale(visit)}
+                    />
                   </Td>
                 </Tr>
               ))}
-              {visits.length === 0 ? (
+              {dailyVisits.length === 0 ? (
                 <tr>
                   <Td className="py-8 text-center" colSpan={7}>
                     {emptyConsultationsMessage}
@@ -235,65 +262,6 @@ export default async function ConsultationsPage() {
         </RecordTable>
       </Card>
 
-      {abandonedToday.length > 0 ? (
-        <Card className="p-0">
-          <CardHeader
-            className="mb-0 p-[18px] pb-3"
-            title="Pacientes que abandonaron (hoy)"
-            description="Derivados al médico que no entraron a la consulta dentro del día. Se cerraron como abandono automáticamente."
-          />
-          <RecordList>
-            {abandonedToday.map((entry) => (
-              <RecordItem
-                key={entry.id}
-                title={entry.visit.patient.fullName}
-                status={
-                  <Chip tone="error" dot>
-                    No atendido
-                  </Chip>
-                }
-              >
-                <span className="tabular-nums">{entry.visit.patient.internalCode}</span>
-                <span className="tabular-nums">{entry.visit.patient.phone}</span>
-                <span className="tabular-nums">Abandonó {formatDateTime(entry.createdAt)}</span>
-              </RecordItem>
-            ))}
-          </RecordList>
-          <RecordTable>
-            <Table caption="Pacientes que abandonaron hoy">
-              <thead>
-                <tr>
-                  <Th>Paciente</Th>
-                  <Th className="lg:hidden xl:table-cell">Teléfono</Th>
-                  <Th>Abandonó</Th>
-                  <Th>Estado</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {abandonedToday.map((entry) => (
-                  <Tr key={entry.id}>
-                    <Td className="font-semibold text-text">
-                      {entry.visit.patient.fullName}
-                      <span className="block text-[11px] font-normal tabular-nums text-muted">
-                        {entry.visit.patient.internalCode}
-                      </span>
-                    </Td>
-                    <Td className="tabular-nums lg:hidden xl:table-cell">
-                      {entry.visit.patient.phone}
-                    </Td>
-                    <Td className="tabular-nums">{formatDateTime(entry.createdAt)}</Td>
-                    <Td>
-                      <Chip tone="error" dot>
-                        No atendido
-                      </Chip>
-                    </Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
-          </RecordTable>
-        </Card>
-      ) : null}
     </div>
   );
 }

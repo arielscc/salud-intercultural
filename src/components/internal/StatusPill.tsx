@@ -38,3 +38,19 @@ export function VisitStatusPill({ status, className }: { status: VisitStatus; cl
     <Pill className={cn(visitStatusClassName[status], className)} label={visitStatusLabels[status]} />
   );
 }
+
+export function VisitOperationalStatusPill({
+  status,
+  paid,
+  className
+}: {
+  status: VisitStatus;
+  paid?: boolean;
+  className?: string;
+}) {
+  if (status === "completed" && paid) {
+    return <Pill className={cn("bg-success/10 text-success", className)} label="Pagado" />;
+  }
+
+  return <VisitStatusPill status={status} className={className} />;
+}

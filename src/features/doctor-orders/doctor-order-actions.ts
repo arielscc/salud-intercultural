@@ -81,6 +81,9 @@ export async function saveDoctorOrderAction(formData: FormData) {
   revalidatePath("/sigeco/consultas");
   revalidatePath(consultaPath);
   revalidatePath("/sigeco/administracion");
+  if (formData.get("intent") === "submit") {
+    redirect("/sigeco/consultas?aviso=paciente-enviado-administracion");
+  }
   redirect(`${consultaPath}?aviso=pedido-guardado`);
 }
 

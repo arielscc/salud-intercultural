@@ -24,7 +24,8 @@ import {
 import type { CaptureSourceOption } from "@/modules/database/queries/attribution";
 import {
   searchReceptionPatientsAction,
-  submitReceptionIntakeAction
+  submitReceptionIntakeAction,
+  validateAttributionEvidenceCodeAction
 } from "@/features/reception/actions";
 import {
   symptomDurationUnitLabels,
@@ -37,7 +38,7 @@ import {
 } from "@/features/geography/origin";
 import { cn } from "@/lib/cn";
 import { Search, UserRoundPlus } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 type PatientMatch = PatientSearchResult;
@@ -76,6 +77,9 @@ export function IntakeFunnel({
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<PatientMatch[] | null>(null);
   const [isSearching, startSearch] = useTransition();
+  const [isValidatingEvidence, startEvidenceValidation] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+  const validatedEvidenceCodeRef = useRef<string | null>(null);
 
   const [existingPatient, setExistingPatient] = useState<PatientMatch | null>(
     initialPatient ?? null
@@ -130,6 +134,14 @@ export function IntakeFunnel({
     toast.error(message, { duration: 5000 });
   }
 
+  function showInvalidEvidenceCodeError() {
+    toast.error("El código de referido o promoción no es válido", {
+      description:
+        "Comprueba el código indicado por la persona antes de finalizar el registro.",
+      duration: 10000
+    });
+  }
+
   function choosePrimaryCaptureSource(value: string) {
     setCapturePrimarySource(value);
     setCaptureSupportSources((current) =>
@@ -158,6 +170,7 @@ export function IntakeFunnel({
     setCapturePrimarySource("");
     setCaptureSupportSources([]);
     setAttributionEvidenceCode("");
+    validatedEvidenceCodeRef.current = null;
     setPhoneMatches([]);
     setStep(1);
   }
@@ -190,6 +203,7 @@ export function IntakeFunnel({
     setCapturePrimarySource("");
     setCaptureSupportSources([]);
     setAttributionEvidenceCode("");
+    validatedEvidenceCodeRef.current = null;
     setPhoneMatches([]);
     setStep(1);
   }
@@ -263,6 +277,7 @@ export function IntakeFunnel({
 
   return (
     <form
+      ref={formRef}
       action={submitReceptionIntakeAction}
       className="grid gap-4"
       onSubmit={(event) => {
@@ -281,6 +296,23 @@ export function IntakeFunnel({
         if (!capturePrimarySource) {
           event.preventDefault();
           showStepError("Selecciona dónde conoció la clínica por primera vez.");
+          return;
+        }
+        const evidenceCode = attributionEvidenceCode.trim();
+        if (
+          evidenceCode &&
+          validatedEvidenceCodeRef.current !== evidenceCode
+        ) {
+          event.preventDefault();
+          startEvidenceValidation(async () => {
+            const result = await validateAttributionEvidenceCodeAction(evidenceCode);
+            if (!result.valid) {
+              showInvalidEvidenceCodeError();
+              return;
+            }
+            validatedEvidenceCodeRef.current = evidenceCode;
+            formRef.current?.requestSubmit();
+          });
         }
       }}
     >
@@ -683,9 +715,13 @@ export function IntakeFunnel({
           <input
             className={internalInputClassName}
             value={attributionEvidenceCode}
-            onChange={(event) =>
-              setAttributionEvidenceCode(event.target.value.toUpperCase())
-            }
+            onChange={(event) => {
+              const nextValue = event.target.value.toUpperCase();
+              setAttributionEvidenceCode(nextValue);
+              if (validatedEvidenceCodeRef.current !== nextValue.trim()) {
+                validatedEvidenceCodeRef.current = null;
+              }
+            }}
             placeholder="Ej. REF-123 o PROMO-AGOSTO"
             autoComplete="off"
             maxLength={120}
@@ -722,7 +758,14 @@ export function IntakeFunnel({
             </Button>
           ) : null}
           {step === 4 ? (
-            <SubmitButton pendingLabel="Registrando...">Finalizar y registrar paciente</SubmitButton>
+            <SubmitButton
+              pendingLabel="Registrando..."
+              disabled={isValidatingEvidence}
+            >
+              {isValidatingEvidence
+                ? "Verificando código..."
+                : "Finalizar y registrar paciente"}
+            </SubmitButton>
           ) : null}
         </FormActions>
       ) : null}

@@ -6,6 +6,13 @@ const optionalText = z
   .transform((value) => (value.length > 0 ? value : undefined))
   .optional();
 
+const optionalMoneyString = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value && value.length > 0 ? value : "0"))
+  .pipe(z.string().regex(/^\d+(\.\d{1,2})?$/, "Monto inválido"));
+
 export const moneyString = z
   .string()
   .trim()
@@ -35,9 +42,9 @@ export const openCashSessionSchema = z.object({
 export const staffCashExpenseSchema = z.object({
   cashSessionId: identifier,
   category: z.enum(["lunch", "transport", "staff_other"]),
+  receivedById: identifier,
   deliveredById: identifier,
   authorizedById: identifier,
-  reason,
   note: optionalText,
   idempotencyKey: z.string().uuid()
 });
@@ -51,20 +58,15 @@ export const urgentPurchaseSchema = z.object({
     "office",
     "other"
   ]),
-  itemDescription: z.string().trim().min(2).max(180),
-  quantity: z.coerce.number().int().positive().max(100_000),
-  unitPrice: moneyString,
+  itemDescription: z.string().trim().min(2).max(600),
+  deliveredAmount: moneyString,
+  returnedChange: optionalMoneyString,
   requestedById: identifier,
   receivedById: identifier,
   deliveredById: identifier,
   authorizedById: identifier,
-  supplierName: optionalText,
   urgencyReason: reason,
   note: optionalText,
-  requiresInventoryEntry: z
-    .union([z.literal("on"), z.literal("true"), z.literal("false")])
-    .optional()
-    .transform((value) => value === "on" || value === "true"),
   idempotencyKey: z.string().uuid()
 });
 

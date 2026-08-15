@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { ActionErrorToast } from "@/components/internal/ActionErrorToast";
 import { IntakeFunnel } from "@/components/internal/reception/IntakeFunnel";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { toDateOnlyString } from "@/lib/dates";
@@ -24,12 +25,21 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
   const initialPatient = patient
     ? { ...patient, birthDate: toDateOnlyString(patient.birthDate) }
     : undefined;
+  const errorToastMessage =
+    params.error === "invalid-attribution"
+      ? "Comprueba el código indicado por la persona antes de finalizar el registro."
+      : undefined;
 
   return (
     <div className="mx-auto grid w-full max-w-2xl gap-4 lg:max-w-4xl">
       <PageHeader
         title="Registrar llegada"
         description="Recepción · Completa el funnel para crear la ficha y abrir la visita"
+      />
+
+      <ActionErrorToast
+        title="El código de referido o promoción no es válido"
+        message={errorToastMessage}
       />
 
       {params.error === "incomplete-funnel" ? (
@@ -49,17 +59,6 @@ export default async function ReceptionIntakePage({ searchParams }: ReceptionInt
           </p>
           <p className="mt-1 text-muted">
             Revisa el nombre, el teléfono y el motivo de la visita e inténtalo de nuevo.
-          </p>
-        </div>
-      ) : null}
-
-      {params.error === "invalid-attribution" ? (
-        <div className="rounded-[9px] bg-error/10 px-4 py-3 text-sm">
-          <p className="font-semibold text-error">
-            El código de referido o promoción no es válido
-          </p>
-          <p className="mt-1 text-muted">
-            Comprueba el código indicado por la persona antes de finalizar el registro.
           </p>
         </div>
       ) : null}

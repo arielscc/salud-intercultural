@@ -15,7 +15,6 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { Chip } from "@/components/internal/ui/Chip";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
-import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import { InfoRow } from "@/components/internal/ui/InfoRow";
 import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
@@ -481,7 +480,7 @@ export default async function ConsultationDetailPage({
               <VisitStatusPill status={visit.status} />
               {/* Bajo xl no existe la cabecera fija de la columna derecha. */}
               {medicoAreaTiming ? (
-                <AreaTimeInline state={medicoAreaTiming} className="xl:hidden" />
+                <AreaTimeInline state={medicoAreaTiming} />
               ) : null}
             </div>
           </div>
@@ -1099,16 +1098,6 @@ export default async function ConsultationDetailPage({
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
-        <DesktopDetailContext
-          eyebrow={visit.patient.internalCode}
-          title={visit.patient.fullName}
-          meta={visit.patient.phone}
-          status={<VisitStatusPill status={visit.status} />}
-          aside={
-            medicoAreaTiming ? <AreaTimeInline state={medicoAreaTiming} /> : null
-          }
-        />
-
         {canWriteClinical ? (
           <Card className="max-sm:order-2">
             <CardHeader

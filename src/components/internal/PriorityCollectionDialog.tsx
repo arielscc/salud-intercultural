@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { AlertTriangle, Banknote } from "lucide-react";
 import {
   AlertDialog,
@@ -9,10 +8,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { buttonVariants } from "@/components/internal/ui/Button";
-import { cn } from "@/lib/cn";
+import { SubmitButton } from "@/components/internal/SubmitButton";
 
 export function PriorityCollectionDialog({
+  action,
   workItemId,
   patientName,
   patientCode,
@@ -23,6 +22,7 @@ export function PriorityCollectionDialog({
   amount,
   balance
 }: {
+  action: (formData: FormData) => void | Promise<void>;
   workItemId: string;
   patientName: string;
   patientCode: string;
@@ -69,10 +69,13 @@ export function PriorityCollectionDialog({
             ) : null}
           </dl>
 
-          <Link href={`/sigeco/administracion/${workItemId}`} className={cn(buttonVariants(), "w-full")}>
-            <Banknote className="h-4 w-4" aria-hidden="true" />
-            Atender cobro ahora
-          </Link>
+          <form action={action}>
+            <input type="hidden" name="workItemId" value={workItemId} />
+            <SubmitButton className="w-full" pendingLabel="Abriendo cobro...">
+              <Banknote className="h-4 w-4" aria-hidden="true" />
+              Atender cobro ahora
+            </SubmitButton>
+          </form>
         </div>
       </AlertDialogContent>
     </AlertDialog>

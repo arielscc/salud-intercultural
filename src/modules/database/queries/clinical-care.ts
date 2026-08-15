@@ -336,6 +336,82 @@ export async function getConsultationVisits(
   });
 }
 
+export async function getConsultationDailyVisits(
+  input: PaginationInput & { branchCode?: string } = {}
+) {
+  const pagination = getPagination(input);
+  const { start, end } = dayRange();
+
+  return withDatabaseError("getConsultationDailyVisits", async () => {
+    return prisma.visit.findMany({
+      where: {
+        branchCode: input.branchCode,
+        checkedInAt: { gte: start, lt: end }
+      },
+      include: {
+        patient: {
+          select: {
+            id: true,
+            fullName: true,
+            internalCode: true,
+            phone: true
+          }
+        },
+        route: true,
+        attendingUser: { select: { id: true, name: true, email: true } },
+        clinicalConsultation: {
+          select: {
+            id: true,
+            status: true,
+            finalizedAt: true
+          }
+        },
+        sales: {
+          select: {
+            id: true,
+            status: true,
+            balanceCents: true
+          },
+          orderBy: { createdAt: "desc" }
+        }
+      },
+      orderBy: { checkedInAt: "desc" },
+      skip: pagination.skip,
+      take: pagination.take
+    });
+  });
+}
+
+export async function getActiveVisitsOutsideConsultation(branchCode?: string) {
+  return withDatabaseError("getActiveVisitsOutsideConsultation", async () => {
+    return prisma.visit.findMany({
+      where: {
+        branchCode,
+        status: {
+          in: ["in_reception", "in_nursing", "in_administration"]
+        },
+        route: {
+          currentArea: { not: "medico" },
+          active: true
+        }
+      },
+      include: {
+        patient: {
+          select: {
+            id: true,
+            fullName: true,
+            internalCode: true,
+            phone: true
+          }
+        },
+        route: true
+      },
+      orderBy: { checkedInAt: "desc" },
+      take: 30
+    });
+  });
+}
+
 /**
  * Pacientes que Recepción derivó al médico pero que no entraron a la consulta
  * dentro de su día (abandono "no atendido"), cerrados hoy. Alimenta la tabla de
@@ -355,7 +431,7 @@ export async function getConsultationAbandonedToday(branchCode?: string) {
       include: {
         visit: {
           include: {
-            patient: { select: { fullName: true, internalCode: true, phone: true } }
+            patient: { select: { id: true, fullName: true, internalCode: true, phone: true } }
           }
         }
       }

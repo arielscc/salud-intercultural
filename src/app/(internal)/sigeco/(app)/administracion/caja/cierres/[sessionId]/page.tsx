@@ -7,6 +7,8 @@ import { Chip } from "@/components/internal/ui/Chip";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import {
   cashChannelLabels,
+  cashExpenseCategoryLabels,
+  cashExpenseKindLabels,
   cashMovementTypeLabels,
   cashSessionStatusLabels,
   cashShiftLabels
@@ -218,6 +220,62 @@ export default async function CashCloseReportPage({
                   {cashChannelLabels[movement.channel]} ·{" "}
                   {formatDateTime(movement.occurredAt)}
                 </p>
+                {movement.expense ? (
+                  <div className="mt-2 grid gap-1 rounded-[7px] bg-background p-2 text-xs text-muted print:border print:border-black print:bg-white print:text-black">
+                    <p className="font-semibold text-text print:text-black">
+                      {cashExpenseKindLabels[movement.expense.kind]} ·{" "}
+                      {cashExpenseCategoryLabels[movement.expense.category]}
+                    </p>
+                    <p>
+                      Entregó {personName(movement.expense.deliveredBy)} ·
+                      Autorizó {personName(movement.expense.authorizedBy)}
+                    </p>
+                    {movement.expense.receivedBy ? (
+                      <p>Recibió {personName(movement.expense.receivedBy)}</p>
+                    ) : null}
+                    {movement.expense.requestedBy ? (
+                      <p>Solicitó {personName(movement.expense.requestedBy)}</p>
+                    ) : null}
+                    {movement.expense.beneficiaries.length > 0 ? (
+                      <ul className="grid gap-0.5">
+                        {movement.expense.beneficiaries.map((line) => (
+                          <li key={line.id}>
+                            {personName(line.employee)}: {formatMoney(line.amountCents)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {movement.expense.itemDescription ? (
+                      <p>
+                        {movement.expense.quantity &&
+                        movement.expense.unitPriceCents
+                          ? `${movement.expense.quantity} × ${movement.expense.itemDescription} · ${formatMoney(
+                              movement.expense.unitPriceCents
+                            )} c/u`
+                          : movement.expense.itemDescription}
+                      </p>
+                    ) : null}
+                    {movement.expense.note ? (
+                      <p className="whitespace-pre-line">
+                        {movement.expense.note}
+                      </p>
+                    ) : null}
+                    {movement.expense.supplierName ? (
+                      <p>Proveedor: {movement.expense.supplierName}</p>
+                    ) : null}
+                    {movement.expense.reason ? (
+                      <p>Motivo: {movement.expense.reason}</p>
+                    ) : null}
+                    {movement.expense.requiresInventoryEntry ? (
+                      <p className="font-semibold text-warning print:text-black">
+                        Pendiente de ingreso a inventario
+                      </p>
+                    ) : null}
+                    {movement.expense.receiptStorageKey ? (
+                      <p>Comprobante adjunto registrado</p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <p className="shrink-0 font-bold tabular-nums">
                 {movement.type === "expense" ||

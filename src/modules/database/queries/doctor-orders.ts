@@ -285,6 +285,76 @@ export async function saveDoctorOrder(input: {
         }
       }
 
+      if (input.submit) {
+        const title = "Cobro de pedido médico";
+        const description = resolvedLines
+          .map((line) => line.description)
+          .join(", ");
+        const existingAdministrationWorkItem = await tx.visitWorkItem.findFirst({
+          where: {
+            visitId: visit.id,
+            area: "administracion",
+            status: { in: ["pending", "acknowledged", "in_progress", "blocked"] },
+            clinicalOrders: {
+              some: { targetArea: "administracion", title }
+            }
+          },
+          orderBy: { createdAt: "desc" }
+        });
+
+        const administrationWorkItem = existingAdministrationWorkItem
+          ? await tx.visitWorkItem.update({
+              where: { id: existingAdministrationWorkItem.id },
+              data: { title, description }
+            })
+          : (
+              await updateVisitRouteStatusInTransaction(tx, {
+                visitId: visit.id,
+                userId: input.doctorId,
+                status: "in_administration",
+                area: "administracion",
+                note: "Derivado a Administración para cobro del pedido médico",
+                workItemTitle: title,
+                workItemDescription: description
+              })
+            ).workItem;
+
+        const existingClinicalOrder = await tx.clinicalOrder.findFirst({
+          where: {
+            visitId: visit.id,
+            targetArea: "administracion",
+            workItemId: administrationWorkItem.id,
+            title
+          },
+          orderBy: { createdAt: "desc" }
+        });
+
+        if (existingClinicalOrder) {
+          await tx.clinicalOrder.update({
+            where: { id: existingClinicalOrder.id },
+            data: {
+              doctorId: input.doctorId,
+              details: input.indications || description,
+              status: "pending"
+            }
+          });
+        } else {
+          await tx.clinicalOrder.create({
+            data: {
+              visitId: visit.id,
+              patientId: visit.patientId,
+              doctorId: input.doctorId,
+              workItemId: administrationWorkItem.id,
+              type: "administration",
+              targetArea: "administracion",
+              status: "pending",
+              title,
+              details: input.indications || description
+            }
+          });
+        }
+      }
+
       return tx.doctorOrder.findUniqueOrThrow({
         where: { id: order.id },
         include: { lines: { orderBy: { position: "asc" } } }

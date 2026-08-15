@@ -1,4 +1,9 @@
-import type { CashChannel, Prisma, SaleItemType } from "@/generated/prisma/client";
+import type {
+  CashChannel,
+  Prisma,
+  SaleItemType,
+  VisitWorkItemStatus
+} from "@/generated/prisma/client";
 import { dayRange, monthRange } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
@@ -7,6 +12,7 @@ import {
   CashWorkflowError,
   getOpenCashSessionForOperation
 } from "@/modules/database/queries/cash";
+import { updateVisitRouteStatusInTransaction } from "@/modules/database/queries/visits";
 
 const paymentMethodNames: Record<string, string> = {
   cash: "Efectivo",
@@ -15,6 +21,12 @@ const paymentMethodNames: Record<string, string> = {
   transfer: "Transferencia",
   other: "Otro"
 };
+
+const activeWorkItemStatuses: VisitWorkItemStatus[] = [
+  "pending",
+  "acknowledged",
+  "in_progress"
+];
 
 function getSaleStatus(totalCents: number, paidCents: number) {
   if (paidCents <= 0) return "pending";
@@ -29,15 +41,30 @@ async function activateAwaitingPaymentFollowUps(
   visitId: string | null | undefined
 ) {
   if (!visitId) return;
-  const pending = await tx.followUpTask.findMany({
-    where: { visitId, status: "awaiting_payment" },
+  const receptionAssignee = await tx.internalUser.findFirst({
+    where: { active: true, role: "recepcion" },
+    orderBy: [
+      { name: "asc" },
+      { createdAt: "asc" }
+    ],
     select: { id: true }
   });
-  if (pending.length === 0) return;
-  await tx.followUpTask.updateMany({
+  const pending = await tx.followUpTask.findMany({
     where: { visitId, status: "awaiting_payment" },
-    data: { status: "pending" }
+    select: { id: true, assignedToId: true }
   });
+  if (pending.length === 0) return;
+  await Promise.all(
+    pending.map((task) =>
+      tx.followUpTask.update({
+        where: { id: task.id },
+        data: {
+          status: "pending",
+          assignedToId: task.assignedToId ?? receptionAssignee?.id
+        }
+      })
+    )
+  );
   await tx.followUpStatusHistory.createMany({
     data: pending.map((task) => ({
       taskId: task.id,
@@ -60,6 +87,32 @@ async function ensurePaymentMethod(tx: Prisma.TransactionClient, code: string) {
   });
 }
 
+async function completeDoctorOrderPaidVisit(
+  tx: Prisma.TransactionClient,
+  input: {
+    visitId: string;
+    userId?: string;
+  }
+) {
+  await tx.visitWorkItem.updateMany({
+    where: {
+      visitId: input.visitId,
+      status: { in: activeWorkItemStatuses }
+    },
+    data: { status: "completed", completedAt: new Date() }
+  });
+  await updateVisitRouteStatusInTransaction(tx, {
+    visitId: input.visitId,
+    userId: input.userId,
+    status: "completed",
+    area: "cierre",
+    note: "Tratamiento pagado en Administración. Visita finalizada.",
+    workItemTitle: "Tratamiento pagado",
+    workItemDescription:
+      "El cobro quedó saldado y los seguimientos pendientes pasaron a Recepción."
+  });
+}
+
 function paymentCodeToCashChannel(code: string): CashChannel {
   return code === "qr" ? "qr" : "cash";
 }
@@ -68,15 +121,30 @@ export async function getAdministrationWorkItems(
   input: PaginationInput & { branchCode?: string } = {}
 ) {
   const pagination = getPagination(input);
+  const today = dayRange();
 
   return withDatabaseError("getAdministrationWorkItems", async () => {
     return prisma.visitWorkItem.findMany({
       where: {
         visit: { branchCode: input.branchCode },
         area: "administracion",
-        status: {
-          in: ["pending", "acknowledged", "in_progress", "blocked"]
-        }
+        OR: [
+          {
+            status: {
+              in: ["pending", "acknowledged", "in_progress", "blocked"]
+            }
+          },
+          {
+            status: "completed",
+            completedAt: { gte: today.start, lt: today.end },
+            sales: {
+              some: {
+                doctorOrderId: { not: null },
+                status: "paid"
+              }
+            }
+          }
+        ]
       },
       include: {
         createdBy: true,
@@ -88,7 +156,14 @@ export async function getAdministrationWorkItems(
           include: {
             patient: true,
             route: true,
-            doctorOrder: { select: { status: true } }
+            doctorOrder: {
+              select: {
+                status: true,
+                chargeBaseCents: true,
+                orderDiscountCents: true,
+                lines: { select: { unitPriceCents: true, quantity: true } }
+              }
+            }
           }
         },
         sales: {
@@ -121,7 +196,20 @@ export async function getLatestPendingAdministrationWorkItem(branchCode?: string
           include: { doctor: true, treatmentProposalOutcome: true },
           orderBy: { createdAt: "desc" }
         },
-        visit: { include: { patient: true, route: true } },
+        visit: {
+          include: {
+            patient: true,
+            route: true,
+            doctorOrder: {
+              select: {
+                status: true,
+                chargeBaseCents: true,
+                orderDiscountCents: true,
+                lines: { select: { unitPriceCents: true, quantity: true } }
+              }
+            }
+          }
+        },
         sales: {
           include: { items: true, payments: true },
           orderBy: { createdAt: "desc" }
@@ -165,6 +253,47 @@ export async function getAdministrationWorkItemById(id: string) {
           orderBy: { createdAt: "desc" }
         }
       }
+    });
+  });
+}
+
+export async function assignAdministrationWorkItem(input: {
+  workItemId: string;
+  userId: string;
+  branchCode?: string;
+}) {
+  return withDatabaseError("assignAdministrationWorkItem", async () => {
+    return prisma.$transaction(async (tx) => {
+      const workItem = await tx.visitWorkItem.findUniqueOrThrow({
+        where: { id: input.workItemId },
+        select: {
+          id: true,
+          visitId: true,
+          area: true,
+          status: true,
+          visit: { select: { branchCode: true } }
+        }
+      });
+
+      if (
+        workItem.area !== "administracion" ||
+        (input.branchCode && workItem.visit.branchCode !== input.branchCode)
+      ) {
+        throw new Error("ADMINISTRATION_WORK_ITEM_NOT_AVAILABLE");
+      }
+
+      const shouldStart =
+        workItem.status === "pending" || workItem.status === "acknowledged";
+      const updated = await tx.visitWorkItem.update({
+        where: { id: input.workItemId },
+        data: {
+          assignedToId: input.userId,
+          assignedAt: new Date(),
+          status: shouldStart ? "in_progress" : workItem.status
+        }
+      });
+
+      return { ...updated, visitId: workItem.visitId };
     });
   });
 }
@@ -616,12 +745,17 @@ export async function confirmDoctorOrderSale(input: {
         await activateAwaitingPaymentFollowUps(tx, order.visitId);
       }
 
-      // Si el pedido va a Enfermería, la tarea se cierra recién al derivar
-      // (Tarea 4); si no, se completa al quedar pagada.
-      if (input.workItemId && status === "paid" && !requiresNursing) {
+      if (input.workItemId && status === "paid") {
         await tx.visitWorkItem.update({
           where: { id: input.workItemId },
           data: { status: "completed", completedAt: new Date() }
+        });
+      }
+
+      if (status === "paid") {
+        await completeDoctorOrderPaidVisit(tx, {
+          visitId: order.visitId,
+          userId: input.createdById
         });
       }
 
@@ -675,7 +809,19 @@ export async function createPaymentRecord(input: {
     return prisma.$transaction(async (tx) => {
       if (input.idempotencyKey) {
         const reused = await tx.payment.findUnique({
-          where: { idempotencyKey: input.idempotencyKey }
+          where: { idempotencyKey: input.idempotencyKey },
+          include: {
+            sale: {
+              select: {
+                id: true,
+                status: true,
+                balanceCents: true,
+                workItemId: true,
+                doctorOrderId: true,
+                visitId: true
+              }
+            }
+          }
         });
         if (reused) return reused;
       }
@@ -711,7 +857,7 @@ export async function createPaymentRecord(input: {
         }
       });
 
-      await tx.sale.update({
+      const updatedSale = await tx.sale.update({
         where: { id: sale.id },
         data: {
           paidCents,
@@ -758,7 +904,24 @@ export async function createPaymentRecord(input: {
         await activateAwaitingPaymentFollowUps(tx, sale.visitId);
       }
 
-      return payment;
+      if (balanceCents === 0 && sale.doctorOrderId && sale.visitId) {
+        await completeDoctorOrderPaidVisit(tx, {
+          visitId: sale.visitId,
+          userId: input.receivedById
+        });
+      }
+
+      return {
+        ...payment,
+        sale: {
+          id: updatedSale.id,
+          status: updatedSale.status,
+          balanceCents: updatedSale.balanceCents,
+          workItemId: updatedSale.workItemId,
+          doctorOrderId: updatedSale.doctorOrderId,
+          visitId: updatedSale.visitId
+        }
+      };
     });
   });
 }

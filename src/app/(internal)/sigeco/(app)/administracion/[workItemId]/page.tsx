@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import { Printer } from "lucide-react";
 import type { SaleItemType } from "@/generated/prisma/client";
+import { AreaTimeInline } from "@/components/internal/area-times/AreaTimeInline";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { NoticeForm } from "@/components/internal/NoticeForm";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
@@ -13,22 +14,18 @@ import { buttonVariants } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { StaleCashSessionModal } from "@/components/internal/cash/StaleCashSessionModal";
 import { Chip } from "@/components/internal/ui/Chip";
-import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { FormActions } from "@/components/internal/ui/FormActions";
 import { VisitDiscontinuationForm } from "@/components/internal/visit-discontinuations/VisitDiscontinuationForm";
 import {
   applySaleDiscountAction,
   confirmDoctorOrderSaleAction,
   createPaymentAction,
-  createSaleOrderAction,
   createSaleAction,
   sendPaidStudiesToNursingAction
 } from "@/features/sales/actions";
 import { SaleDiscountForm } from "@/features/sales/components/SaleDiscountForm";
-import { AdministrationChargeDialog } from "@/features/sales/components/AdministrationChargeDialog";
 import { PatientSalesHistory } from "@/features/sales/components/PatientSalesHistory";
 import { DoctorOrderConfirmPanel } from "@/features/doctor-orders/components/DoctorOrderConfirmPanel";
-import { releaseDoctorOrderToNursingAction } from "@/features/doctor-orders/doctor-order-actions";
 import { doctorOrderStatusLabels } from "@/features/doctor-orders/labels";
 import {
   formatMoney,
@@ -39,11 +36,11 @@ import { applyVisitFlowAction } from "@/features/visits/actions";
 import { isActiveVisitStatus } from "@/features/visits/schemas/visit.schema";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { getInventoryItems } from "@/modules/database/queries/inventory";
+import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import {
   getAdministrationWorkItemById,
   getPatientSales
 } from "@/modules/database/queries/sales";
-import { getActiveServiceCatalogItems } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
 import { getBranchContext } from "@/features/branches/context";
 
@@ -65,26 +62,32 @@ export default async function AdministrationWorkItemPage({
   const { activeBranch } = await getBranchContext(user);
   const { workItemId } = await params;
   const query = await searchParams;
-  const [item, inventoryItems, catalogItems] = await Promise.all([
+  const [item, inventoryItems] = await Promise.all([
     getAdministrationWorkItemById(workItemId),
     getInventoryItems({
       pageSize: 100,
       status: "active",
       usage: "sale",
       branchCode: activeBranch.code
-    }),
-    getActiveServiceCatalogItems()
+    })
   ]);
 
   if (!item) notFound();
   if (item.visit.branchCode !== activeBranch.code) notFound();
 
   const patient = item.visit.patient;
-  const patientSales = await getPatientSales(patient.id);
+  const [patientSales, areaTiming] = await Promise.all([
+    getPatientSales(patient.id),
+    getVisitAreaTimingState(item.visit.id)
+  ]);
+  const administrationAreaTiming =
+    areaTiming?.area === "administracion" &&
+    roleHasPermission(user.role, "area_time_write")
+      ? areaTiming
+      : null;
   const order = item.clinicalOrders[0];
   const proposalOutcome = order?.treatmentProposalOutcome;
   const doctorOrder = item.visit.doctorOrder;
-  const orderHasNursing = doctorOrder?.lines.some((line) => line.requiresNursing) ?? false;
   // Total definido por el médico (base editable − descuento libre). Se calcula en
   // el servidor; a Administración solo le llega el total, no los costos por producto.
   const doctorOrderTotalCents = doctorOrder
@@ -123,7 +126,7 @@ export default async function AdministrationWorkItemPage({
             role="status"
           >
             Venta creada desde el pedido del médico. Si incluye suero o servicio, cóbralo y
-            envíalo a Enfermería aquí.
+            la visita se cerrará al quedar saldado.
           </div>
         ) : null}
         {query.aviso === "descuento-aplicado" ? (
@@ -197,7 +200,12 @@ export default async function AdministrationWorkItemPage({
               </h2>
               <p className="mt-0.5 text-sm tabular-nums text-muted">{patient.phone}</p>
             </div>
-            <VisitStatusPill status={item.visit.status} />
+            <div className="flex flex-col items-end gap-1.5">
+              <VisitStatusPill status={item.visit.status} />
+              {administrationAreaTiming ? (
+                <AreaTimeInline state={administrationAreaTiming} />
+              ) : null}
+            </div>
           </div>
           <div className="mt-4 rounded-[9px] border border-border bg-background p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -225,7 +233,7 @@ export default async function AdministrationWorkItemPage({
 
         {query.error === "pago-pendiente" ? (
           <div className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning" role="alert">
-            Debes registrar el pago completo antes de enviar al paciente a Enfermería.
+            Debes registrar el pago completo antes de cerrar esta atención.
           </div>
         ) : null}
         {query.error === "not-confirmed" ||
@@ -363,28 +371,29 @@ export default async function AdministrationWorkItemPage({
               }))}
             />
           </Card>
-        ) : doctorOrder?.status === "confirmed" && orderHasNursing ? (
+        ) : doctorOrder?.status === "confirmed" && doctorOrderSale ? (
           <Card className="max-sm:order-2">
             <CardHeader
-              title="Suero / servicio a Enfermería"
-              description="El suero y los servicios se ejecutan en Enfermería solo después del pago."
+              title="Pedido médico"
+              description="Registra el cobro. Cuando quede saldado, la visita termina y el seguimiento pasa a Recepción."
               action={
-                doctorOrder.nursingReleasedAt ? (
+                doctorOrderSale.balanceCents === 0 ? (
                   <Chip tone="success" dot>
-                    Enviado a Enfermería
+                    Pagado
                   </Chip>
                 ) : undefined
               }
             />
-            {doctorOrder.nursingReleasedAt ? (
+            {doctorOrderSale.balanceCents === 0 ? (
               <p className="text-sm text-muted">
-                Se envió a Enfermería con la orden e indicaciones del médico.
+                El tratamiento quedó pagado. La visita se cerró y los seguimientos pendientes
+                quedaron para Recepción.
               </p>
             ) : doctorOrderSale && doctorOrderSale.balanceCents > 0 ? (
               <div className="grid gap-3">
                 <p className="text-sm text-warning">
-                  Cobra el saldo ({formatMoney(doctorOrderSale.balanceCents)}) antes de enviar a
-                  Enfermería.
+                  Cobra el saldo ({formatMoney(doctorOrderSale.balanceCents)}) para finalizar la
+                  visita.
                 </p>
                 <NoticeForm
                   action={createPaymentAction}
@@ -412,18 +421,7 @@ export default async function AdministrationWorkItemPage({
                   <SubmitButton>Registrar pago completo</SubmitButton>
                 </NoticeForm>
               </div>
-            ) : (
-              <NoticeForm
-                action={releaseDoctorOrderToNursingAction}
-                notice="Paciente enviado a Enfermería"
-              >
-                <input type="hidden" name="workItemId" value={item.id} />
-                <input type="hidden" name="doctorOrderId" value={doctorOrder.id} />
-                <SubmitButton className="w-full">
-                  Pago confirmado · Enviar a Enfermería
-                </SubmitButton>
-              </NoticeForm>
-            )}
+            ) : null}
           </Card>
         ) : (
         <Card className="max-sm:order-2">
@@ -524,35 +522,6 @@ export default async function AdministrationWorkItemPage({
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
-        <DesktopDetailContext
-          eyebrow={patient.internalCode}
-          title={patient.fullName}
-          meta={patient.phone}
-          status={<VisitStatusPill status={item.visit.status} />}
-        />
-        <Card className="max-sm:order-3">
-          <CardHeader
-            title="Asignar cobro"
-            description="Crea una venta desde el catálogo y luego registra el pago."
-          />
-          <AdministrationChargeDialog
-            action={createSaleOrderAction}
-            patientId={patient.id}
-            visitId={item.visit.id}
-            workItemId={item.id}
-            catalogItems={catalogItems.map((catalogItem) => ({
-              id: catalogItem.id,
-              name: catalogItem.name,
-              kind: catalogItem.kind === "treatment" ? "treatment" : "service",
-              basePriceCents: catalogItem.packagePriceCents ?? catalogItem.basePriceCents
-            }))}
-            inventoryItems={inventoryItems.map((inventoryItem) => ({
-              id: inventoryItem.id,
-              name: inventoryItem.name,
-              salePriceCents: inventoryItem.salePriceCents
-            }))}
-          />
-        </Card>
         {isActiveVisitStatus(item.visit.status) && !isPaidStudyOrder ? (
           <Card className="max-sm:order-4">
             <CardHeader
@@ -598,7 +567,7 @@ export default async function AdministrationWorkItemPage({
 
         <Card className="max-sm:order-4">
           <CardHeader
-            title="Ventas del paciente"
+            title="Historial de Compras del paciente"
             description="Historial resumido de tratamientos, sueros, servicios y productos vendidos."
           />
           <PatientSalesHistory

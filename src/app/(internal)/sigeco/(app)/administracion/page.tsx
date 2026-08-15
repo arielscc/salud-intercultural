@@ -6,6 +6,12 @@ import { Chip } from "@/components/internal/ui/Chip";
 import { DesktopTableToolbar } from "@/components/internal/ui/DesktopTableToolbar";
 import { KpiCard } from "@/components/internal/ui/KpiCard";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
+import { CashExpenseDialogs } from "@/features/cash/components/CashExpenseDialogs";
+import {
+  createOtherCashExpenseAction,
+  createStaffCashExpenseAction,
+  createUrgentPurchaseExpenseAction
+} from "@/features/cash/actions";
 import {
   RecordItem,
   RecordList,
@@ -15,7 +21,9 @@ import {
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { routeAreaLabels } from "@/features/patients/labels";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
+import { attendAdministrationWorkItemAction } from "@/features/sales/actions";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/dates";
 import {
@@ -23,6 +31,11 @@ import {
   getLatestPendingAdministrationWorkItem,
   getSalesSummary
 } from "@/modules/database/queries/sales";
+import {
+  getCashAuthorizers,
+  getCashDashboard,
+  getCashPersonnel
+} from "@/modules/database/queries/cash";
 import { requirePermission } from "@/modules/permissions";
 import { ArrowRight, Banknote, CalendarDays, Clock } from "lucide-react";
 import Link from "next/link";
@@ -37,17 +50,58 @@ const emptyAdministrationMessage = (
   </>
 );
 
+function doctorOrderPendingCents(workItem: {
+  visit: {
+    doctorOrder?: {
+      chargeBaseCents: number | null;
+      orderDiscountCents: number;
+      lines: Array<{ unitPriceCents: number; quantity: number }>;
+    } | null;
+  };
+}) {
+  const order = workItem.visit.doctorOrder;
+  if (!order) return null;
+  const lineSum = order.lines.reduce(
+    (sum, line) => sum + line.unitPriceCents * line.quantity,
+    0
+  );
+  const base = order.chargeBaseCents ?? lineSum;
+  const discount = Math.min(Math.max(0, order.orderDiscountCents), base);
+  return Math.max(0, base - discount);
+}
+
 export default async function AdministrationPage() {
   const user = await requirePermission("sales_read");
   const { activeBranch } = await getBranchContext(user);
   const isPersonalAdministrationAccount = user.role === "administracion";
-  const [workItems, summary, priorityCollection] = await Promise.all([
+  const isSuperAdmin = user.role === "super_admin";
+  const [
+    workItems,
+    summary,
+    priorityCollection,
+    cashDashboard,
+    cashPersonnel,
+    cashAuthorizers
+  ] = await Promise.all([
     getAdministrationWorkItems({ pageSize: 40, branchCode: activeBranch.code }),
     getSalesSummary(new Date(), activeBranch.code),
-    getLatestPendingAdministrationWorkItem(activeBranch.code)
+    getLatestPendingAdministrationWorkItem(activeBranch.code),
+    getCashDashboard({ branchCode: activeBranch.code }),
+    getCashPersonnel(activeBranch.code),
+    getCashAuthorizers()
   ]);
 
   const pendingBalance = summary.pendingSales._sum.balanceCents ?? 0;
+  const hasStaleOpenCashSession = Boolean(cashDashboard.staleOpenSession);
+  const hasUsableCashSession =
+    cashDashboard.activeSessionStatus === "open" && !hasStaleOpenCashSession;
+  const activeCashCollectedCents = cashDashboard.breakdown
+    ? cashDashboard.breakdown.cashIncomeCents +
+      cashDashboard.breakdown.qrIncomeCents
+    : 0;
+  const priorityEstimatedBalance = priorityCollection
+    ? doctorOrderPendingCents(priorityCollection)
+    : null;
 
   return (
     <div className="grid gap-4">
@@ -103,19 +157,21 @@ export default async function AdministrationPage() {
                   <p className="mt-0.5 font-sora text-2xl font-bold tabular-nums text-primary-dark">
                     {priorityCollection.sales[0]
                       ? formatMoney(priorityCollection.sales[0].balanceCents)
-                      : "Por registrar"}
+                      : priorityEstimatedBalance !== null
+                        ? formatMoney(priorityEstimatedBalance)
+                        : "Por registrar"}
                   </p>
                   <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
                     Orden #{priorityCollection.id.slice(-8).toUpperCase()}
                   </p>
                 </div>
-                <Link
-                  href={`/sigeco/administracion/${priorityCollection.id}`}
-                  className={cn(buttonVariants({ size: "sm" }), "ml-auto shrink-0")}
-                >
-                  Atender cobro
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </Link>
+                <form action={attendAdministrationWorkItemAction} className="ml-auto shrink-0">
+                  <input type="hidden" name="workItemId" value={priorityCollection.id} />
+                  <button type="submit" className={cn(buttonVariants({ size: "sm" }))}>
+                    Atender cobro
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </form>
             </div>
           </div>
         </section>
@@ -123,6 +179,7 @@ export default async function AdministrationPage() {
 
       {priorityCollection && isPersonalAdministrationAccount ? (
         <PriorityCollectionDialog
+          action={attendAdministrationWorkItemAction}
           workItemId={priorityCollection.id}
           patientName={priorityCollection.visit.patient.fullName}
           patientCode={priorityCollection.visit.patient.internalCode}
@@ -135,21 +192,52 @@ export default async function AdministrationPage() {
             priorityCollection.createdBy?.email
           }
           requestedAt={formatDateTime(priorityCollection.createdAt)}
-          amount={priorityCollection.sales[0] ? formatMoney(priorityCollection.sales[0].totalCents) : undefined}
-          balance={priorityCollection.sales[0] ? formatMoney(priorityCollection.sales[0].balanceCents) : undefined}
+          amount={
+            priorityCollection.sales[0]
+              ? formatMoney(priorityCollection.sales[0].totalCents)
+              : priorityEstimatedBalance !== null
+                ? formatMoney(priorityEstimatedBalance)
+                : undefined
+          }
+          balance={
+            priorityCollection.sales[0]
+              ? formatMoney(priorityCollection.sales[0].balanceCents)
+              : priorityEstimatedBalance !== null
+                ? formatMoney(priorityEstimatedBalance)
+                : undefined
+          }
+        />
+      ) : null}
+
+      {roleHasPermission(user.role, "cash_movements_create") ? (
+        <CashExpenseDialogs
+          cashSessionId={
+            hasUsableCashSession
+              ? cashDashboard.activeSessionId
+              : null
+          }
+          personnel={cashPersonnel}
+          authorizers={cashAuthorizers}
+          currentUserId={user.id}
+          disabled={!hasUsableCashSession}
+          disabledReason="Abre o regulariza la Caja de hoy antes de registrar egresos."
+          hasStaleOpenSession={hasStaleOpenCashSession}
+          createStaffCashExpenseAction={createStaffCashExpenseAction}
+          createUrgentPurchaseExpenseAction={createUrgentPurchaseExpenseAction}
+          createOtherCashExpenseAction={createOtherCashExpenseAction}
         />
       ) : null}
 
       <section
-        className={`grid gap-2 sm:gap-3 ${isPersonalAdministrationAccount ? "grid-cols-2" : "grid-cols-3"}`}
+        className={`grid gap-2 sm:gap-3 ${isSuperAdmin ? "grid-cols-3" : "grid-cols-2"}`}
       >
         <KpiCard
           icon={Banknote}
-          label="Cobrado hoy"
-          value={formatMoney(summary.todaySales._sum.paidCents ?? 0)}
+          label="Cobrado en Caja"
+          value={formatMoney(activeCashCollectedCents)}
           compactMobile
         />
-        {!isPersonalAdministrationAccount ? (
+        {isSuperAdmin ? (
           <KpiCard
             icon={CalendarDays}
             label="Ventas del mes"
@@ -166,13 +254,13 @@ export default async function AdministrationPage() {
         />
       </section>
 
-      <DesktopTableToolbar count={`${workItems.length} pendientes derivados`} />
+      <DesktopTableToolbar count={`${workItems.length} registros del día`} />
 
       <Card className="p-0">
         <CardHeader
           className="mb-0 p-[18px] pb-3"
-          title="Cobros y entregas pendientes"
-          description="Órdenes derivadas a Administración que todavía requieren una acción."
+          title="Cobros y entregas del día"
+          description="Pendientes derivados y tratamientos pagados hoy."
         />
         <RecordList>
           {workItems.map((item) => {

@@ -72,10 +72,10 @@ describe("cash integration", () => {
         { employeeId: admin.id, amountCents: 2_000 },
         { employeeId: nurse.id, amountCents: 3_000 }
       ],
+      receivedById: nurse.id,
       deliveredById: admin.id,
       registeredById: admin.id,
       authorizedById: direction.id,
-      reason: "Almuerzo del personal",
       idempotencyKey: "staff-expense-once"
     };
 
@@ -130,10 +130,10 @@ describe("cash integration", () => {
       cashSessionId: firstSession.id,
       category: "transport",
       beneficiaries: [{ employeeId: nurse.id, amountCents: 5_000 }],
+      receivedById: nurse.id,
       deliveredById: admin.id,
       registeredById: admin.id,
       authorizedById: direction.id,
-      reason: "Transporte extraordinario",
       idempotencyKey: "first-expense"
     });
     await requestCashSessionClose({
@@ -157,7 +157,7 @@ describe("cash integration", () => {
     });
     const correction = await reverseCashMovement({
       originalMovementId: expense.movement.id,
-      amountCents: 5_000,
+      amountCents: 4_000,
       actorId: direction.id,
       reason: "El empleado devolvió el dinero no utilizado",
       idempotencyKey: "expense-reversal"
@@ -172,7 +172,7 @@ describe("cash integration", () => {
     try {
       await reverseCashMovement({
         originalMovementId: expense.movement.id,
-        amountCents: 1,
+        amountCents: 1_000,
         actorId: direction.id,
         reason: "Intento duplicado",
         idempotencyKey: "second-reversal"
@@ -191,7 +191,7 @@ describe("cash integration", () => {
         cash: 0,
         qr: 0
       },
-      observation: "El reintegro aún no está físicamente en la caja."
+      observation: "El cambio devuelto aún no está físicamente en la caja."
     });
     expect(close).toMatchObject({ requiresApproval: true });
     expect(close.session.status).toBe("pending_approval");
@@ -208,6 +208,6 @@ describe("cash integration", () => {
     });
 
     const dashboard = await getCashDashboard({ sessionId: secondSession.id });
-    expect(dashboard.expected?.cash).toBe(5_000);
+    expect(dashboard.expected?.cash).toBe(4_000);
   });
 });

@@ -14,8 +14,20 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-export function StaleCashSessionModal() {
-  const [open, setOpen] = useState(true);
+type StaleCashSessionModalProps = {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  operationLabel?: string;
+};
+
+export function StaleCashSessionModal({
+  open: controlledOpen,
+  onOpenChange,
+  operationLabel = "cobro"
+}: StaleCashSessionModalProps = {}) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(true);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -30,8 +42,9 @@ export function StaleCashSessionModal() {
                 Caja pendiente de regularización
               </AlertDialogTitle>
               <AlertDialogDescription className="mt-1 text-sm leading-6 text-text">
-                Hay una Caja abierta de una fecha anterior. El cobro no fue registrado
-                para evitar mezclar ingresos de distintos días.
+                Hay una Caja abierta de una fecha anterior. La operación de{" "}
+                {operationLabel} no fue registrada para evitar mezclar movimientos
+                de distintos días.
               </AlertDialogDescription>
             </AlertDialogHeader>
           </div>
@@ -40,7 +53,7 @@ export function StaleCashSessionModal() {
         <div className="px-5 py-4">
           <p className="rounded-[9px] border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
             Cierra o regulariza esa Caja antes de operar hoy. Luego vuelve a intentar
-            el cobro.
+            la operación.
           </p>
         </div>
 

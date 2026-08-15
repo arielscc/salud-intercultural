@@ -1,4 +1,4 @@
-import { AreaTimeControl } from "@/components/internal/area-times/AreaTimeControl";
+import { AreaTimeInline } from "@/components/internal/area-times/AreaTimeInline";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
@@ -8,7 +8,6 @@ import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { CollapsibleSection } from "@/components/internal/ui/CollapsibleSection";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
-import { DesktopDetailContext } from "@/components/internal/ui/DesktopDetailContext";
 import { getBranchContext } from "@/features/branches/context";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
@@ -113,7 +112,13 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
               </h2>
               <p className="mt-0.5 text-sm tabular-nums text-muted">{patient.phone}</p>
             </div>
-            <VisitStatusPill status={item.visit.status} />
+            <div className="flex flex-col items-end gap-1.5">
+              <VisitStatusPill status={item.visit.status} />
+              {areaTiming?.area === "enfermeria" &&
+              roleHasPermission(user.role, "area_time_write") ? (
+                <AreaTimeInline state={areaTiming} />
+              ) : null}
+            </div>
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[9px] border border-primary/25 bg-primary/5 p-4">
             <div>
@@ -555,16 +560,6 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
-        <DesktopDetailContext
-          eyebrow={patient.internalCode}
-          title={patient.fullName}
-          meta={patient.phone}
-          status={<VisitStatusPill status={item.visit.status} />}
-        />
-        {areaTiming?.area === "enfermeria" &&
-        roleHasPermission(user.role, "area_time_write") ? (
-          <AreaTimeControl state={areaTiming} compact hideStartAttention />
-        ) : null}
         <Card className="max-sm:order-5">
           <CardHeader
             title="Nota de enfermería"

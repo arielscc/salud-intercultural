@@ -20,7 +20,7 @@ export const cashMovementTypeLabels: Record<CashMovementType, string> = {
   expense: "Egreso",
   adjustment: "Ajuste anterior",
   refund: "Devolución",
-  reversal: "Reintegro"
+  reversal: "Cambio devuelto"
 };
 
 export const cashSessionStatusLabels: Record<CashSessionStatus, string> = {

@@ -39,6 +39,12 @@ function fields(formData: FormData) {
   );
 }
 
+function cashExpenseTarget(formData: FormData) {
+  const raw = formData.get("returnTo");
+  if (typeof raw !== "string") return "/sigeco/administracion/caja";
+  return raw === "/sigeco/administracion" ? raw : "/sigeco/administracion/caja";
+}
+
 function cashErrorTarget(error: unknown, fallback: string): string | null {
   const workflowError = findCashWorkflowError(error);
   if (!workflowError) return null;
@@ -119,8 +125,9 @@ export async function openCashSessionAction(formData: FormData) {
 }
 
 export async function createStaffCashExpenseAction(formData: FormData) {
+  const fallback = cashExpenseTarget(formData);
   const parsed = staffCashExpenseSchema.safeParse(fields(formData));
-  if (!parsed.success) redirect("/sigeco/administracion/caja?error=cash-invalid-expense");
+  if (!parsed.success) redirect(`${fallback}?error=cash-invalid-expense`);
 
   const beneficiaries: Array<{ employeeId: string; amountCents: number }> = [];
   for (const [key, value] of formData.entries()) {
@@ -129,7 +136,7 @@ export async function createStaffCashExpenseAction(formData: FormData) {
     if (!normalized || Number(normalized) === 0) continue;
     const amount = moneyString.safeParse(normalized);
     if (!amount.success) {
-      redirect("/sigeco/administracion/caja?error=cash-invalid-expense");
+      redirect(`${fallback}?error=cash-invalid-expense`);
     }
     beneficiaries.push({
       employeeId: key.slice("beneficiary:".length),
@@ -137,7 +144,7 @@ export async function createStaffCashExpenseAction(formData: FormData) {
     });
   }
   if (beneficiaries.length === 0) {
-    redirect("/sigeco/administracion/caja?error=cash-no-beneficiaries");
+    redirect(`${fallback}?error=cash-no-beneficiaries`);
   }
 
   try {
@@ -169,18 +176,20 @@ export async function createStaffCashExpenseAction(formData: FormData) {
       }
     );
   } catch (error) {
-    const target = cashErrorTarget(error, "/sigeco/administracion/caja");
+    const target = cashErrorTarget(error, fallback);
     if (target) redirect(target);
     throw error;
   }
 
   revalidatePath("/sigeco/administracion/caja");
-  redirect("/sigeco/administracion/caja?aviso=cash-staff-expense-created");
+  revalidatePath("/sigeco/administracion");
+  redirect(`${fallback}?aviso=cash-staff-expense-created`);
 }
 
 export async function createUrgentPurchaseExpenseAction(formData: FormData) {
+  const fallback = cashExpenseTarget(formData);
   const parsed = urgentPurchaseSchema.safeParse(fields(formData));
-  if (!parsed.success) redirect("/sigeco/administracion/caja?error=cash-invalid-purchase");
+  if (!parsed.success) redirect(`${fallback}?error=cash-invalid-purchase`);
 
   let storedReceipt:
     | {
@@ -205,6 +214,9 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
         file,
         "Comprobante de compra"
       );
+      if (!validated.contentType.startsWith("image/")) {
+        redirect(`${fallback}?error=cash-invalid-receipt`);
+      }
       const storageKey = createCashReceiptStorageKey(
         parsed.data.idempotencyKey,
         validated.extension
@@ -224,7 +236,7 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
         uploadedAt: new Date()
       };
     } catch {
-      redirect("/sigeco/administracion/caja?error=cash-invalid-receipt");
+      redirect(`${fallback}?error=cash-invalid-receipt`);
     }
   }
 
@@ -237,14 +249,14 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
         context: {
           cashSessionId: parsed.data.cashSessionId,
           category: parsed.data.category,
-          quantity: parsed.data.quantity,
           hasReceipt: Boolean(storedReceipt)
         }
       },
       async (user) => {
         const expense = await createUrgentPurchaseExpense({
           ...parsed.data,
-          unitPriceCents: cashMoneyToCents(parsed.data.unitPrice),
+          deliveredAmountCents: cashMoneyToCents(parsed.data.deliveredAmount),
+          returnedChangeCents: cashMoneyToCents(parsed.data.returnedChange),
           registeredById: user.id,
           receipt: storedReceipt
         });
@@ -253,7 +265,6 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
           context: {
             cashSessionId: parsed.data.cashSessionId,
             amountCents: expense.totalCents,
-            requiresInventoryEntry: expense.requiresInventoryEntry,
             hasReceipt: Boolean(expense.receiptStorageKey)
           }
         });
@@ -274,18 +285,20 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
         await deleteCashReceipt(storedReceipt).catch(() => undefined);
       }
     }
-    const target = cashErrorTarget(error, "/sigeco/administracion/caja");
+    const target = cashErrorTarget(error, fallback);
     if (target) redirect(target);
     throw error;
   }
 
   revalidatePath("/sigeco/administracion/caja");
-  redirect("/sigeco/administracion/caja?aviso=cash-purchase-created");
+  revalidatePath("/sigeco/administracion");
+  redirect(`${fallback}?aviso=cash-purchase-created`);
 }
 
 export async function createOtherCashExpenseAction(formData: FormData) {
+  const fallback = cashExpenseTarget(formData);
   const parsed = otherCashExpenseSchema.safeParse(fields(formData));
-  if (!parsed.success) redirect("/sigeco/administracion/caja?error=cash-invalid-expense");
+  if (!parsed.success) redirect(`${fallback}?error=cash-invalid-expense`);
 
   try {
     await runAuditedAction(
@@ -311,13 +324,14 @@ export async function createOtherCashExpenseAction(formData: FormData) {
       }
     );
   } catch (error) {
-    const target = cashErrorTarget(error, "/sigeco/administracion/caja");
+    const target = cashErrorTarget(error, fallback);
     if (target) redirect(target);
     throw error;
   }
 
   revalidatePath("/sigeco/administracion/caja");
-  redirect("/sigeco/administracion/caja?aviso=cash-expense-created");
+  revalidatePath("/sigeco/administracion");
+  redirect(`${fallback}?aviso=cash-expense-created`);
 }
 
 export async function requestCashSessionCloseAction(formData: FormData) {

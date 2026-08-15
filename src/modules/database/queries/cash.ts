@@ -111,6 +111,50 @@ export function calculateCashExpected(session: CashSessionForSummary) {
   return byChannel;
 }
 
+export function calculateCashBreakdown(session: CashSessionForSummary) {
+  const breakdown = {
+    openingCashCents: session.openingCashCents,
+    cashIncomeCents: 0,
+    qrIncomeCents: 0,
+    cashExpenseCents: 0,
+    cashRefundCents: 0,
+    cashReversalCents: 0,
+    qrRefundCents: 0
+  };
+
+  for (const movement of session.movements) {
+    if (movement.channel === "cash" && movement.type === "income") {
+      breakdown.cashIncomeCents += movement.amountCents;
+    }
+    if (movement.channel === "qr" && movement.type === "income") {
+      breakdown.qrIncomeCents += movement.amountCents;
+    }
+    if (movement.channel === "cash" && movement.type === "expense") {
+      breakdown.cashExpenseCents += movement.amountCents;
+    }
+    if (movement.channel === "cash" && movement.type === "refund") {
+      breakdown.cashRefundCents += movement.amountCents;
+    }
+    if (movement.channel === "cash" && movement.type === "reversal") {
+      breakdown.cashReversalCents += movement.amountCents;
+    }
+    if (movement.channel === "qr" && movement.type === "refund") {
+      breakdown.qrRefundCents += movement.amountCents;
+    }
+  }
+
+  return {
+    ...breakdown,
+    expectedCashCents:
+      breakdown.openingCashCents +
+      breakdown.cashIncomeCents -
+      breakdown.cashExpenseCents -
+      breakdown.cashRefundCents +
+      breakdown.cashReversalCents,
+    expectedQrCents: breakdown.qrIncomeCents - breakdown.qrRefundCents
+  };
+}
+
 async function lockCashSession(
   tx: Prisma.TransactionClient,
   cashSessionId: string
@@ -199,6 +243,19 @@ export async function getCashPersonnel(branchCode?: string) {
   );
 }
 
+export async function getCashAuthorizers() {
+  return withDatabaseError("getCashAuthorizers", async () =>
+    prisma.internalUser.findMany({
+      where: {
+        active: true,
+        role: { in: ["direccion", "super_admin"] }
+      },
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: [{ name: "asc" }, { email: "asc" }]
+    })
+  );
+}
+
 export async function getCashDashboard(input?: {
   sessionId?: string;
   type?: CashMovementType;
@@ -278,6 +335,7 @@ export async function getCashDashboard(input?: {
         session: null,
         sessions,
         expected: null,
+        breakdown: null,
         activeSessionId: activeSession?.id ?? null,
         activeSessionStatus: activeSession?.status ?? null,
         staleOpenSession,
@@ -334,6 +392,7 @@ export async function getCashDashboard(input?: {
       session: { ...selectedSession, movements: filteredMovements },
       sessions,
       expected: calculateCashExpected(selectedSession),
+      breakdown: calculateCashBreakdown(selectedSession),
       activeSessionId: activeSession?.id ?? null,
       activeSessionStatus: activeSession?.status ?? null,
       staleOpenSession,
@@ -472,10 +531,10 @@ export async function createStaffCashExpense(input: {
     amountCents: number;
     note?: string;
   }>;
+  receivedById: string;
   deliveredById: string;
   registeredById: string;
   authorizedById: string;
-  reason: string;
   note?: string;
   idempotencyKey: string;
 }) {
@@ -494,6 +553,7 @@ export async function createStaffCashExpense(input: {
       });
       if (reusedAfterLock) return reusedAfterLock;
       await Promise.all([
+        assertActivePerson(tx, input.receivedById),
         assertActivePerson(tx, input.deliveredById),
         assertAuthorizer(tx, input.authorizedById),
         ...input.beneficiaries.map((line) =>
@@ -522,6 +582,12 @@ export async function createStaffCashExpense(input: {
       ) {
         throw new CashWorkflowError("beneficiary_total_mismatch");
       }
+      const reason =
+        input.category === "lunch"
+          ? "Almuerzo"
+          : input.category === "transport"
+            ? "Transporte"
+            : "Otro apoyo al personal";
 
       const movement = await tx.cashMovement.create({
         data: {
@@ -534,7 +600,7 @@ export async function createStaffCashExpense(input: {
           channel: "cash",
           amountCents: totalCents,
           description: "Dinero entregado al personal",
-          reason: input.reason,
+          reason,
           note: input.note
         }
       });
@@ -546,11 +612,12 @@ export async function createStaffCashExpense(input: {
           registeredById: input.registeredById,
           deliveredById: input.deliveredById,
           authorizedById: input.authorizedById,
+          receivedById: input.receivedById,
           idempotencyKey: input.idempotencyKey,
           kind: "staff_support",
           category: input.category,
           totalCents,
-          reason: input.reason,
+          reason,
           note: input.note,
           beneficiaries: {
             create: validLines.map((line) => ({
@@ -583,17 +650,15 @@ export async function createUrgentPurchaseExpense(input: {
     "lunch" | "transport" | "staff_other"
   >;
   itemDescription: string;
-  quantity: number;
-  unitPriceCents: number;
+  deliveredAmountCents: number;
+  returnedChangeCents: number;
   requestedById: string;
   receivedById: string;
   deliveredById: string;
   registeredById: string;
   authorizedById: string;
-  supplierName?: string;
   urgencyReason: string;
   note?: string;
-  requiresInventoryEntry: boolean;
   idempotencyKey: string;
   receipt?: ReceiptMetadata;
 }) {
@@ -618,14 +683,22 @@ export async function createUrgentPurchaseExpense(input: {
         assertAuthorizer(tx, input.authorizedById)
       ]);
 
-      const totalCents = input.quantity * input.unitPriceCents;
+      const totalCents =
+        input.deliveredAmountCents - input.returnedChangeCents;
       if (
         !Number.isSafeInteger(totalCents) ||
-        input.quantity <= 0 ||
-        input.unitPriceCents <= 0
+        input.deliveredAmountCents <= 0 ||
+        input.returnedChangeCents < 0 ||
+        input.returnedChangeCents >= input.deliveredAmountCents ||
+        totalCents <= 0
       ) {
         throw new CashWorkflowError("purchase_total_mismatch");
       }
+      const auditNote = [
+        `Entregado: Bs ${(input.deliveredAmountCents / 100).toFixed(2)}`,
+        `Cambio: Bs ${(input.returnedChangeCents / 100).toFixed(2)}`,
+        input.note
+      ].filter(Boolean).join("\n");
 
       const movement = await tx.cashMovement.create({
         data: {
@@ -639,7 +712,7 @@ export async function createUrgentPurchaseExpense(input: {
           amountCents: totalCents,
           description: `Compra urgente: ${input.itemDescription}`,
           reason: input.urgencyReason,
-          note: input.note
+          note: auditNote
         }
       });
 
@@ -657,13 +730,13 @@ export async function createUrgentPurchaseExpense(input: {
           category: input.category,
           totalCents,
           reason: input.urgencyReason,
-          note: input.note,
+          note: auditNote,
           itemDescription: input.itemDescription,
-          quantity: input.quantity,
-          unitPriceCents: input.unitPriceCents,
-          supplierName: input.supplierName,
+          quantity: null,
+          unitPriceCents: null,
+          supplierName: null,
           urgencyReason: input.urgencyReason,
-          requiresInventoryEntry: input.requiresInventoryEntry,
+          requiresInventoryEntry: false,
           receiptStorageKey: input.receipt?.storageKey,
           receiptStorageDriver: input.receipt?.storageDriver,
           receiptOriginalName: input.receipt?.originalName,
@@ -884,7 +957,9 @@ export async function reverseCashMovement(input: {
       const remainingCents = original.amountCents - correctedCents;
       if (
         input.amountCents <= 0 ||
-        input.amountCents > remainingCents
+        input.amountCents > remainingCents ||
+        (original.type === "expense" &&
+          correctedCents + input.amountCents >= original.amountCents)
       ) {
         throw new CashWorkflowError("correction_exceeds_original");
       }
@@ -906,7 +981,7 @@ export async function reverseCashMovement(input: {
           description:
             original.type === "income"
               ? `Devolución de: ${original.description}`
-              : `Reintegro de: ${original.description}`,
+              : `Cambio devuelto de: ${original.description}`,
           reason: input.reason,
           note: input.note
         }
