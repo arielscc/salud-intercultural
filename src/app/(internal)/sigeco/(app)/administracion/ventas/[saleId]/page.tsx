@@ -18,6 +18,9 @@ import {
   RecordTable
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
+import { getBranchContext } from "@/features/branches/context";
+import { OpenCashSessionCallout } from "@/features/cash/components/OpenCashSessionCallout";
+import { cashErrorMessages } from "@/features/cash/labels";
 import { createPaymentAction } from "@/features/sales/actions";
 import { generateInternalReceiptDocumentAction } from "@/features/generated-documents/actions";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
@@ -34,7 +37,7 @@ import { cn } from "@/lib/cn";
 
 type SaleDetailPageProps = {
   params: Promise<{ saleId: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; aviso?: string }>;
 };
 
 export default async function SaleDetailPage({
@@ -42,6 +45,7 @@ export default async function SaleDetailPage({
   searchParams
 }: SaleDetailPageProps) {
   const user = await requirePermission("sales_read");
+  const { activeBranch } = await getBranchContext(user);
   const { saleId } = await params;
   const query = await searchParams;
   const [sale, receiptDocuments] = await Promise.all([
@@ -52,6 +56,14 @@ export default async function SaleDetailPage({
   if (!sale) notFound();
 
   const hasBalance = sale.balanceCents > 0;
+  // `cash-session-required` lo explica el aviso de apertura y
+  // `cash-session-stale-open` tiene su propio modal; el resto de códigos de Caja
+  // vienen del formulario de apertura lanzado desde esta pantalla.
+  const cashError = query.error && query.error in cashErrorMessages ? query.error : null;
+  const cashOpenMessage =
+    cashError && cashError !== "cash-session-required" && cashError !== "cash-session-stale-open"
+      ? cashErrorMessages[cashError]
+      : null;
   const canGenerateReceipt = roleHasPermission(user.role, "sales_write");
   // Los costos por producto solo los ve el médico (y super admin). En ventas del
   // pedido del médico, Administración/Enfermería ven detalle + cantidad + total.
@@ -68,22 +80,41 @@ export default async function SaleDetailPage({
       <MobileBackLink href="/sigeco/administracion" label="Volver a Caja" />
       <div className="grid gap-4 max-sm:contents">
         {query.error === "cash-session-stale-open" ? <StaleCashSessionModal /> : null}
-        {query.error && query.error !== "cash-session-stale-open" ? (
+        {query.aviso === "cash-session-opened" ? (
+          <div
+            className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text"
+            role="status"
+          >
+            Caja abierta. Ya puedes registrar el cobro de esta venta.
+          </div>
+        ) : null}
+        {cashOpenMessage ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+            role="alert"
+          >
+            <p className="font-semibold">No se pudo abrir la Caja.</p>
+            <p className="mt-1">{cashOpenMessage}</p>
+          </div>
+        ) : null}
+        {query.error && !cashError ? (
           <div
             className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
             role="alert"
           >
-            <p className="font-semibold">
-              {query.error === "cash-session-required"
-                ? "Primero debes abrir la Caja de hoy."
-                : "No se pudo emitir el comprobante."}
-            </p>
+            <p className="font-semibold">No se pudo emitir el comprobante.</p>
             <p className="mt-1">
-              {query.error === "cash-session-required"
-                ? "El cobro no fue registrado. Abre una sesión en “Control de Caja” y vuelve a intentar."
-                : "Los productos, totales y pagos deben coincidir antes de crear otra versión."}
+              Los productos, totales y pagos deben coincidir antes de crear otra versión.
             </p>
           </div>
+        ) : null}
+        {hasBalance || cashError ? (
+          <OpenCashSessionCallout
+            user={user}
+            branch={activeBranch}
+            returnTo={`/sigeco/administracion/ventas/${sale.id}`}
+            blocked={Boolean(cashError) && cashError !== "cash-session-stale-open"}
+          />
         ) : null}
         <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">

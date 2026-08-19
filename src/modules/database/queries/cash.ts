@@ -256,6 +256,52 @@ export async function getCashAuthorizers() {
   );
 }
 
+/**
+ * Estado minimo de la Caja para decidir si se puede cobrar ahora mismo y, si no,
+ * que apertura corresponde. Lo usan las pantallas de cobro (pendiente y venta)
+ * para ofrecer la apertura sin salir del cobro; el tablero completo sigue en
+ * `getCashDashboard`.
+ */
+export async function getCashOpenState(branchCode: string) {
+  return withDatabaseError("getCashOpenState", async () => {
+    const today = todayDatabaseDate();
+    const [activeSession, closedTodayCount] = await Promise.all([
+      prisma.cashSession.findFirst({
+        where: {
+          branchCode,
+          status: { in: ["open", "pending_approval"] }
+        },
+        select: {
+          id: true,
+          status: true,
+          registerName: true,
+          businessDate: true
+        },
+        orderBy: { openedAt: "desc" }
+      }),
+      prisma.cashSession.count({
+        where: { branchCode, businessDate: today, status: "closed" }
+      })
+    ]);
+
+    const staleOpenSession =
+      activeSession &&
+      activeSession.status === "open" &&
+      activeSession.businessDate.getTime() !== today.getTime()
+        ? activeSession
+        : null;
+
+    return {
+      activeSession,
+      staleOpenSession,
+      /** Hay una Caja abierta con la fecha de hoy: los cobros pasan. */
+      canOperate: Boolean(activeSession?.status === "open") && !staleOpenSession,
+      /** Ya hubo un cierre hoy: la nueva apertura debe ser excepcional. */
+      requiresExceptionalOpen: !activeSession && closedTodayCount > 0
+    };
+  });
+}
+
 export async function getCashDashboard(input?: {
   sessionId?: string;
   type?: CashMovementType;

@@ -1,4 +1,10 @@
-import type { ClinicalOrderType, PatientRouteArea, Prisma } from "@/generated/prisma/client";
+import type {
+  ClinicalOrderType,
+  PatientRouteArea,
+  Prisma,
+  VisitStatus
+} from "@/generated/prisma/client";
+import type { ConsultationQueueArea } from "@/features/clinical-care/queue";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 import { dayRange } from "@/lib/dates";
@@ -286,6 +292,19 @@ export async function recordClinicalNoteCatalogUsage(
   });
 }
 
+/**
+ * Área desde la que el paciente llegó a consulta en su última derivación. Solo
+ * interesan las tres que alimentan la cola del médico.
+ */
+function derivedFromAreaOf(
+  fromStatus: VisitStatus | null | undefined
+): ConsultationQueueArea | null {
+  if (fromStatus === "in_nursing") return "enfermeria";
+  if (fromStatus === "in_administration") return "administracion";
+  if (fromStatus === "in_reception") return "recepcion";
+  return null;
+}
+
 export async function getConsultationVisits(
   input: PaginationInput & { branchCode?: string } = {}
 ) {
@@ -306,24 +325,33 @@ export async function getConsultationVisits(
         },
         route: true,
         attendingUser: { select: { id: true, name: true, email: true } },
+        // Ventas de la visita: quien ya pagó un servicio entra a la cola con
+        // prioridad (vuelve de Administración con el cobro hecho).
+        sales: {
+          select: { id: true, status: true, paidCents: true, balanceCents: true }
+        },
         // Última vez que la visita fue derivada al médico (para mostrar la "llegada"
-        // real a consulta, no el check-in original).
+        // real a consulta, no el check-in original) y desde qué área llegó.
         statusHistory: {
           where: { toStatus: "in_consultation" },
           orderBy: { createdAt: "desc" },
           take: 1,
-          select: { createdAt: true }
+          select: { createdAt: true, fromStatus: true }
         }
       },
       skip: pagination.skip,
       take: pagination.take
     });
 
-    // Momento de la última derivación al médico (fallback: check-in).
+    // Momento de la última derivación al médico (fallback: check-in) y área de
+    // origen: es lo que distingue una primera llegada de Recepción de un paciente
+    // que regresa de Enfermería o de Administración.
     const { start, end } = dayRange();
     const withDerivedAt = visits.map((visit) => ({
       ...visit,
-      derivedToDoctorAt: visit.statusHistory[0]?.createdAt ?? visit.checkedInAt
+      derivedToDoctorAt: visit.statusHistory[0]?.createdAt ?? visit.checkedInAt,
+      derivedFromArea: derivedFromAreaOf(visit.statusHistory[0]?.fromStatus),
+      paidCents: visit.sales.reduce((total, sale) => total + sale.paidCents, 0)
     }));
     // Solo el día de atención de hoy (00:00–23:59, hora de Bolivia): los pacientes
     // de días anteriores ya salieron de la lista (atendidos o abandonados).
@@ -370,6 +398,7 @@ export async function getConsultationDailyVisits(
           select: {
             id: true,
             status: true,
+            paidCents: true,
             balanceCents: true
           },
           orderBy: { createdAt: "desc" }

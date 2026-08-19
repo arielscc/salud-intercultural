@@ -19,27 +19,68 @@ import {
   RecordTable
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
+import type { PatientRouteArea, VisitStatus } from "@/generated/prisma/client";
 import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
+import { visitStatusLabels, workItemStatusLabels } from "@/features/patients/labels";
 import { attendAdministrationWorkItemAction } from "@/features/sales/actions";
 import { cn } from "@/lib/cn";
-import { formatDateTime } from "@/lib/dates";
+import { formatDateTime, formatTime } from "@/lib/dates";
 import {
   getAdministrationWorkItems,
   getLatestPendingAdministrationWorkItem,
-  getSalesSummary
+  getSalesSummary,
+  getTodayCollections,
+  type TodayCollection
 } from "@/modules/database/queries/sales";
 import {
   getCashAuthorizers,
   getCashDashboard,
   getCashPersonnel
 } from "@/modules/database/queries/cash";
+import { OpenCashSessionCallout } from "@/features/cash/components/OpenCashSessionCallout";
 import { requirePermission } from "@/modules/permissions";
 import { ArrowRight, Banknote, CalendarDays, Clock } from "lucide-react";
 import Link from "next/link";
 import { getBranchContext } from "@/features/branches/context";
+
+const emptyCollectionsMessage = (
+  <>
+    <span className="block font-semibold text-text">Todavía no hay cobros hoy.</span>
+    <span className="mt-1 block text-sm text-muted">
+      Cada pago registrado aparece aquí con el monto, el área donde está el
+      paciente y el estado de su venta.
+    </span>
+  </>
+);
+
+/** Resume los conceptos de la venta sin desbordar la fila. */
+function collectionConcept(concept: string[]) {
+  if (concept.length === 0) return "Venta sin detalle";
+  const visible = concept.slice(0, 2).join(", ");
+  return concept.length > 2 ? `${visible} +${concept.length - 2}` : visible;
+}
+
+/** Donde esta el paciente ahora y en que estado quedo su visita. */
+function workItemLocation(workItem: {
+  visit: { status: VisitStatus; route: { currentArea: PatientRouteArea } | null };
+}) {
+  const area = workItem.visit.route
+    ? routeAreaLabels[workItem.visit.route.currentArea]
+    : null;
+  const status = visitStatusLabels[workItem.visit.status];
+  return area ? `${area} · ${status}` : status;
+}
+
+function collectionLocation(entry: TodayCollection) {
+  const area = entry.currentArea ? routeAreaLabels[entry.currentArea] : null;
+  const status = entry.visitStatus
+    ? visitStatusLabels[entry.visitStatus]
+    : "Venta sin visita";
+  return area ? `${area} · ${status}` : status;
+}
 
 const emptyAdministrationMessage = (
   <>
@@ -70,7 +111,12 @@ function doctorOrderPendingCents(workItem: {
   return Math.max(0, base - discount);
 }
 
-export default async function AdministrationPage() {
+export default async function AdministrationPage({
+  searchParams
+}: {
+  searchParams: Promise<{ aviso?: string }>;
+}) {
+  const query = await searchParams;
   const user = await requirePermission("sales_read");
   const { activeBranch } = await getBranchContext(user);
   const isPersonalAdministrationAccount = user.role === "administracion";
@@ -79,6 +125,7 @@ export default async function AdministrationPage() {
     workItems,
     summary,
     priorityCollection,
+    todayCollections,
     cashDashboard,
     cashPersonnel,
     cashAuthorizers
@@ -86,6 +133,7 @@ export default async function AdministrationPage() {
     getAdministrationWorkItems({ pageSize: 40, branchCode: activeBranch.code }),
     getSalesSummary(new Date(), activeBranch.code),
     getLatestPendingAdministrationWorkItem(activeBranch.code),
+    getTodayCollections(activeBranch.code),
     getCashDashboard({ branchCode: activeBranch.code }),
     getCashPersonnel(activeBranch.code),
     getCashAuthorizers()
@@ -99,6 +147,9 @@ export default async function AdministrationPage() {
     ? cashDashboard.breakdown.cashIncomeCents +
       cashDashboard.breakdown.qrIncomeCents
     : 0;
+  const collectionsDescription = `${todayCollections.patientCount} ${
+    todayCollections.patientCount === 1 ? "paciente" : "pacientes"
+  } · ${formatMoney(todayCollections.paidTodayCents)} cobrados hoy`;
   const priorityEstimatedBalance = priorityCollection
     ? doctorOrderPendingCents(priorityCollection)
     : null;
@@ -209,6 +260,21 @@ export default async function AdministrationPage() {
         />
       ) : null}
 
+      {query.aviso === "cash-session-opened" ? (
+        <div
+          className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text"
+          role="status"
+        >
+          Caja abierta. Ya puedes registrar los cobros del día.
+        </div>
+      ) : null}
+
+      <OpenCashSessionCallout
+        user={user}
+        branch={activeBranch}
+        returnTo="/sigeco/administracion"
+      />
+
       {roleHasPermission(user.role, "cash_movements_create") ? (
         <CashExpenseDialogs
           cashSessionId={
@@ -254,6 +320,131 @@ export default async function AdministrationPage() {
         />
       </section>
 
+      <Card className="p-0">
+        <CardHeader
+          className="mb-0 p-[18px] pb-3"
+          title="Pacientes que pagaron hoy"
+          description={collectionsDescription}
+          action={
+            <Link
+              href="/sigeco/administracion/caja"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Ver movimientos
+            </Link>
+          }
+        />
+        <RecordList>
+          {todayCollections.collections.map((entry) => (
+            <RecordItem
+              key={entry.saleId}
+              href={`/sigeco/administracion/ventas/${entry.saleId}`}
+              title={entry.patient.fullName}
+              status={
+                <Chip tone={entry.balanceCents > 0 ? "warning" : "success"} dot>
+                  {saleStatusLabels[entry.status]}
+                </Chip>
+              }
+            >
+              <span className="tabular-nums">{entry.patient.internalCode}</span>
+              <span className="min-w-0 truncate font-medium text-text">
+                {collectionConcept(entry.concept)}
+              </span>
+              <span className="font-semibold tabular-nums text-text">
+                Pagó {formatMoney(entry.paidTodayCents)}
+                {entry.balanceCents > 0
+                  ? ` · Saldo ${formatMoney(entry.balanceCents)}`
+                  : ""}
+              </span>
+              <span>
+                {collectionLocation(entry)} · {formatTime(entry.lastPaidAt)} ·{" "}
+                {entry.methods.join(", ")}
+              </span>
+            </RecordItem>
+          ))}
+          {todayCollections.collections.length === 0 ? (
+            <RecordListEmpty>{emptyCollectionsMessage}</RecordListEmpty>
+          ) : null}
+        </RecordList>
+        <RecordTable>
+          <Table caption="Pacientes que pagaron hoy">
+            <thead>
+              <tr>
+                <Th>Paciente</Th>
+                <Th>Concepto</Th>
+                <Th>Pagado hoy</Th>
+                <Th>Saldo</Th>
+                <Th>Área</Th>
+                <Th>Estado</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {todayCollections.collections.map((entry) => (
+                <Tr key={entry.saleId}>
+                  <Td className="font-semibold text-text">
+                    <Link
+                      href={`/sigeco/administracion/ventas/${entry.saleId}`}
+                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                    >
+                      {entry.patient.fullName}
+                    </Link>
+                    <span className="block text-[11px] font-normal tabular-nums text-muted">
+                      {entry.patient.internalCode}
+                    </span>
+                  </Td>
+                  <Td className="max-w-[260px]">
+                    <span className="block truncate text-text">
+                      {collectionConcept(entry.concept)}
+                    </span>
+                    <span className="block text-[11px] tabular-nums text-muted">
+                      {formatTime(entry.lastPaidAt)} · {entry.methods.join(", ")}
+                    </span>
+                  </Td>
+                  <Td className="font-semibold tabular-nums text-text">
+                    {formatMoney(entry.paidTodayCents)}
+                    {entry.paidCents !== entry.paidTodayCents ? (
+                      <span className="block text-[11px] font-normal text-muted">
+                        Total pagado {formatMoney(entry.paidCents)}
+                      </span>
+                    ) : null}
+                  </Td>
+                  <Td
+                    className={cn(
+                      "tabular-nums",
+                      entry.balanceCents > 0 && "font-semibold text-warning"
+                    )}
+                  >
+                    {formatMoney(entry.balanceCents)}
+                  </Td>
+                  <Td>
+                    <span className="block text-text">
+                      {entry.currentArea ? routeAreaLabels[entry.currentArea] : "—"}
+                    </span>
+                    <span className="block text-[11px] text-muted">
+                      {entry.visitStatus
+                        ? visitStatusLabels[entry.visitStatus]
+                        : "Venta sin visita"}
+                    </span>
+                  </Td>
+                  <Td>
+                    <Chip tone={entry.balanceCents > 0 ? "warning" : "success"} dot>
+                      {saleStatusLabels[entry.status]}
+                    </Chip>
+                  </Td>
+                </Tr>
+              ))}
+              {todayCollections.collections.length === 0 ? (
+                <tr>
+                  <Td className="py-8 text-center" colSpan={6}>
+                    {emptyCollectionsMessage}
+                  </Td>
+                </tr>
+              ) : null}
+            </tbody>
+          </Table>
+        </RecordTable>
+      </Card>
+
       <DesktopTableToolbar count={`${workItems.length} registros del día`} />
 
       <Card className="p-0">
@@ -274,7 +465,7 @@ export default async function AdministrationPage() {
                 title={item.visit.patient.fullName}
                 status={
                   <Chip tone={sale ? (sale.balanceCents > 0 ? "warning" : "success") : "neutral"} dot>
-                    {sale ? saleStatusLabels[sale.status] : routeAreaLabels[item.area]}
+                    {sale ? saleStatusLabels[sale.status] : workItemStatusLabels[item.status]}
                   </Chip>
                 }
               >
@@ -291,9 +482,11 @@ export default async function AdministrationPage() {
                 ) : null}
                 {sale ? (
                   <span className="tabular-nums">
-                    {formatMoney(sale.totalCents)} · Saldo {formatMoney(sale.balanceCents)}
+                    {formatMoney(sale.totalCents)} · Pagado {formatMoney(sale.paidCents)} ·
+                    Saldo {formatMoney(sale.balanceCents)}
                   </span>
                 ) : null}
+                <span>{workItemLocation(item)}</span>
                 {item.visit.doctorOrder?.status === "submitted" && !sale ? (
                   <Chip tone="primary">Pedido del médico por confirmar</Chip>
                 ) : null}
@@ -312,6 +505,7 @@ export default async function AdministrationPage() {
                 <Th>Tarea</Th>
                 <Th className="lg:hidden xl:table-cell">Indicación</Th>
                 <Th>Venta</Th>
+                <Th>Área</Th>
                 <Th>Estado</Th>
               </tr>
             </thead>
@@ -350,13 +544,33 @@ export default async function AdministrationPage() {
                         : "—"}
                     </Td>
                     <Td className="tabular-nums">
-                      {sale
-                        ? `${formatMoney(sale.totalCents)} · Saldo ${formatMoney(sale.balanceCents)}`
-                        : "—"}
+                      {sale ? (
+                        <>
+                          <span className="block text-text">
+                            Pagado {formatMoney(sale.paidCents)}
+                          </span>
+                          <span className="block text-[11px] text-muted">
+                            Total {formatMoney(sale.totalCents)} · Saldo{" "}
+                            {formatMoney(sale.balanceCents)}
+                          </span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
+                    <Td>
+                      <span className="block text-text">
+                        {item.visit.route
+                          ? routeAreaLabels[item.visit.route.currentArea]
+                          : "—"}
+                      </span>
+                      <span className="block text-[11px] text-muted">
+                        {visitStatusLabels[item.visit.status]}
+                      </span>
                     </Td>
                     <Td>
                       <Chip tone={sale ? (sale.balanceCents > 0 ? "warning" : "success") : "neutral"} dot>
-                        {sale ? saleStatusLabels[sale.status] : routeAreaLabels[item.area]}
+                        {sale ? saleStatusLabels[sale.status] : workItemStatusLabels[item.status]}
                       </Chip>
                     </Td>
                   </Tr>
@@ -364,7 +578,7 @@ export default async function AdministrationPage() {
               })}
               {workItems.length === 0 ? (
                 <tr>
-                  <Td className="py-8 text-center" colSpan={5}>
+                  <Td className="py-8 text-center" colSpan={6}>
                     {emptyAdministrationMessage}
                   </Td>
                 </tr>

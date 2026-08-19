@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import { Printer } from "lucide-react";
-import type { SaleItemType } from "@/generated/prisma/client";
+import type { ClinicalOrderType, SaleItemType } from "@/generated/prisma/client";
 import { AreaTimeInline } from "@/components/internal/area-times/AreaTimeInline";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { NoticeForm } from "@/components/internal/NoticeForm";
@@ -25,8 +25,17 @@ import {
 } from "@/features/sales/actions";
 import { SaleDiscountForm } from "@/features/sales/components/SaleDiscountForm";
 import { PatientSalesHistory } from "@/features/sales/components/PatientSalesHistory";
+import {
+  AdministrativeRequestSummary,
+  type RequestedItem,
+  type RequestSource
+} from "@/features/sales/components/AdministrativeRequestSummary";
+import { OpenCashSessionCallout } from "@/features/cash/components/OpenCashSessionCallout";
+import { cashErrorMessages } from "@/features/cash/labels";
 import { DoctorOrderConfirmPanel } from "@/features/doctor-orders/components/DoctorOrderConfirmPanel";
 import { doctorOrderStatusLabels } from "@/features/doctor-orders/labels";
+import { clinicalOrderTypeLabels } from "@/features/clinical-care/labels";
+import { internalRoleLabels } from "@/features/internal-auth/permissions";
 import {
   formatMoney,
   saleItemTypeLabels,
@@ -45,6 +54,19 @@ import { requirePermission } from "@/modules/permissions";
 import { getBranchContext } from "@/features/branches/context";
 
 const saleItemTypeOptions = Object.entries(saleItemTypeLabels) as Array<[SaleItemType, string]>;
+
+// Une el tipo de la orden clinica con las claves que usa el resumen para elegir
+// su encabezado (las mismas que `SaleItemType`, que es la fuente preferida).
+const clinicalOrderKindKeys: Record<ClinicalOrderType, string> = {
+  study: "study",
+  nursing_application: "service",
+  serum: "serum",
+  medication: "medication",
+  vital_signs: "other",
+  administration: "other",
+  follow_up: "other",
+  other: "other"
+};
 
 type AdministrationWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
@@ -115,6 +137,58 @@ export default async function AdministrationWorkItemPage({
     user.role,
     "visit_discontinuations_write"
   );
+  // Lo que se le pidio cancelar al paciente, de la fuente mas precisa que exista:
+  // la venta ya creada, el pedido del medico todavia sin confirmar o, si no hay
+  // ninguna, las ordenes clinicas que originaron el pendiente.
+  const requestedSource: RequestSource = generatedSale?.items.length
+    ? "sale"
+    : doctorOrder?.lines.length
+      ? "doctor_order"
+      : "clinical_order";
+  const requestedItems: RequestedItem[] = generatedSale?.items.length
+    ? generatedSale.items.map((saleItem) => ({
+        id: saleItem.id,
+        label: saleItem.description,
+        typeLabel: saleItemTypeLabels[saleItem.type],
+        kind: saleItem.type,
+        quantity: saleItem.quantity
+      }))
+    : doctorOrder?.lines.length
+      ? doctorOrder.lines.map((line) => ({
+          id: line.id,
+          label: line.description,
+          typeLabel: saleItemTypeLabels[line.itemType],
+          kind: line.itemType,
+          quantity: line.quantity,
+          detail: line.sessionCount ? `${line.sessionCount} sesiones` : line.notes
+        }))
+      : item.clinicalOrders.map((clinicalOrder) => ({
+          id: clinicalOrder.id,
+          label: clinicalOrder.title,
+          typeLabel: clinicalOrderTypeLabels[clinicalOrder.type],
+          kind: clinicalOrderKindKeys[clinicalOrder.type],
+          quantity: 1
+        }));
+  // Errores de Caja: `cash-session-required` ya lo explica el aviso de apertura y
+  // `cash-session-stale-open` tiene su propio modal; el resto viene del formulario
+  // de apertura lanzado desde esta misma pantalla.
+  const cashError = query.error && query.error in cashErrorMessages ? query.error : null;
+  const cashOpenMessage =
+    cashError && cashError !== "cash-session-required" && cashError !== "cash-session-stale-open"
+      ? cashErrorMessages[cashError]
+      : null;
+  const requester = item.createdBy ?? order?.doctor ?? null;
+  const requestedBy = requester
+    ? {
+        name: requester.name ?? requester.email,
+        roleLabel: internalRoleLabels[requester.role]
+      }
+    : doctorOrder?.doctor
+      ? {
+          name: doctorOrder.doctor.name ?? doctorOrder.doctor.email,
+          roleLabel: internalRoleLabels.medico
+        }
+      : null;
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
@@ -179,17 +253,30 @@ export default async function AdministrationWorkItemPage({
                 : "El pedido ya no está disponible para confirmar (revisa su estado)."}
           </div>
         ) : null}
-        {query.error === "cash-session-required" ? (
+        {query.aviso === "cash-session-opened" ? (
           <div
-            className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
-            role="alert"
+            className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text max-sm:order-1"
+            role="status"
           >
-            <p className="font-semibold">Primero debes abrir la Caja de hoy.</p>
-            <p className="mt-1">
-              No se registró ningún cobro. Abre una sesión en “Control de Caja” y vuelve a intentar.
-            </p>
+            Caja abierta. Ya puedes registrar el cobro de este pendiente.
           </div>
         ) : null}
+        {cashOpenMessage ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-error max-sm:order-1"
+            role="alert"
+          >
+            <p className="font-semibold">No se pudo abrir la Caja.</p>
+            <p className="mt-1">{cashOpenMessage}</p>
+          </div>
+        ) : null}
+        <OpenCashSessionCallout
+          user={user}
+          branch={activeBranch}
+          returnTo={`/sigeco/administracion/${item.id}`}
+          blocked={Boolean(cashError) && cashError !== "cash-session-stale-open"}
+          className="max-sm:order-1"
+        />
         {query.error === "cash-session-stale-open" ? <StaleCashSessionModal /> : null}
         <Card className="max-sm:order-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -207,28 +294,21 @@ export default async function AdministrationWorkItemPage({
               ) : null}
             </div>
           </div>
-          <div className="mt-4 rounded-[9px] border border-border bg-background p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                Pendiente administrativo
-              </p>
-              {proposalOutcome ? (
-                <Chip tone="success" dot>
-                  Aceptado por el paciente
-                </Chip>
-              ) : null}
-            </div>
-            <p className="mt-0.5 text-sm font-semibold text-text">{order?.title ?? item.title}</p>
-            {order?.details ?? item.description ? (
-              <p className="mt-1 text-sm text-muted">{order?.details ?? item.description}</p>
-            ) : null}
-            {proposalOutcome ? (
-              <p className="mt-2 text-xs text-muted">
-                Instrucción confirmada por el médico. La venta todavía debe
-                registrarse en esta pantalla.
-              </p>
-            ) : null}
-          </div>
+          <AdministrativeRequestSummary
+            items={requestedItems}
+            source={requestedSource}
+            requestedBy={requestedBy}
+            requestedAt={item.createdAt}
+            note={order?.details ?? doctorOrder?.indications ?? null}
+            accepted={Boolean(proposalOutcome)}
+            fallbackTitle={order?.title ?? item.title}
+          />
+          {proposalOutcome ? (
+            <p className="mt-2 text-xs text-muted">
+              Instrucción confirmada por el médico. La venta todavía debe
+              registrarse en esta pantalla.
+            </p>
+          ) : null}
         </Card>
 
         {query.error === "pago-pendiente" ? (
@@ -253,7 +333,7 @@ export default async function AdministrationWorkItemPage({
           <Card className="max-sm:order-2">
             <CardHeader
               title="Cobro de estudios / servicios"
-              description="Derivado a Enfermería (pago previo). Revisa lo que se realizará, cobra y envía a Enfermería."
+              description="Derivado a Enfermería (pago previo). Cobra el saldo y envía al paciente a Enfermería."
               action={
                 <a
                   className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -267,30 +347,7 @@ export default async function AdministrationWorkItemPage({
               }
             />
 
-            <div className="grid gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                Estudios y servicios a realizar
-              </p>
-              {generatedSale.items.map((saleItem, index) => (
-                <div
-                  key={saleItem.id}
-                  className="flex items-center gap-3 rounded-[9px] border border-border bg-surface px-3 py-2.5"
-                >
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold tabular-nums text-primary-dark">
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-text">{saleItem.description}</p>
-                    <p className="text-xs text-muted">{saleItemTypeLabels[saleItem.type]}</p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-surface-soft px-2.5 py-1 text-xs font-semibold tabular-nums text-text">
-                    × {saleItem.quantity}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 rounded-[9px] border border-border bg-background p-3 text-sm">
+            <div className="rounded-[9px] border border-border bg-background p-3 text-sm">
               <dl className="grid gap-1.5 tabular-nums">
                 <div className="flex justify-between gap-2">
                   <dt className="text-muted">Total</dt>

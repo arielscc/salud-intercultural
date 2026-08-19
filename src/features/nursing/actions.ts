@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { z } from "zod";
 import { redirect } from "next/navigation";
 import {
   assignNursingWorkItem,
@@ -33,6 +34,17 @@ import {
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
+}
+
+/*
+ * Devuelve al mismo detalle del paciente indicando que medicion quedo fuera
+ * de rango, para que la pantalla explique el problema en vez de mostrar un
+ * error generico en la bandeja.
+ */
+function invalidVitalsTarget(workItemId: string, error: z.ZodError) {
+  const field = error.issues.find((issue) => typeof issue.path[0] === "string")?.path[0];
+  const query = field ? `?error=invalid-vitals&campo=${String(field)}` : "?error=invalid-vitals";
+  return workItemId ? `/sigeco/enfermeria/${workItemId}${query}` : `/sigeco/enfermeria${query}`;
 }
 
 export async function assignNursingWorkItemAction(formData: FormData) {
@@ -87,7 +99,7 @@ export async function createVitalSignsAction(formData: FormData) {
       const parsed = createVitalSignsSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
-        redirect("/sigeco/enfermeria?error=invalid-vitals");
+        redirect(invalidVitalsTarget(workItemId, parsed.error));
       }
 
       const vitalSigns = await createVitalSignsRecord({
@@ -119,11 +131,7 @@ export async function updateVitalSignsAction(formData: FormData) {
     async (user) => {
       const parsed = updateVitalSignsSchema.safeParse(parseFormData(formData));
       if (!parsed.success) {
-        redirect(
-          workItemId
-            ? `/sigeco/enfermeria/${workItemId}?error=invalid-vitals`
-            : "/sigeco/enfermeria?error=invalid-vitals"
-        );
+        redirect(invalidVitalsTarget(workItemId, parsed.error));
       }
 
       const updated = await updateVitalSignsRecord({

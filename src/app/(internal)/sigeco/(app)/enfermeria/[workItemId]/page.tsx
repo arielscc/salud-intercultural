@@ -26,6 +26,12 @@ import {
   type PaidStudyOption
 } from "@/components/internal/PaidStudyOrderDialog";
 import { NursingRouteField } from "@/features/nursing/components/NursingRouteField";
+import { VitalSignsForm } from "@/features/nursing/components/VitalSignsForm";
+import {
+  vitalSignLimits,
+  vitalSignRangeText,
+  type VitalSignField
+} from "@/features/nursing/vital-signs";
 import { serviceSessionPricingModeLabels } from "@/features/service-sessions/labels";
 import { consumeServiceSessionAction } from "@/features/service-sessions/service-session-actions";
 import { createStudyAction } from "@/features/studies/actions";
@@ -67,14 +73,19 @@ function formatVitalsSummary(vs: VitalSigns) {
 
 type NursingWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
-  searchParams: Promise<{ error?: string; aviso?: string }>;
+  searchParams: Promise<{ error?: string; aviso?: string; campo?: string }>;
 };
+
+function invalidVitalSignField(campo: string | undefined) {
+  return campo && campo in vitalSignLimits ? (campo as VitalSignField) : null;
+}
 
 export default async function NursingWorkItemPage({ params, searchParams }: NursingWorkItemPageProps) {
   const user = await requirePermission("nursing_read");
   const { activeBranch } = await getBranchContext(user);
   const { workItemId } = await params;
   const query = await searchParams;
+  const invalidVitalField = invalidVitalSignField(query.campo);
   const item = await getNursingWorkItemById(workItemId);
 
   if (!item) notFound();
@@ -205,6 +216,21 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
             Sesión registrada. Se descontó del paquete del paciente.
           </div>
         ) : null}
+        {query.error === "invalid-vitals" ? (
+          <div
+            className="rounded-[9px] border border-error/30 bg-error/10 px-4 py-3 text-sm text-text max-sm:order-1"
+            role="alert"
+          >
+            <p className="font-semibold text-error">No se guardaron los signos vitales</p>
+            <p className="mt-1">
+              {invalidVitalField
+                ? `${vitalSignLimits[invalidVitalField].label} quedó fuera del rango permitido (${vitalSignRangeText(
+                    invalidVitalField
+                  )}). Corrige el valor y vuelve a guardar.`
+                : "Alguna medición quedó fuera del rango permitido. Revisa los valores marcados en rojo y vuelve a guardar."}
+            </p>
+          </div>
+        ) : null}
         {query.error === "no-sessions-left" || query.error === "not-active" ? (
           <div
             className="rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning max-sm:order-1"
@@ -325,46 +351,29 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
                   className="rounded-[9px] border border-border bg-background"
                 >
                   {canWriteNursing ? (
-                    <NoticeForm
+                    <VitalSignsForm
                       action={updateVitalSignsAction}
                       notice="Signos vitales actualizados"
-                      className="grid gap-3"
-                    >
-                      <input type="hidden" name="id" value={vs.id} />
-                      <input type="hidden" name="patientId" value={patient.id} />
-                      <input type="hidden" name="visitId" value={item.visit.id} />
-                      <input type="hidden" name="workItemId" value={item.id} />
-                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        <Field label="Temperatura (°C)">
-                          <input className={internalInputClassName} name="temperatureCelsius" inputMode="decimal" defaultValue={vs.temperatureCelsius?.toString() ?? ""} />
-                        </Field>
-                        <Field label="Saturación O₂ (%)">
-                          <input className={internalInputClassName} name="oxygenSaturation" inputMode="numeric" defaultValue={vs.oxygenSaturation?.toString() ?? ""} />
-                        </Field>
-                        <Field label="Presión sistólica (mmHg)">
-                          <input className={internalInputClassName} name="systolicPressureMmHg" inputMode="numeric" defaultValue={vs.systolicPressureMmHg?.toString() ?? ""} />
-                        </Field>
-                        <Field label="Presión diastólica (mmHg)">
-                          <input className={internalInputClassName} name="diastolicPressureMmHg" inputMode="numeric" defaultValue={vs.diastolicPressureMmHg?.toString() ?? ""} />
-                        </Field>
-                        <Field label="Pulso (lpm)">
-                          <input className={internalInputClassName} name="heartRateBpm" inputMode="numeric" defaultValue={vs.heartRateBpm?.toString() ?? ""} />
-                        </Field>
-                        <Field label="Respiración (rpm)">
-                          <input className={internalInputClassName} name="respiratoryRateRpm" inputMode="numeric" defaultValue={vs.respiratoryRateRpm?.toString() ?? ""} />
-                        </Field>
-                        <Field label="Peso (kg)">
-                          <input className={internalInputClassName} name="weightKg" inputMode="decimal" defaultValue={vs.weightKg?.toString() ?? ""} />
-                        </Field>
-                        <Field label="Talla (cm)">
-                          <input className={internalInputClassName} name="heightCm" inputMode="decimal" defaultValue={vs.heightCm?.toString() ?? ""} />
-                        </Field>
-                      </div>
-                      <Field label="Observaciones">
-                        <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" defaultValue={vs.notes ?? ""} />
-                      </Field>
-                      <SubmitButton variant="outline" className="w-full">Guardar cambios</SubmitButton>
-                    </NoticeForm>
+                      submitLabel="Guardar cambios"
+                      submitVariant="outline"
+                      hiddenFields={{
+                        id: vs.id,
+                        patientId: patient.id,
+                        visitId: item.visit.id,
+                        workItemId: item.id
+                      }}
+                      defaults={{
+                        temperatureCelsius: vs.temperatureCelsius?.toString() ?? "",
+                        oxygenSaturation: vs.oxygenSaturation?.toString() ?? "",
+                        systolicPressureMmHg: vs.systolicPressureMmHg?.toString() ?? "",
+                        diastolicPressureMmHg: vs.diastolicPressureMmHg?.toString() ?? "",
+                        heartRateBpm: vs.heartRateBpm?.toString() ?? "",
+                        respiratoryRateRpm: vs.respiratoryRateRpm?.toString() ?? "",
+                        weightKg: vs.weightKg?.toString() ?? "",
+                        heightCm: vs.heightCm?.toString() ?? ""
+                      }}
+                      defaultNotes={vs.notes ?? ""}
+                    />
                   ) : (
                     <p className="text-sm text-muted">{formatVitalsSummary(vs)}</p>
                   )}
@@ -378,44 +387,17 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
             defaultOpen={order?.type === "vital_signs" && item.visit.vitalSigns.length === 0}
             className="border-0 bg-transparent open:bg-transparent"
           >
-          <NoticeForm action={createVitalSignsAction} notice="Signos vitales guardados" className="grid gap-3">
-            <input type="hidden" name="patientId" value={patient.id} />
-            <input type="hidden" name="visitId" value={item.visit.id} />
-            <input type="hidden" name="workItemId" value={item.id} />
-            <p className="text-xs text-muted">
-              Registra los que tengas; no es obligatorio llenarlos todos.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Field label="Temperatura (°C)">
-                <input className={internalInputClassName} name="temperatureCelsius" inputMode="decimal" placeholder="36.5" />
-              </Field>
-              <Field label="Saturación O₂ (%)">
-                <input className={internalInputClassName} name="oxygenSaturation" inputMode="numeric" placeholder="98" />
-              </Field>
-              <Field label="Presión sistólica (mmHg)">
-                <input className={internalInputClassName} name="systolicPressureMmHg" inputMode="numeric" placeholder="120" />
-              </Field>
-              <Field label="Presión diastólica (mmHg)">
-                <input className={internalInputClassName} name="diastolicPressureMmHg" inputMode="numeric" placeholder="80" />
-              </Field>
-              <Field label="Pulso (lpm)">
-                <input className={internalInputClassName} name="heartRateBpm" inputMode="numeric" placeholder="72" />
-              </Field>
-              <Field label="Respiración (rpm)">
-                <input className={internalInputClassName} name="respiratoryRateRpm" inputMode="numeric" placeholder="16" />
-              </Field>
-              <Field label="Peso (kg)">
-                <input className={internalInputClassName} name="weightKg" inputMode="decimal" placeholder="70" />
-              </Field>
-              <Field label="Talla (cm)">
-                <input className={internalInputClassName} name="heightCm" inputMode="decimal" placeholder="170" />
-              </Field>
-            </div>
-            <Field label="Observaciones">
-              <textarea className={`${internalInputClassName} min-h-20 py-3`} name="notes" />
-            </Field>
-            <SubmitButton className="w-full">Guardar signos vitales</SubmitButton>
-          </NoticeForm>
+          <VitalSignsForm
+            action={createVitalSignsAction}
+            notice="Signos vitales guardados"
+            submitLabel="Guardar signos vitales"
+            hiddenFields={{
+              patientId: patient.id,
+              visitId: item.visit.id,
+              workItemId: item.id
+            }}
+            intro="Registra los que tengas; no es obligatorio llenarlos todos."
+          />
           </CollapsibleSection>
         </Card>
 

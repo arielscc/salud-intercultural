@@ -14,6 +14,13 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { routeAreaLabels } from "@/features/patients/labels";
+import {
+  isPriorityVisit,
+  isWaitingForDoctor,
+  sortConsultationQueue,
+  type ConsultationQueueArea
+} from "@/features/clinical-care/queue";
+import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/dates";
 import {
   getConsultationDailyVisits,
@@ -22,7 +29,7 @@ import {
 import { autoAbandonUnattendedConsultationVisits } from "@/modules/database/queries/visit-discontinuations";
 import { getTreatmentProposalOutcomeSummary } from "@/modules/database/queries/treatment-proposals";
 import { requirePermission } from "@/modules/permissions";
-import { ArrowRight, CheckCircle2, Clock3, Percent, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, Percent, Stethoscope, XCircle } from "lucide-react";
 import { getBranchContext } from "@/features/branches/context";
 
 const emptyConsultationsMessage = (
@@ -39,6 +46,16 @@ function visitHasPaidSale(visit: {
 }) {
   return visit.sales?.some((sale) => sale.status === "paid" && sale.balanceCents === 0) ?? false;
 }
+
+/*
+ * De donde vuelve el paciente. Explica por que encabeza la cola sin decir
+ * nada del cobro: en la pantalla del medico no se muestran montos.
+ */
+const queueOriginLabels: Record<ConsultationQueueArea, string> = {
+  recepcion: "Llega de Recepción",
+  enfermeria: "Vuelve de Enfermería",
+  administracion: "Vuelve de Administración"
+};
 
 function dailyVisitHref(visit: {
   id: string;
@@ -63,9 +80,16 @@ export default async function ConsultationsPage() {
     getTreatmentProposalOutcomeSummary(new Date(), activeBranch.code)
   ]);
 
-  // Pacientes derivados al médico que nadie ha tomado aún (en espera).
-  // Ya vienen ordenados por última derivación (los más recientes primero).
-  const waitingArrivals = visits.filter((visit) => !visit.attendingUser);
+  // Cola del médico: los que nadie tomó todavía y los que volvieron a consulta
+  // después de pasar por otra área (Enfermería o Administración), que conservan
+  // su médico a cargo y por eso antes no aparecían aquí. Se ordena para este
+  // médico: primero sus pacientes, luego los prioritarios (vuelven de otra área
+  // o ya pagaron) y dentro de cada grupo la derivación más reciente arriba.
+  const waitingArrivals = sortConsultationQueue(
+    visits.filter((visit) => isWaitingForDoctor(visit)),
+    user.id
+  );
+  const inCareCount = waitingArrivals.filter((visit) => isPriorityVisit(visit)).length;
 
   return (
     <div className="grid gap-4">
@@ -89,33 +113,71 @@ export default async function ConsultationsPage() {
               <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[11px] font-semibold text-primary-dark">
                 {waitingArrivals.length} en espera
               </span>
+              {inCareCount > 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/35 bg-surface px-2 py-0.5 text-[11px] font-semibold text-primary-dark">
+                  <Stethoscope className="h-3.5 w-3.5" aria-hidden="true" />
+                  {inCareCount} en atención
+                </span>
+              ) : null}
             </div>
             <div className="grid gap-2">
-              {waitingArrivals.map((visit) => (
-                <Link
-                  key={visit.id}
-                  href={`/sigeco/consultas/${visit.id}`}
-                  className="focus-ring flex flex-wrap items-center justify-between gap-3 rounded-[9px] border border-primary/20 bg-surface px-3 py-2.5 hover:border-primary/40"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-sora text-sm font-bold text-text">
-                      {visit.patient.fullName}
-                    </p>
-                    <p className="truncate text-xs text-muted">
-                      <span className="tabular-nums">{visit.patient.internalCode}</span>
-                      <span className="px-1.5" aria-hidden="true">·</span>
-                      {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
-                    </p>
-                    <p className="mt-0.5 text-[11px] tabular-nums text-muted">
-                      Derivado {formatDateTime(visit.derivedToDoctorAt)}
-                    </p>
-                  </div>
-                  <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary-dark">
-                    Atender
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  </span>
-                </Link>
-              ))}
+              {waitingArrivals.map((visit) => {
+                // "En atención" = ya pasó por Enfermería/Administración o tiene
+                // un servicio en curso; el resto son consultas que recién llegan.
+                const inCare = isPriorityVisit(visit);
+                const mine = visit.attendingUserId === user.id;
+
+                return (
+                  <Link
+                    key={visit.id}
+                    href={`/sigeco/consultas/${visit.id}`}
+                    className={cn(
+                      "focus-ring flex flex-wrap items-center justify-between gap-3 rounded-[9px] border bg-surface px-3 py-2.5",
+                      inCare
+                        ? "border-primary/40 border-l-4 border-l-primary shadow-sm hover:border-primary"
+                        : "border-border hover:border-primary/40"
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-sora text-sm font-bold text-text">
+                        {visit.patient.fullName}
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        <span className="tabular-nums">{visit.patient.internalCode}</span>
+                        <span className="px-1.5" aria-hidden="true">·</span>
+                        {visit.route ? routeAreaLabels[visit.route.currentArea] : "Sin ruta"}
+                      </p>
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                        {inCare ? (
+                          <Chip tone="primary">
+                            <Stethoscope className="h-3 w-3" aria-hidden="true" />
+                            En atención
+                          </Chip>
+                        ) : (
+                          <Chip tone="neutral">Consulta nueva</Chip>
+                        )}
+                        {inCare && visit.derivedFromArea && visit.derivedFromArea !== "recepcion" ? (
+                          <Chip tone="neutral">{queueOriginLabels[visit.derivedFromArea]}</Chip>
+                        ) : null}
+                        {mine ? (
+                          <Chip tone="neutral">Tu paciente</Chip>
+                        ) : visit.attendingUser ? (
+                          <Chip tone="neutral">
+                            Atiende {visit.attendingUser.name ?? visit.attendingUser.email}
+                          </Chip>
+                        ) : null}
+                      </span>
+                      <p className="mt-0.5 text-[11px] tabular-nums text-muted">
+                        Derivado {formatDateTime(visit.derivedToDoctorAt)}
+                      </p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary-dark">
+                      {inCare ? "Continuar atención" : "Atender"}
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -182,11 +244,9 @@ export default async function ConsultationsPage() {
                 <span className="text-muted">Sin asignar</span>
               )}
               {visit.clinicalConsultation ? (
-                <span>
-                  <Chip tone="success" dot>
-                    Registrada
-                  </Chip>
-                </span>
+                <Chip tone="success" dot>
+                  Registrada
+                </Chip>
               ) : null}
             </RecordItem>
           ))}

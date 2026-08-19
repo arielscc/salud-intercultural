@@ -1,7 +1,10 @@
 import type {
   CashChannel,
+  PatientRouteArea,
   Prisma,
   SaleItemType,
+  SaleStatus,
+  VisitStatus,
   VisitWorkItemStatus
 } from "@/generated/prisma/client";
 import { dayRange, monthRange } from "@/lib/dates";
@@ -135,14 +138,12 @@ export async function getAdministrationWorkItems(
             }
           },
           {
+            // Lo cobrado hoy no desaparece de la bandeja al completar el
+            // pendiente: Administracion necesita seguir viendo al paciente
+            // (venta directa o pedido del medico) durante el resto del dia.
             status: "completed",
             completedAt: { gte: today.start, lt: today.end },
-            sales: {
-              some: {
-                doctorOrderId: { not: null },
-                status: "paid"
-              }
-            }
+            sales: { some: {} }
           }
         ]
       },
@@ -980,6 +981,112 @@ export async function getPatientSales(patientId: string) {
       orderBy: { createdAt: "desc" },
       take: 12
     });
+  });
+}
+
+export type TodayCollection = {
+  saleId: string;
+  workItemId: string | null;
+  patient: { id: string; fullName: string; internalCode: string };
+  concept: string[];
+  status: SaleStatus;
+  totalCents: number;
+  paidCents: number;
+  balanceCents: number;
+  /** Solo lo cobrado hoy; la venta puede traer pagos de dias anteriores. */
+  paidTodayCents: number;
+  lastPaidAt: Date;
+  methods: string[];
+  visitStatus: VisitStatus | null;
+  currentArea: PatientRouteArea | null;
+};
+
+/**
+ * Pacientes que pagaron hoy, agrupados por venta. Se arma desde los pagos y no
+ * desde los pendientes de Administracion, para que un cobro siga visible aunque
+ * el pendiente ya se haya completado, la venta no venga de un pedido del medico
+ * o el paciente ya haya seguido a otra area.
+ */
+export async function getTodayCollections(
+  branchCode?: string,
+  date = new Date()
+) {
+  const today = dayRange(date);
+
+  return withDatabaseError("getTodayCollections", async () => {
+    const payments = await prisma.payment.findMany({
+      where: { branchCode, paidAt: { gte: today.start, lt: today.end } },
+      orderBy: { paidAt: "desc" },
+      select: {
+        id: true,
+        amountCents: true,
+        paidAt: true,
+        method: { select: { name: true } },
+        patient: { select: { id: true, fullName: true, internalCode: true } },
+        sale: {
+          select: {
+            id: true,
+            status: true,
+            totalCents: true,
+            paidCents: true,
+            balanceCents: true,
+            workItemId: true,
+            items: {
+              select: { description: true },
+              orderBy: { createdAt: "asc" }
+            },
+            visit: {
+              select: {
+                id: true,
+                status: true,
+                route: { select: { currentArea: true } }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const bySale = new Map<string, TodayCollection>();
+
+    for (const payment of payments) {
+      const sale = payment.sale;
+      const existing = bySale.get(sale.id);
+      if (existing) {
+        existing.paidTodayCents += payment.amountCents;
+        if (!existing.methods.includes(payment.method.name)) {
+          existing.methods.push(payment.method.name);
+        }
+        continue;
+      }
+      bySale.set(sale.id, {
+        saleId: sale.id,
+        workItemId: sale.workItemId,
+        patient: payment.patient,
+        concept: sale.items.map((item) => item.description),
+        status: sale.status,
+        totalCents: sale.totalCents,
+        paidCents: sale.paidCents,
+        balanceCents: sale.balanceCents,
+        paidTodayCents: payment.amountCents,
+        // `payments` viene ordenado de mas reciente a mas antiguo.
+        lastPaidAt: payment.paidAt,
+        methods: [payment.method.name],
+        visitStatus: sale.visit?.status ?? null,
+        currentArea: sale.visit?.route?.currentArea ?? null
+      });
+    }
+
+    const collections = Array.from(bySale.values());
+
+    return {
+      collections,
+      paidTodayCents: collections.reduce(
+        (total, entry) => total + entry.paidTodayCents,
+        0
+      ),
+      patientCount: new Set(collections.map((entry) => entry.patient.id)).size
+    };
   });
 }
 

@@ -39,6 +39,19 @@ function fields(formData: FormData) {
   );
 }
 
+// Las pantallas de cobro pueden abrir la Caja sin salir del pendiente o de la
+// venta; `returnTo` las trae de vuelta al mismo cobro. Solo se aceptan rutas
+// internas de SIGECO para no convertirlo en un redirect abierto.
+const internalReturnPath = /^\/sigeco\/[A-Za-z0-9\-_/]*$/;
+
+function cashOpenTarget(formData: FormData) {
+  const raw = formData.get("returnTo");
+  if (typeof raw !== "string" || !internalReturnPath.test(raw)) {
+    return "/sigeco/administracion/caja";
+  }
+  return raw;
+}
+
 function cashExpenseTarget(formData: FormData) {
   const raw = formData.get("returnTo");
   if (typeof raw !== "string") return "/sigeco/administracion/caja";
@@ -71,8 +84,9 @@ function cashErrorTarget(error: unknown, fallback: string): string | null {
 }
 
 export async function openCashSessionAction(formData: FormData) {
+  const fallback = cashOpenTarget(formData);
   const parsed = openCashSessionSchema.safeParse(fields(formData));
-  if (!parsed.success) redirect("/sigeco/administracion/caja?error=cash-invalid-session");
+  if (!parsed.success) redirect(`${fallback}?error=cash-invalid-session`);
 
   try {
     await runAuditedAction(
@@ -90,7 +104,7 @@ export async function openCashSessionAction(formData: FormData) {
       async (user) => {
         const { activeBranch } = await getBranchContext(user);
         if (parsed.data.branchCode !== activeBranch.code) {
-          redirect("/sigeco/administracion/caja?error=cash-invalid-session");
+          redirect(`${fallback}?error=cash-invalid-session`);
         }
         const session = await openCashSession({
           branchCode: parsed.data.branchCode,
@@ -115,13 +129,14 @@ export async function openCashSessionAction(formData: FormData) {
       }
     );
   } catch (error) {
-    const target = cashErrorTarget(error, "/sigeco/administracion/caja");
+    const target = cashErrorTarget(error, fallback);
     if (target) redirect(target);
     throw error;
   }
 
   revalidatePath("/sigeco/administracion/caja");
-  redirect("/sigeco/administracion/caja?aviso=cash-session-opened");
+  if (fallback !== "/sigeco/administracion/caja") revalidatePath(fallback);
+  redirect(`${fallback}?aviso=cash-session-opened`);
 }
 
 export async function createStaffCashExpenseAction(formData: FormData) {
