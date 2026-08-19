@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 
 export function PasswordInput({
   name = "password",
-  autoComplete = "current-password",
+  autoComplete = "off",
   required,
   minLength,
   maxLength
@@ -27,6 +27,10 @@ export function PasswordInput({
         type={visible ? "text" : "password"}
         name={name}
         autoComplete={autoComplete}
+        data-lpignore="true"
+        data-1p-ignore=""
+        data-bwignore="true"
+        data-form-type="other"
         required={required}
         minLength={minLength}
         maxLength={maxLength}

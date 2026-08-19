@@ -13,7 +13,7 @@ const supportWhatsappHref = createWhatsAppLink(
 );
 
 type LoginPageProps = {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; email?: string }>;
 };
 
 export default async function SigecoLoginPage({
@@ -54,13 +54,26 @@ export default async function SigecoLoginPage({
           </p>
         ) : null}
 
-        <form action={loginInternalUser} className="grid gap-4">
+        <form
+          action={loginInternalUser}
+          className="grid gap-4"
+          autoComplete="off"
+          data-lpignore="true"
+          data-1p-ignore=""
+          data-bwignore="true"
+          data-form-type="other"
+        >
           <Field label="Email">
             <input
               className={internalInputClassName}
               type="email"
               name="email"
-              autoComplete="email"
+              defaultValue={params.email ?? ""}
+              autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore=""
+              data-bwignore="true"
+              data-form-type="other"
               required
             />
           </Field>

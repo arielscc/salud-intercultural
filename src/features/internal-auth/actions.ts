@@ -14,8 +14,12 @@ import {
   setInternalSessionCookie
 } from "@/features/internal-auth/session";
 
-function getLoginErrorRedirect(error: "invalid" | "locked" = "invalid") {
-  return `/sigeco/login?error=${error}`;
+function getLoginErrorRedirect(email: string, error: "invalid" | "locked" = "invalid") {
+  const params = new URLSearchParams({ error });
+  if (email) {
+    params.set("email", email);
+  }
+  return `/sigeco/login?${params.toString()}`;
 }
 
 export async function loginInternalUser(formData: FormData) {
@@ -29,7 +33,7 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect());
+    redirect(getLoginErrorRedirect(email));
   }
 
   const user = await prisma.internalUser.findUnique({
@@ -43,7 +47,7 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect());
+    redirect(getLoginErrorRedirect(email));
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -55,7 +59,7 @@ export async function loginInternalUser(formData: FormData) {
       result: "denied",
       context: { reason: "account_locked" }
     });
-    redirect(getLoginErrorRedirect("locked"));
+    redirect(getLoginErrorRedirect(email, "locked"));
   }
 
   const isValid = await verifyPassword(password, user.passwordHash);
@@ -80,7 +84,7 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect());
+    redirect(getLoginErrorRedirect(email));
   }
 
   await prisma.internalUser.update({
