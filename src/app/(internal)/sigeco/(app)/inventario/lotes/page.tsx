@@ -24,6 +24,8 @@ import {
 } from "@/modules/database/queries/purchases";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
+import { getActiveModules } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 
 type LotStatus = "available" | "expiring" | "expired" | "empty" | "all";
@@ -81,7 +83,10 @@ export default async function InventoryLotsPage({
   };
   const canAdjust = roleHasPermission(user.role, "inventory_lot_adjust");
   const canReadCosts = roleHasPermission(user.role, "inventory_cost_read");
-  const canReadPurchases = roleHasPermission(user.role, "purchases_read");
+  const activeModules = await getActiveModules();
+  // Compras puede estar apagada aunque Inventario esté lanzado: sin el módulo
+  // el enlace llevaría a una pantalla bloqueada.
+  const canReadPurchases = canUse(user.role, activeModules, "purchases_read");
   const canReadSuppliers = roleHasPermission(user.role, "suppliers_read");
   const [lots, total, fefoIds, personnel] = await Promise.all([
     getInventoryLots({ ...filters, page, pageSize }),

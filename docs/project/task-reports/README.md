@@ -64,6 +64,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-24 | [Lanzamiento Tarea 1: catálogo de módulos y mapa de permisos](./2026-08-24-lanzamiento-tarea-1-catalogo-modulos.md) | Declara los once módulos de SIGECO con sus dependencias duras y mapea los 64 permisos a los módulos que los habilitan, como base del lanzamiento por etapas. |
 | 2026-08-24 | [Lanzamiento Tarea 2: estado de activación y su historial](./2026-08-24-lanzamiento-tarea-2-estado-activacion-modulos.md) | Persiste qué módulos están encendidos, siembra los once con solo el núcleo activo y bloquea en PostgreSQL la edición y el borrado del historial. |
 | 2026-08-24 | [Lanzamiento Tarea 3: gate de módulos en servidor](./2026-08-24-lanzamiento-tarea-3-gate-modulos.md) | Bloquea páginas y acciones de un módulo apagado desde `requirePermission` y `runAuditedAction`, audita el rechazo como `module.disabled` y lo distingue de la falta de permiso. |
+| 2026-08-24 | [Lanzamiento Tarea 4: navegación e inicio según módulos activos](./2026-08-24-lanzamiento-tarea-4-navegacion-modulos.md) | Filtra el menú y el dashboard por módulo lanzado, evita ejecutar las consultas de los apagados y oculta los enlaces cruzados hacia pantallas bloqueadas. |
 
 ## Relacion Con Estado V3
 

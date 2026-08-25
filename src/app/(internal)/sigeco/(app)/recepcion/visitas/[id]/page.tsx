@@ -30,6 +30,8 @@ import { createDirectWhatsAppLink } from "@/lib/whatsapp";
 import { getVisitById } from "@/modules/database/queries/visits";
 import { getActiveStudyCatalogItems } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
+import { getActiveModules } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import {
   Building2,
   CalendarClock,
@@ -53,8 +55,39 @@ type VisitDetailPageProps = {
   }>;
 };
 
+
+/**
+ * El responsable del seguimiento se enlaza solo cuando ese módulo está lanzado;
+ * si no, se muestra el nombre y nada más, en lugar de un enlace que rebota.
+ */
+function FollowUpOwner({
+  task,
+  linked
+}: {
+  task: {
+    id: string;
+    assignedTo: { name: string | null; email: string } | null;
+  };
+  linked: boolean;
+}) {
+  const owner = task.assignedTo?.name ?? task.assignedTo?.email ?? "Pendiente sin responsable";
+
+  if (!linked) return <span className="font-semibold text-text">{owner}</span>;
+
+  return (
+    <Link
+      href={`/sigeco/seguimientos/${task.id}`}
+      className="focus-ring rounded-[7px] font-semibold text-primary-dark hover:underline"
+    >
+      {owner}
+    </Link>
+  );
+}
+
 export default async function VisitDetailPage({ params, searchParams }: VisitDetailPageProps) {
   const user = await requirePermission("visits_read");
+  const activeModules = await getActiveModules();
+  const canOpenFollowUps = canUse(user.role, activeModules, "followups_read");
   const { activeBranch } = await getBranchContext(user);
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const [visit, studyCatalogItems] = await Promise.all([
@@ -414,14 +447,10 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                 </dt>
                 <dd className="mt-1 text-text">
                   {visit.discontinuation.followUpTask ? (
-                    <Link
-                      href={`/sigeco/seguimientos/${visit.discontinuation.followUpTask.id}`}
-                      className="focus-ring rounded-[7px] font-semibold text-primary-dark hover:underline"
-                    >
-                      {visit.discontinuation.followUpTask.assignedTo?.name ??
-                        visit.discontinuation.followUpTask.assignedTo?.email ??
-                        "Pendiente sin responsable"}
-                    </Link>
+                    <FollowUpOwner
+                      task={visit.discontinuation.followUpTask}
+                      linked={canOpenFollowUps}
+                    />
                   ) : (
                     "No creado"
                   )}

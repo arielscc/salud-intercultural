@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { InternalRole } from "@/generated/prisma/client";
-import { roleHasPermission } from "@/features/internal-auth/permissions";
+import type { ActiveModules } from "@/features/modules/activation";
+import { canUse } from "@/features/modules/access";
 import { sigecoNavItems, type SigecoNavItem } from "@/components/internal/nav-items";
 import { cn } from "@/lib/cn";
 
@@ -54,9 +55,15 @@ function DesktopNavLink({ item }: { item: SigecoNavItem }) {
   );
 }
 
-export function DesktopSidebarNav({ role }: { role: InternalRole }) {
+export function DesktopSidebarNav({
+  role,
+  activeModules
+}: {
+  role: InternalRole;
+  activeModules: ActiveModules;
+}) {
   const permittedItems = sigecoNavItems.filter((item) =>
-    roleHasPermission(role, item.permission)
+    canUse(role, activeModules, item.permission, item.module)
   );
 
   // Todo item permitido que no esté asignado a un grupo se muestra igual en una

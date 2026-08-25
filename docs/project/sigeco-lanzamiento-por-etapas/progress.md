@@ -12,10 +12,11 @@ catálogo de módulos, el mapa de permisos y los helpers de activación viven en
 ya está en base (migración `20260824210000_module_activation`, aplicada en
 desarrollo).
 
-Con la Tarea 3 el gate ya está activo: una página o una acción de un módulo
-apagado se rechaza en el servidor y queda auditada como `module.disabled`. Falta
-la navegación (Tarea 4) y la pantalla del super administrador (Tarea 5); mientras
-tanto, los módulos se encienden con `pnpm modules:set`.
+Con las Tareas 3 y 4 el lanzamiento por etapas ya se ve y se aplica: una página
+o una acción de un módulo apagado se rechaza en el servidor y queda auditada como
+`module.disabled`, y el menú, el inicio y los enlaces cruzados dejaron de
+ofrecerla. Falta la pantalla del super administrador (Tarea 5); mientras tanto,
+los módulos se encienden con `pnpm modules:set`.
 
 Con los once módulos activos el sistema se comporta igual que antes de este
 plan.
@@ -40,8 +41,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 17 |
-| En progreso | 3 |
+| Pendiente | 16 |
+| En progreso | 4 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -62,7 +63,7 @@ se sigue llevando en sus propios archivos.
 | 1 | Catálogo de módulos y mapa de permisos | P0 | En progreso | Ninguna |
 | 2 | Estado de activación y su historial | P0 | En progreso | 1 |
 | 3 | Gate de módulos en servidor | P0 | En progreso | 1-2 |
-| 4 | Navegación e inicio según módulos activos | P0 | Pendiente | 3 |
+| 4 | Navegación e inicio según módulos activos | P0 | En progreso | 3 |
 | 5 | Pantalla de activación del super administrador | P0 | Pendiente | 3-4 |
 | 6 | Modo solo lectura del módulo apagado | P1 | Pendiente | 5 |
 | 7 | Alta mínima de cliente desde Administración | P0 | Pendiente | 4 |
@@ -122,13 +123,39 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 4: navegación e inicio según módulos activos. El gate ya impide el acceso,
-pero el menú sigue ofreciendo enlaces que llevan al inicio con un aviso. Hay que
-declarar el módulo de cada `SigecoNavItem`, filtrar en las dos vistas del menú,
-leer los módulos activos una vez en el layout y dejar de ejecutar las queries de
-los módulos apagados en el dashboard.
+Tarea 5: la pantalla `/sigeco/modulos` del super administrador. La escritura ya
+existe (`setModuleActivation`, con dependencias duras y motivo obligatorio) y la
+lectura también (`getModuleActivationStates`, `getModuleActivationHistory`), así
+que la tarea es la interfaz, los permisos nuevos `modules_read` y
+`modules_manage` —que deberán mapearse a `core`— y la auditoría de cada cambio.
 
 ## Registro
+
+### 2026-08-24 — Tarea 4 Implementada (Navegación E Inicio Según Módulos Activos)
+
+- `canUse` en `src/features/modules/access.ts` repite en la interfaz la misma
+  condición que aplica el servidor: permiso del rol más módulo lanzado, con el
+  mismo `module` opcional. Una sola regla para mostrar y para bloquear.
+- Cada `SigecoNavItem` declara su módulo; el menú de escritorio y el de móvil
+  filtran por permiso y módulo. El layout lee `getActiveModules()` una vez por
+  request, en paralelo con la sucursal activa.
+- El dashboard no ejecuta las consultas de los módulos apagados. Su mensaje vacío
+  distingue "tu rol no tiene módulos" de "tu módulo todavía no se lanzó": lo
+  primero manda a pedir permisos que la persona ya tiene.
+- Diez enlaces cruzados en seis archivos quedaron condicionados al módulo destino
+  (ficha → venta y seguimiento, visita y abandonos → seguimiento, inventario y
+  lotes → compra, catálogo → producto). Se oculta el enlace, no el dato ya
+  visible. La búsqueda de pacientes del encabezado exige `recepcion`, porque lleva
+  a la ficha.
+- Validación: typecheck y lint limpios; 437 de 442 pruebas unitarias, con doce
+  nuevas. `SidebarNav.test.tsx` comprueba el criterio de aceptación literal: en la
+  Etapa 1 el menú muestra Caja, Catálogo, Inventario, Compras y el núcleo, y nada
+  clínico.
+- Se ajustó una prueba de privacidad que verificaba el texto literal del control
+  de la búsqueda de pacientes; el control no se debilitó, se reforzó con el
+  módulo.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-4-navegacion-modulos.md).
 
 ### 2026-08-24 — Tarea 3 Implementada (Gate De Módulos En Servidor)
 

@@ -3,13 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { InternalRole } from "@/generated/prisma/client";
-import { roleHasPermission } from "@/features/internal-auth/permissions";
+import type { ActiveModules } from "@/features/modules/activation";
+import { canUse } from "@/features/modules/access";
 import { sigecoNavItems } from "@/components/internal/nav-items";
 import { cn } from "@/lib/cn";
 
-export function SidebarNav({ role, onNavigate }: { role: InternalRole; onNavigate?: () => void }) {
+export function SidebarNav({
+  role,
+  activeModules,
+  onNavigate
+}: {
+  role: InternalRole;
+  activeModules: ActiveModules;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
-  const items = sigecoNavItems.filter((item) => roleHasPermission(role, item.permission));
+  const items = sigecoNavItems.filter((item) =>
+    canUse(role, activeModules, item.permission, item.module)
+  );
 
   return (
     <nav className="flex flex-col gap-0.5 px-3" aria-label="Módulos de Sigeco">

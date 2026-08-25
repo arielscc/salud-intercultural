@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { InternalPermission } from "@/generated/prisma/client";
 import { sigecoModuleCodes } from "@/features/modules/catalog";
 import { permissionModules } from "@/features/modules/permission-modules";
+import { sigecoNavItems } from "@/components/internal/nav-items";
 
 /*
  * El gate de módulos vive en `requirePermission` y `runAuditedAction`, así que
@@ -127,6 +128,32 @@ describe("gate de módulos", () => {
         source(resolve(process.cwd(), file)),
         `${key} ya no usa ese permiso`
       ).toContain(`permission: "${permission}"`);
+    }
+  });
+
+  it("declara un módulo del catálogo en cada entrada del menú", () => {
+    for (const item of sigecoNavItems) {
+      expect(sigecoModuleCodes, `${item.href} declara un módulo desconocido`).toContain(
+        item.module
+      );
+    }
+  });
+
+  it("mantiene el módulo del menú igual al que fija su página", () => {
+    for (const item of sigecoNavItems) {
+      const file = resolve(
+        process.cwd(),
+        `src/app/(internal)/sigeco/(app)${item.href.replace("/sigeco", "")}/page.tsx`
+      );
+      const call = source(file).match(
+        new RegExp(
+          `requirePermission\\(\\s*"${item.permission}"\\s*,\\s*\\{[^}]*module:\\s*"(\\w+)"`
+        )
+      );
+
+      // Si la página no fija módulo, el permiso ya identifica al suyo.
+      if (!call) continue;
+      expect(call[1], `${item.href}: el menú y la página no coinciden`).toBe(item.module);
     }
   });
 });

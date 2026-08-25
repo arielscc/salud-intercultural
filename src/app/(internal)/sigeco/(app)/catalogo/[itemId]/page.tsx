@@ -24,6 +24,8 @@ import {
   getServiceCatalogItemById
 } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
+import { getActiveModules } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 const linkClassName =
   "focus-ring inline-flex min-h-10 items-center justify-center rounded-[9px] border border-border px-3 text-sm font-semibold text-text hover:text-primary-dark";
@@ -41,6 +43,10 @@ export default async function ServiceCatalogItemPage({
   const item = await getServiceCatalogItemById(itemId);
   if (!item) notFound();
 
+  const activeModules = await getActiveModules();
+  // La ficha del producto vive en Inventario; sin ese módulo se muestra el
+  // nombre sin enlace, no una pantalla que rebota.
+  const canOpenInventory = canUse(user.role, activeModules, "inventory_read", "inventario");
   const canWrite = roleHasPermission(user.role, "service_catalog_write");
   const canManageThreshold = roleHasPermission(user.role, "discount_threshold_manage");
   if (!item.active && !canWrite) notFound();
@@ -139,12 +145,16 @@ export default async function ServiceCatalogItemPage({
                   {item.components.map((component) => (
                     <Tr key={component.id}>
                       <Td className="font-semibold text-text">
-                        <Link
-                          className="hover:underline"
-                          href={`/sigeco/inventario/${component.inventoryItemId}`}
-                        >
-                          {component.inventoryItem.name}
-                        </Link>
+                        {canOpenInventory ? (
+                          <Link
+                            className="hover:underline"
+                            href={`/sigeco/inventario/${component.inventoryItemId}`}
+                          >
+                            {component.inventoryItem.name}
+                          </Link>
+                        ) : (
+                          component.inventoryItem.name
+                        )}
                       </Td>
                       <Td className="text-right tabular-nums">{component.quantity}</Td>
                       <Td className="text-right tabular-nums">

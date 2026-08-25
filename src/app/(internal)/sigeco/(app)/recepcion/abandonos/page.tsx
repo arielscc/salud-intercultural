@@ -24,6 +24,8 @@ import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
 import { dateOnlyRange, formatDateTime } from "@/lib/dates";
 import { getVisitDiscontinuationReport } from "@/modules/database/queries/visit-discontinuations";
 import { requirePermission } from "@/modules/permissions";
+import { getActiveModules } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 type VisitDiscontinuationReportPageProps = {
   searchParams: Promise<{
@@ -33,10 +35,41 @@ type VisitDiscontinuationReportPageProps = {
   }>;
 };
 
+
+/**
+ * El responsable del seguimiento se enlaza solo cuando ese módulo está lanzado;
+ * si no, se muestra el nombre y nada más, en lugar de un enlace que rebota.
+ */
+function FollowUpOwner({
+  task,
+  linked
+}: {
+  task: {
+    id: string;
+    assignedTo: { name: string | null; email: string } | null;
+  };
+  linked: boolean;
+}) {
+  const owner = task.assignedTo?.name ?? task.assignedTo?.email ?? "Sin responsable";
+
+  if (!linked) return <span className="font-semibold text-text">{owner}</span>;
+
+  return (
+    <Link
+      href={`/sigeco/seguimientos/${task.id}`}
+      className="focus-ring rounded-[7px] font-semibold text-primary-dark hover:underline"
+    >
+      {owner}
+    </Link>
+  );
+}
+
 export default async function VisitDiscontinuationReportPage({
   searchParams
 }: VisitDiscontinuationReportPageProps) {
-  await requirePermission("visit_discontinuations_read");
+  const user = await requirePermission("visit_discontinuations_read");
+  const activeModules = await getActiveModules();
+  const canOpenFollowUps = canUse(user.role, activeModules, "followups_read");
   const params = await searchParams;
   const reason = visitDiscontinuationReasonOptions.some(
     ([value]) => value === params.motivo
@@ -232,14 +265,10 @@ export default async function VisitDiscontinuationReportPage({
                   </Td>
                   <Td>
                     {event.followUpTask ? (
-                      <Link
-                        href={`/sigeco/seguimientos/${event.followUpTask.id}`}
-                        className="focus-ring rounded-[7px] font-semibold text-primary-dark hover:underline"
-                      >
-                        {event.followUpTask.assignedTo?.name ??
-                          event.followUpTask.assignedTo?.email ??
-                          "Sin responsable"}
-                      </Link>
+                      <FollowUpOwner
+                        task={event.followUpTask}
+                        linked={canOpenFollowUps}
+                      />
                     ) : (
                       "—"
                     )}

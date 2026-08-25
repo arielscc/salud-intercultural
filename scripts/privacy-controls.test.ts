@@ -71,8 +71,10 @@ describe("SIGECO privacy controls", () => {
   it("hides global patient search when the role lacks patient access", () => {
     const shell = source("src/components/internal/InternalShell.tsx");
 
+    // `canUse` exige el permiso del rol y, ademas, que el modulo este lanzado:
+    // la busqueda lleva a la ficha, que vive en Recepcion.
     expect(shell).toContain(
-      'roleHasPermission(user.role, "patients_read")'
+      'canUse(user.role, activeModules, "patients_read", "recepcion")'
     );
   });
 });

@@ -5,6 +5,7 @@ import { InternalShell } from "@/components/internal/InternalShell";
 import { ConnectivityGuard } from "@/components/internal/ConnectivityGuard";
 import { Toaster } from "@/components/ui/sonner";
 import { requireInternalUser } from "@/modules/permissions";
+import { getActiveModules } from "@/modules/database/queries/modules";
 import { getBranchContext } from "@/features/branches/context";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +16,15 @@ export default async function SigecoAppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireInternalUser();
-  const branchContext = await getBranchContext(user);
+  // Los módulos lanzados se leen una sola vez por request, igual que la sucursal
+  // activa; `getActiveModules` está memoizado, así que las guardas de cada
+  // página reutilizan esta misma consulta.
+  const [branchContext, activeModules] = await Promise.all([
+    getBranchContext(user),
+    getActiveModules()
+  ]);
   return (
-    <InternalShell user={user} branchContext={branchContext}>
+    <InternalShell user={user} branchContext={branchContext} activeModules={activeModules}>
       <ConnectivityGuard />
       <DesktopBreadcrumb />
       {children}

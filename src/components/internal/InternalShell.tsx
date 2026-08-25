@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import type { InternalUser } from "@/generated/prisma/client";
-import {
-  internalRoleLabels,
-  roleHasPermission
-} from "@/features/internal-auth/permissions";
+import { internalRoleLabels } from "@/features/internal-auth/permissions";
+import type { ActiveModules } from "@/features/modules/activation";
+import { canUse } from "@/features/modules/access";
 import { formatLongDate } from "@/lib/dates";
 import { DesktopPatientSearch } from "@/components/internal/DesktopPatientSearch";
 import { DesktopSidebarNav } from "@/components/internal/DesktopSidebarNav";
@@ -48,9 +47,11 @@ function UserBadge({ user }: { user: InternalUser }) {
 export function InternalShell({
   user,
   branchContext,
+  activeModules,
   children
 }: {
   user: InternalUser;
+  activeModules: ActiveModules;
   branchContext: {
     activeBranch: { code: string; name: string };
     branches: Array<{
@@ -70,7 +71,7 @@ export function InternalShell({
           <p className="text-[11px] text-muted">Salud Intercultural</p>
         </Link>
         <div className="flex-1 overflow-y-auto">
-          <DesktopSidebarNav role={user.role} />
+          <DesktopSidebarNav role={user.role} activeModules={activeModules} />
         </div>
         <div className="mt-2 border-t border-border px-5 pt-3">
           <UserBadge user={user} />
@@ -79,14 +80,18 @@ export function InternalShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="print-hidden flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
-          <MobileSidebar role={user.role} userSlot={<UserBadge user={user} />} />
+          <MobileSidebar
+            role={user.role}
+            activeModules={activeModules}
+            userSlot={<UserBadge user={user} />}
+          />
           <p className="hidden font-sora text-sm font-bold text-text sm:block lg:hidden">Sigeco</p>
           <BranchSelector
             key={branchContext.activeBranch.code}
             activeCode={branchContext.activeBranch.code}
             branches={branchContext.branches}
           />
-          {roleHasPermission(user.role, "patients_read") ? (
+          {canUse(user.role, activeModules, "patients_read", "recepcion") ? (
             <DesktopPatientSearch />
           ) : null}
           <div className="ml-auto flex shrink-0 items-center gap-3">

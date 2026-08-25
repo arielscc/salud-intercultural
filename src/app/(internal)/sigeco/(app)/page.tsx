@@ -30,6 +30,8 @@ import { getFollowUpWorkSummary } from "@/modules/database/queries/follow-ups";
 import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getReceptionDashboardSummary } from "@/modules/database/queries/reception";
 import { requireInternalUser } from "@/modules/permissions";
+import { getActiveModules } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 import { cn } from "@/lib/cn";
 
@@ -52,12 +54,25 @@ const operationalAreas: PatientRouteArea[] = [
 
 export default async function SigecoDashboardPage() {
   const user = await requireInternalUser();
-  const { activeBranch } = await getBranchContext(user);
-  const canSeeReception = roleHasPermission(user.role, "visits_read");
-  const canSeePatients = roleHasPermission(user.role, "patients_read");
-  const canSeeFollowUps = roleHasPermission(user.role, "followups_read");
-  const canSeeInventory = roleHasPermission(user.role, "inventory_read");
-  const canRegisterArrival = roleHasPermission(user.role, "visits_create");
+  const [{ activeBranch }, activeModules] = await Promise.all([
+    getBranchContext(user),
+    getActiveModules()
+  ]);
+  // Cada indicador depende del permiso del rol y de que su módulo esté lanzado.
+  // La búsqueda y el stock fijan el módulo porque sus enlaces viven en Recepción
+  // e Inventario, aunque el permiso lo compartan con otras áreas.
+  const canSeeReception = canUse(user.role, activeModules, "visits_read");
+  const canSeePatients = canUse(user.role, activeModules, "patients_read", "recepcion");
+  const canSeeFollowUps = canUse(user.role, activeModules, "followups_read");
+  const canSeeInventory = canUse(user.role, activeModules, "inventory_read", "inventario");
+  const canRegisterArrival = canUse(user.role, activeModules, "visits_create");
+  // El rol tiene trabajo asignado, pero su módulo todavía no se lanzó: no es lo
+  // mismo que no tener acceso, y decirlo mal manda a la persona a pedir permisos
+  // que ya tiene.
+  const waitingForLaunch =
+    roleHasPermission(user.role, "visits_read") ||
+    roleHasPermission(user.role, "followups_read") ||
+    roleHasPermission(user.role, "inventory_read");
 
   const [receptionSummary, followUpSummary, inventorySummary] = await Promise.all([
     canSeeReception ? getReceptionDashboardSummary(new Date(), activeBranch.code) : null,
@@ -99,10 +114,24 @@ export default async function SigecoDashboardPage() {
 
       {!receptionSummary && !followUpSummary && !inventorySummary ? (
         <Card>
-          <p className="text-sm font-semibold text-text">Tu rol no tiene módulos asignados.</p>
-          <p className="mt-1 text-sm text-muted">
-            Pide a dirección que actualice tu rol para ver el trabajo del día.
-          </p>
+          {waitingForLaunch ? (
+            <>
+              <p className="text-sm font-semibold text-text">
+                Tus módulos todavía no están disponibles.
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                La clínica los va habilitando por etapas. Dirección avisa cuando
+                llega el turno del tuyo.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-text">Tu rol no tiene módulos asignados.</p>
+              <p className="mt-1 text-sm text-muted">
+                Pide a dirección que actualice tu rol para ver el trabajo del día.
+              </p>
+            </>
+          )}
         </Card>
       ) : null}
 

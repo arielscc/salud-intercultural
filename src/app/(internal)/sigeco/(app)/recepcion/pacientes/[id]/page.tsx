@@ -55,6 +55,8 @@ import {
 } from "@/features/service-sessions/labels";
 import { getClinicalAttachmentsForPatient } from "@/modules/clinical-attachments/service";
 import { requirePermission } from "@/modules/permissions";
+import { getActiveModules } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { Chip } from "@/components/internal/ui/Chip";
 import { calculateAgeFromDate } from "@/lib/age";
 import { cn } from "@/lib/cn";
@@ -98,6 +100,11 @@ export default async function PatientDetailPage({
   searchParams
 }: PatientDetailPageProps) {
   const user = await requirePermission("patients_read", { module: "recepcion" });
+  const activeModules = await getActiveModules();
+  // La ficha resume ventas y seguimientos aunque esos módulos no estén
+  // lanzados; lo que se oculta es el enlace, no el dato ya visible.
+  const canOpenSales = canUse(user.role, activeModules, "sales_read");
+  const canOpenFollowUps = canUse(user.role, activeModules, "followups_read");
   const { id } = await params;
   const filters = await searchParams;
   const patient = await getPatientById(id);
@@ -564,7 +571,7 @@ export default async function PatientDetailPage({
             {patient.sales.map((sale) => (
               <RecordItem
                 key={sale.id}
-                href={`/sigeco/administracion/ventas/${sale.id}`}
+                href={canOpenSales ? `/sigeco/administracion/ventas/${sale.id}` : undefined}
                 title={<span className="tabular-nums">{formatMoney(sale.totalCents)}</span>}
                 status={<Chip>{saleStatusLabels[sale.status]}</Chip>}
               >
@@ -593,12 +600,16 @@ export default async function PatientDetailPage({
                 {patient.sales.map((sale) => (
                   <Tr key={sale.id}>
                     <Td className="font-semibold tabular-nums text-text">
-                      <a
-                        href={`/sigeco/administracion/ventas/${sale.id}`}
-                        className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
-                      >
-                        {formatMoney(sale.totalCents)}
-                      </a>
+                      {canOpenSales ? (
+                        <a
+                          href={`/sigeco/administracion/ventas/${sale.id}`}
+                          className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                        >
+                          {formatMoney(sale.totalCents)}
+                        </a>
+                      ) : (
+                        formatMoney(sale.totalCents)
+                      )}
                     </Td>
                     <Td className="tabular-nums">{formatMoney(sale.paidCents)}</Td>
                     <Td className="tabular-nums">{formatMoney(sale.balanceCents)}</Td>
@@ -630,12 +641,16 @@ export default async function PatientDetailPage({
               <TimelineItem
                 key={task.id}
                 title={
-                  <a
-                    href={`/sigeco/seguimientos/${task.id}`}
-                    className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
-                  >
-                    {task.title}
-                  </a>
+                  canOpenFollowUps ? (
+                    <a
+                      href={`/sigeco/seguimientos/${task.id}`}
+                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                    >
+                      {task.title}
+                    </a>
+                  ) : (
+                    task.title
+                  )
                 }
                 meta={`${followUpTypeLabels[task.type]} · ${formatDateTime(task.dueAt)}`}
                 aside={followUpStatusLabels[task.status]}
@@ -714,7 +729,7 @@ export default async function PatientDetailPage({
           </Card>
         ) : null}
 
-        {roleHasPermission(user.role, "followups_read") ? (
+        {canOpenFollowUps ? (
           <Card className="max-sm:order-3">
             <CardHeader
               title="Seguimientos programados"

@@ -37,6 +37,8 @@ import {
 } from "@/modules/database/queries/inventory";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
+import { getActiveModules } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { cn } from "@/lib/cn";
 import { getBranchContext } from "@/features/branches/context";
 
@@ -62,7 +64,10 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const canWrite = roleHasPermission(user.role, "inventory_write");
   const canReadCosts = roleHasPermission(user.role, "inventory_cost_read");
   const canReadSuppliers = roleHasPermission(user.role, "suppliers_read");
-  const canReadPurchases = roleHasPermission(user.role, "purchases_read");
+  const activeModules = await getActiveModules();
+  // Compras puede estar apagada aunque Inventario esté lanzado: sin el módulo
+  // el enlace llevaría a una pantalla bloqueada.
+  const canReadPurchases = canUse(user.role, activeModules, "purchases_read");
   const selectedUsage =
     params.uso === "sale" ||
     params.uso === "internal_use" ||
