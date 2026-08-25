@@ -362,7 +362,8 @@ Recepción.
 - Formulario corto: nombre completo y teléfono obligatorios; documento y
   observación opcionales. Crea `Patient` **sin** `Visit`, `PatientRoute` ni
   `VisitWorkItem`.
-- Permiso `patients_write` agregado al rol `administracion`.
+- Permisos `patients_create` y `patients_update` agregados al rol
+  `administracion` (hoy solo tiene `patients_read`).
 - Reutiliza la detección de duplicados existente: si hay coincidencia por
   teléfono o nombre, se ofrece la ficha encontrada antes de crear otra.
 - La ficha creada así es una ficha normal: cuando se active Recepción admite

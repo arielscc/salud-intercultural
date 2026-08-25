@@ -61,6 +61,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-03 | [Ajuste: derivación con dos modales en consulta](./2026-08-03-derivacion-dos-modales-consulta.md) | Reemplaza el constructor grande por "Derivar al paciente" con dos modales (enfermería / administración), reparto automático y un descuento total con tope. |
 | 2026-08-03 | [Tarea 6: historial del paciente en la consulta](./2026-08-03-historial-paciente-consulta.md) | Muestra el resumen de cada visita anterior (diagnóstico, vendido, costo y sesiones) y precarga la receta rápida desde la consulta previa, solo lectura. |
 | 2026-08-03 | [Tarea 7: seguimiento estricto por compra](./2026-08-03-seguimiento-estricto-por-compra.md) | El médico agenda seguimiento a Recepción (fecha, hora, motivo) solo si hay venta registrada en la visita; avisa y bloquea contacto sin consentimiento. |
+| 2026-08-24 | [Lanzamiento Tarea 1: catálogo de módulos y mapa de permisos](./2026-08-24-lanzamiento-tarea-1-catalogo-modulos.md) | Declara los once módulos de SIGECO con sus dependencias duras y mapea los 64 permisos a los módulos que los habilitan, como base del lanzamiento por etapas. |
 
 ## Relacion Con Estado V3
 

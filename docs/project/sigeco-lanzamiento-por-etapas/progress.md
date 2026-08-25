@@ -6,7 +6,11 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 ## Estado General
 
-Plan creado el 2026-08-24. Ninguna tarea iniciada.
+Plan creado el 2026-08-24. La Tarea 1 tiene implementación local: el catálogo
+de módulos, el mapa de permisos y los helpers de activación ya existen en
+`src/features/modules/`. Todavía no cambia el comportamiento del sistema —no hay
+base de datos, navegación ni gate—; define el vocabulario de las tareas
+siguientes.
 
 SIGECO tiene implementación local de todos los módulos operativos, pero no
 tiene forma de exponer solo una parte al personal. Este plan agrega la
@@ -28,8 +32,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 20 |
-| En progreso | 0 |
+| Pendiente | 19 |
+| En progreso | 1 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -38,7 +42,7 @@ se sigue llevando en sus propios archivos.
 
 | Fase | Tareas | Estado | Gate |
 | --- | --- | --- | --- |
-| A. Activación controlada de módulos | 1-6 | Pendiente | Un módulo apagado es inalcanzable y auditable |
+| A. Activación controlada de módulos | 1-6 | En progreso | Un módulo apagado es inalcanzable y auditable |
 | B. Etapa 1: Caja y Administración | 7-10 | Pendiente | Se vende y cobra sin ruta clínica |
 | C. Plataforma y salida a producción | 11-16 | Pendiente | Producción autorizada y Etapa 1 encendida |
 | D. Etapas siguientes | 17-20 | Pendiente | Cada módulo se enciende con QA y capacitación |
@@ -47,7 +51,7 @@ se sigue llevando en sus propios archivos.
 
 | # | Tarea | Prioridad | Estado | Dependencias |
 | --- | --- | --- | --- | --- |
-| 1 | Catálogo de módulos y mapa de permisos | P0 | Pendiente | Ninguna |
+| 1 | Catálogo de módulos y mapa de permisos | P0 | En progreso | Ninguna |
 | 2 | Estado de activación y su historial | P0 | Pendiente | 1 |
 | 3 | Gate de módulos en servidor | P0 | Pendiente | 1-2 |
 | 4 | Navegación e inicio según módulos activos | P0 | Pendiente | 3 |
@@ -104,11 +108,39 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Comenzar por la Tarea 1. Es solo código puro —catálogo de módulos, mapa de
-permisos y helpers— sin base de datos ni UI, y es la que define el vocabulario
-que usan todas las demás.
+Tarea 2: persistir el estado de activación y su historial. El catálogo ya define
+los once códigos y `normalizeActiveModules` ya resuelve qué hacer con una fila
+desconocida o ausente, así que la migración solo debe crear las filas iniciales
+con `core` activo y el resto apagado.
 
 ## Registro
+
+### 2026-08-24 — Tarea 1 Implementada (Catálogo De Módulos Y Mapa De Permisos)
+
+- `src/features/modules/catalog.ts`: once módulos con nombre, descripción,
+  dependencias duras y orden; `core` marcado como permanente. Incluye las cuatro
+  etapas de lanzamiento como documentación ejecutable.
+- `src/features/modules/permission-modules.ts`: los 64 valores de
+  `InternalPermission` mapeados a los módulos que los habilitan. Un permiso queda
+  habilitado con que **uno** de sus módulos esté activo, que es lo que permite a
+  Administración leer y crear fichas en la Etapa 1 sin Recepción.
+- `src/features/modules/activation.ts`: helpers puros, sin Prisma ni
+  `server-only`. Además de los tres pedidos por el plan se agregó
+  `resolveDeactivationBlockers`, porque una dependencia dura sin su reverso
+  permitiría apagar Recepción dejando Consulta encendida.
+- Los cinco permisos de leads quedan retirados: ningún módulo los habilita. Se
+  verificó que las acciones de `features/crm` no tienen consumidores.
+- Decisión con consecuencia visible: `followups_*` los habilita solo
+  `seguimientos`, así que hasta la Etapa 4 el médico no verá la tarjeta de
+  agendar seguimiento. Se puede adelantar activando ese módulo, que solo depende
+  de `recepcion`. **Pendiente de confirmación de Dirección.**
+- Corrección al plan: la Tarea 7 mencionaba `patients_write`, que no existe en el
+  enum; los permisos reales son `patients_create` y `patients_update`.
+- Validación: lint y typecheck sin errores; 31 pruebas propias aprobadas,
+  incluida la de cobertura que falla si un permiso nuevo queda sin mapear.
+  Suite completa, integración, build y QA quedan para el cierre acumulado.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-1-catalogo-modulos.md).
 
 ### 2026-08-24 — Creación Del Plan
 
