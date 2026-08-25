@@ -25,6 +25,9 @@ export const permissionModules: Record<InternalPermission, readonly SigecoModule
   users_manage: ["core"],
   audit_read: ["core"],
   documents_configure: ["core"],
+  // Sin estos dos no habría forma de volver a encender un módulo apagado.
+  modules_read: ["core"],
+  modules_manage: ["core"],
 
   // Leads: la UI interna se retiró en la V3.7 y los modelos quedaron solo como
   // historia. Ningún módulo los habilita; las acciones de `features/crm` no

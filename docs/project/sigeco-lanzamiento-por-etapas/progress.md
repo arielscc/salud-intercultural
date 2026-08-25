@@ -12,11 +12,14 @@ catálogo de módulos, el mapa de permisos y los helpers de activación viven en
 ya está en base (migración `20260824210000_module_activation`, aplicada en
 desarrollo).
 
-Con las Tareas 3 y 4 el lanzamiento por etapas ya se ve y se aplica: una página
-o una acción de un módulo apagado se rechaza en el servidor y queda auditada como
-`module.disabled`, y el menú, el inicio y los enlaces cruzados dejaron de
-ofrecerla. Falta la pantalla del super administrador (Tarea 5); mientras tanto,
-los módulos se encienden con `pnpm modules:set`.
+Con las Tareas 3, 4 y 5 el lanzamiento por etapas ya se opera desde la
+interfaz: una página o una acción de un módulo apagado se rechaza en el servidor
+y queda auditada, el menú y el inicio dejaron de ofrecerla, y el super
+administrador enciende y apaga módulos desde `/sigeco/modulos` con dependencias
+explicadas, motivo obligatorio e historial. Dirección lo ve en solo lectura.
+
+Falta la Tarea 6: hoy un módulo apagado se oculta por completo, y el trabajo que
+quedó abierto dentro no es consultable.
 
 Con los once módulos activos el sistema se comporta igual que antes de este
 plan.
@@ -41,8 +44,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 16 |
-| En progreso | 4 |
+| Pendiente | 15 |
+| En progreso | 5 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -64,7 +67,7 @@ se sigue llevando en sus propios archivos.
 | 2 | Estado de activación y su historial | P0 | En progreso | 1 |
 | 3 | Gate de módulos en servidor | P0 | En progreso | 1-2 |
 | 4 | Navegación e inicio según módulos activos | P0 | En progreso | 3 |
-| 5 | Pantalla de activación del super administrador | P0 | Pendiente | 3-4 |
+| 5 | Pantalla de activación del super administrador | P0 | En progreso | 3-4 |
 | 6 | Modo solo lectura del módulo apagado | P1 | Pendiente | 5 |
 | 7 | Alta mínima de cliente desde Administración | P0 | Pendiente | 4 |
 | 8 | Venta directa sin visita | P0 | Pendiente | 7 |
@@ -123,13 +126,43 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 5: la pantalla `/sigeco/modulos` del super administrador. La escritura ya
-existe (`setModuleActivation`, con dependencias duras y motivo obligatorio) y la
-lectura también (`getModuleActivationStates`, `getModuleActivationHistory`), así
-que la tarea es la interfaz, los permisos nuevos `modules_read` y
-`modules_manage` —que deberán mapearse a `core`— y la auditoría de cada cambio.
+Tarea 6: el modo solo lectura del módulo apagado. Hoy apagar oculta todo, así que
+el trabajo que quedó abierto —visitas activas, tareas, ventas con saldo— deja de
+verse justo cuando hay que decidir qué hacer con él. Falta que Dirección y el
+super administrador puedan consultarlo sin poder escribir, una vista de
+pendientes por módulo suspendido y el procedimiento documentado en
+`docs/operations/`. El aviso del shell y `getSuspendedModules` ya existen.
 
 ## Registro
+
+### 2026-08-24 — Tarea 5 Implementada (Pantalla De Activación Del Super Administrador)
+
+- Permisos nuevos `modules_read` y `modules_manage` (migración
+  `20260824220000_module_management_permissions`), mapeados a `core` a
+  propósito: si el gate pudiera bloquearlos, un módulo apagado por error dejaría
+  el sistema sin forma de volver a encenderlo. Dirección recibe `modules_read`.
+- `/sigeco/modulos` muestra las cuatro etapas, cada módulo con estado,
+  dependencias, desde cuándo y quién, y el historial completo. Distingue
+  `Lanzado`, `Sin lanzar` y `Suspendido`: confundir los dos últimos borraría la
+  información que hace falta en un incidente.
+- Encender pide confirmación; apagar pide motivo escrito. Cuando una dependencia
+  bloquea no hay botón deshabilitado: se nombra el módulo que falta encender o
+  apagar antes.
+- El shell avisa de los módulos suspendidos, solo a quien tiene `modules_read`;
+  para el resto la consulta ni se ejecuta.
+- La acción comparte `setModuleActivation` con `pnpm modules:set`, así que no hay
+  dos caminos con reglas distintas. Se audita como `module.activate` o
+  `module.deactivate` para poder filtrar los apagados.
+- **Cambio de alcance más amplio:** `requirePermission` y `requireModule` ahora
+  auditan el rechazo antes de redirigir (`page.denied` y `module.disabled`). El
+  criterio de la tarea lo pedía y la auditoría de páginas no existía en todo el
+  sistema. Obligó a separar `appendAuditEvent` en `src/modules/audit/append.ts`
+  para romper un ciclo de imports; la API pública no cambió.
+- Validación: typecheck y lint limpios; 450 de 455 pruebas unitarias, con trece
+  nuevas que cubren las guardas y el esquema del formulario. Migración aplicada y
+  verificada en desarrollo.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-5-pantalla-modulos.md).
 
 ### 2026-08-24 — Tarea 4 Implementada (Navegación E Inicio Según Módulos Activos)
 

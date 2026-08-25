@@ -65,6 +65,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-24 | [Lanzamiento Tarea 2: estado de activación y su historial](./2026-08-24-lanzamiento-tarea-2-estado-activacion-modulos.md) | Persiste qué módulos están encendidos, siembra los once con solo el núcleo activo y bloquea en PostgreSQL la edición y el borrado del historial. |
 | 2026-08-24 | [Lanzamiento Tarea 3: gate de módulos en servidor](./2026-08-24-lanzamiento-tarea-3-gate-modulos.md) | Bloquea páginas y acciones de un módulo apagado desde `requirePermission` y `runAuditedAction`, audita el rechazo como `module.disabled` y lo distingue de la falta de permiso. |
 | 2026-08-24 | [Lanzamiento Tarea 4: navegación e inicio según módulos activos](./2026-08-24-lanzamiento-tarea-4-navegacion-modulos.md) | Filtra el menú y el dashboard por módulo lanzado, evita ejecutar las consultas de los apagados y oculta los enlaces cruzados hacia pantallas bloqueadas. |
+| 2026-08-24 | [Lanzamiento Tarea 5: pantalla de activación del super administrador](./2026-08-24-lanzamiento-tarea-5-pantalla-modulos.md) | Enciende y apaga módulos desde `/sigeco/modulos` con dependencias explicadas, motivo obligatorio, historial e avisos de suspensión; audita también los accesos denegados a páginas. |
 
 ## Relacion Con Estado V3
 

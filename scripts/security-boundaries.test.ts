@@ -157,7 +157,8 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/usuarios/[userId]/page.tsx": [
     "users_manage"
   ],
-  "src/app/(internal)/sigeco/(app)/usuarios/page.tsx": ["users_manage"]
+  "src/app/(internal)/sigeco/(app)/usuarios/page.tsx": ["users_manage"],
+  "src/app/(internal)/sigeco/(app)/modulos/page.tsx": ["modules_read"]
 };
 
 const authenticatedPages = [
@@ -175,6 +176,7 @@ const legacyRedirectPages = [
 ];
 
 const actionPermissions: Record<string, InternalPermission | null> = {
+  setModuleActivationAction: "modules_manage",
   addInventoryEntryAction: "inventory_write",
   applyVisitFlowAction: "visits_update",
   approveCashSessionCloseAction: "cash_sessions_approve",

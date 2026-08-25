@@ -57,6 +57,7 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
     "patient_consents_read",
     "attribution_manage",
     "patient_duplicates_read",
+    "modules_read",
     "visit_discontinuations_read",
     "documents_configure",
     "service_catalog_read",

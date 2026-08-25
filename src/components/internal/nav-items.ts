@@ -14,6 +14,7 @@ import {
   Stethoscope,
   Tags,
   Timer,
+  ToggleRight,
   UserCog,
   UserRound,
   ChartNoAxesCombined,
@@ -132,6 +133,13 @@ export const sigecoNavItems: SigecoNavItem[] = [
     label: "Auditoría",
     icon: ShieldCheck,
     permission: "audit_read",
+    module: "core"
+  },
+  {
+    href: "/sigeco/modulos",
+    label: "Módulos",
+    icon: ToggleRight,
+    permission: "modules_read",
     module: "core"
   },
   {

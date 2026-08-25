@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import type { InternalPermission } from "@/generated/prisma/client";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
-import { moduleIsActive, permissionIsEnabled } from "@/features/modules/activation";
+import {
+  moduleIsActive,
+  modulesEnablingPermission,
+  permissionIsEnabled
+} from "@/features/modules/activation";
 import type { SigecoModuleCode } from "@/features/modules/catalog";
 import { moduleDisabledNotice, permissionDeniedNotice } from "@/features/modules/notices";
 import {
@@ -9,6 +13,7 @@ import {
   getInternalSessionToken,
   getInternalUserBySessionToken
 } from "@/features/internal-auth/session";
+import { appendAuditEvent } from "@/modules/audit/append";
 import { getActiveModules } from "@/modules/database/queries/modules";
 
 export async function getCurrentInternalUser() {
@@ -71,12 +76,36 @@ export async function requirePermission(
   options?: { module?: SigecoModuleCode }
 ) {
   const user = await requireInternalUser();
+  const actor = { id: user.id, role: user.role };
 
   if (!roleHasPermission(user.role, permission)) {
+    // Entrar por URL a una pantalla que el rol no tiene deja rastro: el menú
+    // nunca la ofrece, así que un intento es una señal, no ruido.
+    await appendAuditEvent({
+      actor,
+      action: "page.denied",
+      entityType: "page",
+      result: "denied",
+      context: { permission, reason: "missing_permission" }
+    });
     redirect(`/sigeco?aviso=${permissionDeniedNotice}`);
   }
 
   if (!(await moduleAllows(permission, options?.module))) {
+    await appendAuditEvent({
+      actor,
+      action: "module.disabled",
+      entityType: "module",
+      entityId: options?.module ?? null,
+      result: "denied",
+      context: {
+        reason: "module_disabled",
+        permission,
+        modules: options?.module
+          ? [options.module]
+          : modulesEnablingPermission(permission)
+      }
+    });
     redirect(`/sigeco?aviso=${moduleDisabledNotice}`);
   }
 
@@ -92,6 +121,14 @@ export async function requireModule(module: SigecoModuleCode) {
   const activeModules = await getActiveModules();
 
   if (!moduleIsActive(activeModules, module)) {
+    await appendAuditEvent({
+      actor: { id: user.id, role: user.role },
+      action: "module.disabled",
+      entityType: "module",
+      entityId: module,
+      result: "denied",
+      context: { reason: "module_disabled", modules: [module] }
+    });
     redirect(`/sigeco?aviso=${moduleDisabledNotice}`);
   }
 

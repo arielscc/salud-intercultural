@@ -37,6 +37,8 @@ type ConfirmFormProps = Omit<React.ComponentPropsWithoutRef<"form">, "action"> &
   confirmTitle: string;
   confirmDescription: string;
   confirmLabel: string;
+  /** Encender un módulo no es una acción destructiva; el rojo sobra ahí. */
+  confirmVariant?: React.ComponentProps<typeof Button>["variant"];
   confirmWhen?: {
     field: string;
     equals: string;
@@ -51,6 +53,7 @@ export function ConfirmForm({
   confirmTitle,
   confirmDescription,
   confirmLabel,
+  confirmVariant = "danger",
   confirmWhen,
   confirmAtAllWidths = false,
   clearLocalDataOnSubmit = false,
@@ -134,7 +137,7 @@ export function ConfirmForm({
             <DrawerDescription>{confirmDescription}</DrawerDescription>
           </DrawerHeader>
           <DrawerFooter className="px-5 pb-6">
-            <Button type="button" variant="danger" onClick={handleConfirm}>
+            <Button type="button" variant={confirmVariant} onClick={handleConfirm}>
               {confirmLabel}
             </Button>
             <DrawerClose asChild>
@@ -173,7 +176,7 @@ export function ConfirmForm({
               </Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
-              <Button type="button" variant="danger" onClick={handleConfirm}>
+              <Button type="button" variant={confirmVariant} onClick={handleConfirm}>
                 {confirmLabel}
               </Button>
             </AlertDialogAction>

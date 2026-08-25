@@ -5,7 +5,11 @@ import { InternalShell } from "@/components/internal/InternalShell";
 import { ConnectivityGuard } from "@/components/internal/ConnectivityGuard";
 import { Toaster } from "@/components/ui/sonner";
 import { requireInternalUser } from "@/modules/permissions";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import {
+  getActiveModules,
+  getSuspendedModules
+} from "@/modules/database/queries/modules";
+import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { getBranchContext } from "@/features/branches/context";
 
 export const dynamic = "force-dynamic";
@@ -19,12 +23,20 @@ export default async function SigecoAppLayout({
   // Los módulos lanzados se leen una sola vez por request, igual que la sucursal
   // activa; `getActiveModules` está memoizado, así que las guardas de cada
   // página reutilizan esta misma consulta.
-  const [branchContext, activeModules] = await Promise.all([
+  const [branchContext, activeModules, suspendedModules] = await Promise.all([
     getBranchContext(user),
-    getActiveModules()
+    getActiveModules(),
+    // El aviso es para quien puede actuar sobre él: Dirección y super
+    // administrador. Para el resto ni siquiera se consulta.
+    roleHasPermission(user.role, "modules_read") ? getSuspendedModules() : []
   ]);
   return (
-    <InternalShell user={user} branchContext={branchContext} activeModules={activeModules}>
+    <InternalShell
+      user={user}
+      branchContext={branchContext}
+      activeModules={activeModules}
+      suspendedModules={suspendedModules}
+    >
       <ConnectivityGuard />
       <DesktopBreadcrumb />
       {children}

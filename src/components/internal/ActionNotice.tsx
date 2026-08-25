@@ -54,7 +54,9 @@ const noticeMessages: Record<string, string> = {
   "paciente-enviado-administracion": "Paciente derivado a administración",
   "paciente-devuelto-recepcion": "Paciente devuelto a recepción",
   "visita-cerrada": "Atención cerrada",
-  "tratamiento-pagado": "Tratamiento pagado"
+  "tratamiento-pagado": "Tratamiento pagado",
+  "modulo-activado": "Módulo encendido",
+  "modulo-apagado": "Módulo apagado"
 };
 
 const centeredNotices: Record<string, { title: string; description: string }> = {

@@ -81,9 +81,10 @@ SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=false \
   SIGECO_MODULE_REASON="Prueba local" pnpm modules:set
 ```
 
-El script existe para preparar un ambiente. La operacion real se hace desde la
-pantalla del super administrador y comparte las mismas reglas y el mismo
-historial. Plan:
+El script existe para preparar un ambiente. La operacion real se hace en
+`/sigeco/modulos`, con el permiso `modules_manage`; esa pantalla comparte las
+mismas reglas y el mismo historial. Direccion la ve en solo lectura con
+`modules_read`. Plan:
 [lanzamiento por etapas](../project/sigeco-lanzamiento-por-etapas/tasks.md).
 
 ## Migraciones Y Seeds

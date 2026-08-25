@@ -1,12 +1,6 @@
-import { randomUUID } from "node:crypto";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import type {
-  AuditResult,
-  InternalPermission,
-  InternalRole,
-  Prisma
-} from "@/generated/prisma/client";
+import type { InternalPermission, InternalRole } from "@/generated/prisma/client";
+import { appendAuditEvent, getRequestId } from "@/modules/audit/append";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import {
   moduleIsActive,
@@ -18,7 +12,6 @@ import {
   moduleDisabledNotice,
   permissionDeniedNotice
 } from "@/features/modules/notices";
-import { prisma } from "@/modules/database";
 import { getActiveModules } from "@/modules/database/queries/modules";
 import { getCurrentInternalUser } from "@/modules/permissions";
 import { sanitizeAuditContext } from "@/modules/audit/sanitize";
@@ -53,16 +46,6 @@ type AuditedOperationInput = {
   context?: unknown;
 };
 
-type AppendAuditEventInput = {
-  actor?: AuditActor | null;
-  action: string;
-  entityType: string;
-  entityId?: string | null;
-  result: AuditResult;
-  requestId?: string;
-  context?: unknown;
-};
-
 class AuditAccessDeniedError extends Error {
   constructor(public readonly reason: string) {
     super("AUDIT_ACCESS_DENIED");
@@ -70,35 +53,7 @@ class AuditAccessDeniedError extends Error {
   }
 }
 
-async function getRequestId() {
-  try {
-    const requestHeaders = await headers();
-    const candidate =
-      requestHeaders.get("x-request-id") ?? requestHeaders.get("x-vercel-id");
-    return candidate && /^[a-zA-Z0-9._:-]{1,160}$/.test(candidate)
-      ? candidate
-      : randomUUID();
-  } catch {
-    return randomUUID();
-  }
-}
-
-export async function appendAuditEvent(input: AppendAuditEventInput) {
-  const context = sanitizeAuditContext(input.context);
-
-  return prisma.auditEvent.create({
-    data: {
-      actorId: input.actor?.id ?? null,
-      actorRole: input.actor?.role ?? null,
-      action: input.action.slice(0, 120),
-      entityType: input.entityType.slice(0, 80),
-      entityId: input.entityId?.slice(0, 120) ?? null,
-      result: input.result,
-      requestId: input.requestId ?? (await getRequestId()),
-      context: context ? (context as Prisma.InputJsonValue) : undefined
-    }
-  });
-}
+export { appendAuditEvent } from "@/modules/audit/append";
 
 export function auditedResult<T>(value: T, audit?: AuditMetadata): AuditOperationResult<T> {
   return { value, audit };

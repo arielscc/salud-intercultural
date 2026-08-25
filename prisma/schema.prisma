@@ -91,6 +91,8 @@ enum InternalPermission {
   service_catalog_read
   service_catalog_write
   discount_threshold_manage
+  modules_read
+  modules_manage
 }
 
 enum AuditResult {

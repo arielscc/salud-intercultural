@@ -31,6 +31,7 @@ describe("SidebarNav", () => {
       "Compras",
       "Sucursales",
       "Auditoría",
+      "Módulos",
       "Documentos",
       "Usuarios",
       "Mi cuenta"
@@ -68,6 +69,7 @@ describe("SidebarNav", () => {
       "Inicio",
       "Sucursales",
       "Auditoría",
+      "Módulos",
       "Documentos",
       "Usuarios",
       "Mi cuenta"

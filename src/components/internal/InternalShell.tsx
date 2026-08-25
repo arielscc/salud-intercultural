@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { FileText, PauseCircle } from "lucide-react";
 import type { InternalUser } from "@/generated/prisma/client";
 import { internalRoleLabels } from "@/features/internal-auth/permissions";
 import type { ActiveModules } from "@/features/modules/activation";
 import { canUse } from "@/features/modules/access";
+import { getSigecoModule, type SigecoModuleCode } from "@/features/modules/catalog";
 import { formatLongDate } from "@/lib/dates";
 import { DesktopPatientSearch } from "@/components/internal/DesktopPatientSearch";
 import { DesktopSidebarNav } from "@/components/internal/DesktopSidebarNav";
@@ -48,10 +49,17 @@ export function InternalShell({
   user,
   branchContext,
   activeModules,
+  suspendedModules = [],
   children
 }: {
   user: InternalUser;
   activeModules: ActiveModules;
+  /**
+   * Módulos que estuvieron lanzados y hoy están apagados. Solo llegan cuando
+   * quien mira puede verlos; el resto del personal no necesita enterarse de una
+   * suspensión que no puede resolver.
+   */
+  suspendedModules?: readonly { code: SigecoModuleCode; note: string | null }[];
   branchContext: {
     activeBranch: { code: string; name: string };
     branches: Array<{
@@ -111,7 +119,32 @@ export function InternalShell({
           </div>
         </header>
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6">
+          {suspendedModules.length > 0 ? (
+            <Link
+              href="/sigeco/modulos"
+              className="focus-ring mb-4 flex items-start gap-2.5 rounded-[9px] border border-warning/30 bg-warning/10 px-3 py-2.5 text-[13px] text-text"
+            >
+              <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+              <span>
+                <span className="font-semibold">
+                  {suspendedModules.length === 1
+                    ? "Un módulo está suspendido"
+                    : `${suspendedModules.length} módulos están suspendidos`}
+                  :{" "}
+                  {suspendedModules
+                    .map((entry) => getSigecoModule(entry.code).name)
+                    .join(", ")}
+                  .
+                </span>{" "}
+                <span className="text-muted">
+                  El trabajo abierto se conserva. Revisar en Módulos.
+                </span>
+              </span>
+            </Link>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
   );

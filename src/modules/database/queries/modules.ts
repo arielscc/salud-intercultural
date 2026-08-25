@@ -108,6 +108,31 @@ export async function getModuleActivationStates(): Promise<ModuleActivationState
   });
 }
 
+/**
+ * Módulos que estuvieron encendidos y hoy están apagados: no es lo mismo que un
+ * módulo que todavía no se lanzó. Se usa para avisar en el shell que hay una
+ * parte de la operación suspendida.
+ */
+export async function getSuspendedModules(): Promise<
+  { code: SigecoModuleCode; note: string | null; deactivatedAt: Date }[]
+> {
+  return withDatabaseError("getSuspendedModules", async () => {
+    const rows = await prisma.moduleActivation.findMany({
+      where: { status: "inactive", deactivatedAt: { not: null } },
+      select: { code: true, note: true, deactivatedAt: true },
+      orderBy: { deactivatedAt: "desc" }
+    });
+
+    return rows
+      .filter((row) => isSigecoModuleCode(row.code))
+      .map((row) => ({
+        code: row.code as SigecoModuleCode,
+        note: row.note,
+        deactivatedAt: row.deactivatedAt as Date
+      }));
+  });
+}
+
 export type ModuleActivationHistoryEntry = {
   id: string;
   moduleCode: string;

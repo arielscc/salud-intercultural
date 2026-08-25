@@ -6,6 +6,7 @@ import {
   getActiveModules,
   getModuleActivationHistory,
   getModuleActivationStates,
+  getSuspendedModules,
   setModuleActivation
 } from "@/modules/database/queries/modules";
 
@@ -186,5 +187,25 @@ describe("setModuleActivation", () => {
       reason: "Incidente de stock"
     });
     expect(history.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("getSuspendedModules", () => {
+  it("no reporta como suspendido un módulo que nunca se lanzó", async () => {
+    await expect(getSuspendedModules()).resolves.toEqual([]);
+  });
+
+  it("reporta el módulo que estuvo activo y fue apagado, con su motivo", async () => {
+    await setModuleActivation({ code: "catalogo", active: true });
+    await setModuleActivation({
+      code: "catalogo",
+      active: false,
+      reason: "Precios en revisión"
+    });
+
+    const suspended = await getSuspendedModules();
+
+    expect(suspended).toHaveLength(1);
+    expect(suspended[0]).toMatchObject({ code: "catalogo", note: "Precios en revisión" });
   });
 });
