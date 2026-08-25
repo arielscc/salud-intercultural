@@ -181,6 +181,19 @@ const legacyRedirectPages = [
 ];
 
 const actionPermissions: Record<string, InternalPermission | null> = {
+  assignConsultationVisitAction: "clinical_write",
+  deleteIndicationCatalogItemAction: "clinical_write",
+  assignNursingWorkItemAction: "nursing_write",
+  updateVitalSignsAction: "nursing_write",
+  deleteNursingNoteAction: "nursing_write",
+  deriveNursingToDoctorAction: "nursing_write",
+  createNursingChargeOrderAction: "nursing_write",
+  attendAdministrationWorkItemAction: "sales_write",
+  createSaleOrderAction: "sales_write",
+  applySaleDiscountAction: "sales_write",
+  // Consulta de lectura: valida permiso y no escribe. Ver `nonCriticalReadActions`
+  // en scripts/audit-coverage.test.ts.
+  validateAttributionEvidenceCodeAction: "visits_create",
   registerWalkInClientAction: "patients_create",
   setModuleActivationAction: "modules_manage",
   addInventoryEntryAction: "inventory_write",
@@ -269,7 +282,6 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   updateInventoryItemMaxDiscountAction: "discount_threshold_manage",
   updateInventoryItemSuppliersAction: "suppliers_write",
   updateManagedInternalUserProfileAction: "users_manage",
-  updateNursingWorkItemAction: "nursing_write",
   updateReceptionPatientAction: "patients_update",
   updateServiceCatalogItemAction: "service_catalog_write",
   updateServiceCatalogThresholdAction: "discount_threshold_manage",

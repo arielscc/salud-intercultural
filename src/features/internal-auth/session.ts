@@ -5,6 +5,17 @@ import { prisma } from "@/modules/database";
 
 export const internalSessionCookieName = "sigeco_session";
 
+/**
+ * Pista para no hacer reescribir el correo tras un intento fallido.
+ *
+ * Va en una cookie corta y no en la URL: un correo en el query string queda en
+ * el historial del navegador, en los logs del servidor y en la cabecera
+ * `Referer` de cualquier pedido posterior.
+ */
+export const loginEmailHintCookieName = "sigeco_login_hint";
+const loginEmailHintSeconds = 120;
+const loginEmailHintPath = "/sigeco/login";
+
 function hashSessionToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -40,6 +51,34 @@ export async function setInternalSessionCookie(token: string, expiresAt: Date) {
     secure: process.env.NODE_ENV === "production",
     path: "/sigeco"
   });
+}
+
+export async function setLoginEmailHint(email: string) {
+  const cookieStore = await cookies();
+
+  if (!email) {
+    cookieStore.delete({ name: loginEmailHintCookieName, path: loginEmailHintPath });
+    return;
+  }
+
+  cookieStore.set(loginEmailHintCookieName, email, {
+    path: loginEmailHintPath,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: loginEmailHintSeconds
+  });
+}
+
+export async function getLoginEmailHint() {
+  const cookieStore = await cookies();
+  return cookieStore.get(loginEmailHintCookieName)?.value ?? "";
+}
+
+export async function clearLoginEmailHint() {
+  const cookieStore = await cookies();
+  // La ruta tiene que coincidir con la de creación o el borrado no surte efecto.
+  cookieStore.delete({ name: loginEmailHintCookieName, path: loginEmailHintPath });
 }
 
 export async function clearInternalSessionCookie() {

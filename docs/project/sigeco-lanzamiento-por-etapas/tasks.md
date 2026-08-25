@@ -448,6 +448,9 @@ datos de demostración.
 - Sucursal El Alto activa; usuarios reales con su rol y contraseña temporal.
 - Verificación de que ningún dato sintético de demostración quede en la base
   productiva.
+- Desactivar las formas de cobro que la interfaz ya no ofrece (`card`,
+  `transfer`, `other`), revisando antes si alguna venta histórica las usa. Un
+  método activo que nadie puede elegir ensucia la conciliación de Caja.
 
 **Criterios de aceptación:**
 
@@ -456,6 +459,46 @@ datos de demostración.
 - No existen usuarios ni productos de prueba en producción.
 
 **Commit sugerido:** `chore(sigeco): load stage one master data`
+
+## Tarea 10B — Deuda Previa Al Plan
+
+**Prioridad:** P0. **Responsable:** Plataforma. **Dependencias:** ninguna.
+
+**Objetivo:** dejar la suite en verde antes de encender el CI, para que su
+primer rojo signifique algo.
+
+Se numera `10B` a propósito: se insertó el 2026-08-24, después de escribir el
+plan, y renumerar las tareas siguientes invalidaría las referencias de ocho
+reportes ya publicados.
+
+**De dónde sale:** cinco pruebas fallaban desde antes de este plan, sin que
+nadie las viera, porque desde el 2026-08-02 las pruebas no se corren por tarea.
+Al diagnosticarlas no eran todas tests desactualizados.
+
+**Alcance:**
+
+- **Fuga del correo en la URL del login.** Regresión del 2026-08-18 (commit
+  `7c7a430`): `getLoginErrorRedirect(email)` deja el correo del usuario interno
+  en la URL y la página lo lee con `params.email`. Queda en el historial del
+  navegador, en los logs del servidor y en la cabecera `Referer`. Conservar el
+  valor escrito sin exponerlo.
+- **Acción sin auditoría.** `validateAttributionEvidenceCodeAction` no pasa por
+  `runAuditedAction`. Auditarla o dejar documentada la excepción con su motivo.
+- **Mapa de acciones desactualizado.** `security-boundaries` declara 94 acciones
+  y existen 104. Mientras esté roto, ese control deja de avisar si una acción
+  nueva queda con el permiso equivocado.
+- **Pruebas desactualizadas.** `paid-study.schema.test.ts` no envía `total`, que
+  el esquema pide desde un cambio de agosto.
+
+**Criterios de aceptación:**
+
+- `pnpm test` termina sin fallos.
+- Ningún fallo queda "explicado" sin corregir: o se arregla, o queda escrito por
+  qué se acepta.
+- El correo del usuario no viaja en ninguna URL y el formulario sigue
+  conservando lo escrito.
+
+**Commit sugerido:** `fix(sigeco): clear pre-plan test debt before CI`
 
 ---
 
@@ -572,6 +615,9 @@ producción. Corresponde a las Tareas 5, 6 y 8 del plan integral.
   `DATABASE_ENVIRONMENT`; `pnpm db:deploy` sobre la base productiva.
 - Con todos los módulos apagados salvo `core`, el super administrador activa
   `inventario`, `catalogo`, `compras` y `administracion`.
+- Guía operativa diaria de Caja y Administración escrita **antes** de capacitar:
+  abrir Caja, registrar un cliente, vender, cobrar, emitir el recibo, registrar
+  un egreso y cerrar Caja. Sin ella se capacita de memoria.
 - Capacitación de Administración y acompañamiento durante los primeros días,
   con un canal definido para reportar problemas.
 - Plan de reversa escrito: qué se apaga, quién decide y cómo se sigue operando
@@ -601,7 +647,9 @@ producción. Corresponde a las Tareas 5, 6 y 8 del plan integral.
   mejoras de login.
 - Actualizar `v3-implementation-status.md` con las etapas de lanzamiento y el
   estado real de cada módulo.
-- Guía operativa del lanzamiento por etapas en `docs/operations/`.
+- Guía operativa del lanzamiento por etapas en `docs/operations/`. La guía de
+  operación diaria del personal se adelantó a la Tarea 15, porque hace falta
+  para capacitar antes de encender.
 - Actualizar los `progress.md` de los planes integral y del médico.
 
 **Criterios de aceptación:**

@@ -3,7 +3,16 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const featuresRoot = resolve(process.cwd(), "src/features");
-const nonCriticalReadActions = new Set(["searchReceptionPatientsAction"]);
+/*
+ * Consultas de lectura que igual validan permiso pero no generan evento: no
+ * cambian nada y auditar cada tecleo del buscador enterraría los eventos que sí
+ * importan. Agregar una entrada acá es una decisión, no un descuido.
+ */
+const nonCriticalReadActions = new Set([
+  "searchReceptionPatientsAction",
+  // Solo responde si un código de campaña existe; no revela datos ni escribe.
+  "validateAttributionEvidenceCodeAction"
+]);
 
 function exportedActionSegments(source: string) {
   const starts = [...source.matchAll(/export async function \w+\b/g)].map(

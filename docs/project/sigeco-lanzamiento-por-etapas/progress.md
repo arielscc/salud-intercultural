@@ -28,8 +28,14 @@ cliente de mostrador sin abrir visita, arma la venta por su cuenta y encuentra
 una venta anterior por cliente, estado y fecha. El cobro, el descuento de stock y
 el recibo son los de siempre.
 
-Queda la Tarea 10, que no es código sino datos: cargar productos, precios,
-proveedores, stock inicial por conteo físico y usuarios reales.
+La Tarea 10 entregó la herramienta —plantilla, cargador y verificación— pero
+**depende de datos que solo tiene la clínica**: productos, precios, umbrales,
+proveedores, conteo físico y personal. No puede darse por terminada hasta que
+Administración y Dirección completen la plantilla y la carga corra contra la
+base que se va a usar.
+
+Con eso la Fase B queda cerrada en implementación y el plan pasa a la Fase C: el
+camino a producción.
 
 Con los once módulos activos el sistema se comporta igual que antes de este
 plan.
@@ -54,8 +60,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 11 |
-| En progreso | 9 |
+| Pendiente | 10 |
+| En progreso | 11 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -66,6 +72,7 @@ se sigue llevando en sus propios archivos.
 | --- | --- | --- | --- |
 | A. Activación controlada de módulos | 1-6 | En progreso | Un módulo apagado es inalcanzable y auditable |
 | B. Etapa 1: Caja y Administración | 7-10 | En progreso | Se vende y cobra sin ruta clínica |
+| B+. Deuda previa al plan | 10B | En progreso | La suite queda en verde antes del CI |
 | C. Plataforma y salida a producción | 11-16 | Pendiente | Producción autorizada y Etapa 1 encendida |
 | D. Etapas siguientes | 17-20 | Pendiente | Cada módulo se enciende con QA y capacitación |
 
@@ -82,7 +89,8 @@ se sigue llevando en sus propios archivos.
 | 7 | Alta mínima de cliente desde Administración | P0 | En progreso | 4 |
 | 8 | Venta directa sin visita | P0 | En progreso | 7 |
 | 9 | Listado y búsqueda de ventas | P1 | En progreso | 8 |
-| 10 | Datos maestros reales de la Etapa 1 | P0 | Pendiente | 8-9 |
+| 10 | Datos maestros reales de la Etapa 1 | P0 | En progreso | 8-9 |
+| 10B | Deuda previa al plan | P0 | En progreso | Ninguna |
 | 11 | CI remoto y protección de ramas | P0 | Pendiente | Fases A y B |
 | 12 | Staging aislado y ensayo de la Etapa 1 | P0 | Pendiente | 11 |
 | 13 | Backup y restauración probados en remoto | P0 | Pendiente | 12 |
@@ -136,15 +144,87 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 10: datos maestros reales de la Etapa 1. Es trabajo de datos y de
-Dirección más que de código: productos con precio, costo referencial y umbral de
-descuento; proveedores; servicios y tratamientos vendibles; stock inicial
-registrado como entrada de inventario por conteo físico, con responsable y
-fecha; sucursal El Alto activa y usuarios reales con contraseña temporal.
-También hay que confirmar que no quede ningún dato de demostración en la base
-que se vaya a usar.
+Tarea 11: CI remoto y protección de ramas. Ahora sí parte de una suite verde
+—479 pruebas, 0 fallos—, así que el primer rojo del CI señalará algo real y no
+deuda arrastrada. Falta publicar el workflow, observar una ejecución completa con
+integración y build, y configurar las protecciones de rama.
+
+En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
+`docs/operations/plantillas/` y el procedimiento en
+`docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-24 — Tarea 10B Implementada (Deuda Previa Al Plan)
+
+- **Fuga corregida:** el ingreso fallido dejaba el correo del usuario en la URL
+  desde el 2026-08-18 (commit `7c7a430`), y de ahí pasaba al historial, a los
+  logs y al `Referer`. Ahora viaja en una cookie de dos minutos, `httpOnly`,
+  limitada a la ruta del login y borrada al ingresar bien. El formulario sigue
+  llegando con el correo escrito.
+- **Mapa de permisos al día:** `security-boundaries` declaraba 94 acciones y
+  existían 104. Mientras estuvo desfasado, ese control dejó de avisar si una
+  acción nueva quedaba con el permiso equivocado.
+- **Acción de lectura documentada:** `validateAttributionEvidenceCodeAction` se
+  sumó a `nonCriticalReadActions`, el mecanismo que ya existía para consultas que
+  validan permiso y no escriben.
+- **Campo opcional que no lo era:** `paidStudyOrderSchema.total` fallaba si la
+  clave no llegaba, pese a documentarse como opcional. Se corrigió el esquema, no
+  la prueba.
+- **`pnpm test`: 93 archivos, 479 pruebas, 0 fallos.** Primera suite
+  completamente verde desde el 2026-08-02.
+- Anotado para después: `optionalMoneyString` en `sale.schema.ts` repite la forma
+  frágil que provocó el fallo de `total`.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-10b-deuda-previa.md).
+
+### 2026-08-24 — Ajustes Al Plan Tras Diagnosticar La Deuda Previa
+
+Decisiones de Dirección después de revisar qué quedaba fuera del plan:
+
+- **Tarea 10B nueva.** Los cinco fallos que se venían arrastrando no eran todos
+  tests desactualizados. Se les da tarea propia en vez de esconderlos dentro del
+  cierre acumulado de la Tarea 11, que además asumía una suite verde que no
+  existe. Se numera `10B` para no invalidar las referencias de los reportes ya
+  publicados.
+- **Formas de cobro sin uso, a la Tarea 10.** `card`, `transfer` y `other` siguen
+  activas aunque la interfaz solo ofrezca efectivo y QR; es limpieza de datos de
+  la base que se va a usar, igual que los precios.
+- **Guía operativa adelantada a la Tarea 15.** Estaba en la 16, que va después
+  del lanzamiento: sin la guía escrita antes, la capacitación de Administración
+  se hace de memoria. Los reportes atrasados sí se quedan en la 16.
+
+### 2026-08-24 — Tarea 10 Implementada Parcialmente (Datos Maestros De La Etapa 1)
+
+- **Los datos no los puede poner el desarrollo.** Productos, precios, umbrales,
+  proveedores, conteo físico y personal los tiene la clínica; inventar un precio
+  sería peor que no cargarlo, porque se cobra igual que uno real. Se entrega la
+  herramienta completa y la tarea queda esperando los datos.
+- `pnpm stage-one:check` revisa sin corregir: módulos de la Etapa 1 encendidos,
+  El Alto activa, ausencia de datos de prueba, productos con precio y unidad,
+  **stock igual a la suma de sus movimientos**, personal mínimo y formas de cobro.
+  Termina con error si falta algo bloqueante.
+- `pnpm stage-one:load` carga proveedores, productos y catálogo desde un archivo
+  que la clínica completa. Exige el nombre de la base escrito a mano y un
+  responsable con cuenta activa, rechaza códigos `DEMO-`/`QA-`, falla con
+  mensaje concreto si falta un dato y es idempotente.
+- El stock entra como **movimiento de inventario** con la cantidad contada, el
+  responsable y el motivo del conteo, no como número escrito a mano.
+- Plantilla en `docs/operations/plantillas/` y procedimiento en
+  [stage-one-master-data.md](../../operations/stage-one-master-data.md). El
+  archivo real vive en `.data/`, que no se versiona.
+- **Hallazgos:** la base de desarrollo no pasaría la verificación (30 productos y
+  13 ofertas de demostración, 3 proveedores y 1 usuario de prueba, nadie con rol
+  Administración), y quedaron activas formas de cobro que la interfaz ya no
+  ofrece —`card`, `transfer`, `other`— que conviene desactivar antes de lanzar.
+- Al limpiar la prueba, PostgreSQL rechazó borrar el movimiento de stock: la
+  garantía append-only funcionando. Se neutralizó con un ajuste compensatorio.
+- Validación: typecheck y lint limpios; 474 de 479 pruebas. Cargador probado
+  contra desarrollo: precio, umbral, unidad y stock correctos, movimiento con su
+  motivo y clave, reintento sin duplicar, y las cinco barreras rechazando con
+  mensaje accionable.
+- Estado: **En progreso**, a la espera de los datos de la clínica. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-10-datos-maestros.md).
 
 ### 2026-08-24 — Tarea 9 Implementada (Listado Y Búsqueda De Ventas)
 

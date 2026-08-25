@@ -11,11 +11,15 @@ export const paidStudyOrderSchema = z.object({
     .transform((value) => (value.length > 0 ? value : undefined))
     .optional(),
   discount: money,
-  // Total editable definido por el médico (base antes de descuento). Opcional.
+  // Total editable definido por el médico (base antes de descuento). Opcional
+  // de verdad: acepta que el campo llegue vacío y que no llegue. Antes solo
+  // aceptaba lo primero, así que un llamador que no mandara la clave fallaba
+  // con "Required" pese a que el campo se documenta como opcional.
   total: z
     .string()
     .trim()
     .transform((value) => (value.length > 0 ? value : undefined))
+    .optional()
     .pipe(money.optional()),
   studies: z
     .array(

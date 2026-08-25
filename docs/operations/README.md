@@ -60,6 +60,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 45. [Operación multi-sucursal](./multi-branch-operations.md)
 46. [Guía reproducible del piloto completo con el personal](./staff-pilot.md)
 47. [Lanzamiento y suspension de modulos](./module-launch-suspension.md)
+48. [Datos maestros de la Etapa 1](./stage-one-master-data.md)
 
 ## Flujo recomendado
 

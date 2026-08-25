@@ -70,6 +70,8 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-24 | [Lanzamiento Tarea 7: alta mínima de cliente desde Administración](./2026-08-24-lanzamiento-tarea-7-alta-minima-cliente.md) | Administración registra al cliente de mostrador con nombre y teléfono, sin abrir visita, y ve las fichas parecidas antes de crear otra. |
 | 2026-08-24 | [Lanzamiento Tarea 8: venta directa sin visita](./2026-08-24-lanzamiento-tarea-8-venta-directa-sin-visita.md) | Administración inicia la venta de mostrador en dos pasos, sin derivación del médico, reutilizando la venta, el stock y la Caja existentes. |
 | 2026-08-24 | [Lanzamiento Tarea 9: listado y búsqueda de ventas](./2026-08-24-lanzamiento-tarea-9-listado-ventas.md) | Encuentra una venta anterior por cliente, estado y fecha, con totales del conjunto filtrado y la venta de mostrador distinguida. |
+| 2026-08-24 | [Lanzamiento Tarea 10: datos maestros de la Etapa 1](./2026-08-24-lanzamiento-tarea-10-datos-maestros.md) | Plantilla, cargador idempotente con el stock como movimiento auditable y verificación de que la base esté lista, sin inventar ningún dato de la clínica. |
+| 2026-08-24 | [Lanzamiento Tarea 10B: deuda previa al plan](./2026-08-24-lanzamiento-tarea-10b-deuda-previa.md) | Corrige la fuga del correo en la URL del login, reconcilia el mapa que vigila los permisos y deja la suite en verde antes del CI. |
 
 ## Relacion Con Estado V3
 

@@ -3,6 +3,7 @@ import { PasswordInput } from "@/components/internal/PasswordInput";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { buttonVariants } from "@/components/internal/ui/Button";
 import { loginInternalUser } from "@/features/internal-auth/actions";
+import { getLoginEmailHint } from "@/features/internal-auth/session";
 import { cn } from "@/lib/cn";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 import { LockKeyhole } from "lucide-react";
@@ -13,13 +14,14 @@ const supportWhatsappHref = createWhatsAppLink(
 );
 
 type LoginPageProps = {
-  searchParams: Promise<{ error?: string; email?: string }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
 export default async function SigecoLoginPage({
   searchParams,
 }: LoginPageProps) {
-  const params = await searchParams;
+  // El correo del intento anterior llega por cookie corta, nunca por la URL.
+  const [params, emailHint] = await Promise.all([searchParams, getLoginEmailHint()]);
   const errorMessage =
     params.error === "locked"
       ? "La cuenta está bloqueada temporalmente. Intenta nuevamente más tarde."
@@ -68,7 +70,7 @@ export default async function SigecoLoginPage({
               className={internalInputClassName}
               type="email"
               name="email"
-              defaultValue={params.email ?? ""}
+              defaultValue={emailHint}
               autoComplete="off"
               data-lpignore="true"
               data-1p-ignore=""

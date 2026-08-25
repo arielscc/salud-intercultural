@@ -54,7 +54,9 @@
     "internal:seed": "node --import dotenv/config --import tsx scripts/seed-internal-user.ts",
     "branches:seed:synthetic": "node --import dotenv/config --import tsx scripts/seed-multi-branch-synthetic.ts",
     "internal:set-role": "node --import dotenv/config --import tsx scripts/set-internal-user-role.ts",
-    "modules:set": "node --import dotenv/config --import tsx scripts/set-module-activation.ts"
+    "modules:set": "node --import dotenv/config --import tsx scripts/set-module-activation.ts",
+    "stage-one:check": "node --import dotenv/config --import tsx scripts/check-stage-one-readiness.ts",
+    "stage-one:load": "node --import dotenv/config --import tsx scripts/load-stage-one-master-data.ts"
   },
   "dependencies": {
     "@date-fns/tz": "1.5.0",

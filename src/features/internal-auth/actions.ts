@@ -8,18 +8,21 @@ import { getCurrentInternalUser } from "@/modules/permissions";
 import { verifyPassword } from "@/features/internal-auth/password";
 import {
   clearInternalSessionCookie,
+  clearLoginEmailHint,
   createInternalSession,
   deleteInternalSession,
   getInternalSessionToken,
-  setInternalSessionCookie
+  setInternalSessionCookie,
+  setLoginEmailHint
 } from "@/features/internal-auth/session";
 
-function getLoginErrorRedirect(email: string, error: "invalid" | "locked" = "invalid") {
-  const params = new URLSearchParams({ error });
-  if (email) {
-    params.set("email", email);
-  }
-  return `/sigeco/login?${params.toString()}`;
+/**
+ * El correo escrito se conserva en una cookie corta, no en la URL: ahí quedaría
+ * en el historial, en los logs y en el `Referer`. `redirect` queda como última
+ * línea de cada caso para que TypeScript siga viendo que corta el flujo.
+ */
+function loginErrorUrl(error: "invalid" | "locked" = "invalid") {
+  return `/sigeco/login?error=${error}`;
 }
 
 export async function loginInternalUser(formData: FormData) {
@@ -33,7 +36,8 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect(email));
+    await setLoginEmailHint(email);
+    redirect(loginErrorUrl());
   }
 
   const user = await prisma.internalUser.findUnique({
@@ -47,7 +51,8 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect(email));
+    await setLoginEmailHint(email);
+    redirect(loginErrorUrl());
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -59,7 +64,8 @@ export async function loginInternalUser(formData: FormData) {
       result: "denied",
       context: { reason: "account_locked" }
     });
-    redirect(getLoginErrorRedirect(email, "locked"));
+    await setLoginEmailHint(email);
+    redirect(loginErrorUrl("locked"));
   }
 
   const isValid = await verifyPassword(password, user.passwordHash);
@@ -84,7 +90,8 @@ export async function loginInternalUser(formData: FormData) {
       result: "failure",
       context: { reason: "invalid_credentials" }
     });
-    redirect(getLoginErrorRedirect(email));
+    await setLoginEmailHint(email);
+    redirect(loginErrorUrl());
   }
 
   await prisma.internalUser.update({
@@ -99,6 +106,7 @@ export async function loginInternalUser(formData: FormData) {
   const requestHeaders = await headers();
   const session = await createInternalSession(user.id, requestHeaders.get("user-agent"));
   await setInternalSessionCookie(session.token, session.expiresAt);
+  await clearLoginEmailHint();
   await appendAuditEvent({
     actor: { id: user.id, role: user.role },
     action: "session.login",
