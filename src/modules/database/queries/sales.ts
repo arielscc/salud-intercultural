@@ -15,6 +15,7 @@ import {
   CashWorkflowError,
   getOpenCashSessionForOperation
 } from "@/modules/database/queries/cash";
+import { patientSearchWhere } from "@/modules/database/queries/patient-search";
 import { updateVisitRouteStatusInTransaction } from "@/modules/database/queries/visits";
 
 const paymentMethodNames: Record<string, string> = {
@@ -1086,6 +1087,94 @@ export async function getTodayCollections(
         0
       ),
       patientCount: new Set(collections.map((entry) => entry.patient.id)).size
+    };
+  });
+}
+
+export type SaleListInput = PaginationInput & {
+  /** Nombre, teléfono o código interno del cliente. */
+  search?: string;
+  status?: SaleStatus;
+  from?: Date;
+  to?: Date;
+  branchCode?: string;
+};
+
+function saleListWhere(input: SaleListInput): Prisma.SaleWhereInput {
+  return {
+    AND: [
+      input.branchCode ? { branchCode: input.branchCode } : {},
+      input.status ? { status: input.status } : {},
+      input.from || input.to
+        ? { createdAt: { gte: input.from, lt: input.to } }
+        : {},
+      // La búsqueda es del cliente, no de la venta: quien atiende recuerda a la
+      // persona, no el número de la venta.
+      input.search ? { patient: patientSearchWhere(input.search) } : {}
+    ]
+  };
+}
+
+/**
+ * Ventas para el listado de Administración, de la más reciente a la más
+ * antigua. Trae solo los primeros conceptos de cada venta y su cantidad total:
+ * alcanza para reconocerla en la fila y evita cargar el detalle completo de
+ * cada una.
+ */
+export async function getSalesPage(input: SaleListInput = {}) {
+  const pagination = getPagination(input);
+
+  return withDatabaseError("getSalesPage", async () => {
+    return prisma.sale.findMany({
+      where: saleListWhere(input),
+      select: {
+        id: true,
+        createdAt: true,
+        status: true,
+        totalCents: true,
+        paidCents: true,
+        balanceCents: true,
+        visitId: true,
+        patient: {
+          select: { id: true, fullName: true, phone: true, internalCode: true }
+        },
+        createdBy: { select: { name: true, email: true } },
+        items: {
+          select: { id: true, description: true, type: true },
+          orderBy: { createdAt: "asc" },
+          take: 3
+        },
+        _count: { select: { items: true } }
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: pagination.skip,
+      take: pagination.take
+    });
+  });
+}
+
+export async function countSales(input: SaleListInput = {}) {
+  return withDatabaseError("countSales", async () => {
+    return prisma.sale.count({ where: saleListWhere(input) });
+  });
+}
+
+/**
+ * Totales del conjunto filtrado. Se calculan en servidor y sobre la misma
+ * condición del listado, para que lo que suma la pantalla coincida con lo que
+ * muestran el detalle y la Caja.
+ */
+export async function getSalesPageTotals(input: SaleListInput = {}) {
+  return withDatabaseError("getSalesPageTotals", async () => {
+    const totals = await prisma.sale.aggregate({
+      where: saleListWhere(input),
+      _sum: { totalCents: true, paidCents: true, balanceCents: true }
+    });
+
+    return {
+      totalCents: totals._sum.totalCents ?? 0,
+      paidCents: totals._sum.paidCents ?? 0,
+      balanceCents: totals._sum.balanceCents ?? 0
     };
   });
 }

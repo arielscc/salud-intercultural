@@ -69,6 +69,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-24 | [Lanzamiento Tarea 6: modo solo lectura del módulo apagado](./2026-08-24-lanzamiento-tarea-6-solo-lectura-modulo-apagado.md) | Separa permisos de lectura y escritura para que un módulo suspendido conserve la consulta de Dirección, bloquee todo cambio y liste el trabajo que quedó abierto. |
 | 2026-08-24 | [Lanzamiento Tarea 7: alta mínima de cliente desde Administración](./2026-08-24-lanzamiento-tarea-7-alta-minima-cliente.md) | Administración registra al cliente de mostrador con nombre y teléfono, sin abrir visita, y ve las fichas parecidas antes de crear otra. |
 | 2026-08-24 | [Lanzamiento Tarea 8: venta directa sin visita](./2026-08-24-lanzamiento-tarea-8-venta-directa-sin-visita.md) | Administración inicia la venta de mostrador en dos pasos, sin derivación del médico, reutilizando la venta, el stock y la Caja existentes. |
+| 2026-08-24 | [Lanzamiento Tarea 9: listado y búsqueda de ventas](./2026-08-24-lanzamiento-tarea-9-listado-ventas.md) | Encuentra una venta anterior por cliente, estado y fecha, con totales del conjunto filtrado y la venta de mostrador distinguida. |
 
 ## Relacion Con Estado V3
 

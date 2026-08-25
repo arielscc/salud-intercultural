@@ -178,6 +178,12 @@ export default async function AdministrationPage({
                 Nueva venta
               </Link>
             ) : null}
+            <Link
+              href="/sigeco/administracion/ventas"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Ventas
+            </Link>
             {canReadClients ? (
               <Link
                 href="/sigeco/administracion/clientes"

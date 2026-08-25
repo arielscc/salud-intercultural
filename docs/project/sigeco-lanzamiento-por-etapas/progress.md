@@ -23,11 +23,13 @@ suspendido conserva la consulta para Dirección y el super administrador, bloque
 toda escritura y lista el trabajo que quedó abierto. Sigue en pie el gate de
 cierre: nada pasa a `Terminada` antes del cierre acumulado de las Tareas 11 y 12.
 
-La Fase B ya cubre los dos bloqueos principales: Administración registra al
-cliente de mostrador sin abrir visita y arma la venta por su cuenta, sin esperar
-la derivación del médico. El cobro, el descuento de stock y el recibo son los de
-siempre. Falta el listado de ventas (Tarea 9) y la carga de datos maestros
-reales (Tarea 10).
+La Fase B ya cubre los tres bloqueos de código: Administración registra al
+cliente de mostrador sin abrir visita, arma la venta por su cuenta y encuentra
+una venta anterior por cliente, estado y fecha. El cobro, el descuento de stock y
+el recibo son los de siempre.
+
+Queda la Tarea 10, que no es código sino datos: cargar productos, precios,
+proveedores, stock inicial por conteo físico y usuarios reales.
 
 Con los once módulos activos el sistema se comporta igual que antes de este
 plan.
@@ -52,8 +54,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 12 |
-| En progreso | 8 |
+| Pendiente | 11 |
+| En progreso | 9 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -79,7 +81,7 @@ se sigue llevando en sus propios archivos.
 | 6 | Modo solo lectura del módulo apagado | P1 | En progreso | 5 |
 | 7 | Alta mínima de cliente desde Administración | P0 | En progreso | 4 |
 | 8 | Venta directa sin visita | P0 | En progreso | 7 |
-| 9 | Listado y búsqueda de ventas | P1 | Pendiente | 8 |
+| 9 | Listado y búsqueda de ventas | P1 | En progreso | 8 |
 | 10 | Datos maestros reales de la Etapa 1 | P0 | Pendiente | 8-9 |
 | 11 | CI remoto y protección de ramas | P0 | Pendiente | Fases A y B |
 | 12 | Staging aislado y ensayo de la Etapa 1 | P0 | Pendiente | 11 |
@@ -134,13 +136,40 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 9: listado y búsqueda de ventas. Hoy una venta anterior solo se alcanza
-desde la ficha del cliente o desde los cobros del día; falta
-`/sigeco/administracion/ventas` con filtros por fecha, estado y cliente.
-`getSalesSummary` y las consultas de cobros ya existen: el trabajo es la
-paginación, los filtros que falten y la tabla que no desborde en móvil.
+Tarea 10: datos maestros reales de la Etapa 1. Es trabajo de datos y de
+Dirección más que de código: productos con precio, costo referencial y umbral de
+descuento; proveedores; servicios y tratamientos vendibles; stock inicial
+registrado como entrada de inventario por conteo físico, con responsable y
+fecha; sucursal El Alto activa y usuarios reales con contraseña temporal.
+También hay que confirmar que no quede ningún dato de demostración en la base
+que se vaya a usar.
 
 ## Registro
+
+### 2026-08-24 — Tarea 9 Implementada (Listado Y Búsqueda De Ventas)
+
+- `getSalesPage`, `countSales` y `getSalesPageTotals` comparten una sola
+  condición: cliente, estado, fechas y sucursal. La búsqueda es del cliente y
+  reutiliza `patientSearchWhere`, así que sirve nombre, teléfono, código interno
+  y alias de una ficha fusionada.
+- Los totales suman el **conjunto filtrado**, no la página visible: sumar solo lo
+  que se ve daría otro número al pasar de página y haría dudar del sistema.
+- `/sigeco/administracion/ventas` con tres indicadores, filtros por cliente,
+  estado y fecha, tarjetas en móvil y tabla en escritorio con fecha, cliente,
+  conceptos, total, saldo, estado y quién registró. Una venta sin visita se marca
+  como **Mostrador**.
+- Los estados salen del modelo: "Sin cobrar" (`pending`) y "Con saldo"
+  (`partial`) quedaron separados. Juntarlos, como sugería el texto del plan,
+  habría escondido la diferencia que sirve para saber a quién reclamar.
+- Fechas por período —hoy, 7 días, 30 días, cualquiera— igual que Recepción: se
+  opera con un toque en el teléfono y evita rangos mal escritos.
+- Validación: typecheck y lint limpios; 474 de 479 pruebas unitarias. Verificado
+  contra la base de desarrollo con sus seis ventas reales: la paginación devolvió
+  cinco de seis, los conceptos mostraron los primeros con su cantidad real, la
+  búsqueda por nombre acertó, los filtros dieron 1 con saldo y 4 pagadas, y los
+  totales del listado coincidieron exactamente con la suma directa de la tabla.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-9-listado-ventas.md).
 
 ### 2026-08-24 — Tarea 8 Implementada (Venta Directa Sin Visita)
 

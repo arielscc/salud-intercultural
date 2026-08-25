@@ -43,6 +43,7 @@ const pagePermissions: Record<string, InternalPermission[]> = {
   "src/app/(internal)/sigeco/(app)/administracion/clientes/[id]/page.tsx": ["patients_read"],
   "src/app/(internal)/sigeco/(app)/administracion/clientes/nuevo/page.tsx": ["patients_create"],
   "src/app/(internal)/sigeco/(app)/administracion/ventas/nueva/page.tsx": ["sales_write"],
+  "src/app/(internal)/sigeco/(app)/administracion/ventas/page.tsx": ["sales_read"],
   "src/app/(internal)/sigeco/(app)/administracion/ventas/[saleId]/page.tsx": [
     "sales_read"
   ],

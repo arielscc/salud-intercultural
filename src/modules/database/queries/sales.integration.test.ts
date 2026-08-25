@@ -4,11 +4,14 @@ import { prisma } from "@/modules/database";
 import { createClinicalOrderRecord } from "@/modules/database/queries/clinical-care";
 import { createPatientRecord, getPatientById } from "@/modules/database/queries/patients";
 import {
+  countSales,
   createPaymentRecord,
   createSaleOrderRecord,
   createSaleRecord,
   getAdministrationWorkItems,
   getSaleById,
+  getSalesPage,
+  getSalesPageTotals,
   getSalesSummary
 } from "@/modules/database/queries/sales";
 import { openCashSession } from "@/modules/database/queries/cash";
@@ -264,5 +267,155 @@ describe("venta de mostrador sin visita", () => {
     expect(movements).toHaveLength(1);
     expect(movements[0]?.visitId).toBeNull();
     expect(movements[0]?.amountCents).toBe(10000);
+  });
+});
+
+describe("listado de ventas", () => {
+  async function salesFixture() {
+    const admin = await prisma.internalUser.create({
+      data: {
+        email: "admin-listado@example.com",
+        name: "Admin Listado",
+        passwordHash: await hashPassword("clave-segura-123"),
+        role: "administracion"
+      }
+    });
+    const ana = await createPatientRecord({ fullName: "Ana Quispe", phone: "70000061" });
+    const luis = await createPatientRecord({ fullName: "Luis Torrez", phone: "70000062" });
+    await openCashSession({
+      branchCode: "el-alto",
+      registerName: "Caja principal",
+      businessDate: new Date("2026-08-24T00:00:00.000Z"),
+      shift: "full_day",
+      responsibleId: admin.id,
+      openedById: admin.id,
+      openingCashCents: 0,
+      idempotencyKey: "sales-list-cash-session"
+    });
+
+    const anaSale = await createSaleOrderRecord({
+      idempotencyKey: "list-sale-ana",
+      patientId: ana.id,
+      createdById: admin.id,
+      branchCode: "el-alto",
+      subtotalCents: 20000,
+      discountCents: 0,
+      lines: [
+        { itemType: "service", description: "Sesión de control", quantity: 1, unitPriceCents: 20000 }
+      ]
+    });
+    const luisSale = await createSaleOrderRecord({
+      idempotencyKey: "list-sale-luis",
+      patientId: luis.id,
+      createdById: admin.id,
+      branchCode: "el-alto",
+      subtotalCents: 5000,
+      discountCents: 0,
+      lines: [
+        { itemType: "product", description: "Vendas", quantity: 1, unitPriceCents: 5000 }
+      ]
+    });
+    await createPaymentRecord({
+      idempotencyKey: "list-payment-luis",
+      saleId: luisSale.id,
+      amountCents: 5000,
+      paymentMethodCode: "cash",
+      receivedById: admin.id
+    });
+
+    return { admin, ana, luis, anaSale, luisSale };
+  }
+
+  it("encuentra la venta por el nombre del cliente", async () => {
+    const { ana } = await salesFixture();
+
+    const results = await getSalesPage({ search: "Ana" });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.patient.id).toBe(ana.id);
+    expect(await countSales({ search: "Ana" })).toBe(1);
+  });
+
+  it("encuentra la venta por el teléfono del cliente", async () => {
+    await salesFixture();
+
+    const results = await getSalesPage({ search: "70000062" });
+
+    expect(results.map((sale) => sale.patient.fullName)).toEqual(["Luis Torrez"]);
+  });
+
+  it("separa lo que falta cobrar de lo ya pagado", async () => {
+    await salesFixture();
+
+    const pending = await getSalesPage({ status: "pending" });
+    const paid = await getSalesPage({ status: "paid" });
+
+    expect(pending.map((sale) => sale.patient.fullName)).toEqual(["Ana Quispe"]);
+    expect(paid.map((sale) => sale.patient.fullName)).toEqual(["Luis Torrez"]);
+  });
+
+  it("suma los totales del conjunto filtrado, no de la página", async () => {
+    await salesFixture();
+
+    const totals = await getSalesPageTotals({});
+
+    expect(totals.totalCents).toBe(25000);
+    expect(totals.paidCents).toBe(5000);
+    expect(totals.balanceCents).toBe(20000);
+  });
+
+  it("coincide con lo que muestra el detalle de cada venta", async () => {
+    const { anaSale } = await salesFixture();
+
+    const listed = (await getSalesPage({ search: "Ana" }))[0];
+    const detail = await getSaleById(anaSale.id);
+
+    expect(listed?.totalCents).toBe(detail?.totalCents);
+    expect(listed?.balanceCents).toBe(detail?.balanceCents);
+    expect(listed?.status).toBe(detail?.status);
+  });
+
+  it("deja ver los primeros conceptos y cuántos hay en total", async () => {
+    const { admin, ana } = await salesFixture();
+    await createSaleOrderRecord({
+      idempotencyKey: "list-sale-multi",
+      patientId: ana.id,
+      createdById: admin.id,
+      branchCode: "el-alto",
+      subtotalCents: 4000,
+      discountCents: 0,
+      lines: [
+        { itemType: "product", description: "Gasas", quantity: 1, unitPriceCents: 1000 },
+        { itemType: "product", description: "Alcohol", quantity: 1, unitPriceCents: 1000 },
+        { itemType: "product", description: "Jeringa", quantity: 1, unitPriceCents: 1000 },
+        { itemType: "product", description: "Guantes", quantity: 1, unitPriceCents: 1000 }
+      ]
+    });
+
+    const listed = (await getSalesPage({ search: "Ana", pageSize: 1 }))[0];
+
+    expect(listed?.items).toHaveLength(3);
+    expect(listed?._count.items).toBe(4);
+  });
+
+  it("pagina de la más reciente a la más antigua", async () => {
+    await salesFixture();
+
+    const first = await getSalesPage({ page: 1, pageSize: 1 });
+    const second = await getSalesPage({ page: 2, pageSize: 1 });
+
+    expect(first).toHaveLength(1);
+    expect(second).toHaveLength(1);
+    expect(first[0]?.id).not.toBe(second[0]?.id);
+    expect(first[0]!.createdAt.getTime()).toBeGreaterThanOrEqual(
+      second[0]!.createdAt.getTime()
+    );
+  });
+
+  it("ignora las ventas de otra sucursal", async () => {
+    await salesFixture();
+
+    expect(await countSales({ branchCode: "el-alto" })).toBe(2);
+    expect(await countSales({ branchCode: "cochabamba" })).toBe(0);
   });
 });
