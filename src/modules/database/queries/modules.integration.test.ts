@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { sigecoModuleCodes } from "@/features/modules/catalog";
 import { prisma } from "@/modules/database";
 import {
@@ -13,24 +13,42 @@ import {
 } from "@/modules/database/queries/modules";
 
 /**
- * El estado inicial lo crea la migración, no el test: aquí no se trunca
- * `ModuleActivation` porque eso borraría lo que la migración sembró. Cada
- * prueba que enciende algo lo devuelve a apagado al terminar.
+ * Deja el estado base que produce la migración: los once módulos con solo el
+ * núcleo encendido.
+ *
+ * No alcanza con confiar en lo que sembró la migración. Seis archivos de
+ * integración hacen `TRUNCATE ... "InternalUser" CASCADE`, y PostgreSQL propaga
+ * a toda tabla que la referencie: `ModuleActivation` apunta a `InternalUser` en
+ * `activatedById`, así que sus filas desaparecen cuando corre cualquiera de esos
+ * archivos antes que este. Que la migración siembre el catálogo completo se
+ * verifica aparte, sobre el archivo de migración.
  */
-async function restoreInitialState() {
-  await prisma.moduleActivation.updateMany({
-    where: { code: { not: "core" } },
-    data: { status: "inactive", activatedAt: null, deactivatedAt: null, note: null }
+async function resetModuleState() {
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "ModuleActivationEvent", "ModuleActivation" CASCADE'
+  );
+  await prisma.moduleActivation.createMany({
+    data: sigecoModuleCodes.map((code) => ({
+      code,
+      status: code === "core" ? ("active" as const) : ("inactive" as const),
+      activatedAt: code === "core" ? new Date() : null
+    }))
   });
-  await prisma.moduleActivation.deleteMany({
-    where: { code: { notIn: [...sigecoModuleCodes] } }
+  await prisma.moduleActivationEvent.create({
+    data: {
+      moduleCode: "core",
+      previousStatus: "inactive",
+      status: "active",
+      reason: "Instalación inicial del lanzamiento por etapas."
+    }
   });
 }
 
-afterEach(restoreInitialState);
+beforeEach(resetModuleState);
+afterEach(resetModuleState);
 
 describe("estado inicial de los módulos", () => {
-  it("crea una fila por cada módulo del catálogo", async () => {
+  it("tiene una fila por cada módulo del catálogo", async () => {
     const rows = await prisma.moduleActivation.findMany({ select: { code: true } });
 
     expect(rows.map((row) => row.code).sort()).toEqual([...sigecoModuleCodes].sort());
@@ -158,6 +176,8 @@ describe("setModuleActivation", () => {
   });
 
   it("exige motivo para apagar", async () => {
+    // Opiniones depende de Recepción: encender en orden es parte de la regla.
+    await setModuleActivation({ code: "recepcion", active: true });
     await setModuleActivation({ code: "opiniones", active: true });
 
     await expect(
@@ -237,6 +257,7 @@ describe("apagar y reactivar", () => {
   });
 
   it("conserva el historial completo del ciclo", async () => {
+    await setModuleActivation({ code: "recepcion", active: true });
     await setModuleActivation({ code: "opiniones", active: true });
     await setModuleActivation({
       code: "opiniones",

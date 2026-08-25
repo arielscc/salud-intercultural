@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { hashPassword } from "@/features/internal-auth/password";
+import { todayDatabaseDate } from "@/lib/dates";
 import { prisma } from "@/modules/database";
 import {
   approveCashSessionClose,
@@ -10,6 +11,15 @@ import {
   requestCashSessionClose,
   reverseCashMovement
 } from "@/modules/database/queries/cash";
+
+/*
+ * La Caja abierta debe ser la del día operativo en curso: desde el 2026-08-14
+ * una sesión de otro día se rechaza como `session_stale_open`. Las fechas fijas
+ * que tenían estas pruebas quedaban viejas con el paso del tiempo, así que se
+ * calculan contra el día de hoy.
+ */
+const businessToday = todayDatabaseDate();
+const businessYesterday = new Date(businessToday.getTime() - 24 * 60 * 60 * 1000);
 
 async function cleanCash() {
   await prisma.$executeRawUnsafe(
@@ -58,7 +68,7 @@ describe("cash integration", () => {
     const session = await openCashSession({
       branchCode: "el-alto",
       registerName: "Caja principal",
-      businessDate: new Date("2026-07-30T00:00:00.000Z"),
+      businessDate: businessToday,
       shift: "full_day",
       responsibleId: admin.id,
       openedById: admin.id,
@@ -119,7 +129,7 @@ describe("cash integration", () => {
     const firstSession = await openCashSession({
       branchCode: "el-alto",
       registerName: "Caja principal",
-      businessDate: new Date("2026-07-29T00:00:00.000Z"),
+      businessDate: businessYesterday,
       shift: "full_day",
       responsibleId: admin.id,
       openedById: admin.id,
@@ -148,7 +158,7 @@ describe("cash integration", () => {
     const secondSession = await openCashSession({
       branchCode: "el-alto",
       registerName: "Caja principal",
-      businessDate: new Date("2026-07-30T00:00:00.000Z"),
+      businessDate: businessToday,
       shift: "full_day",
       responsibleId: admin.id,
       openedById: admin.id,

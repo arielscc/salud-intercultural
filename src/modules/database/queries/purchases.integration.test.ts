@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { hashPassword } from "@/features/internal-auth/password";
+import { todayDatabaseDate } from "@/lib/dates";
 import { prisma } from "@/modules/database";
 import {
   createUrgentPurchaseExpense,
@@ -13,6 +14,15 @@ import {
   createPurchaseReceiptRecord,
   recordPurchasePayment
 } from "@/modules/database/queries/purchases";
+
+/*
+ * La Caja abierta debe ser la del día operativo en curso: desde el 2026-08-14
+ * una sesión de otro día se rechaza como `session_stale_open`. Las fechas fijas
+ * que tenían estas pruebas quedaban viejas con el paso del tiempo, así que se
+ * calculan contra el día de hoy.
+ */
+const businessToday = todayDatabaseDate();
+const businessYesterday = new Date(businessToday.getTime() - 24 * 60 * 60 * 1000);
 
 async function cleanPurchases() {
   await prisma.$executeRawUnsafe(
@@ -68,7 +78,7 @@ async function setup() {
   const cashSession = await openCashSession({
     branchCode: "el-alto",
     registerName: "Caja principal",
-    businessDate: new Date("2026-07-30T00:00:00.000Z"),
+    businessDate: businessToday,
     shift: "full_day",
     responsibleId: administrator.id,
     openedById: administrator.id,
@@ -203,6 +213,9 @@ describe("purchase, receipt, batch and stock integration", () => {
       registeredById: fixture.administrator.id,
       authorizedById: fixture.direction.id,
       urgencyReason: "Faltaba para la atención del día",
+      // Solo un gasto marcado como entrada de inventario puede enlazarse a una
+      // orden de compra; es la condición que valida `createPurchaseDraftRecord`.
+      requiresInventoryEntry: true,
       idempotencyKey: randomUUID()
     });
     const movementCount = await prisma.cashMovement.count();

@@ -150,7 +150,7 @@ describe("nursing and studies integration", () => {
 
     expect(nursingWorkItem).toMatchObject({
       area: "enfermeria",
-      title: "Realizar estudios pagados"
+      title: "Realizar estudios/servicios pagados"
     });
     expect(await prisma.visit.findUniqueOrThrow({ where: { id: visit.id } })).toMatchObject({
       status: "in_nursing"

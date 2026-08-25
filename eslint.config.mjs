@@ -9,7 +9,14 @@ const eslintConfig = [
       "dist/**",
       "build/**",
       "src/generated/**",
-      "src/types/payload-types.ts"
+      "src/types/payload-types.ts",
+      // Datos locales que no son código: adjuntos clínicos y respaldos. ESLint 9
+      // recorre los directorios que empiezan con punto, y `.data/` llega a pesar
+      // decenas de megas, con lo que `pnpm lint` se queda sin memoria.
+      ".data/**",
+      ".gstack/**",
+      ".claude/**",
+      "docker/**"
     ]
   }
 ];

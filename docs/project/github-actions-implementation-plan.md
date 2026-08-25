@@ -103,7 +103,97 @@ Despues de que el workflow sea estable:
 4. Invalidar aprobaciones cuando cambie el contenido del PR.
 5. Restringir force-push y eliminacion de ramas protegidas.
 
-El audit de dependencias solo se vuelve obligatorio cuando las vulnerabilidades altas actuales se hayan resuelto o aceptado de forma explicita y temporal.
+El audit de dependencias **ya puede exigirse**: el 2026-08-25 se resolvieron
+cinco de las siete vulnerabilidades altas forzando versiones parcheadas en
+`pnpm-workspace.yaml`, y las dos restantes de `image-size` quedaron aceptadas de
+forma explicita en `auditConfig.ignoreGhsas` porque no tienen correccion
+publicada.
+
+## Repositorio De Una Sola Persona
+
+Hoy trabaja una sola persona en el repositorio. Eso cambia una decision
+importante: **no se puede exigir aprobacion en el Pull Request**. GitHub no
+permite que el autor apruebe su propio PR, asi que
+`required_approving_review_count: 1` bloquearia toda promocion sin que exista
+nadie que pueda desbloquearla.
+
+Lo que si aporta el PR con una sola persona no es la revision, es **el candado**:
+GitHub no deja fusionar mientras el CI este en rojo. Ese es el valor.
+
+Combinado con **auto-merge**, la ceremonia desaparece: se abre el PR, se activa
+auto-merge y GitHub fusiona solo cuando los cinco checks terminan en verde.
+
+## Comandos Concretos
+
+Con `gh` autenticado sobre `arielscc/salud-intercultural`:
+
+```bash
+for BRANCH in staging main; do
+  gh api -X PUT "repos/arielscc/salud-intercultural/branches/$BRANCH/protection" \
+    --input - <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["Quality", "Unit tests", "Integration tests and migrations", "Build", "Dependency audit"]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 0,
+    "dismiss_stale_reviews": true
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+JSON
+done
+
+# Auto-merge, para que la promocion no exija esperar mirando la pantalla.
+gh api -X PATCH repos/arielscc/salud-intercultural \
+  -f allow_auto_merge=true -f delete_branch_on_merge=false
+```
+
+`enforce_admins: true` es deliberado: sin eso, la unica persona del repositorio
+es tambien quien puede saltarse la proteccion, y el candado no protege de nada.
+Para una emergencia se desactiva un momento y se vuelve a activar; queda
+registrado en el historial del repositorio.
+
+`develop` queda **sin proteccion**: es la rama de trabajo diario y el CI corre
+igual en cada push, avisando sin frenar.
+
+Los nombres de los contextos son los `name:` de cada job en `ci.yml`; si se
+renombra un job hay que actualizar la proteccion o el check quedara pendiente
+para siempre.
+
+## Como Se Promueve
+
+```bash
+# develop -> staging
+gh pr create --base staging --head develop --title "Promover a staging" --body ""
+gh pr merge --auto --merge
+
+# staging -> main
+gh pr create --base main --head staging --title "Promover a produccion" --body ""
+gh pr merge --auto --merge
+```
+
+## Vercel No Mira El CI Por Su Cuenta
+
+Vercel publica en cuanto la rama cambia; no consulta el resultado de GitHub
+Actions. Se puede resolver de tres formas, y la mas simple es la que ya queda
+puesta con lo anterior:
+
+1. **Proteger la rama** (recomendado). Si a `main` solo se llega por PR con los
+   cinco checks obligatorios, todo lo que aterriza ahi **ya paso el CI**. Vercel
+   puede publicar de inmediato porque no existe un commit rojo en `main`. No hace
+   falta configurar nada en Vercel.
+2. **Ignored Build Step**: un comando en Vercel que consulta el estado de los
+   checks del commit y cancela la construccion si estan en rojo. Agrega un token
+   y una dependencia mas.
+3. **Desplegar desde el workflow** con `vercel deploy --prod` despues del CI.
+   Da el control mas fino y obliga a guardar `VERCEL_TOKEN` como secreto.
+
+Con la opcion 1, `staging` tambien queda cubierta porque se promueve igual.
 
 ## Orden De Implementacion
 

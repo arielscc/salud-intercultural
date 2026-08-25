@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { hashPassword } from "@/features/internal-auth/password";
+import { todayDatabaseDate } from "@/lib/dates";
 import { prisma } from "@/modules/database";
 import { createClinicalOrderRecord } from "@/modules/database/queries/clinical-care";
 import { createPatientRecord, getPatientById } from "@/modules/database/queries/patients";
@@ -16,6 +17,16 @@ import {
 } from "@/modules/database/queries/sales";
 import { openCashSession } from "@/modules/database/queries/cash";
 import { createVisitRecord } from "@/modules/database/queries/visits";
+
+/*
+ * La Caja abierta debe ser la del día operativo en curso: desde el 2026-08-14
+ * una sesión de otro día se rechaza como `session_stale_open`. Las fechas fijas
+ * que tenían estas pruebas quedaban viejas con el paso del tiempo, así que se
+ * calculan contra el día de hoy.
+ */
+const businessToday = todayDatabaseDate();
+const businessYesterday = new Date(businessToday.getTime() - 24 * 60 * 60 * 1000);
+
 
 async function cleanSales() {
   await prisma.$executeRawUnsafe(
@@ -79,7 +90,7 @@ describe("sales integration", () => {
     await openCashSession({
       branchCode: "el-alto",
       registerName: "Caja principal",
-      businessDate: new Date("2026-07-30T00:00:00.000Z"),
+      businessDate: businessToday,
       shift: "full_day",
       responsibleId: admin.id,
       openedById: admin.id,
@@ -184,7 +195,7 @@ describe("venta de mostrador sin visita", () => {
     await openCashSession({
       branchCode: "el-alto",
       registerName: "Caja principal",
-      businessDate: new Date("2026-08-24T00:00:00.000Z"),
+      businessDate: businessToday,
       shift: "full_day",
       responsibleId: admin.id,
       openedById: admin.id,
@@ -285,7 +296,7 @@ describe("listado de ventas", () => {
     await openCashSession({
       branchCode: "el-alto",
       registerName: "Caja principal",
-      businessDate: new Date("2026-08-24T00:00:00.000Z"),
+      businessDate: businessToday,
       shift: "full_day",
       responsibleId: admin.id,
       openedById: admin.id,

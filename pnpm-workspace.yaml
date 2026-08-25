@@ -6,7 +6,28 @@ allowBuilds:
   unrs-resolver: true
 auditConfig:
   ignoreGhsas:
+    # brace-expansion, solo alcanzable a través de ESLint. Forzar la versión 5
+    # dentro de minimatch 3 rompe el lint.
     - GHSA-mh99-v99m-4gvg
+    # image-size: denegación de servicio al analizar ICNS, JXL y HEIF.
+    # Sin corrección publicada: el aviso pide >=2.0.3 y la última versión es
+    # 2.0.2. Llega de forma transitiva por payload@3.86.0, que la usa para leer
+    # las dimensiones de una imagen subida. Explotarla exige una cuenta con
+    # acceso al CMS que suba un archivo preparado; no hay carga pública de
+    # imágenes. Revisar en cada actualización de Payload.
+    - GHSA-5p2g-fcmc-qvqq
+    - GHSA-w3rx-r6r6-pgpr
 overrides:
   'postcss@<=8.5.17': 8.5.23
   'sharp@<0.35.0': 0.35.3
+  # Vulnerabilidades altas que llegan de forma transitiva por Payload, Next y
+  # Prisma. Se fuerzan las versiones parcheadas y se verifica con build, suite
+  # completa e integración.
+  #
+  # `image-size` queda fuera a propósito: el aviso pide >=2.0.3 y esa versión
+  # todavía no está publicada (la última es 2.0.2). Ver docs/operations/deploy.md.
+  'undici@<7.29.0': '>=7.29.0'
+  'fast-uri@<3.1.5': '>=3.1.5'
+  'js-yaml@>=4.0.0 <4.3.1': '>=4.3.1'
+  'nanoid@<3.3.18': '>=3.3.18'
+  'deepmerge-ts@<8.0.0': '>=8.0.0'

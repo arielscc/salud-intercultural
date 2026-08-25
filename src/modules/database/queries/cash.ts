@@ -705,6 +705,15 @@ export async function createUrgentPurchaseExpense(input: {
   authorizedById: string;
   urgencyReason: string;
   note?: string;
+  /**
+   * El gasto urgente alimenta el stock: habilita enlazarlo después a una orden
+   * de compra. El commit `fa15696` (2026-08-14) lo quitó de la entrada y lo dejó
+   * fijo en `false` al simplificar los diálogos de egreso, con lo que
+   * `createPurchaseDraftRecord` pasó a rechazar todo enlace con
+   * `source-expense-invalid`. Vuelve como opcional para que el contrato sea
+   * satisfacible; los diálogos actuales no lo envían y conservan su valor falso.
+   */
+  requiresInventoryEntry?: boolean;
   idempotencyKey: string;
   receipt?: ReceiptMetadata;
 }) {
@@ -782,7 +791,7 @@ export async function createUrgentPurchaseExpense(input: {
           unitPriceCents: null,
           supplierName: null,
           urgencyReason: input.urgencyReason,
-          requiresInventoryEntry: false,
+          requiresInventoryEntry: input.requiresInventoryEntry ?? false,
           receiptStorageKey: input.receipt?.storageKey,
           receiptStorageDriver: input.receipt?.storageDriver,
           receiptOriginalName: input.receipt?.originalName,

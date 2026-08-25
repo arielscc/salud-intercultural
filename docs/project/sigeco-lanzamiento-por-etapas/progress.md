@@ -60,8 +60,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 10 |
-| En progreso | 11 |
+| Pendiente | 9 |
+| En progreso | 12 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -73,7 +73,7 @@ se sigue llevando en sus propios archivos.
 | A. Activación controlada de módulos | 1-6 | En progreso | Un módulo apagado es inalcanzable y auditable |
 | B. Etapa 1: Caja y Administración | 7-10 | En progreso | Se vende y cobra sin ruta clínica |
 | B+. Deuda previa al plan | 10B | En progreso | La suite queda en verde antes del CI |
-| C. Plataforma y salida a producción | 11-16 | Pendiente | Producción autorizada y Etapa 1 encendida |
+| C. Plataforma y salida a producción | 11-16 | En progreso | Producción autorizada y Etapa 1 encendida |
 | D. Etapas siguientes | 17-20 | Pendiente | Cada módulo se enciende con QA y capacitación |
 
 ## Estado Por Tarea
@@ -91,7 +91,7 @@ se sigue llevando en sus propios archivos.
 | 9 | Listado y búsqueda de ventas | P1 | En progreso | 8 |
 | 10 | Datos maestros reales de la Etapa 1 | P0 | En progreso | 8-9 |
 | 10B | Deuda previa al plan | P0 | En progreso | Ninguna |
-| 11 | CI remoto y protección de ramas | P0 | Pendiente | Fases A y B |
+| 11 | CI remoto y protección de ramas | P0 | En progreso | Fases A y B |
 | 12 | Staging aislado y ensayo de la Etapa 1 | P0 | Pendiente | 11 |
 | 13 | Backup y restauración probados en remoto | P0 | Pendiente | 12 |
 | 14 | Cierre del gate de seguridad | P0 | Pendiente | 13 |
@@ -144,16 +144,55 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 11: CI remoto y protección de ramas. Ahora sí parte de una suite verde
-—479 pruebas, 0 fallos—, así que el primer rojo del CI señalará algo real y no
-deuda arrastrada. Falta publicar el workflow, observar una ejecución completa con
-integración y build, y configurar las protecciones de rama.
+Cerrar la mitad remota de la Tarea 11: empujar los commits a `origin`, observar
+una ejecución completa del workflow y aplicar la protección de ramas. Los
+comandos están en [el plan de GitHub Actions](../github-actions-implementation-plan.md);
+`gh` no está instalado en el entorno de trabajo.
+
+Después, Tarea 12: staging aislado y ensayo de la Etapa 1.
 
 En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/plantillas/` y el procedimiento en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-25 — Tarea 11: Cierre Acumulado En Verde (Mitad Remota Pendiente)
+
+**Los seis controles pasan juntos por primera vez:** lint 14,6 s, typecheck,
+480 pruebas unitarias en 93 archivos, 94 de integración en 24 archivos con las 67
+migraciones desde base vacía, build y auditoría de dependencias.
+
+Las pruebas de integración nunca se habían ejecutado. Arrancaron con **18 fallos
+de 94** y destaparon:
+
+- **Un defecto real de once días:** el commit `fa15696` fijó
+  `requiresInventoryEntry` en `false`, y `createPurchaseDraftRecord` exige ese
+  campo en `true` para enlazar un gasto urgente con una orden de compra. La
+  trazabilidad "compra urgente → orden → stock" era imposible. Se restauró el
+  campo como opcional; **queda decisión de Dirección** sobre si el diálogo debe
+  volver a preguntarlo o si el enlace se retira.
+- **Una regla sin pruebas:** el rechazo de una Caja de otro día
+  (`session_stale_open`, 2026-08-14) rompió cinco archivos de integración sin que
+  nadie se enterara. Los fixtures usaban fechas escritas a mano.
+- **Contaminación entre archivos:** seis pruebas hacen
+  `TRUNCATE … "InternalUser" CASCADE`, y PostgreSQL propaga a `ModuleActivation`.
+  Mis pruebas de módulos ahora preparan su propio estado base.
+- Dos fixtures míos que no respetaban el orden de dependencias, y un texto que
+  cambió sin que la prueba siguiera.
+
+**Dependencias:** cinco de siete vulnerabilidades altas resueltas con versiones
+forzadas en `pnpm-workspace.yaml`; las dos de `image-size` no tienen corrección
+publicada y quedaron aceptadas explícitamente con su justificación.
+
+**`pnpm lint` volvió a ser usable:** ESLint 9 recorría `.data/` (47 MB de
+adjuntos locales). De no terminar, a 14,6 segundos.
+
+**Falta la mitad remota:** publicar el workflow, observar una ejecución y aplicar
+la protección de ramas. Requiere empujar a `origin` y `gh`, que no está instalado
+acá. Comandos concretos en el plan de GitHub Actions.
+
+Detalle: [reporte de tarea](../task-reports/2026-08-25-lanzamiento-tarea-11-cierre-acumulado-ci.md).
 
 ### 2026-08-24 — Tarea 10B Implementada (Deuda Previa Al Plan)
 
