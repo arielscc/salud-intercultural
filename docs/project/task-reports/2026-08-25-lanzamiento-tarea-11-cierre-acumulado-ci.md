@@ -105,22 +105,70 @@ comando inservible para cualquiera que lo corriera en su máquina. Con `.data/`,
 `.gstack/`, `.claude/` y `docker/` en los ignores, pasó de no terminar a 14,6
 segundos.
 
-## Pendiente: La Mitad Remota
+## La Ejecución Remota
 
-Lo que falta **no se puede hacer desde acá**:
+### El workflow ya estaba publicado, y llevaba semanas en rojo
 
-1. Publicar el workflow en `origin` y observar una ejecución completa. Requiere
-   empujar los commits.
-2. Configurar la protección de ramas. `gh` no está instalado en este entorno.
+El plan decía que faltaba publicarlo. Era incorrecto: al empujar aparecieron
+ejecuciones anteriores del **9 y del 19 de agosto**, ambas fallidas. El CI existía
+y estaba rojo desde hacía dos semanas sin que nadie lo mirara.
 
-Los comandos exactos quedaron escritos en
-[el plan de GitHub Actions](../github-actions-implementation-plan.md), con los
-nombres de contexto que corresponden a cada job. El audit de dependencias ya
-puede exigirse como check obligatorio, cosa que ese plan condicionaba a resolver
-las altas.
+### Por qué fallaba
 
-## Riesgo Conocido Del Primer Run Remoto
+Primer intento sobre este trabajo (`32867862180`): `Quality`, `Build` y
+`Dependency audit` en verde; `Unit tests` e `Integration tests` en rojo con
 
-CI usa Node 22 y acá se corrió todo con Node 24. `package.json` declara
-`>=22.0.0 <23`, así que el workflow está bien; la diferencia solo significa que
-la versión exacta de CI no se probó localmente.
+```
+Failed to resolve import "@/generated/prisma/client" from src/modules/database/client.ts
+```
+
+El cliente de Prisma se genera en `src/generated/`, que está en `.gitignore`. En
+un checkout limpio no existe, y ni `pnpm test` ni `pnpm test:integration` lo
+generaban. Cualquier archivo que importe Prisma fallaba **al cargar**, no al
+asertar: por eso 367 pruebas pasaban y 14 archivos ni se abrían.
+
+`typecheck` y `build` sí lo generaban, y por eso esos dos jobs pasaban mientras
+los de pruebas fallaban. La diferencia estaba a la vista en `package.json` desde
+que se creó el workflow.
+
+Se agregó `prisma generate` a los cuatro scripts de prueba. Verificado borrando
+`src/generated/` por completo: 480 unitarias y 94 de integración en verde desde
+cero.
+
+### Primera ejecución verde
+
+Ejecución `32868540365`, los cinco jobs:
+
+| Job | Tiempo |
+| --- | --- |
+| Dependency audit | 31 s |
+| Quality | 1 m 24 s |
+| Integration tests and migrations | 2 m 55 s |
+| Build | 1 m 30 s |
+| Unit tests | 1 m 35 s |
+
+## Protección De Ramas Aplicada
+
+`staging` y `main` quedaron protegidas y verificadas:
+
+- Los cinco checks son obligatorios, con `strict` activo: la rama debe estar al
+  día antes de fusionar.
+- **Cero aprobaciones requeridas.** Trabaja una sola persona y GitHub no permite
+  aprobar el propio PR; exigir una aprobación habría bloqueado toda promoción sin
+  que existiera nadie para desbloquearla.
+- `enforce_admins` activo: sin eso, la única persona del repositorio es también
+  quien puede saltarse el candado.
+- Sin force-push ni borrado.
+- Auto-merge habilitado en el repositorio, para que el PR se fusione solo cuando
+  los checks terminen.
+
+`develop` queda sin protección a propósito: es la rama de trabajo diario y el CI
+corre igual en cada push.
+
+## Para Informar
+
+**El repositorio es público.** No hay fuga de datos —`.env`, `.data/` y los
+adjuntos están fuera del control de versiones—, pero cualquiera puede leer la
+matriz de permisos, la lógica de auditoría y los controles de seguridad del
+sistema. Es una decisión de Dirección, no técnica; conviene revisarla antes de
+que la clínica opere con datos reales.

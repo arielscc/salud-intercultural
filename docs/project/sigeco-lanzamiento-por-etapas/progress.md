@@ -144,12 +144,10 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Cerrar la mitad remota de la Tarea 11: empujar los commits a `origin`, observar
-una ejecución completa del workflow y aplicar la protección de ramas. Los
-comandos están en [el plan de GitHub Actions](../github-actions-implementation-plan.md);
-`gh` no está instalado en el entorno de trabajo.
-
-Después, Tarea 12: staging aislado y ensayo de la Etapa 1.
+Tarea 12: staging aislado y ensayo de la Etapa 1. La promoción `develop → staging`
+ya pasa por el candado del CI, así que el siguiente paso es preparar la base, el
+Blob y los secretos exclusivos de staging, desplegar y ensayar el lanzamiento
+completo con módulos apagados y encendidos.
 
 En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/plantillas/` y el procedimiento en
@@ -157,7 +155,7 @@ En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 
 ## Registro
 
-### 2026-08-25 — Tarea 11: Cierre Acumulado En Verde (Mitad Remota Pendiente)
+### 2026-08-25 — Tarea 11 Implementada (CI Remoto Y Cierre Acumulado)
 
 **Los seis controles pasan juntos por primera vez:** lint 14,6 s, typecheck,
 480 pruebas unitarias en 93 archivos, 94 de integración en 24 archivos con las 67
@@ -188,9 +186,24 @@ publicada y quedaron aceptadas explícitamente con su justificación.
 **`pnpm lint` volvió a ser usable:** ESLint 9 recorría `.data/` (47 MB de
 adjuntos locales). De no terminar, a 14,6 segundos.
 
-**Falta la mitad remota:** publicar el workflow, observar una ejecución y aplicar
-la protección de ramas. Requiere empujar a `origin` y `gh`, que no está instalado
-acá. Comandos concretos en el plan de GitHub Actions.
+**Ejecución remota en verde.** El workflow no estaba sin publicar como decía el
+plan: existía y llevaba en rojo desde el 9 de agosto. Fallaba porque `pnpm test`
+y `pnpm test:integration` no generaban el cliente de Prisma, que vive en
+`src/generated/` y no se versiona; en un checkout limpio ningún archivo que
+importara Prisma podía cargar. `typecheck` y `build` sí lo generaban, y por eso
+esos dos jobs pasaban. Corregido en los cuatro scripts de prueba.
+
+Ejecución `32868540365`: los cinco jobs en verde. Auditoría 31 s, Quality 1 m 24 s,
+Integración 2 m 55 s, Build 1 m 30 s, Unitarias 1 m 35 s.
+
+**Protección aplicada** en `staging` y `main`: cinco checks obligatorios con
+`strict`, cero aprobaciones —trabaja una sola persona y GitHub no deja aprobar el
+propio PR—, `enforce_admins` activo, sin force-push ni borrado, y auto-merge
+habilitado. `develop` queda libre a propósito.
+
+**Para informar:** el repositorio es público. No hay fuga de datos, pero la matriz
+de permisos y los controles de seguridad son legibles por cualquiera. Conviene
+revisarlo antes de operar con datos reales.
 
 Detalle: [reporte de tarea](../task-reports/2026-08-25-lanzamiento-tarea-11-cierre-acumulado-ci.md).
 

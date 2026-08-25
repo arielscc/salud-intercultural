@@ -2,7 +2,11 @@
 
 Plan posterior al cierre de las 10 tareas de simplificacion V3.7. Su objetivo es convertir las validaciones locales actuales en controles automaticos y obligatorios antes de promover cambios a `staging` y `main`.
 
-Estado al 2026-07-28: `.github/workflows/ci.yml` esta implementado localmente como parte de la Tarea 1 de mejoras integrales. Falta publicarlo, observar una ejecucion remota completa y configurar las reglas de proteccion; hasta entonces la Tarea 1 permanece en progreso.
+Estado al 2026-08-25: el workflow **ya estaba publicado** y llevaba en rojo
+desde el 9 de agosto sin que nadie lo revisara. La causa era que `pnpm test` y
+`pnpm test:integration` no generaban el cliente de Prisma, que vive en
+`src/generated/` y no se versiona. Corregido, la ejecucion `32868540365` termino
+con los cinco jobs en verde y `staging` y `main` quedaron protegidas.
 
 ## Objetivos
 
