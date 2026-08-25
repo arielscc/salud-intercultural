@@ -16,6 +16,38 @@ develop local -> staging -> main produccion
 | `staging` | Revision publicada antes de produccion. | Vercel Preview Deployment. |
 | `main` | Produccion. Solo recibe cambios aprobados desde staging. | Vercel Production. |
 
+## Comandos De Promocion
+
+Desde el 2026-08-25 `staging` y `main` estan protegidas: solo se llega por Pull
+Request y GitHub no fusiona mientras los cinco checks del CI no terminen en
+verde. Los scripts abren el PR y activan auto-merge, asi que no hay que esperar
+mirando la pantalla.
+
+```bash
+pnpm promote:staging   # develop -> staging
+pnpm promote:main      # staging -> main
+```
+
+Antes de crear el PR muestran que commits se van a promover y avisan si el CI de
+la rama de origen no esta en verde. Con `--dry-run` no crean nada:
+
+```bash
+pnpm promote:staging --dry-run
+```
+
+Si el PR ya existe, lo reutilizan en lugar de crear otro.
+
+Para seguir el CI:
+
+```bash
+pnpm ci          # ultimas cinco ejecuciones de develop
+pnpm ci:watch    # se queda mirando la ejecucion actual
+pnpm ci:failed   # log del job que fallo
+```
+
+Los scripts solo necesitan `gh` autenticado; no dependen de las credenciales de
+git. Si falta la sesion: `gh auth login`.
+
 ## Trabajo Diario
 
 Trabajar normalmente en `develop`:
