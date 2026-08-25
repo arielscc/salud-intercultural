@@ -124,6 +124,9 @@ export default async function AdministrationPage({
   // El padrón de Administración es propio: no depende de que Recepción esté
   // lanzada, porque en la Etapa 1 el cliente se registra desde acá.
   const canReadClients = canUse(user.role, moduleAccess, "patients_read", "administracion");
+  // La venta de mostrador no espera la derivación del médico: Administración
+  // la inicia por su cuenta.
+  const canCreateSale = canUse(user.role, moduleAccess, "sales_write");
   const { activeBranch } = await getBranchContext(user);
   const isPersonalAdministrationAccount = user.role === "administracion";
   const isSuperAdmin = user.role === "super_admin";
@@ -167,6 +170,14 @@ export default async function AdministrationPage({
         description="Administración"
         actions={
           <>
+            {canCreateSale ? (
+              <Link
+                href="/sigeco/administracion/ventas/nueva"
+                className={buttonVariants({ size: "sm" })}
+              >
+                Nueva venta
+              </Link>
+            ) : null}
             {canReadClients ? (
               <Link
                 href="/sigeco/administracion/clientes"

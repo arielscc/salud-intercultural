@@ -34,6 +34,7 @@ export default async function AdministrationClientPage({ params }: ClientPagePro
   const sales = await getPatientSales(client.id);
   // La ficha completa vive en Recepción: solo se ofrece cuando ese módulo está
   // lanzado y quien mira puede abrirla.
+  const canCreateSale = canUse(user.role, moduleAccess, "sales_write");
   const canOpenFullRecord = canUse(user.role, moduleAccess, "patients_read", "recepcion");
 
   return (
@@ -44,14 +45,24 @@ export default async function AdministrationClientPage({ params }: ClientPagePro
         description={`Código ${client.internalCode}`}
         actionsClassName="w-full sm:w-auto"
         actions={
-          canOpenFullRecord ? (
-            <Link
-              href={`/sigeco/recepcion/pacientes/${client.id}`}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              Ver ficha completa
-            </Link>
-          ) : undefined
+          <>
+            {canCreateSale ? (
+              <Link
+                href={`/sigeco/administracion/ventas/nueva?cliente=${client.id}`}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Nueva venta
+              </Link>
+            ) : null}
+            {canOpenFullRecord ? (
+              <Link
+                href={`/sigeco/recepcion/pacientes/${client.id}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Ver ficha completa
+              </Link>
+            ) : null}
+          </>
         }
       />
 

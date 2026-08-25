@@ -23,9 +23,11 @@ suspendido conserva la consulta para Dirección y el super administrador, bloque
 toda escritura y lista el trabajo que quedó abierto. Sigue en pie el gate de
 cierre: nada pasa a `Terminada` antes del cierre acumulado de las Tareas 11 y 12.
 
-La Fase B ya empezó: Administración registra al cliente de mostrador sin abrir
-visita, que era el primero de los tres bloqueos para vender sin la ruta clínica.
-Faltan la venta directa (Tarea 8) y el listado de ventas (Tarea 9).
+La Fase B ya cubre los dos bloqueos principales: Administración registra al
+cliente de mostrador sin abrir visita y arma la venta por su cuenta, sin esperar
+la derivación del médico. El cobro, el descuento de stock y el recibo son los de
+siempre. Falta el listado de ventas (Tarea 9) y la carga de datos maestros
+reales (Tarea 10).
 
 Con los once módulos activos el sistema se comporta igual que antes de este
 plan.
@@ -50,8 +52,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 13 |
-| En progreso | 7 |
+| Pendiente | 12 |
+| En progreso | 8 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -76,7 +78,7 @@ se sigue llevando en sus propios archivos.
 | 5 | Pantalla de activación del super administrador | P0 | En progreso | 3-4 |
 | 6 | Modo solo lectura del módulo apagado | P1 | En progreso | 5 |
 | 7 | Alta mínima de cliente desde Administración | P0 | En progreso | 4 |
-| 8 | Venta directa sin visita | P0 | Pendiente | 7 |
+| 8 | Venta directa sin visita | P0 | En progreso | 7 |
 | 9 | Listado y búsqueda de ventas | P1 | Pendiente | 8 |
 | 10 | Datos maestros reales de la Etapa 1 | P0 | Pendiente | 8-9 |
 | 11 | CI remoto y protección de ramas | P0 | Pendiente | Fases A y B |
@@ -132,15 +134,40 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 8: venta directa sin visita. La ficha del cliente ya existe y se puede
-buscar; falta que Administración inicie la venta por su cuenta en lugar de
-esperar la derivación del médico. `createSaleOrderAction` ya acepta `visitId` y
-`workItemId` vacíos, y `AdministrationChargeDialog` y `createPaymentAction` se
-reutilizan tal cual: el trabajo es el punto de entrada desde
-`/sigeco/administracion` y el armado de líneas desde catálogo, inventario o texto
-libre.
+Tarea 9: listado y búsqueda de ventas. Hoy una venta anterior solo se alcanza
+desde la ficha del cliente o desde los cobros del día; falta
+`/sigeco/administracion/ventas` con filtros por fecha, estado y cliente.
+`getSalesSummary` y las consultas de cobros ya existen: el trabajo es la
+paginación, los filtros que falten y la tabla que no desborde en móvil.
 
 ## Registro
+
+### 2026-08-24 — Tarea 8 Implementada (Venta Directa Sin Visita)
+
+- `createSaleOrderAction`, `createSaleOrderRecord` y `AdministrationChargeDialog`
+  ya existían desde el commit `5668da9` y **no tenían ningún consumidor**. La
+  acción ya contemplaba el caso sin tarea administrativa y el esquema ya aceptaba
+  `visitId` y `workItemId` vacíos: esta tarea armó el recorrido, no reescribió la
+  venta.
+- `/sigeco/administracion/ventas/nueva` en dos pasos: a quién se le vende
+  —búsqueda por nombre, teléfono o código, con acceso al alta de la Tarea 7— y
+  qué se le vende, con el catálogo de servicios y tratamientos, los productos
+  vendibles de la sucursal activa y texto libre.
+- Entradas nuevas: "Nueva venta" en el encabezado de `/sigeco/administracion` y
+  en la ficha del cliente, que abre el paso 2 con ese cliente ya elegido.
+- El cobro, el descuento de stock, el rollback por stock insuficiente, la
+  idempotencia y el recibo son los de siempre, en el detalle de la venta. Una
+  venta de mostrador y una derivada del médico son la misma `Sale`; lo único que
+  cambia es que una no tiene `visitId`.
+- Los errores de la venta de mostrador volvían a `/sigeco/administracion`, que no
+  muestra mensajes de error: ahora vuelven a la pantalla donde se estaba armando,
+  con el cliente elegido y el motivo explicado.
+- Validación: typecheck y lint limpios; 474 de 479 pruebas unitarias. Verificado
+  contra la base de desarrollo: `visitId: null | workItemId: null`, total 13000
+  sobre 15000 con 2000 de descuento calculado en servidor, y el reintento con la
+  misma clave devolvió la misma venta.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-8-venta-directa-sin-visita.md).
 
 ### 2026-08-24 — Tarea 7 Implementada (Alta Mínima De Cliente Desde Administración)
 

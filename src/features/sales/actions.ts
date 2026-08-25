@@ -141,7 +141,7 @@ export async function createSaleAction(formData: FormData) {
         const stockError = findInsufficientStockError(error);
         const target = parsed.data.workItemId
           ? `/sigeco/administracion/${parsed.data.workItemId}`
-          : "/sigeco/administracion";
+          : newSaleTarget(parsed.data.patientId);
         const catalogError = findInventoryCatalogError(error);
         if (catalogError?.code === "inactive-item" || catalogError?.code === "not-for-sale") {
           redirect(`${target}?error=unavailable-product`);
@@ -166,8 +166,16 @@ export async function createSaleAction(formData: FormData) {
 
   revalidatePath("/sigeco/administracion");
   if (workItemId) revalidatePath(`/sigeco/administracion/${workItemId}`);
+  revalidatePath(`/sigeco/administracion/clientes/${patientId}`);
   revalidatePath(`/sigeco/recepcion/pacientes/${patientId}`);
   redirect(`/sigeco/administracion/ventas/${sale.id}?aviso=venta-creada`);
+}
+
+/** Vuelve al armado de la venta de mostrador conservando el cliente elegido. */
+function newSaleTarget(patientId: string) {
+  return patientId
+    ? `/sigeco/administracion/ventas/nueva?cliente=${encodeURIComponent(patientId)}`
+    : "/sigeco/administracion/ventas/nueva";
 }
 
 export async function createSaleOrderAction(formData: FormData) {
@@ -186,9 +194,11 @@ export async function createSaleOrderAction(formData: FormData) {
     async (user) => {
       const { activeBranch } = await getBranchContext(user);
       const parsed = createSaleOrderSchema.safeParse(parseSaleOrderForm(formData));
+      // Sin tarea administrativa la venta es de mostrador: el error vuelve a la
+      // pantalla donde se estaba armando, con el cliente ya elegido.
       const target = workItemId
         ? `/sigeco/administracion/${workItemId}`
-        : "/sigeco/administracion";
+        : newSaleTarget(patientId);
       if (!parsed.success) redirect(`${target}?error=invalid-sale`);
 
       let created;

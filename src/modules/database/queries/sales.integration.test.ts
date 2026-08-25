@@ -5,6 +5,7 @@ import { createClinicalOrderRecord } from "@/modules/database/queries/clinical-c
 import { createPatientRecord, getPatientById } from "@/modules/database/queries/patients";
 import {
   createPaymentRecord,
+  createSaleOrderRecord,
   createSaleRecord,
   getAdministrationWorkItems,
   getSaleById,
@@ -160,5 +161,108 @@ describe("sales integration", () => {
     expect(detail?.payments).toHaveLength(2);
     expect(summary.todaySales._sum.paidCents).toBeGreaterThanOrEqual(18000);
     expect(patientDetail?.sales[0]?.id).toBe(sale.id);
+  });
+});
+
+describe("venta de mostrador sin visita", () => {
+  async function counterSaleFixture() {
+    const admin = await prisma.internalUser.create({
+      data: {
+        email: "admin-mostrador@example.com",
+        name: "Admin Mostrador",
+        passwordHash: await hashPassword("clave-segura-123"),
+        role: "administracion"
+      }
+    });
+    const client = await createPatientRecord({
+      fullName: "Cliente Mostrador",
+      phone: "70000055"
+    });
+    await openCashSession({
+      branchCode: "el-alto",
+      registerName: "Caja principal",
+      businessDate: new Date("2026-08-24T00:00:00.000Z"),
+      shift: "full_day",
+      responsibleId: admin.id,
+      openedById: admin.id,
+      openingCashCents: 0,
+      idempotencyKey: "counter-sale-cash-session"
+    });
+
+    return { admin, client };
+  }
+
+  it("registra la venta sin visita ni tarea administrativa", async () => {
+    const { admin, client } = await counterSaleFixture();
+
+    const sale = await createSaleOrderRecord({
+      idempotencyKey: "counter-sale-1",
+      patientId: client.id,
+      createdById: admin.id,
+      branchCode: "el-alto",
+      subtotalCents: 15000,
+      discountCents: 0,
+      lines: [
+        { itemType: "service", description: "Consulta de control", quantity: 1, unitPriceCents: 15000 }
+      ]
+    });
+
+    expect(sale.visitId).toBeNull();
+    expect(sale.workItemId).toBeNull();
+    expect(sale.totalCents).toBe(15000);
+    expect(sale.balanceCents).toBe(15000);
+  });
+
+  it("no duplica la venta al reintentar con la misma clave", async () => {
+    const { admin, client } = await counterSaleFixture();
+    const input = {
+      idempotencyKey: "counter-sale-retry",
+      patientId: client.id,
+      createdById: admin.id,
+      branchCode: "el-alto",
+      subtotalCents: 8000,
+      discountCents: 0,
+      lines: [
+        { itemType: "service" as const, description: "Curación", quantity: 1, unitPriceCents: 8000 }
+      ]
+    };
+
+    const first = await createSaleOrderRecord(input);
+    const retried = await createSaleOrderRecord(input);
+
+    expect(retried.id).toBe(first.id);
+    expect(await prisma.sale.count({ where: { patientId: client.id } })).toBe(1);
+  });
+
+  it("cobra en Caja y deja el movimiento, sin visita asociada", async () => {
+    const { admin, client } = await counterSaleFixture();
+    const sale = await createSaleOrderRecord({
+      idempotencyKey: "counter-sale-paid",
+      patientId: client.id,
+      createdById: admin.id,
+      branchCode: "el-alto",
+      subtotalCents: 12000,
+      discountCents: 2000,
+      lines: [
+        { itemType: "service", description: "Sesión suelta", quantity: 1, unitPriceCents: 12000 }
+      ]
+    });
+
+    await createPaymentRecord({
+      idempotencyKey: "counter-payment-1",
+      saleId: sale.id,
+      amountCents: 10000,
+      paymentMethodCode: "cash",
+      receivedById: admin.id
+    });
+
+    const stored = await getSaleById(sale.id);
+    expect(stored?.status).toBe("paid");
+    expect(stored?.balanceCents).toBe(0);
+
+    const movements = await prisma.cashMovement.findMany({ where: { saleId: sale.id } });
+    expect(movements).toHaveLength(1);
+    expect(movements[0]?.visitId).toBeNull();
+    expect(movements[0]?.amountCents).toBe(10000);
   });
 });
