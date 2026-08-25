@@ -166,6 +166,7 @@ export async function updateServiceCatalogThresholdAction(formData: FormData) {
     await runAuditedAction(
       {
         permission: "discount_threshold_manage",
+        module: "catalogo",
         action: "service_catalog.item.threshold.update",
         entityType: "service_catalog_item",
         entityId: catalogItemId || undefined
@@ -201,6 +202,7 @@ export async function updateInventoryItemMaxDiscountAction(formData: FormData) {
     await runAuditedAction(
       {
         permission: "discount_threshold_manage",
+        module: "inventario",
         action: "inventory.item.max_discount.update",
         entityType: "inventory_item",
         entityId: itemId || undefined

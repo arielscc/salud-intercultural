@@ -11,7 +11,7 @@ type PatientEditPageProps = {
 };
 
 export default async function PatientEditPage({ params, searchParams }: PatientEditPageProps) {
-  await requirePermission("patients_update");
+  await requirePermission("patients_update", { module: "recepcion" });
   const [{ id }, { error, duplicate }] = await Promise.all([
     params,
     searchParams

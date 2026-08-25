@@ -162,6 +162,7 @@ export async function updateReceptionPatientAction(formData: FormData) {
   await runAuditedAction(
     {
       permission: "patients_update",
+      module: "recepcion",
       action: "patient.update",
       entityType: "patient",
       entityId: patientId || undefined

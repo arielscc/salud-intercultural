@@ -81,7 +81,7 @@ function invalidVitalSignField(campo: string | undefined) {
 }
 
 export default async function NursingWorkItemPage({ params, searchParams }: NursingWorkItemPageProps) {
-  const user = await requirePermission("nursing_read");
+  const user = await requirePermission("nursing_read", { module: "enfermeria" });
   const { activeBranch } = await getBranchContext(user);
   const { workItemId } = await params;
   const query = await searchParams;

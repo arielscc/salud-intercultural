@@ -11,7 +11,7 @@ import { requirePermission } from "@/modules/permissions";
 import { redirect } from "next/navigation";
 
 export default async function BranchesPage() {
-  const user = await requirePermission("reports_read");
+  const user = await requirePermission("reports_read", { module: "core" });
   if (!canViewConsolidatedBranches(user.role)) redirect("/sigeco");
   const report = await getBranchComparisonReport(user.role);
 

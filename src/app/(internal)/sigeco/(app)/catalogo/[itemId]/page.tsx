@@ -35,7 +35,7 @@ export default async function ServiceCatalogItemPage({
   params: Promise<{ itemId: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const user = await requirePermission("service_catalog_read");
+  const user = await requirePermission("service_catalog_read", { module: "catalogo" });
   const { itemId } = await params;
   const query = await searchParams;
   const item = await getServiceCatalogItemById(itemId);

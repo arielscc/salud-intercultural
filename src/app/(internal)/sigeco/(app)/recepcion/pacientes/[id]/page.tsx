@@ -97,7 +97,7 @@ export default async function PatientDetailPage({
   params,
   searchParams
 }: PatientDetailPageProps) {
-  const user = await requirePermission("patients_read");
+  const user = await requirePermission("patients_read", { module: "recepcion" });
   const { id } = await params;
   const filters = await searchParams;
   const patient = await getPatientById(id);

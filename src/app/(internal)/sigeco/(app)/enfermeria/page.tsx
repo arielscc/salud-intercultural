@@ -35,7 +35,7 @@ const emptyNursingMessage = (
 );
 
 export default async function NursingWorkQueuePage() {
-  const user = await requirePermission("nursing_read");
+  const user = await requirePermission("nursing_read", { module: "enfermeria" });
   const { activeBranch } = await getBranchContext(user);
   // Barrido perezoso: cierra por abandono a quienes superaron 1 h en espera
   // antes de leer la bandeja, para que no aparezcan como "a atender".

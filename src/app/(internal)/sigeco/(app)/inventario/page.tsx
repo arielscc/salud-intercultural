@@ -54,7 +54,7 @@ const actionClassName =
   "focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-[9px] border border-border bg-surface px-3 text-sm font-semibold text-text transition hover:border-primary/40 hover:text-primary-dark";
 
 export default async function InventoryPage({ searchParams }: InventoryPageProps) {
-  const user = await requirePermission("inventory_read");
+  const user = await requirePermission("inventory_read", { module: "inventario" });
   const { activeBranch } = await getBranchContext(user);
   const params = await searchParams;
   const page = parsePage(params.page);

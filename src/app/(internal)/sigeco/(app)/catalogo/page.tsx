@@ -42,7 +42,7 @@ const actionBaseClassName =
 const secondaryActionClassName = `${actionBaseClassName} border-border bg-surface text-text hover:border-primary/40 hover:text-primary-dark`;
 
 export default async function ServiceCatalogPage({ searchParams }: CatalogPageProps) {
-  const user = await requirePermission("service_catalog_read");
+  const user = await requirePermission("service_catalog_read", { module: "catalogo" });
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = 40;

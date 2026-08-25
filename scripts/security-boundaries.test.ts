@@ -331,8 +331,13 @@ describe("SIGECO permission and privacy boundaries", () => {
     for (const [file, permissions] of Object.entries(pagePermissions)) {
       const contents = source(file);
       for (const permission of permissions) {
-        expect(contents, `${file} must require ${permission}`).toContain(
-          `requirePermission("${permission}")`
+        // El gate de modulos agrega un segundo argumento opcional:
+        // requirePermission("x", { module: "y" }). El permiso sigue siendo
+        // obligatorio; el modulo solo se fija cuando varios lo comparten.
+        expect(contents, `${file} must require ${permission}`).toMatch(
+          new RegExp(
+            `requirePermission\\("${permission}"(?:\\s*,\\s*\\{[^}]*\\})?\\)`
+          )
         );
       }
     }

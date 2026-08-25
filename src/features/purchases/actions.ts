@@ -323,6 +323,7 @@ export async function createInventoryLotAdjustmentAction(formData: FormData) {
     await runAuditedAction(
       {
         permission: "inventory_lot_adjust",
+        module: "inventario",
         action: "inventory.lot.adjust",
         entityType: "inventory_lot",
         entityId: parsed.data.lotId

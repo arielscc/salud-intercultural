@@ -191,7 +191,7 @@ export default async function ReceptionPage({
 
   const user =
     vista === "pacientes"
-      ? await requirePermission("patients_read")
+      ? await requirePermission("patients_read", { module: "recepcion" })
       : await requirePermission("visits_read");
   const { activeBranch } = await getBranchContext(user);
   const canReadDuplicates = roleHasPermission(

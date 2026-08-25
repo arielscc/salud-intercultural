@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { sigecoModuleCodes } from "@/features/modules/catalog";
 import { prisma } from "@/modules/database";
 import {
+  ModuleActivationError,
   getActiveModules,
   getModuleActivationHistory,
-  getModuleActivationStates
+  getModuleActivationStates,
+  setModuleActivation
 } from "@/modules/database/queries/modules";
 
 /**
@@ -116,5 +118,73 @@ describe("historial append-only", () => {
 
     expect(history.length).toBeGreaterThan(0);
     expect(history.every((entry) => entry.reason !== "editado")).toBe(true);
+  });
+});
+
+describe("setModuleActivation", () => {
+  it("enciende un módulo y deja el cambio en el historial", async () => {
+    await setModuleActivation({ code: "administracion", active: true });
+
+    await expect(getActiveModules()).resolves.toContain("administracion");
+    const history = await getModuleActivationHistory({ code: "administracion" });
+    expect(history[0]).toMatchObject({
+      previousStatus: "inactive",
+      status: "active"
+    });
+  });
+
+  it("no enciende un módulo sin sus dependencias", async () => {
+    await expect(setModuleActivation({ code: "compras", active: true })).rejects.toMatchObject({
+      code: "missing_dependencies",
+      blockers: ["inventario"]
+    });
+
+    await expect(getActiveModules()).resolves.not.toContain("compras");
+  });
+
+  it("no apaga un módulo del que otro activo depende", async () => {
+    await setModuleActivation({ code: "recepcion", active: true });
+    await setModuleActivation({ code: "consulta", active: true });
+
+    await expect(
+      setModuleActivation({ code: "recepcion", active: false, reason: "prueba" })
+    ).rejects.toMatchObject({
+      code: "required_by_active_modules",
+      blockers: ["consulta"]
+    });
+  });
+
+  it("exige motivo para apagar", async () => {
+    await setModuleActivation({ code: "opiniones", active: true });
+
+    await expect(
+      setModuleActivation({ code: "opiniones", active: false })
+    ).rejects.toBeInstanceOf(ModuleActivationError);
+  });
+
+  it("no apaga el núcleo", async () => {
+    await expect(
+      setModuleActivation({ code: "core", active: false, reason: "prueba" })
+    ).rejects.toMatchObject({ code: "always_active" });
+
+    await expect(getActiveModules()).resolves.toContain("core");
+  });
+
+  it("apaga un módulo del que nadie depende y conserva la historia", async () => {
+    await setModuleActivation({ code: "inventario", active: true });
+    await setModuleActivation({
+      code: "inventario",
+      active: false,
+      reason: "Incidente de stock"
+    });
+
+    await expect(getActiveModules()).resolves.not.toContain("inventario");
+    const history = await getModuleActivationHistory({ code: "inventario" });
+    expect(history[0]).toMatchObject({
+      previousStatus: "active",
+      status: "inactive",
+      reason: "Incidente de stock"
+    });
+    expect(history.length).toBeGreaterThanOrEqual(2);
   });
 });

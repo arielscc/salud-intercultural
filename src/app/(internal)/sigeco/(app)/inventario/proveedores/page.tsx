@@ -29,7 +29,7 @@ export default async function SuppliersPage({
     estado?: "active" | "inactive" | "all";
   }>;
 }) {
-  const user = await requirePermission("suppliers_read");
+  const user = await requirePermission("suppliers_read", { module: "inventario" });
   const params = await searchParams;
   const page = parsePage(params.page);
   const canWrite = roleHasPermission(user.role, "suppliers_write");

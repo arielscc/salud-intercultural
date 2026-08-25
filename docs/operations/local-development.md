@@ -58,6 +58,34 @@ Rutas utiles:
 - API leads: `http://localhost:3000/api/leads`
 - Adjuntos clínicos: dentro de la ficha del paciente, solo con un rol autorizado.
 
+## Modulos Activos
+
+SIGECO se lanza por etapas: un modulo apagado no aparece en la navegacion y sus
+paginas y acciones se rechazan en el servidor. Una base recien migrada solo trae
+el nucleo encendido, asi que en desarrollo hay que activar lo que se va a usar.
+
+```bash
+SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=true pnpm modules:set
+SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=true pnpm modules:set
+```
+
+Modulos disponibles: `core`, `administracion`, `inventario`, `compras`,
+`catalogo`, `recepcion`, `consulta`, `enfermeria`, `seguimientos`, `opiniones`,
+`reportes`.
+
+Las dependencias son duras: Compras exige Inventario, Consulta exige Recepcion y
+Enfermeria exige Consulta. Apagar exige motivo:
+
+```bash
+SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=false \
+  SIGECO_MODULE_REASON="Prueba local" pnpm modules:set
+```
+
+El script existe para preparar un ambiente. La operacion real se hace desde la
+pantalla del super administrador y comparte las mismas reglas y el mismo
+historial. Plan:
+[lanzamiento por etapas](../project/sigeco-lanzamiento-por-etapas/tasks.md).
+
 ## Migraciones Y Seeds
 
 Flujo inicial para preparar la base local:

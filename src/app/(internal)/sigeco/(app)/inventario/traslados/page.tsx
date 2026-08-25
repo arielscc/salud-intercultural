@@ -22,7 +22,7 @@ export default async function InventoryTransfersPage({
 }: {
   searchParams: Promise<{ error?: string; aviso?: string }>;
 }) {
-  const user = await requirePermission("inventory_read");
+  const user = await requirePermission("inventory_read", { module: "inventario" });
   const { activeBranch, branches } = await getBranchContext(user);
   const query = await searchParams;
   const canWrite = roleHasPermission(user.role, "inventory_write");

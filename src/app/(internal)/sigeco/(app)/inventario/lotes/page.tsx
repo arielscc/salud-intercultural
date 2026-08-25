@@ -58,7 +58,7 @@ export default async function InventoryLotsPage({
     aviso?: string;
   }>;
 }) {
-  const user = await requirePermission("inventory_read");
+  const user = await requirePermission("inventory_read", { module: "inventario" });
   const { activeBranch } = await getBranchContext(user);
   const params = await searchParams;
   const page = parsePage(params.page);

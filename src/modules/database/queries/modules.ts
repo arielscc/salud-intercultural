@@ -1,10 +1,15 @@
 import { cache } from "react";
 import type { InternalRole } from "@/generated/prisma/client";
 import {
+  moduleCanBeDeactivated,
+  moduleIsActive,
   normalizeActiveModules,
+  resolveActivationBlockers,
+  resolveDeactivationBlockers,
   type ActiveModules
 } from "@/features/modules/activation";
 import {
+  sigecoModuleCodes,
   sigecoModules,
   type SigecoModule,
   type SigecoModuleCode
@@ -151,5 +156,125 @@ export async function getModuleActivationHistory(options?: {
       actorRole: event.actorRole,
       occurredAt: event.occurredAt
     }));
+  });
+}
+
+/** Motivos por los que un cambio de estado se rechaza. */
+export type ModuleActivationErrorCode =
+  | "unknown_module"
+  | "missing_dependencies"
+  | "required_by_active_modules"
+  | "always_active"
+  | "reason_required";
+
+export class ModuleActivationError extends Error {
+  constructor(
+    public readonly code: ModuleActivationErrorCode,
+    public readonly blockers: readonly SigecoModuleCode[] = []
+  ) {
+    super(`MODULE_ACTIVATION_${code.toUpperCase()}`);
+    this.name = "ModuleActivationError";
+  }
+}
+
+export function isSigecoModuleCode(value: string): value is SigecoModuleCode {
+  return (sigecoModuleCodes as readonly string[]).includes(value);
+}
+
+/**
+ * Enciende o apaga un módulo y deja el cambio en el historial, en una sola
+ * transacción. Aplica las dependencias duras en los dos sentidos: no se activa
+ * un módulo sin sus prerrequisitos ni se apaga uno del que otro activo depende.
+ *
+ * Es la única escritura del estado. La pantalla del super administrador
+ * (Tarea 5) y el script de línea de comandos la comparten para que no existan
+ * dos caminos con reglas distintas.
+ */
+export async function setModuleActivation(input: {
+  code: SigecoModuleCode;
+  active: boolean;
+  reason?: string | null;
+  actorId?: string | null;
+  actorRole?: InternalRole | null;
+}) {
+  const { code, active } = input;
+  const reason = input.reason?.trim() || null;
+
+  if (!isSigecoModuleCode(code)) throw new ModuleActivationError("unknown_module");
+  if (!active && !moduleCanBeDeactivated(code)) {
+    throw new ModuleActivationError("always_active");
+  }
+  // Apagar exige motivo: es la decisión que Dirección va a querer explicada.
+  if (!active && !reason) throw new ModuleActivationError("reason_required");
+
+  // La lectura y las validaciones quedan fuera de `withDatabaseError`: si el
+  // rechazo se envolviera en un DatabaseError, la pantalla perdería el motivo y
+  // no podría decir qué dependencia falta.
+  const rows = await withDatabaseError("setModuleActivation.read", () =>
+    prisma.moduleActivation.findMany({
+      where: { status: "active" },
+      select: { code: true }
+    })
+  );
+  const activeModules = normalizeActiveModules(rows.map((row) => row.code));
+
+  if (active) {
+    const blockers = resolveActivationBlockers(activeModules, code);
+    if (blockers.length > 0) {
+      throw new ModuleActivationError("missing_dependencies", blockers);
+    }
+  } else {
+    const blockers = resolveDeactivationBlockers(activeModules, code);
+    if (blockers.length > 0) {
+      throw new ModuleActivationError("required_by_active_modules", blockers);
+    }
+  }
+
+  const alreadyInState = moduleIsActive(activeModules, code) === active;
+  const now = new Date();
+
+  return withDatabaseError("setModuleActivation", async () => {
+    return prisma.$transaction(async (tx) => {
+      const previousStatus = alreadyInState
+        ? active
+          ? "active"
+          : "inactive"
+        : active
+          ? "inactive"
+          : "active";
+
+      const activation = await tx.moduleActivation.upsert({
+        where: { code },
+        create: {
+          code,
+          status: active ? "active" : "inactive",
+          activatedAt: active ? now : null,
+          activatedById: active ? (input.actorId ?? null) : null,
+          note: reason
+        },
+        update: {
+          status: active ? "active" : "inactive",
+          ...(active
+            ? { activatedAt: now, activatedById: input.actorId ?? null }
+            : { deactivatedAt: now, deactivatedById: input.actorId ?? null }),
+          note: reason
+        }
+      });
+
+      // El historial registra incluso un cambio que no altera el estado: deja
+      // ver que alguien lo intentó y cuándo.
+      await tx.moduleActivationEvent.create({
+        data: {
+          moduleCode: code,
+          previousStatus,
+          status: active ? "active" : "inactive",
+          reason,
+          actorId: input.actorId ?? null,
+          actorRole: input.actorRole ?? null
+        }
+      });
+
+      return activation;
+    });
   });
 }

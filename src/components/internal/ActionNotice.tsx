@@ -8,6 +8,10 @@ import {
   clearSigecoSessionKey,
   PURCHASE_SAFE_DRAFT_KEY
 } from "@/features/mobile-resilience/storage";
+import {
+  moduleDisabledNotice,
+  permissionDeniedNotice
+} from "@/features/modules/notices";
 
 /*
  * Lee el search param `?aviso=<codigo>` que dejan las server actions que
@@ -84,6 +88,16 @@ const centeredNotices: Record<string, { title: string; description: string }> = 
   }
 };
 
+/*
+ * Rechazos: no son un exito, asi que salen como advertencia. El modulo apagado y
+ * la falta de permiso se avisan distinto a proposito, porque no significan lo
+ * mismo para quien esta al otro lado de la pantalla.
+ */
+const warningNotices: Record<string, string> = {
+  [moduleDisabledNotice]: "Esa parte del sistema todavía no está disponible.",
+  [permissionDeniedNotice]: "No tienes acceso a esa sección."
+};
+
 export function ActionNotice() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -100,6 +114,10 @@ export function ActionNotice() {
       toast.warning(
         "Llegada registrada. La campaña quedó pendiente porque Payload no respondió."
       );
+    }
+    const warning = warningNotices[aviso];
+    if (warning) {
+      toast.warning(warning);
     }
     const message = noticeMessages[aviso];
     const centered = centeredNotices[aviso];

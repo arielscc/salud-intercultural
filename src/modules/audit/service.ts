@@ -8,7 +8,18 @@ import type {
   Prisma
 } from "@/generated/prisma/client";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
+import {
+  moduleIsActive,
+  modulesEnablingPermission,
+  permissionIsEnabled
+} from "@/features/modules/activation";
+import type { SigecoModuleCode } from "@/features/modules/catalog";
+import {
+  moduleDisabledNotice,
+  permissionDeniedNotice
+} from "@/features/modules/notices";
 import { prisma } from "@/modules/database";
+import { getActiveModules } from "@/modules/database/queries/modules";
 import { getCurrentInternalUser } from "@/modules/permissions";
 import { sanitizeAuditContext } from "@/modules/audit/sanitize";
 
@@ -29,6 +40,13 @@ type AuditOperationResult<T> = {
 
 type AuditedOperationInput = {
   permission: InternalPermission;
+  /**
+   * Módulo al que pertenece la acción. Solo hace falta cuando el permiso lo
+   * comparten varios módulos y la acción es de uno concreto: editar la ficha
+   * desde Recepción usa `patients_update`, que Administración también tiene.
+   * Sin fijarlo, esa acción seguiría disponible con Recepción apagada.
+   */
+  module?: SigecoModuleCode;
   action: string;
   entityType: string;
   entityId?: string | null;
@@ -146,7 +164,34 @@ export async function runAuditedAction<T>(
       requestId,
       context: { ...sanitizeAuditContext(input.context), reason: "missing_permission" }
     });
-    redirect("/sigeco");
+    redirect(`/sigeco?aviso=${permissionDeniedNotice}`);
+  }
+
+  // El módulo apagado se registra como un rechazo propio: Dirección puede
+  // filtrar `module.disabled` en la auditoría y ver qué se intentó usar antes de
+  // que esa etapa estuviera lanzada, sin confundirlo con una falta de permiso.
+  const activeModules = await getActiveModules();
+  const moduleEnabled = input.module
+    ? moduleIsActive(activeModules, input.module)
+    : permissionIsEnabled(activeModules, input.permission);
+
+  if (!moduleEnabled) {
+    await appendAuditEvent({
+      actor,
+      action: "module.disabled",
+      entityType: "module",
+      entityId: input.module ?? null,
+      result: "denied",
+      requestId,
+      context: {
+        reason: "module_disabled",
+        attemptedAction: input.action,
+        attemptedEntityType: input.entityType,
+        permission: input.permission,
+        modules: input.module ? [input.module] : modulesEnablingPermission(input.permission)
+      }
+    });
+    redirect(`/sigeco?aviso=${moduleDisabledNotice}`);
   }
 
   let operationResult: AuditOperationResult<T>;

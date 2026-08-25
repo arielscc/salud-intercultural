@@ -25,7 +25,7 @@ export default async function SupplierDetailPage({
   params: Promise<{ supplierId: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const user = await requirePermission("suppliers_read");
+  const user = await requirePermission("suppliers_read", { module: "inventario" });
   const { supplierId } = await params;
   const query = await searchParams;
   const supplier = await getSupplierById(supplierId);

@@ -48,7 +48,7 @@ export default async function InventoryItemPage({
   params: Promise<{ itemId: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const user = await requirePermission("inventory_read");
+  const user = await requirePermission("inventory_read", { module: "inventario" });
   const { activeBranch } = await getBranchContext(user);
   const { itemId } = await params;
   const query = await searchParams;

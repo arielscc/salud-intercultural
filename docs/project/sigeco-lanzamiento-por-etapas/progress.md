@@ -12,9 +12,13 @@ catálogo de módulos, el mapa de permisos y los helpers de activación viven en
 ya está en base (migración `20260824210000_module_activation`, aplicada en
 desarrollo).
 
-Todavía **no cambia el comportamiento del sistema**: no hay gate ni pantalla, así
-que una base en uso sigue funcionando igual. El gate llega en la Tarea 3 y la
-escritura del estado en la Tarea 5.
+Con la Tarea 3 el gate ya está activo: una página o una acción de un módulo
+apagado se rechaza en el servidor y queda auditada como `module.disabled`. Falta
+la navegación (Tarea 4) y la pantalla del super administrador (Tarea 5); mientras
+tanto, los módulos se encienden con `pnpm modules:set`.
+
+Con los once módulos activos el sistema se comporta igual que antes de este
+plan.
 
 SIGECO tiene implementación local de todos los módulos operativos, pero no
 tiene forma de exponer solo una parte al personal. Este plan agrega la
@@ -36,8 +40,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 18 |
-| En progreso | 2 |
+| Pendiente | 17 |
+| En progreso | 3 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -57,7 +61,7 @@ se sigue llevando en sus propios archivos.
 | --- | --- | --- | --- | --- |
 | 1 | Catálogo de módulos y mapa de permisos | P0 | En progreso | Ninguna |
 | 2 | Estado de activación y su historial | P0 | En progreso | 1 |
-| 3 | Gate de módulos en servidor | P0 | Pendiente | 1-2 |
+| 3 | Gate de módulos en servidor | P0 | En progreso | 1-2 |
 | 4 | Navegación e inicio según módulos activos | P0 | Pendiente | 3 |
 | 5 | Pantalla de activación del super administrador | P0 | Pendiente | 3-4 |
 | 6 | Modo solo lectura del módulo apagado | P1 | Pendiente | 5 |
@@ -109,16 +113,51 @@ se sigue llevando en sus propios archivos.
 - **Permiso nuevo sin módulo.** Si alguien agrega un `InternalPermission` y no lo
   mapea, quedaría fuera del gate. La prueba de cobertura de la Tarea 1 existe
   para impedirlo.
+- **Deuda de pruebas previa al plan.** Cinco pruebas fallaban ya el 2026-08-24
+  por cambios de agosto que nunca se validaron. Son anteriores a este plan, pero
+  bloquean el cierre acumulado de la Tarea 11.
+- **Orden de despliegue.** El gate consulta `ModuleActivation` en cada página
+  protegida: la migración de la Tarea 2 debe aplicarse antes de publicar el
+  código de la Tarea 3.
 
 ## Próximo Trabajo
 
-Tarea 3: el gate en servidor. `getActiveModules()` ya entrega los módulos
-encendidos y `permissionIsEnabled` ya resuelve si un permiso está habilitado;
-falta conectarlos dentro de `requirePermission` y `runAuditedAction`, agregar
-`requireModule` para las rutas que comparten permiso, y distinguir en la
-auditoría el rechazo por módulo apagado del rechazo por permiso.
+Tarea 4: navegación e inicio según módulos activos. El gate ya impide el acceso,
+pero el menú sigue ofreciendo enlaces que llevan al inicio con un aviso. Hay que
+declarar el módulo de cada `SigecoNavItem`, filtrar en las dos vistas del menú,
+leer los módulos activos una vez en el layout y dejar de ejecutar las queries de
+los módulos apagados en el dashboard.
 
 ## Registro
+
+### 2026-08-24 — Tarea 3 Implementada (Gate De Módulos En Servidor)
+
+- `requirePermission` y `runAuditedAction` verifican el módulo además del
+  permiso. Dos funciones cubren las 50 páginas y las 126 acciones auditadas.
+  `requireModule` queda disponible para rutas sin permiso propio.
+- Ambas aceptan un `module` opcional: cuando varios módulos comparten un permiso,
+  manda la pantalla. Se fijó en trece páginas y tres acciones; el caso más
+  delicado fue `/sigeco/sucursales`, que administra sedes pero está protegida con
+  `reports_read` y habría quedado apagada justo en la Etapa 1.
+- El rechazo por módulo se audita como `module.disabled` con el módulo, la acción
+  intentada y el permiso; el rechazo por permiso conserva su forma. Los dos
+  avisan distinto al usuario (`modulo-no-disponible` y `permiso-denegado`).
+- El super administrador no evade el gate. Los permisos retirados de leads quedan
+  bloqueados incluso para él.
+- `scripts/module-gate.test.ts` falla si una página o acción usa un permiso
+  compartido sin decidir su módulo; las excepciones están listadas con su
+  justificación. Se verificó que las dos comprobaciones fallan de verdad.
+- Adición fuera de la letra de la tarea: `setModuleActivation` en la capa de
+  queries y el script `pnpm modules:set`. Sin ellos el entorno local quedaba
+  inutilizable hasta la Tarea 5, que reutilizará esa misma función.
+- Validación: typecheck y lint limpios; 425 de 430 pruebas unitarias aprobadas,
+  con 20 nuevas. Reglas de activación verificadas contra la base de desarrollo.
+- **Deuda previa detectada:** cinco pruebas ya fallaban en `HEAD`
+  (`paid-study.schema` x2, `audit-coverage`, `privacy-controls` y el mapa de
+  acciones de `security-boundaries`). Hay que saldarlas antes del cierre
+  acumulado de la Tarea 11.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-3-gate-modulos.md).
 
 ### 2026-08-24 — Tarea 2 Implementada (Estado De Activación Y Su Historial)
 
