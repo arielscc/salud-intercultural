@@ -113,6 +113,11 @@ export const internalRolePermissions: Record<InternalRole, InternalPermission[]>
   administracion: [
     "internal_access",
     "patients_read",
+    // Etapa 1: Administración registra al cliente de mostrador y corrige sus
+    // datos, sin abrir visita. El funnel de Recepción sigue siendo el alta
+    // completa cuando ese módulo está lanzado.
+    "patients_create",
+    "patients_update",
     "visits_read",
     "visits_update",
     "patient_route_read",

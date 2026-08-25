@@ -121,6 +121,9 @@ export default async function AdministrationPage({
   const query = await searchParams;
   const user = await requirePermission("sales_read");
   const moduleAccess = await getModuleAccessState();
+  // El padrón de Administración es propio: no depende de que Recepción esté
+  // lanzada, porque en la Etapa 1 el cliente se registra desde acá.
+  const canReadClients = canUse(user.role, moduleAccess, "patients_read", "administracion");
   const { activeBranch } = await getBranchContext(user);
   const isPersonalAdministrationAccount = user.role === "administracion";
   const isSuperAdmin = user.role === "super_admin";
@@ -163,12 +166,22 @@ export default async function AdministrationPage({
         title="Ventas y cobros"
         description="Administración"
         actions={
-          <Link
-            href="/sigeco/administracion/caja"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            Control de Caja
-          </Link>
+          <>
+            {canReadClients ? (
+              <Link
+                href="/sigeco/administracion/clientes"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Clientes
+              </Link>
+            ) : null}
+            <Link
+              href="/sigeco/administracion/caja"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Control de Caja
+            </Link>
+          </>
         }
       />
 

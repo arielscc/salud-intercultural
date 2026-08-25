@@ -142,6 +142,32 @@ export async function countPatients(
   });
 }
 
+/**
+ * Ficha del cliente para Administración: identificación y contacto, nada
+ * clínico. La ficha completa —alergias, antecedentes, historia— vive en
+ * Recepción y se lee con `getPatientById`.
+ */
+export async function getWalkInClientById(id: string) {
+  return withDatabaseError("getWalkInClientById", async () => {
+    return prisma.patient.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        internalCode: true,
+        fullName: true,
+        phone: true,
+        secondaryPhone: true,
+        generalObservations: true,
+        status: true,
+        createdAt: true,
+        mergedIntoId: true,
+        mergedInto: { select: { id: true, fullName: true, internalCode: true } },
+        _count: { select: { visits: true, sales: true } }
+      }
+    });
+  });
+}
+
 export async function getPatientById(id: string) {
   return withDatabaseError("getPatientById", async () => {
     return prisma.patient.findUnique({

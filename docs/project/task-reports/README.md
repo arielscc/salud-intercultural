@@ -67,6 +67,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-24 | [Lanzamiento Tarea 4: navegación e inicio según módulos activos](./2026-08-24-lanzamiento-tarea-4-navegacion-modulos.md) | Filtra el menú y el dashboard por módulo lanzado, evita ejecutar las consultas de los apagados y oculta los enlaces cruzados hacia pantallas bloqueadas. |
 | 2026-08-24 | [Lanzamiento Tarea 5: pantalla de activación del super administrador](./2026-08-24-lanzamiento-tarea-5-pantalla-modulos.md) | Enciende y apaga módulos desde `/sigeco/modulos` con dependencias explicadas, motivo obligatorio, historial e avisos de suspensión; audita también los accesos denegados a páginas. |
 | 2026-08-24 | [Lanzamiento Tarea 6: modo solo lectura del módulo apagado](./2026-08-24-lanzamiento-tarea-6-solo-lectura-modulo-apagado.md) | Separa permisos de lectura y escritura para que un módulo suspendido conserve la consulta de Dirección, bloquee todo cambio y liste el trabajo que quedó abierto. |
+| 2026-08-24 | [Lanzamiento Tarea 7: alta mínima de cliente desde Administración](./2026-08-24-lanzamiento-tarea-7-alta-minima-cliente.md) | Administración registra al cliente de mostrador con nombre y teléfono, sin abrir visita, y ve las fichas parecidas antes de crear otra. |
 
 ## Relacion Con Estado V3
 

@@ -318,4 +318,17 @@ describe("internal role permissions", () => {
     expect(roleHasPermission("seguimiento", "area_time_write")).toBe(false);
     expect(roleHasPermission("captacion", "area_time_write")).toBe(false);
   });
+
+  it("deja que Administración registre y corrija clientes de mostrador", () => {
+    expect(roleHasPermission("administracion", "patients_create")).toBe(true);
+    expect(roleHasPermission("administracion", "patients_update")).toBe(true);
+    // Sigue sin poder abrir visitas: esa es la llegada, y la registra Recepción.
+    expect(roleHasPermission("administracion", "visits_create")).toBe(false);
+  });
+
+  it("no le da a otras áreas el alta de fichas", () => {
+    expect(roleHasPermission("medico", "patients_create")).toBe(false);
+    expect(roleHasPermission("enfermeria", "patients_create")).toBe(false);
+    expect(roleHasPermission("recepcion", "patients_create")).toBe(true);
+  });
 });

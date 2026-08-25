@@ -39,6 +39,9 @@ const pagePermissions: Record<string, InternalPermission[]> = {
     "cash_sessions_read"
   ],
   "src/app/(internal)/sigeco/(app)/administracion/page.tsx": ["sales_read"],
+  "src/app/(internal)/sigeco/(app)/administracion/clientes/page.tsx": ["patients_read"],
+  "src/app/(internal)/sigeco/(app)/administracion/clientes/[id]/page.tsx": ["patients_read"],
+  "src/app/(internal)/sigeco/(app)/administracion/clientes/nuevo/page.tsx": ["patients_create"],
   "src/app/(internal)/sigeco/(app)/administracion/ventas/[saleId]/page.tsx": [
     "sales_read"
   ],
@@ -176,6 +179,7 @@ const legacyRedirectPages = [
 ];
 
 const actionPermissions: Record<string, InternalPermission | null> = {
+  registerWalkInClientAction: "patients_create",
   setModuleActivationAction: "modules_manage",
   addInventoryEntryAction: "inventory_write",
   applyVisitFlowAction: "visits_update",

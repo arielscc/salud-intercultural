@@ -95,3 +95,51 @@ describe("patients and visits integration", () => {
     expect(visitDetail?.workItems.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("alta mínima de cliente de mostrador", () => {
+  it("crea la ficha sin visita, sin ruta y sin tarea", async () => {
+    const client = await createPatientRecord({
+      fullName: "Juana Mamani",
+      phone: "70000001",
+      generalObservations: "Cliente de mostrador"
+    });
+
+    expect(client.internalCode).toMatch(/^SI-\d{6}$/);
+    expect(await prisma.visit.count({ where: { patientId: client.id } })).toBe(0);
+    expect(await prisma.patientRoute.count({ where: { visit: { patientId: client.id } } })).toBe(
+      0
+    );
+    expect(
+      await prisma.visitWorkItem.count({ where: { visit: { patientId: client.id } } })
+    ).toBe(0);
+  });
+
+  it("deja la ficha lista para recibir una visita normal después", async () => {
+    const client = await createPatientRecord({
+      fullName: "Juana Mamani",
+      phone: "70000001"
+    });
+
+    const visit = await createVisitRecord({
+      patientId: client.id,
+      reason: "Primera atención"
+    });
+
+    expect(visit.patientId).toBe(client.id);
+    // Sigue siendo una sola ficha: no se duplicó ni se migró.
+    expect(await prisma.patient.count()).toBe(1);
+  });
+
+  it("no guarda datos clínicos que Administración no pide", async () => {
+    const client = await createPatientRecord({
+      fullName: "Juana Mamani",
+      phone: "70000001"
+    });
+
+    const stored = await prisma.patient.findUniqueOrThrow({ where: { id: client.id } });
+
+    expect(stored.allergies).toBeNull();
+    expect(stored.relevantHistory).toBeNull();
+    expect(stored.birthDate).toBeNull();
+  });
+});

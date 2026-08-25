@@ -23,7 +23,9 @@ suspendido conserva la consulta para Dirección y el super administrador, bloque
 toda escritura y lista el trabajo que quedó abierto. Sigue en pie el gate de
 cierre: nada pasa a `Terminada` antes del cierre acumulado de las Tareas 11 y 12.
 
-El siguiente bloque es la Fase B, la Etapa 1 propiamente dicha.
+La Fase B ya empezó: Administración registra al cliente de mostrador sin abrir
+visita, que era el primero de los tres bloqueos para vender sin la ruta clínica.
+Faltan la venta directa (Tarea 8) y el listado de ventas (Tarea 9).
 
 Con los once módulos activos el sistema se comporta igual que antes de este
 plan.
@@ -48,8 +50,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 14 |
-| En progreso | 6 |
+| Pendiente | 13 |
+| En progreso | 7 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -59,7 +61,7 @@ se sigue llevando en sus propios archivos.
 | Fase | Tareas | Estado | Gate |
 | --- | --- | --- | --- |
 | A. Activación controlada de módulos | 1-6 | En progreso | Un módulo apagado es inalcanzable y auditable |
-| B. Etapa 1: Caja y Administración | 7-10 | Pendiente | Se vende y cobra sin ruta clínica |
+| B. Etapa 1: Caja y Administración | 7-10 | En progreso | Se vende y cobra sin ruta clínica |
 | C. Plataforma y salida a producción | 11-16 | Pendiente | Producción autorizada y Etapa 1 encendida |
 | D. Etapas siguientes | 17-20 | Pendiente | Cada módulo se enciende con QA y capacitación |
 
@@ -73,7 +75,7 @@ se sigue llevando en sus propios archivos.
 | 4 | Navegación e inicio según módulos activos | P0 | En progreso | 3 |
 | 5 | Pantalla de activación del super administrador | P0 | En progreso | 3-4 |
 | 6 | Modo solo lectura del módulo apagado | P1 | En progreso | 5 |
-| 7 | Alta mínima de cliente desde Administración | P0 | Pendiente | 4 |
+| 7 | Alta mínima de cliente desde Administración | P0 | En progreso | 4 |
 | 8 | Venta directa sin visita | P0 | Pendiente | 7 |
 | 9 | Listado y búsqueda de ventas | P1 | Pendiente | 8 |
 | 10 | Datos maestros reales de la Etapa 1 | P0 | Pendiente | 8-9 |
@@ -130,14 +132,39 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 7: alta mínima de cliente desde Administración, que abre la Fase B. Es el
-primero de los tres bloqueos que impiden vender sin la ruta clínica: hoy
-`Sale.patientId` es obligatorio y el único alta de paciente es el funnel de
-Recepción, que abre visita, ruta y tarea. Hay que agregar `patients_create` y
-`patients_update` al rol `administracion` y crear la ficha sin visita,
-reutilizando la detección de duplicados que ya existe.
+Tarea 8: venta directa sin visita. La ficha del cliente ya existe y se puede
+buscar; falta que Administración inicie la venta por su cuenta en lugar de
+esperar la derivación del médico. `createSaleOrderAction` ya acepta `visitId` y
+`workItemId` vacíos, y `AdministrationChargeDialog` y `createPaymentAction` se
+reutilizan tal cual: el trabajo es el punto de entrada desde
+`/sigeco/administracion` y el armado de líneas desde catálogo, inventario o texto
+libre.
 
 ## Registro
+
+### 2026-08-24 — Tarea 7 Implementada (Alta Mínima De Cliente Desde Administración)
+
+- `administracion` suma `patients_create` y `patients_update`; sigue sin
+  `visits_create`, porque registrar una llegada es otra cosa.
+- `registerWalkInClientAction` crea la ficha con nombre y teléfono reutilizando
+  `createPatientRecord`, sin `Visit`, `PatientRoute` ni `VisitWorkItem`.
+- Antes de crear, muestra las fichas parecidas y deja elegir: usar la encontrada
+  o confirmar que es otra persona. La acción **devuelve** las candidatas en lugar
+  de redirigir, porque poner nombres y teléfonos en la URL los deja en el
+  historial, en los logs y en el referer.
+- Tres pantallas nuevas bajo `/sigeco/administracion/clientes`, todas fijadas al
+  módulo `administracion`. La ficha usa una consulta propia que trae contacto y
+  no trae alergias ni antecedentes: Administración no los necesita para cobrar.
+- **No se agregó documento de identidad**, pese a que el plan lo mencionaba: el
+  modelo no lo tiene y el funnel de Recepción tampoco lo pide. Agregarlo solo acá
+  obligaría a decidir si entra en la detección de duplicados y si debe ser único;
+  es una decisión sobre la identidad del paciente, no un agregado de esta tarea.
+- Validación: typecheck y lint limpios; 466 de 471 pruebas unitarias.
+  Verificado contra la base de desarrollo: ficha creada con código interno,
+  `visitas: 0 | rutas: 0 | tareas: 0`, duplicado detectado por teléfono, y la
+  ficha de prueba eliminada al terminar.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-7-alta-minima-cliente.md).
 
 ### 2026-08-24 — Tarea 6 Implementada (Modo Solo Lectura Del Módulo Apagado)
 
