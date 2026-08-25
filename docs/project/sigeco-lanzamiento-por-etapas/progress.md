@@ -6,11 +6,15 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 ## Estado General
 
-Plan creado el 2026-08-24. La Tarea 1 tiene implementación local: el catálogo
-de módulos, el mapa de permisos y los helpers de activación ya existen en
-`src/features/modules/`. Todavía no cambia el comportamiento del sistema —no hay
-base de datos, navegación ni gate—; define el vocabulario de las tareas
-siguientes.
+Plan creado el 2026-08-24. Las Tareas 1 y 2 tienen implementación local: el
+catálogo de módulos, el mapa de permisos y los helpers de activación viven en
+`src/features/modules/`, y el estado de cada módulo con su historial append-only
+ya está en base (migración `20260824210000_module_activation`, aplicada en
+desarrollo).
+
+Todavía **no cambia el comportamiento del sistema**: no hay gate ni pantalla, así
+que una base en uso sigue funcionando igual. El gate llega en la Tarea 3 y la
+escritura del estado en la Tarea 5.
 
 SIGECO tiene implementación local de todos los módulos operativos, pero no
 tiene forma de exponer solo una parte al personal. Este plan agrega la
@@ -32,8 +36,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 19 |
-| En progreso | 1 |
+| Pendiente | 18 |
+| En progreso | 2 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -52,7 +56,7 @@ se sigue llevando en sus propios archivos.
 | # | Tarea | Prioridad | Estado | Dependencias |
 | --- | --- | --- | --- | --- |
 | 1 | Catálogo de módulos y mapa de permisos | P0 | En progreso | Ninguna |
-| 2 | Estado de activación y su historial | P0 | Pendiente | 1 |
+| 2 | Estado de activación y su historial | P0 | En progreso | 1 |
 | 3 | Gate de módulos en servidor | P0 | Pendiente | 1-2 |
 | 4 | Navegación e inicio según módulos activos | P0 | Pendiente | 3 |
 | 5 | Pantalla de activación del super administrador | P0 | Pendiente | 3-4 |
@@ -108,12 +112,38 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 2: persistir el estado de activación y su historial. El catálogo ya define
-los once códigos y `normalizeActiveModules` ya resuelve qué hacer con una fila
-desconocida o ausente, así que la migración solo debe crear las filas iniciales
-con `core` activo y el resto apagado.
+Tarea 3: el gate en servidor. `getActiveModules()` ya entrega los módulos
+encendidos y `permissionIsEnabled` ya resuelve si un permiso está habilitado;
+falta conectarlos dentro de `requirePermission` y `runAuditedAction`, agregar
+`requireModule` para las rutas que comparten permiso, y distinguir en la
+auditoría el rechazo por módulo apagado del rechazo por permiso.
 
 ## Registro
+
+### 2026-08-24 — Tarea 2 Implementada (Estado De Activación Y Su Historial)
+
+- Modelos `ModuleActivation` y `ModuleActivationEvent`, con `actorRole` guardado
+  como fotografía histórica y referencias a `InternalUser` con `RESTRICT`, para
+  que borrar una cuenta no borre quién encendió un módulo.
+- Migración aditiva `20260824210000_module_activation`: crea las tablas, instala
+  el trigger que rechaza `UPDATE` y `DELETE` sobre el historial —el mismo patrón
+  de `AuditEvent`—, siembra los once módulos con solo `core` activo y registra el
+  encendido del núcleo como primer evento.
+- Lecturas en `src/modules/database/queries/modules.ts`: `getActiveModules()`
+  memoizado por request con `cache` de React, `getModuleActivationStates()` que
+  une catálogo y base para la pantalla de la Tarea 5, y
+  `getModuleActivationHistory()`.
+- Un módulo del catálogo sin fila queda apagado y una fila con código retirado se
+  ignora; el núcleo se resuelve por la marca `alwaysActive`, así que ni siquiera
+  un cambio manual en base puede dejar el sistema sin acceso.
+- Verificado a mano contra la base de desarrollo: once filas, solo `core` activo,
+  evento inicial presente, y `UPDATE`/`DELETE` sobre el historial rechazados por
+  PostgreSQL. `prisma migrate status` sin desvío.
+- Validación: lint, typecheck y 35 pruebas unitarias aprobadas, incluida la
+  verificación del archivo de migración. La prueba de integración quedó escrita y
+  sin ejecutar, para el cierre acumulado.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-2-estado-activacion-modulos.md).
 
 ### 2026-08-24 — Tarea 1 Implementada (Catálogo De Módulos Y Mapa De Permisos)
 

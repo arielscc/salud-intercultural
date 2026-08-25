@@ -748,8 +748,8 @@ model InternalUser {
   attendedVisits                 Visit[]                         @relation("VisitAttendingUser")
   visitStatusChanges             VisitStatusHistory[]
   receptionCheckIns              ReceptionCheckIn[]
-  createdWorkItems               VisitWorkItem[]         @relation("WorkItemCreatedBy")
-  assignedWorkItems              VisitWorkItem[]         @relation("WorkItemAssignedTo")
+  createdWorkItems               VisitWorkItem[]                 @relation("WorkItemCreatedBy")
+  assignedWorkItems              VisitWorkItem[]                 @relation("WorkItemAssignedTo")
   clinicalConsultations          ClinicalConsultation[]
   prescriptions                  Prescription[]
   clinicalEvolutions             ClinicalEvolution[]
@@ -822,6 +822,9 @@ model InternalUser {
   recordedAreaTimeEvents         VisitAreaTimeEvent[]            @relation("VisitAreaTimeEventRecordedBy")
   branchAssignments              InternalUserBranch[]
   createdInventoryTransfers      InventoryTransfer[]             @relation("InventoryTransferCreatedBy")
+  activatedModules               ModuleActivation[]              @relation("ModuleActivationActivatedBy")
+  deactivatedModules             ModuleActivation[]              @relation("ModuleActivationDeactivatedBy")
+  moduleActivationEvents         ModuleActivationEvent[]         @relation("ModuleActivationEventActor")
 
   @@index([role])
   @@index([active])
@@ -1559,18 +1562,18 @@ model IndicationCatalogItem {
 /// secundario escrito/elegido al guardar suma a `usageCount`). `normalized`
 /// (minúsculas, espacios colapsados) evita duplicados.
 model DiagnosisCatalogItem {
-  id                 String   @id @default(cuid())
-  text               String
-  normalized         String   @unique
-  usageCount         Int      @default(0)
-  active             Boolean  @default(true)
+  id                  String   @id @default(cuid())
+  text                String
+  normalized          String   @unique
+  usageCount          Int      @default(0)
+  active              Boolean  @default(true)
   // Plantilla opcional: al elegir este diagnóstico se agrega (sin sobrescribir) el
   // plan e indicaciones sugeridos, que el médico puede editar. Las indicaciones van
   // una por línea.
-  planTemplate       String?
+  planTemplate        String?
   indicationsTemplate String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([usageCount])
 }
@@ -1950,29 +1953,29 @@ model NursingWorkItemResult {
 }
 
 model Sale {
-  id                 String              @id @default(cuid())
-  idempotencyKey     String?             @unique
+  id                 String                  @id @default(cuid())
+  idempotencyKey     String?                 @unique
   patientId          String
   visitId            String?
   workItemId         String?
-  doctorOrderId      String?             @unique
+  doctorOrderId      String?                 @unique
   createdById        String?
-  branchCode         String              @default("el-alto")
-  status             SaleStatus          @default(pending)
-  subtotalCents      Int                 @default(0)
-  discountCents      Int                 @default(0)
-  totalCents         Int                 @default(0)
-  paidCents          Int                 @default(0)
-  balanceCents       Int                 @default(0)
+  branchCode         String                  @default("el-alto")
+  status             SaleStatus              @default(pending)
+  subtotalCents      Int                     @default(0)
+  discountCents      Int                     @default(0)
+  totalCents         Int                     @default(0)
+  paidCents          Int                     @default(0)
+  balanceCents       Int                     @default(0)
   notes              String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  patient            Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit              Visit?              @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  workItem           VisitWorkItem?      @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  doctorOrder        DoctorOrder?        @relation(fields: [doctorOrderId], references: [id], onDelete: SetNull)
-  createdBy          InternalUser?       @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  branch             ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  patient            Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visit              Visit?                  @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  workItem           VisitWorkItem?          @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  doctorOrder        DoctorOrder?            @relation(fields: [doctorOrderId], references: [id], onDelete: SetNull)
+  createdBy          InternalUser?           @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  branch             ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   items              SaleItem[]
   payments           Payment[]
   deliveredProducts  DeliveredProduct[]
@@ -2613,41 +2616,41 @@ model Supplier {
 }
 
 model InventoryItem {
-  id                 String                        @id @default(cuid())
-  sku                String?                       @unique
-  internalCode       String                        @unique
-  name               String
-  description        String?
-  category           String                        @default("Sin categoría")
-  unit               String                        @default("unidad")
-  usage              InventoryItemUsage            @default(both)
-  salePriceCents     Int                           @default(0)
-  referenceCostCents Int                           @default(0)
+  id                  String                        @id @default(cuid())
+  sku                 String?                       @unique
+  internalCode        String                        @unique
+  name                String
+  description         String?
+  category            String                        @default("Sin categoría")
+  unit                String                        @default("unidad")
+  usage               InventoryItemUsage            @default(both)
+  salePriceCents      Int                           @default(0)
+  referenceCostCents  Int                           @default(0)
   /// Umbral de descuento máximo por unidad (en centavos) que solo Dirección y
   /// Super administrador pueden editar. Acota el descuento del médico.
-  maxDiscountCents   Int                           @default(0)
-  currentStock       Int                           @default(0)
-  minimumStock       Int                           @default(0)
-  active             Boolean                       @default(true)
-  revision           Int                           @default(1)
-  createdAt          DateTime                      @default(now())
-  updatedAt          DateTime                      @updatedAt
-  saleItems          SaleItem[]
-  serviceComponents  ServiceCatalogComponent[]
-  doctorOrderLines   DoctorOrderLine[]
+  maxDiscountCents    Int                           @default(0)
+  currentStock        Int                           @default(0)
+  minimumStock        Int                           @default(0)
+  active              Boolean                       @default(true)
+  revision            Int                           @default(1)
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
+  saleItems           SaleItem[]
+  serviceComponents   ServiceCatalogComponent[]
+  doctorOrderLines    DoctorOrderLine[]
   nursingApplications NursingApplication[]
-  prescriptionItems  PrescriptionItem[]
-  movements          InventoryMovement[]
-  adjustments        InventoryAdjustment[]
-  alerts             InventoryAlert[]
-  supplierLinks      InventoryItemSupplier[]
-  catalogVersions    InventoryItemCatalogVersion[]
-  purchaseLines      PurchaseLine[]
-  receiptLines       PurchaseReceiptLine[]
-  lots               InventoryLot[]
-  lotAdjustments     InventoryLotAdjustment[]
-  branchBalances     BranchInventoryBalance[]
-  transfers          InventoryTransfer[]
+  prescriptionItems   PrescriptionItem[]
+  movements           InventoryMovement[]
+  adjustments         InventoryAdjustment[]
+  alerts              InventoryAlert[]
+  supplierLinks       InventoryItemSupplier[]
+  catalogVersions     InventoryItemCatalogVersion[]
+  purchaseLines       PurchaseLine[]
+  receiptLines        PurchaseReceiptLine[]
+  lots                InventoryLot[]
+  lotAdjustments      InventoryLotAdjustment[]
+  branchBalances      BranchInventoryBalance[]
+  transfers           InventoryTransfer[]
 
   @@index([name])
   @@index([category])
@@ -3171,36 +3174,36 @@ model ServiceCatalogItemVersion {
 /// precio y descuento y se envía a Administración, pero NO crea la venta ni el
 /// cobro (eso es Tarea 3). Hay como máximo un pedido activo por visita.
 model DoctorOrder {
-  id                 String            @id @default(cuid())
-  visitId            String            @unique
-  patientId          String
-  doctorId           String?
-  status             DoctorOrderStatus @default(draft)
-  indications        String?
-  submittedAt        DateTime?
+  id                  String                  @id @default(cuid())
+  visitId             String                  @unique
+  patientId           String
+  doctorId            String?
+  status              DoctorOrderStatus       @default(draft)
+  indications         String?
+  submittedAt         DateTime?
   /// Total editable definido por el médico (base antes de descuento). Si es null,
   /// se usa la suma de las líneas. El descuento (tope: suma de umbrales) se resta
   /// de esta base. Administración solo ve el total, no los costos por producto.
-  chargeBaseCents    Int?
-  orderDiscountCents Int               @default(0)
+  chargeBaseCents     Int?
+  orderDiscountCents  Int                     @default(0)
   /// Decisión de Administración sobre el descuento aplicado por el médico:
   /// null = sin decidir; true = aprobado; false = rechazado (se cobra completo).
-  discountApproved   Boolean?
+  discountApproved    Boolean?
   discountDecidedById String?
-  discountDecidedAt  DateTime?
-  confirmedAt        DateTime?
+  discountDecidedAt   DateTime?
+  confirmedAt         DateTime?
   /// Derivación a Enfermería después del pago (Tarea 4). Idempotente.
-  nursingReleasedAt  DateTime?
-  nursingWorkItemId  String?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  visit              Visit             @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  patient            Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  doctor             InternalUser?     @relation("DoctorOrderDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
-  discountDecidedBy  InternalUser?     @relation("DoctorOrderDiscountDecidedBy", fields: [discountDecidedById], references: [id], onDelete: SetNull)
-  lines              DoctorOrderLine[]
-  sale               Sale?
-  sessionPackages    ServiceSessionPackage[]
+  nursingReleasedAt   DateTime?
+  nursingWorkItemId   String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  visit               Visit                   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patient             Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor              InternalUser?           @relation("DoctorOrderDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  discountDecidedBy   InternalUser?           @relation("DoctorOrderDiscountDecidedBy", fields: [discountDecidedById], references: [id], onDelete: SetNull)
+  lines               DoctorOrderLine[]
+  sale                Sale?
+  sessionPackages     ServiceSessionPackage[]
 
   @@index([patientId])
   @@index([status])
@@ -3210,26 +3213,26 @@ model DoctorOrder {
 /// línea (umbral por unidad × cantidad), calculado en servidor al guardar. El
 /// descuento total del pedido no puede superar la suma de estos topes.
 model DoctorOrderLine {
-  id               String                @id @default(cuid())
+  id               String                     @id @default(cuid())
   orderId          String
   source           DoctorOrderLineSource
   itemType         SaleItemType
   catalogItemId    String?
   inventoryItemId  String?
   description      String
-  unitPriceCents   Int                   @default(0)
-  discountCents    Int                   @default(0)
-  quantity         Int                       @default(1)
+  unitPriceCents   Int                        @default(0)
+  discountCents    Int                        @default(0)
+  quantity         Int                        @default(1)
   sessionCount     Int?
   pricingMode      ServiceSessionPricingMode?
-  maxDiscountCents Int                       @default(0)
-  requiresNursing  Boolean                   @default(false)
+  maxDiscountCents Int                        @default(0)
+  requiresNursing  Boolean                    @default(false)
   notes            String?
-  position         Int                       @default(0)
-  createdAt        DateTime              @default(now())
-  order            DoctorOrder           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  catalogItem      ServiceCatalogItem?   @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
-  inventoryItem    InventoryItem?        @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  position         Int                        @default(0)
+  createdAt        DateTime                   @default(now())
+  order            DoctorOrder                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  catalogItem      ServiceCatalogItem?        @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  inventoryItem    InventoryItem?             @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([catalogItemId])
@@ -3284,4 +3287,52 @@ model ServiceSessionUse {
 
   @@index([packageId])
   @@index([visitId])
+}
+
+/// Estado de un módulo de SIGECO dentro del lanzamiento por etapas.
+enum ModuleActivationStatus {
+  active
+  inactive
+}
+
+/// Estado vigente de cada módulo. El catálogo, las dependencias y el orden viven
+/// en código (`src/features/modules/catalog.ts`); aquí solo se guarda si está
+/// encendido y desde cuándo. Un módulo del catálogo sin fila se trata como
+/// apagado, nunca como activo por omisión.
+model ModuleActivation {
+  code            String                  @id
+  status          ModuleActivationStatus  @default(inactive)
+  activatedAt     DateTime?
+  activatedById   String?
+  deactivatedAt   DateTime?
+  deactivatedById String?
+  /// Motivo vigente del último cambio; el historial conserva todos.
+  note            String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  activatedBy     InternalUser?           @relation("ModuleActivationActivatedBy", fields: [activatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  deactivatedBy   InternalUser?           @relation("ModuleActivationDeactivatedBy", fields: [deactivatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  events          ModuleActivationEvent[]
+
+  @@index([status])
+}
+
+/// Historial append-only de encendidos y apagados. PostgreSQL bloquea update y
+/// delete mediante trigger, igual que `AuditEvent`.
+model ModuleActivationEvent {
+  id             String                 @id @default(cuid())
+  moduleCode     String
+  previousStatus ModuleActivationStatus
+  status         ModuleActivationStatus
+  /// Obligatorio al apagar; la validación vive en la acción (Tarea 5).
+  reason         String?
+  actorId        String?
+  actorRole      InternalRole?
+  occurredAt     DateTime               @default(now())
+  module         ModuleActivation       @relation(fields: [moduleCode], references: [code], onDelete: Restrict, onUpdate: Restrict)
+  actor          InternalUser?          @relation("ModuleActivationEventActor", fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([moduleCode, occurredAt])
+  @@index([occurredAt])
+  @@index([actorId, occurredAt])
 }

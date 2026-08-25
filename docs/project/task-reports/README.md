@@ -62,6 +62,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-03 | [Tarea 6: historial del paciente en la consulta](./2026-08-03-historial-paciente-consulta.md) | Muestra el resumen de cada visita anterior (diagnóstico, vendido, costo y sesiones) y precarga la receta rápida desde la consulta previa, solo lectura. |
 | 2026-08-03 | [Tarea 7: seguimiento estricto por compra](./2026-08-03-seguimiento-estricto-por-compra.md) | El médico agenda seguimiento a Recepción (fecha, hora, motivo) solo si hay venta registrada en la visita; avisa y bloquea contacto sin consentimiento. |
 | 2026-08-24 | [Lanzamiento Tarea 1: catálogo de módulos y mapa de permisos](./2026-08-24-lanzamiento-tarea-1-catalogo-modulos.md) | Declara los once módulos de SIGECO con sus dependencias duras y mapea los 64 permisos a los módulos que los habilitan, como base del lanzamiento por etapas. |
+| 2026-08-24 | [Lanzamiento Tarea 2: estado de activación y su historial](./2026-08-24-lanzamiento-tarea-2-estado-activacion-modulos.md) | Persiste qué módulos están encendidos, siembra los once con solo el núcleo activo y bloquea en PostgreSQL la edición y el borrado del historial. |
 
 ## Relacion Con Estado V3
 

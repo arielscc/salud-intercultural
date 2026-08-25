@@ -14,6 +14,10 @@ const userManagementMigrationPath = resolve(
   process.cwd(),
   "prisma/migrations/20260729160000_manage_internal_users_sessions/migration.sql"
 );
+const moduleActivationMigrationPath = resolve(
+  process.cwd(),
+  "prisma/migrations/20260824210000_module_activation/migration.sql"
+);
 
 describe("Prisma migration files", () => {
   it("backfills Facebook sources in the Lead table created by the CRM migration", () => {
@@ -39,5 +43,17 @@ describe("Prisma migration files", () => {
     expect(migration).toContain('"deviceLabel" TEXT');
     expect(migration).not.toContain("passwordHash");
     expect(migration).not.toMatch(/\bDROP\b/i);
+  });
+
+  it("makes module activation history append-only and starts with the core module only", () => {
+    const migration = readFileSync(moduleActivationMigrationPath, "utf8");
+
+    expect(migration).toContain('BEFORE UPDATE OR DELETE ON "ModuleActivationEvent"');
+    expect(migration).toContain("ModuleActivationEvent is append-only");
+    expect(migration).toContain("ON DELETE RESTRICT ON UPDATE RESTRICT");
+    expect(migration).toContain("('core',           'active'");
+    // Aditiva: no altera ni elimina nada de lo que ya existe en la base.
+    expect(migration).not.toMatch(/\bDROP\b/i);
+    expect(migration).not.toMatch(/ALTER TABLE "(?!ModuleActivation)/);
   });
 });

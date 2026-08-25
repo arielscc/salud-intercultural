@@ -46,6 +46,7 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Sucursales y asignación del personal | Prisma | SIGECO, Dirección | Activo local | El paciente es global; cada operación conserva sede. El Alto está activa y Cochabamba permanece en preparación. |
 | Saldos y traslados por sucursal | Prisma | SIGECO, Administración y Dirección | Activo local | `BranchInventoryBalance` es el saldo operativo por sede; `InventoryTransfer` enlaza salida y entrada append-only. |
 | Borrador local de nueva compra | `sessionStorage` transitorio | SIGECO, Administración | Temporal, no es fuente de verdad | Solo campos administrativos aprobados, sin pacientes, clínica o archivos; se elimina al confirmar o cerrar sesión. |
+| Activación de módulos | Prisma | SIGECO, solo super administrador | Activo local | `ModuleActivation` guarda el estado; el catálogo, las dependencias y el orden viven en código. `ModuleActivationEvent` es append-only y PostgreSQL bloquea update y delete. |
 | Auditoría de SIGECO | Prisma | SIGECO, solo Dirección y super administrador | Activo | `AuditEvent` append-only; PostgreSQL bloquea update y delete. |
 | Adjuntos clínicos | Prisma + storage clínico privado | SIGECO, según permisos clínicos | Activo | Metadata y concesiones en Prisma; contenido fuera de Payload y de `public/`. |
 | Reportes analiticos internos | Prisma | SIGECO, Dirección | Activo | Captación, recorrido completo y tiempos por área se derivan de eventos, visitas, decisiones, ventas, pagos y seguimientos; no se copian a Payload. |
