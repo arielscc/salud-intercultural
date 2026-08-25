@@ -26,6 +26,8 @@ import {
 } from "@/modules/database/queries/service-catalog";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 type CatalogPageProps = {
   searchParams: Promise<{
@@ -43,10 +45,11 @@ const secondaryActionClassName = `${actionBaseClassName} border-border bg-surfac
 
 export default async function ServiceCatalogPage({ searchParams }: CatalogPageProps) {
   const user = await requirePermission("service_catalog_read", { module: "catalogo" });
+  const moduleAccess = await getModuleAccessState();
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = 40;
-  const canWrite = roleHasPermission(user.role, "service_catalog_write");
+  const canWrite = canUse(user.role, moduleAccess, "service_catalog_write");
   const selectedKind =
     params.tipo === "service" ||
     params.tipo === "treatment" ||

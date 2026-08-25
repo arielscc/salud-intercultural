@@ -30,6 +30,8 @@ import {
 } from "@/modules/database/queries/purchases";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 
 const statuses = [
@@ -58,6 +60,7 @@ export default async function PurchasesPage({
   }>;
 }) {
   const user = await requirePermission("purchases_read");
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const params = await searchParams;
   const page = parsePage(params.page);
@@ -78,7 +81,7 @@ export default async function PurchasesPage({
     getPurchaseSummary(activeBranch.code),
     getActiveSuppliers()
   ]);
-  const canWrite = roleHasPermission(user.role, "purchases_write");
+  const canWrite = canUse(user.role, moduleAccess, "purchases_write");
 
   return (
     <div className="grid gap-4">

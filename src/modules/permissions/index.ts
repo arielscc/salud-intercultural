@@ -1,11 +1,8 @@
 import { redirect } from "next/navigation";
-import type { InternalPermission } from "@/generated/prisma/client";
+import type { InternalPermission, InternalRole } from "@/generated/prisma/client";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
-import {
-  moduleIsActive,
-  modulesEnablingPermission,
-  permissionIsEnabled
-} from "@/features/modules/activation";
+import { modulesEnablingPermission } from "@/features/modules/activation";
+import { resolveModuleAccess } from "@/features/modules/access";
 import type { SigecoModuleCode } from "@/features/modules/catalog";
 import { moduleDisabledNotice, permissionDeniedNotice } from "@/features/modules/notices";
 import {
@@ -14,7 +11,7 @@ import {
   getInternalUserBySessionToken
 } from "@/features/internal-auth/session";
 import { appendAuditEvent } from "@/modules/audit/append";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 
 export async function getCurrentInternalUser() {
   const token = await getInternalSessionToken();
@@ -58,12 +55,12 @@ export async function requireInternalSession() {
  * `inventory_read`, que también habilitan Administración y Compras; sin fijar el
  * módulo, la pantalla de Inventario seguiría abierta con Inventario apagado.
  */
-async function moduleAllows(permission: InternalPermission, module?: SigecoModuleCode) {
-  const activeModules = await getActiveModules();
-
-  return module
-    ? moduleIsActive(activeModules, module)
-    : permissionIsEnabled(activeModules, permission);
+async function moduleAccessFor(
+  role: InternalRole,
+  permission: InternalPermission,
+  module?: SigecoModuleCode
+) {
+  return resolveModuleAccess(role, await getModuleAccessState(), permission, module);
 }
 
 /**
@@ -91,7 +88,9 @@ export async function requirePermission(
     redirect(`/sigeco?aviso=${permissionDeniedNotice}`);
   }
 
-  if (!(await moduleAllows(permission, options?.module))) {
+  // Un módulo suspendido conserva la lectura para Dirección y el super
+  // administrador; la escritura queda bloqueada para todos, ellos incluidos.
+  if ((await moduleAccessFor(user.role, permission, options?.module)) === "blocked") {
     await appendAuditEvent({
       actor,
       action: "module.disabled",
@@ -118,9 +117,9 @@ export async function requirePermission(
  */
 export async function requireModule(module: SigecoModuleCode) {
   const user = await requireInternalUser();
-  const activeModules = await getActiveModules();
+  const { active } = await getModuleAccessState();
 
-  if (!moduleIsActive(activeModules, module)) {
+  if (!active.includes(module) && module !== "core") {
     await appendAuditEvent({
       actor: { id: user.id, role: user.role },
       action: "module.disabled",

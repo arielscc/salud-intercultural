@@ -30,7 +30,7 @@ import { createDirectWhatsAppLink } from "@/lib/whatsapp";
 import { getVisitById } from "@/modules/database/queries/visits";
 import { getActiveStudyCatalogItems } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 import { canUse } from "@/features/modules/access";
 import {
   Building2,
@@ -86,8 +86,8 @@ function FollowUpOwner({
 
 export default async function VisitDetailPage({ params, searchParams }: VisitDetailPageProps) {
   const user = await requirePermission("visits_read");
-  const activeModules = await getActiveModules();
-  const canOpenFollowUps = canUse(user.role, activeModules, "followups_read");
+  const moduleAccess = await getModuleAccessState();
+  const canOpenFollowUps = canUse(user.role, moduleAccess, "followups_read");
   const { activeBranch } = await getBranchContext(user);
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const [visit, studyCatalogItems] = await Promise.all([
@@ -108,10 +108,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
       ["pending", "acknowledged", "in_progress", "blocked"].includes(item.status) &&
       (item.sales.length > 0 || item.title.toLowerCase().includes("cobro"))
   );
-  const canRecordDiscontinuation = roleHasPermission(
-    user.role,
-    "visit_discontinuations_write"
-  );
+  const canRecordDiscontinuation = canUse(user.role, moduleAccess, "visit_discontinuations_write", "recepcion");
 
   return (
     <div className="grid gap-4">
@@ -182,7 +179,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
                   : " Si fue derivado por error, puedes traerlo nuevamente a recepción."}
               </p>
             </div>
-            {roleHasPermission(user.role, "visits_update") && !activeBillingWorkItem ? (
+            {canUse(user.role, moduleAccess, "visits_update") && !activeBillingWorkItem ? (
               <NoticeForm
                 action={applyVisitFlowAction}
                 notice="Paciente devuelto a recepción"

@@ -14,6 +14,8 @@ import { InventoryCatalogError } from "@/features/inventory/components/Inventory
 import { formatDateTime } from "@/lib/dates";
 import { getSupplierById } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 const linkClassName =
   "focus-ring inline-flex min-h-10 items-center justify-center rounded-[9px] border border-border px-3 text-sm font-semibold text-text hover:text-primary-dark";
@@ -26,11 +28,12 @@ export default async function SupplierDetailPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requirePermission("suppliers_read", { module: "inventario" });
+  const moduleAccess = await getModuleAccessState();
   const { supplierId } = await params;
   const query = await searchParams;
   const supplier = await getSupplierById(supplierId);
   if (!supplier) notFound();
-  const canWrite = roleHasPermission(user.role, "suppliers_write");
+  const canWrite = canUse(user.role, moduleAccess, "suppliers_write");
 
   return (
     <div className="grid gap-4">

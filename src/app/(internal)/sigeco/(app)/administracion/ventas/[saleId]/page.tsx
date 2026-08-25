@@ -33,6 +33,8 @@ import { formatDateTime } from "@/lib/dates";
 import { getSaleById } from "@/modules/database/queries/sales";
 import { getSaleReceiptDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { cn } from "@/lib/cn";
 
 type SaleDetailPageProps = {
@@ -45,6 +47,7 @@ export default async function SaleDetailPage({
   searchParams
 }: SaleDetailPageProps) {
   const user = await requirePermission("sales_read");
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const { saleId } = await params;
   const query = await searchParams;
@@ -64,7 +67,7 @@ export default async function SaleDetailPage({
     cashError && cashError !== "cash-session-required" && cashError !== "cash-session-stale-open"
       ? cashErrorMessages[cashError]
       : null;
-  const canGenerateReceipt = roleHasPermission(user.role, "sales_write");
+  const canGenerateReceipt = canUse(user.role, moduleAccess, "sales_write");
   // Los costos por producto solo los ve el médico (y super admin). En ventas del
   // pedido del médico, Administración/Enfermería ven detalle + cantidad + total.
   const canSeeLineCosts = user.role === "medico" || user.role === "super_admin";
@@ -111,6 +114,7 @@ export default async function SaleDetailPage({
         {hasBalance || cashError ? (
           <OpenCashSessionCallout
             user={user}
+        moduleAccess={moduleAccess}
             branch={activeBranch}
             returnTo={`/sigeco/administracion/ventas/${sale.id}`}
             blocked={Boolean(cashError) && cashError !== "cash-session-stale-open"}

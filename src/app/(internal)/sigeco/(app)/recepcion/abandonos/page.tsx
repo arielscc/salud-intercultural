@@ -24,7 +24,7 @@ import { routeAreaLabels, visitStatusLabels } from "@/features/patients/labels";
 import { dateOnlyRange, formatDateTime } from "@/lib/dates";
 import { getVisitDiscontinuationReport } from "@/modules/database/queries/visit-discontinuations";
 import { requirePermission } from "@/modules/permissions";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 import { canUse } from "@/features/modules/access";
 
 type VisitDiscontinuationReportPageProps = {
@@ -67,9 +67,11 @@ function FollowUpOwner({
 export default async function VisitDiscontinuationReportPage({
   searchParams
 }: VisitDiscontinuationReportPageProps) {
-  const user = await requirePermission("visit_discontinuations_read");
-  const activeModules = await getActiveModules();
-  const canOpenFollowUps = canUse(user.role, activeModules, "followups_read");
+  const user = await requirePermission("visit_discontinuations_read", {
+    module: "recepcion"
+  });
+  const moduleAccess = await getModuleAccessState();
+  const canOpenFollowUps = canUse(user.role, moduleAccess, "followups_read");
   const params = await searchParams;
   const reason = visitDiscontinuationReasonOptions.some(
     ([value]) => value === params.motivo

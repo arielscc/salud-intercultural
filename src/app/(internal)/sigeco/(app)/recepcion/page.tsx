@@ -34,6 +34,8 @@ import {
 } from "@/modules/database/queries/patients";
 import { countVisits, getVisits } from "@/modules/database/queries/visits";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 import { CircleOff, ScanSearch, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
@@ -193,15 +195,13 @@ export default async function ReceptionPage({
     vista === "pacientes"
       ? await requirePermission("patients_read", { module: "recepcion" })
       : await requirePermission("visits_read");
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const canReadDuplicates = roleHasPermission(
     user.role,
     "patient_duplicates_read"
   );
-  const canRecordDiscontinuation = roleHasPermission(
-    user.role,
-    "visit_discontinuations_write"
-  );
+  const canRecordDiscontinuation = canUse(user.role, moduleAccess, "visit_discontinuations_write", "recepcion");
   const canReadDiscontinuations = roleHasPermission(
     user.role,
     "visit_discontinuations_read"

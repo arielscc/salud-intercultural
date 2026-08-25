@@ -2,9 +2,12 @@ import Link from "next/link";
 import { FileText, PauseCircle } from "lucide-react";
 import type { InternalUser } from "@/generated/prisma/client";
 import { internalRoleLabels } from "@/features/internal-auth/permissions";
-import type { ActiveModules } from "@/features/modules/activation";
-import { canUse } from "@/features/modules/access";
-import { getSigecoModule, type SigecoModuleCode } from "@/features/modules/catalog";
+import {
+  canUse,
+  roleKeepsSuspendedAccess,
+  type ModuleAccessState
+} from "@/features/modules/access";
+import { getSigecoModule } from "@/features/modules/catalog";
 import { formatLongDate } from "@/lib/dates";
 import { DesktopPatientSearch } from "@/components/internal/DesktopPatientSearch";
 import { DesktopSidebarNav } from "@/components/internal/DesktopSidebarNav";
@@ -48,18 +51,11 @@ function UserBadge({ user }: { user: InternalUser }) {
 export function InternalShell({
   user,
   branchContext,
-  activeModules,
-  suspendedModules = [],
+  moduleAccess,
   children
 }: {
   user: InternalUser;
-  activeModules: ActiveModules;
-  /**
-   * Módulos que estuvieron lanzados y hoy están apagados. Solo llegan cuando
-   * quien mira puede verlos; el resto del personal no necesita enterarse de una
-   * suspensión que no puede resolver.
-   */
-  suspendedModules?: readonly { code: SigecoModuleCode; note: string | null }[];
+  moduleAccess: ModuleAccessState;
   branchContext: {
     activeBranch: { code: string; name: string };
     branches: Array<{
@@ -79,7 +75,7 @@ export function InternalShell({
           <p className="text-[11px] text-muted">Salud Intercultural</p>
         </Link>
         <div className="flex-1 overflow-y-auto">
-          <DesktopSidebarNav role={user.role} activeModules={activeModules} />
+          <DesktopSidebarNav role={user.role} moduleAccess={moduleAccess} />
         </div>
         <div className="mt-2 border-t border-border px-5 pt-3">
           <UserBadge user={user} />
@@ -90,7 +86,7 @@ export function InternalShell({
         <header className="print-hidden flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:px-6">
           <MobileSidebar
             role={user.role}
-            activeModules={activeModules}
+            moduleAccess={moduleAccess}
             userSlot={<UserBadge user={user} />}
           />
           <p className="hidden font-sora text-sm font-bold text-text sm:block lg:hidden">Sigeco</p>
@@ -99,7 +95,7 @@ export function InternalShell({
             activeCode={branchContext.activeBranch.code}
             branches={branchContext.branches}
           />
-          {canUse(user.role, activeModules, "patients_read", "recepcion") ? (
+          {canUse(user.role, moduleAccess, "patients_read", "recepcion") ? (
             <DesktopPatientSearch />
           ) : null}
           <div className="ml-auto flex shrink-0 items-center gap-3">
@@ -120,7 +116,7 @@ export function InternalShell({
         </header>
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6">
-          {suspendedModules.length > 0 ? (
+          {moduleAccess.suspended.length > 0 && roleKeepsSuspendedAccess(user.role) ? (
             <Link
               href="/sigeco/modulos"
               className="focus-ring mb-4 flex items-start gap-2.5 rounded-[9px] border border-warning/30 bg-warning/10 px-3 py-2.5 text-[13px] text-text"
@@ -128,17 +124,18 @@ export function InternalShell({
               <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
               <span>
                 <span className="font-semibold">
-                  {suspendedModules.length === 1
+                  {moduleAccess.suspended.length === 1
                     ? "Un módulo está suspendido"
-                    : `${suspendedModules.length} módulos están suspendidos`}
+                    : `${moduleAccess.suspended.length} módulos están suspendidos`}
                   :{" "}
-                  {suspendedModules
-                    .map((entry) => getSigecoModule(entry.code).name)
+                  {moduleAccess.suspended
+                    .map((code) => getSigecoModule(code).name)
                     .join(", ")}
                   .
                 </span>{" "}
                 <span className="text-muted">
-                  El trabajo abierto se conserva. Revisar en Módulos.
+                  Puedes consultarlos en solo lectura; nadie puede registrar cambios
+                  ahí hasta reactivarlos.
                 </span>
               </span>
             </Link>

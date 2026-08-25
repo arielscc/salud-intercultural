@@ -37,6 +37,8 @@ import {
   getCaptureCatalog
 } from "@/modules/database/queries/attribution";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 type AttributionPageProps = {
   searchParams: Promise<{
@@ -58,6 +60,7 @@ export default async function AttributionPage({
   searchParams
 }: AttributionPageProps) {
   const user = await requirePermission("reports_read");
+  const moduleAccess = await getModuleAccessState();
   const filters = await searchParams;
   const currentMonth = monthRange();
   const requestedRange = dateOnlyRange(filters.desde, filters.hasta);
@@ -66,7 +69,7 @@ export default async function AttributionPage({
   const city = filters.ciudad?.trim().slice(0, 120) || undefined;
   const department =
     filters.departamento?.trim().slice(0, 120) || undefined;
-  const canManage = roleHasPermission(user.role, "attribution_manage");
+  const canManage = canUse(user.role, moduleAccess, "attribution_manage", "reportes");
   const [report, catalog] = await Promise.all([
     getCaptureAttributionReport({ from, to, city, department }),
     getCaptureCatalog()

@@ -40,6 +40,8 @@ import {
   getRecentPatientFeedbackRequests
 } from "@/modules/database/queries/patient-feedback";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 type FeedbackPageProps = {
   searchParams: Promise<{
@@ -67,6 +69,7 @@ function severityTone(severity: FeedbackSeverity) {
 
 export default async function FeedbackPage({ searchParams }: FeedbackPageProps) {
   const user = await requirePermission("feedback_read");
+  const moduleAccess = await getModuleAccessState();
   const query = await searchParams;
   const status = statuses.includes(query.estado as FeedbackCaseStatus)
     ? (query.estado as FeedbackCaseStatus)
@@ -74,7 +77,7 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
   const severity = severities.includes(query.prioridad as FeedbackSeverity)
     ? (query.prioridad as FeedbackSeverity)
     : undefined;
-  const canManage = roleHasPermission(user.role, "feedback_manage");
+  const canManage = canUse(user.role, moduleAccess, "feedback_manage");
   const [cases, dashboard, visits, owners, requests] = await Promise.all([
     getPatientFeedbackCases({ status, severity }),
     getPatientFeedbackDashboard(),

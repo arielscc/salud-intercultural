@@ -39,6 +39,8 @@ import {
   getSupervisedReminderSummary
 } from "@/modules/database/queries/supervised-reminders";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 type ReminderPageProps = {
   searchParams: Promise<{
@@ -83,12 +85,13 @@ export default async function SupervisedRemindersPage({
   searchParams
 }: ReminderPageProps) {
   const user = await requirePermission("followups_read");
+  const moduleAccess = await getModuleAccessState();
   const query = await searchParams;
   const status = statuses.includes(query.estado as SupervisedReminderCandidateStatus)
     ? (query.estado as SupervisedReminderCandidateStatus)
     : "pending_review";
-  const canReview = roleHasPermission(user.role, "reminders_review");
-  const canManage = roleHasPermission(user.role, "reminder_rules_manage");
+  const canReview = canUse(user.role, moduleAccess, "reminders_review");
+  const canManage = canUse(user.role, moduleAccess, "reminder_rules_manage");
   const [candidates, summary, rules, owners] = await Promise.all([
     getSupervisedReminderCandidates({ status }),
     getSupervisedReminderSummary(),

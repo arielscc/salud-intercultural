@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { InternalPermission } from "@/generated/prisma/client";
 import { sigecoModuleCodes } from "@/features/modules/catalog";
 import { permissionModules } from "@/features/modules/permission-modules";
+import { isWritePermission } from "@/features/modules/permission-access";
 import { sigecoNavItems } from "@/components/internal/nav-items";
 
 /*
@@ -52,6 +53,8 @@ const intentionallyShared: Record<string, string> = {
     "Recepción, Consulta, Enfermería y Administración marcan su propio tiempo de atención.",
   "src/features/attribution/actions.ts:attribution_manage":
     "La fuente de captación se registra en la llegada y se analiza en los reportes.",
+  "src/features/visit-discontinuations/actions.ts:visit_discontinuations_write":
+    "Recepción, Médico, Enfermería y Administración pueden registrar \"No continuará\".",
   "src/features/patients/actions.ts:patients_create":
     "El alta de una ficha la hacen Recepción y, desde la Etapa 1, Administración.",
   "src/app/(internal)/sigeco/api/clinical-attachments/route.ts:attachments_write":
@@ -154,6 +157,28 @@ describe("gate de módulos", () => {
       // Si la página no fija módulo, el permiso ya identifica al suyo.
       if (!call) continue;
       expect(call[1], `${item.href}: el menú y la página no coinciden`).toBe(item.module);
+    }
+  });
+
+  it("no decide con el rol solo si el permiso es de escritura", () => {
+    const pages = applicationFiles(
+      resolve(process.cwd(), "src/app/(internal)/sigeco/(app)")
+    ).filter((file) => file.endsWith("/page.tsx"));
+
+    for (const file of pages) {
+      for (const [, permission] of source(file).matchAll(
+        /roleHasPermission\(\s*user\.role\s*,\s*"(\w+)"/g
+      )) {
+        if (!isWritePermission(permission as InternalPermission)) continue;
+        // Un permiso del núcleo nunca se bloquea, así que la distinción no aplica.
+        const modules = permissionModules[permission as InternalPermission] ?? [];
+        if (modules.length === 1 && modules[0] === "core") continue;
+
+        expect.fail(
+          `${relative(file)} decide ${permission} con roleHasPermission: usa canUse ` +
+            "para que un módulo suspendido quede en solo lectura"
+        );
+      }
     }
   });
 });

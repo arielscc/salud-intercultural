@@ -18,8 +18,12 @@ y queda auditada, el menú y el inicio dejaron de ofrecerla, y el super
 administrador enciende y apaga módulos desde `/sigeco/modulos` con dependencias
 explicadas, motivo obligatorio e historial. Dirección lo ve en solo lectura.
 
-Falta la Tarea 6: hoy un módulo apagado se oculta por completo, y el trabajo que
-quedó abierto dentro no es consultable.
+Con la Tarea 6 la Fase A está completa en implementación local: un módulo
+suspendido conserva la consulta para Dirección y el super administrador, bloquea
+toda escritura y lista el trabajo que quedó abierto. Sigue en pie el gate de
+cierre: nada pasa a `Terminada` antes del cierre acumulado de las Tareas 11 y 12.
+
+El siguiente bloque es la Fase B, la Etapa 1 propiamente dicha.
 
 Con los once módulos activos el sistema se comporta igual que antes de este
 plan.
@@ -44,8 +48,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 15 |
-| En progreso | 5 |
+| Pendiente | 14 |
+| En progreso | 6 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -68,7 +72,7 @@ se sigue llevando en sus propios archivos.
 | 3 | Gate de módulos en servidor | P0 | En progreso | 1-2 |
 | 4 | Navegación e inicio según módulos activos | P0 | En progreso | 3 |
 | 5 | Pantalla de activación del super administrador | P0 | En progreso | 3-4 |
-| 6 | Modo solo lectura del módulo apagado | P1 | Pendiente | 5 |
+| 6 | Modo solo lectura del módulo apagado | P1 | En progreso | 5 |
 | 7 | Alta mínima de cliente desde Administración | P0 | Pendiente | 4 |
 | 8 | Venta directa sin visita | P0 | Pendiente | 7 |
 | 9 | Listado y búsqueda de ventas | P1 | Pendiente | 8 |
@@ -126,14 +130,44 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 6: el modo solo lectura del módulo apagado. Hoy apagar oculta todo, así que
-el trabajo que quedó abierto —visitas activas, tareas, ventas con saldo— deja de
-verse justo cuando hay que decidir qué hacer con él. Falta que Dirección y el
-super administrador puedan consultarlo sin poder escribir, una vista de
-pendientes por módulo suspendido y el procedimiento documentado en
-`docs/operations/`. El aviso del shell y `getSuspendedModules` ya existen.
+Tarea 7: alta mínima de cliente desde Administración, que abre la Fase B. Es el
+primero de los tres bloqueos que impiden vender sin la ruta clínica: hoy
+`Sale.patientId` es obligatorio y el único alta de paciente es el funnel de
+Recepción, que abre visita, ruta y tarea. Hay que agregar `patients_create` y
+`patients_update` al rol `administracion` y crear la ficha sin visita,
+reutilizando la detección de duplicados que ya existe.
 
 ## Registro
+
+### 2026-08-24 — Tarea 6 Implementada (Modo Solo Lectura Del Módulo Apagado)
+
+- `permission-access.ts` clasifica los 66 permisos como lectura o escritura, con
+  prueba de cobertura. La clasificación se declara: `reminders_review` y
+  `patient_duplicates_review` registran decisiones y son escritura aunque no lo
+  digan.
+- `getModuleAccessState()` distingue **suspendido** (estuvo lanzado y se apagó)
+  de **sin lanzar**. Solo el primero conserva la lectura, porque solo ahí hay
+  trabajo abierto que resolver.
+- `resolveModuleAccess` devuelve `allowed`, `read_only` o `blocked`, y la usan
+  las tres capas: guarda de página, guarda de acción e interfaz. `read_only`
+  nunca aparece con un permiso de escritura, ni para el super administrador.
+- 44 indicadores de escritura en 26 páginas pasaron de `roleHasPermission` a
+  `canUse`, así que una pantalla suspendida se dibuja sin sus botones de guardar.
+  Los indicadores de lectura se dejaron intactos a propósito: convertirlos habría
+  vaciado la pantalla y anulado el objetivo.
+- `getModulePendingWork` cuenta lo que quedó abierto en cada módulo suspendido
+  (visitas sin cerrar, ventas con saldo, Cajas sin cerrar, tareas, alertas) y se
+  muestra en su tarjeta.
+- Corrección al mapa: "No continuará" lo registran cuatro áreas, no solo
+  Recepción; `visit_discontinuations_*` quedó habilitado por las cuatro.
+- Procedimiento documentado en
+  [operations/module-launch-suspension.md](../../operations/module-launch-suspension.md).
+- Validación: typecheck y lint limpios; 466 de 471 pruebas unitarias, con 29
+  nuevas. Verificado contra la base de desarrollo suspendiendo Caja: Dirección
+  obtiene `read_only` en lectura y `blocked` en escritura, el rol Administración
+  queda bloqueado en ambas, y los pendientes reportaron datos reales.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-24-lanzamiento-tarea-6-solo-lectura-modulo-apagado.md).
 
 ### 2026-08-24 — Tarea 5 Implementada (Pantalla De Activación Del Super Administrador)
 

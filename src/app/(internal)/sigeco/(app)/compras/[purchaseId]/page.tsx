@@ -31,6 +31,8 @@ import {
   getPurchaseById
 } from "@/modules/database/queries/purchases";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 
 const noticeMessages: Record<string, string> = {
@@ -53,6 +55,7 @@ export default async function PurchaseDetailPage({
   searchParams: Promise<{ error?: string; aviso?: string }>;
 }) {
   const user = await requirePermission("purchases_read");
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const { purchaseId } = await params;
   const query = await searchParams;
@@ -62,8 +65,8 @@ export default async function PurchaseDetailPage({
   ]);
   if (!purchase) notFound();
 
-  const canWrite = roleHasPermission(user.role, "purchases_write");
-  const canReceive = roleHasPermission(user.role, "purchase_receipts_write");
+  const canWrite = canUse(user.role, moduleAccess, "purchases_write");
+  const canReceive = canUse(user.role, moduleAccess, "purchase_receipts_write");
   const paidCents = purchase.payments.reduce(
     (sum, payment) => sum + effectivePurchasePaymentCents(payment),
     0

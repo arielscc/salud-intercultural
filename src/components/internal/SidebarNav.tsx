@@ -3,23 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { InternalRole } from "@/generated/prisma/client";
-import type { ActiveModules } from "@/features/modules/activation";
-import { canUse } from "@/features/modules/access";
+import { canUse, type ModuleAccessState } from "@/features/modules/access";
 import { sigecoNavItems } from "@/components/internal/nav-items";
 import { cn } from "@/lib/cn";
 
 export function SidebarNav({
   role,
-  activeModules,
+  moduleAccess,
   onNavigate
 }: {
   role: InternalRole;
-  activeModules: ActiveModules;
+  moduleAccess: ModuleAccessState;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const items = sigecoNavItems.filter((item) =>
-    canUse(role, activeModules, item.permission, item.module)
+    canUse(role, moduleAccess, item.permission, item.module)
   );
 
   return (
@@ -45,6 +44,11 @@ export function SidebarNav({
               aria-hidden="true"
             />
             {item.label}
+            {moduleAccess.suspended.includes(item.module) ? (
+              <span className="ml-auto rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold text-warning">
+                Suspendido
+              </span>
+            ) : null}
           </Link>
         );
       })}

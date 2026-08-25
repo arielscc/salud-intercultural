@@ -6,7 +6,7 @@ import { buttonVariants } from "@/components/internal/ui/Button";
 import { openCashSessionAction } from "@/features/cash/actions";
 import { OpenCashSessionDialog } from "@/features/cash/components/OpenCashSessionDialog";
 import { defaultCashRegisterName } from "@/features/cash/policy";
-import { roleHasPermission } from "@/features/internal-auth/permissions";
+import { canUse, type ModuleAccessState } from "@/features/modules/access";
 import { formatDateOnly, todayDateOnly } from "@/lib/dates";
 import {
   getCashOpenState,
@@ -16,6 +16,7 @@ import { cn } from "@/lib/cn";
 
 type OpenCashSessionCalloutProps = {
   user: { id: string; role: InternalRole };
+  moduleAccess: ModuleAccessState;
   branch: { code: string; name: string };
   /** Ruta del cobro al que se vuelve después de abrir la Caja. */
   returnTo: string;
@@ -31,6 +32,7 @@ type OpenCashSessionCalloutProps = {
  */
 export async function OpenCashSessionCallout({
   user,
+  moduleAccess,
   branch,
   returnTo,
   blocked = false,
@@ -39,7 +41,8 @@ export async function OpenCashSessionCallout({
   const state = await getCashOpenState(branch.code);
   if (state.canOperate && !blocked) return null;
 
-  const canOpen = roleHasPermission(user.role, "cash_sessions_open");
+  // Con Caja suspendida no se abre una sesión nueva, ni siquiera con permiso.
+  const canOpen = canUse(user.role, moduleAccess, "cash_sessions_open");
   const box = cn(
     "rounded-[9px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm",
     className

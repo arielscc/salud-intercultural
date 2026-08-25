@@ -19,6 +19,8 @@ import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { getPatientDuplicateQueue } from "@/modules/database/queries/patient-duplicates";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 function matchingReasons(candidate: {
   phoneMatch: boolean;
@@ -45,11 +47,12 @@ export default async function PatientDuplicatesPage({
   searchParams: Promise<{ aviso?: string; error?: string }>;
 }) {
   const user = await requirePermission("patient_duplicates_read");
+  const moduleAccess = await getModuleAccessState();
   const [candidates, params] = await Promise.all([
     getPatientDuplicateQueue(),
     searchParams
   ]);
-  const canReview = roleHasPermission(user.role, "patient_duplicates_review");
+  const canReview = canUse(user.role, moduleAccess, "patient_duplicates_review");
   const highConfidence = candidates.filter(
     (candidate) => candidate.score >= 70
   ).length;

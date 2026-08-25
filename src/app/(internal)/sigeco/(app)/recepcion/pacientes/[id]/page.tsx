@@ -55,7 +55,7 @@ import {
 } from "@/features/service-sessions/labels";
 import { getClinicalAttachmentsForPatient } from "@/modules/clinical-attachments/service";
 import { requirePermission } from "@/modules/permissions";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 import { canUse } from "@/features/modules/access";
 import { Chip } from "@/components/internal/ui/Chip";
 import { calculateAgeFromDate } from "@/lib/age";
@@ -100,11 +100,11 @@ export default async function PatientDetailPage({
   searchParams
 }: PatientDetailPageProps) {
   const user = await requirePermission("patients_read", { module: "recepcion" });
-  const activeModules = await getActiveModules();
+  const moduleAccess = await getModuleAccessState();
   // La ficha resume ventas y seguimientos aunque esos módulos no estén
   // lanzados; lo que se oculta es el enlace, no el dato ya visible.
-  const canOpenSales = canUse(user.role, activeModules, "sales_read");
-  const canOpenFollowUps = canUse(user.role, activeModules, "followups_read");
+  const canOpenSales = canUse(user.role, moduleAccess, "sales_read");
+  const canOpenFollowUps = canUse(user.role, moduleAccess, "followups_read");
   const { id } = await params;
   const filters = await searchParams;
   const patient = await getPatientById(id);
@@ -181,7 +181,7 @@ export default async function PatientDetailPage({
                   </div>
                 </div>
               </div>
-              {roleHasPermission(user.role, "patients_update") ? (
+              {canUse(user.role, moduleAccess, "patients_update", "recepcion") ? (
                 <Link
                   href={`/sigeco/recepcion/pacientes/${patient.id}/editar`}
                   className={cn(buttonVariants({ variant: "outline", size: "sm" }), "bg-surface")}
@@ -703,14 +703,14 @@ export default async function PatientDetailPage({
               id: study.id,
               label: study.title
             }))}
-            canWrite={roleHasPermission(user.role, "attachments_write")}
-            canDelete={roleHasPermission(user.role, "attachments_delete")}
+            canWrite={canUse(user.role, moduleAccess, "attachments_write", "recepcion")}
+            canDelete={canUse(user.role, moduleAccess, "attachments_delete", "recepcion")}
           />
         ) : null}
       </div>
 
       <div className="grid gap-4 max-sm:contents xl:sticky xl:top-0 xl:max-h-[calc(100dvh-6.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
-        {roleHasPermission(user.role, "visits_create") ? (
+        {canUse(user.role, moduleAccess, "visits_create") ? (
           <Card className="max-sm:order-2">
             <CardHeader
               title="Registrar nueva llegada"

@@ -44,6 +44,8 @@ import {
   getCashPersonnel
 } from "@/modules/database/queries/cash";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import {
   Banknote,
   ExternalLink,
@@ -91,6 +93,7 @@ export default async function CashControlPage({
   searchParams
 }: CashPageProps) {
   const user = await requirePermission("cash_sessions_read");
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const query = await searchParams;
   const selectedType = movementTypes.includes(query.type as CashMovementType)
@@ -115,10 +118,10 @@ export default async function CashControlPage({
     (person) =>
       person.role === "administracion" || person.role === "super_admin"
   );
-  const canOpen = roleHasPermission(user.role, "cash_sessions_open");
-  const canClose = roleHasPermission(user.role, "cash_sessions_close");
-  const canApprove = roleHasPermission(user.role, "cash_sessions_approve");
-  const canReverse = roleHasPermission(user.role, "cash_movements_reverse");
+  const canOpen = canUse(user.role, moduleAccess, "cash_sessions_open");
+  const canClose = canUse(user.role, moduleAccess, "cash_sessions_close");
+  const canApprove = canUse(user.role, moduleAccess, "cash_sessions_approve");
+  const canReverse = canUse(user.role, moduleAccess, "cash_movements_reverse");
   const isCurrentSession = session?.id === dashboard.activeSessionId;
   const isOpen = isCurrentSession && session?.status === "open";
   const expected = dashboard.expected;

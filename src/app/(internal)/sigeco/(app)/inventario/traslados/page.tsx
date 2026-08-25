@@ -16,6 +16,8 @@ import {
   getInventoryTransfers
 } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 export default async function InventoryTransfersPage({
   searchParams
@@ -23,9 +25,10 @@ export default async function InventoryTransfersPage({
   searchParams: Promise<{ error?: string; aviso?: string }>;
 }) {
   const user = await requirePermission("inventory_read", { module: "inventario" });
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch, branches } = await getBranchContext(user);
   const query = await searchParams;
-  const canWrite = roleHasPermission(user.role, "inventory_write");
+  const canWrite = canUse(user.role, moduleAccess, "inventory_write");
   const activeDestinations = branches.filter(
     (branch) =>
       branch.assigned && branch.status === "active" && branch.code !== activeBranch.code

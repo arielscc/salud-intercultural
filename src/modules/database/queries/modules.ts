@@ -8,6 +8,7 @@ import {
   resolveDeactivationBlockers,
   type ActiveModules
 } from "@/features/modules/activation";
+import type { ModuleAccessState } from "@/features/modules/access";
 import {
   sigecoModuleCodes,
   sigecoModules,
@@ -33,16 +34,29 @@ import { prisma, withDatabaseError } from "@/modules/database";
  * mismo request seguirá devolviendo el valor anterior. Las acciones de la Tarea
  * 5 revalidan y redirigen, así que el siguiente render lee el estado nuevo.
  */
-export const getActiveModules = cache(async (): Promise<ActiveModules> => {
-  return withDatabaseError("getActiveModules", async () => {
+export const getModuleAccessState = cache(async (): Promise<ModuleAccessState> => {
+  return withDatabaseError("getModuleAccessState", async () => {
     const rows = await prisma.moduleActivation.findMany({
-      where: { status: "active" },
-      select: { code: true }
+      select: { code: true, status: true, deactivatedAt: true }
     });
 
-    return normalizeActiveModules(rows.map((row) => row.code));
+    return {
+      active: normalizeActiveModules(
+        rows.filter((row) => row.status === "active").map((row) => row.code)
+      ),
+      // Suspendido es el que estuvo lanzado y se apagó. El que nunca se encendió
+      // no tiene trabajo abierto que consultar.
+      suspended: rows
+        .filter((row) => row.status === "inactive" && row.deactivatedAt !== null)
+        .map((row) => row.code)
+        .filter(isSigecoModuleCode)
+    };
   });
 });
+
+export async function getActiveModules(): Promise<ActiveModules> {
+  return (await getModuleAccessState()).active;
+}
 
 const actorSelect = { id: true, name: true, email: true, role: true } as const;
 
@@ -181,6 +195,153 @@ export async function getModuleActivationHistory(options?: {
       actorRole: event.actorRole,
       occurredAt: event.occurredAt
     }));
+  });
+}
+
+export type ModulePendingWork = {
+  code: SigecoModuleCode;
+  items: { label: string; count: number }[];
+};
+
+/**
+ * Trabajo que quedó abierto dentro de un módulo suspendido.
+ *
+ * Apagar un módulo no cierra nada: una visita activa sigue activa y una venta
+ * con saldo sigue debiendo. Dirección necesita ver eso para decidir qué hacer
+ * antes de reactivarlo, y por eso se cuenta aquí en lugar de esconderlo.
+ *
+ * Solo se consultan los módulos que se piden, y solo los que tienen trabajo
+ * medible: Catálogo y Reportes no acumulan pendientes.
+ */
+export async function getModulePendingWork(
+  codes: readonly SigecoModuleCode[]
+): Promise<ModulePendingWork[]> {
+  if (codes.length === 0) return [];
+
+  return withDatabaseError("getModulePendingWork", async () => {
+    const wanted = new Set(codes);
+    const results: ModulePendingWork[] = [];
+
+    if (wanted.has("recepcion")) {
+      const [activeVisits, pendingWork] = await Promise.all([
+        prisma.visit.count({
+          where: {
+            status: { in: ["in_reception", "in_consultation", "in_nursing", "in_administration"] }
+          }
+        }),
+        prisma.visitWorkItem.count({
+          where: { area: "recepcion", status: { in: ["pending", "acknowledged", "in_progress"] } }
+        })
+      ]);
+      results.push({
+        code: "recepcion",
+        items: [
+          { label: "Visitas sin cerrar", count: activeVisits },
+          { label: "Tareas de Recepción abiertas", count: pendingWork }
+        ]
+      });
+    }
+
+    if (wanted.has("consulta")) {
+      const [drafts, queue] = await Promise.all([
+        prisma.clinicalConsultation.count({ where: { status: "draft" } }),
+        prisma.visitWorkItem.count({
+          where: { area: "medico", status: { in: ["pending", "acknowledged", "in_progress"] } }
+        })
+      ]);
+      results.push({
+        code: "consulta",
+        items: [
+          { label: "Consultas en borrador", count: drafts },
+          { label: "Pacientes esperando al médico", count: queue }
+        ]
+      });
+    }
+
+    if (wanted.has("enfermeria")) {
+      const [queue, openPackages] = await Promise.all([
+        prisma.visitWorkItem.count({
+          where: { area: "enfermeria", status: { in: ["pending", "acknowledged", "in_progress"] } }
+        }),
+        prisma.serviceSessionPackage.count({ where: { status: "active" } })
+      ]);
+      results.push({
+        code: "enfermeria",
+        items: [
+          { label: "Tareas de Enfermería abiertas", count: queue },
+          { label: "Paquetes de sesiones sin terminar", count: openPackages }
+        ]
+      });
+    }
+
+    if (wanted.has("administracion")) {
+      const [unpaid, openSessions, queue] = await Promise.all([
+        prisma.sale.count({ where: { status: { in: ["pending", "partial"] } } }),
+        prisma.cashSession.count({ where: { status: { in: ["open", "pending_approval"] } } }),
+        prisma.visitWorkItem.count({
+          where: {
+            area: "administracion",
+            status: { in: ["pending", "acknowledged", "in_progress"] }
+          }
+        })
+      ]);
+      results.push({
+        code: "administracion",
+        items: [
+          { label: "Ventas con saldo", count: unpaid },
+          { label: "Cajas sin cerrar", count: openSessions },
+          { label: "Cobros pendientes", count: queue }
+        ]
+      });
+    }
+
+    if (wanted.has("inventario")) {
+      const alerts = await prisma.inventoryAlert.count({ where: { status: "open" } });
+      results.push({
+        code: "inventario",
+        items: [{ label: "Alertas de stock abiertas", count: alerts }]
+      });
+    }
+
+    if (wanted.has("compras")) {
+      const open = await prisma.purchase.count({
+        where: { status: { in: ["draft", "confirmed", "partially_received"] } }
+      });
+      results.push({
+        code: "compras",
+        items: [{ label: "Compras sin recibir por completo", count: open }]
+      });
+    }
+
+    if (wanted.has("seguimientos")) {
+      const [pending, candidates] = await Promise.all([
+        prisma.followUpTask.count({
+          where: { status: { in: ["pending", "awaiting_payment", "no_answer"] } }
+        }),
+        prisma.supervisedReminderCandidate.count({
+          where: { status: { in: ["pending_review", "failed"] } }
+        })
+      ]);
+      results.push({
+        code: "seguimientos",
+        items: [
+          { label: "Seguimientos sin resolver", count: pending },
+          { label: "Recordatorios esperando aprobación", count: candidates }
+        ]
+      });
+    }
+
+    if (wanted.has("opiniones")) {
+      const cases = await prisma.patientFeedbackCase.count({
+        where: { status: { in: ["new", "reviewing", "awaiting_patient"] } }
+      });
+      results.push({
+        code: "opiniones",
+        items: [{ label: "Casos abiertos", count: cases }]
+      });
+    }
+
+    return results;
   });
 }
 

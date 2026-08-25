@@ -5,7 +5,9 @@ import {
   ModuleActivationError,
   getActiveModules,
   getModuleActivationHistory,
+  getModuleAccessState,
   getModuleActivationStates,
+  getModulePendingWork,
   getSuspendedModules,
   setModuleActivation
 } from "@/modules/database/queries/modules";
@@ -207,5 +209,94 @@ describe("getSuspendedModules", () => {
 
     expect(suspended).toHaveLength(1);
     expect(suspended[0]).toMatchObject({ code: "catalogo", note: "Precios en revisión" });
+  });
+});
+
+describe("apagar y reactivar", () => {
+  it("no altera ningún registro del módulo", async () => {
+    await setModuleActivation({ code: "inventario", active: true });
+
+    const before = await prisma.inventoryItem.findMany({
+      select: { id: true, name: true, currentStock: true, updatedAt: true },
+      orderBy: { id: "asc" }
+    });
+
+    await setModuleActivation({
+      code: "inventario",
+      active: false,
+      reason: "Simulacro de suspensión"
+    });
+    await setModuleActivation({ code: "inventario", active: true });
+
+    const after = await prisma.inventoryItem.findMany({
+      select: { id: true, name: true, currentStock: true, updatedAt: true },
+      orderBy: { id: "asc" }
+    });
+
+    expect(after).toEqual(before);
+  });
+
+  it("conserva el historial completo del ciclo", async () => {
+    await setModuleActivation({ code: "opiniones", active: true });
+    await setModuleActivation({
+      code: "opiniones",
+      active: false,
+      reason: "Revisión de textos"
+    });
+    await setModuleActivation({ code: "opiniones", active: true });
+
+    const history = await getModuleActivationHistory({ code: "opiniones" });
+
+    expect(history.slice(0, 3).map((event) => event.status)).toEqual([
+      "active",
+      "inactive",
+      "active"
+    ]);
+    expect(history[1]?.reason).toBe("Revisión de textos");
+  });
+});
+
+describe("getModuleAccessState", () => {
+  it("separa lo activo de lo suspendido", async () => {
+    await setModuleActivation({ code: "administracion", active: true });
+    await setModuleActivation({
+      code: "administracion",
+      active: false,
+      reason: "Incidente de Caja"
+    });
+
+    const state = await getModuleAccessState();
+
+    expect(state.active).toContain("core");
+    expect(state.active).not.toContain("administracion");
+    expect(state.suspended).toContain("administracion");
+  });
+
+  it("no marca como suspendido un módulo que nunca se lanzó", async () => {
+    const state = await getModuleAccessState();
+
+    expect(state.suspended).not.toContain("consulta");
+  });
+});
+
+describe("getModulePendingWork", () => {
+  it("no consulta nada cuando no hay módulos suspendidos", async () => {
+    await expect(getModulePendingWork([])).resolves.toEqual([]);
+  });
+
+  it("informa el trabajo abierto del módulo suspendido", async () => {
+    const work = await getModulePendingWork(["administracion"]);
+
+    expect(work).toHaveLength(1);
+    expect(work[0]?.code).toBe("administracion");
+    expect(work[0]?.items.map((item) => item.label)).toEqual([
+      "Ventas con saldo",
+      "Cajas sin cerrar",
+      "Cobros pendientes"
+    ]);
+  });
+
+  it("omite los módulos que no acumulan pendientes", async () => {
+    await expect(getModulePendingWork(["catalogo", "reportes"])).resolves.toEqual([]);
   });
 });

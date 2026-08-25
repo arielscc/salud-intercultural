@@ -30,7 +30,7 @@ import { getFollowUpWorkSummary } from "@/modules/database/queries/follow-ups";
 import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getReceptionDashboardSummary } from "@/modules/database/queries/reception";
 import { requireInternalUser } from "@/modules/permissions";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 import { cn } from "@/lib/cn";
@@ -54,18 +54,18 @@ const operationalAreas: PatientRouteArea[] = [
 
 export default async function SigecoDashboardPage() {
   const user = await requireInternalUser();
-  const [{ activeBranch }, activeModules] = await Promise.all([
+  const [{ activeBranch }, moduleAccess] = await Promise.all([
     getBranchContext(user),
-    getActiveModules()
+    getModuleAccessState()
   ]);
   // Cada indicador depende del permiso del rol y de que su módulo esté lanzado.
   // La búsqueda y el stock fijan el módulo porque sus enlaces viven en Recepción
   // e Inventario, aunque el permiso lo compartan con otras áreas.
-  const canSeeReception = canUse(user.role, activeModules, "visits_read");
-  const canSeePatients = canUse(user.role, activeModules, "patients_read", "recepcion");
-  const canSeeFollowUps = canUse(user.role, activeModules, "followups_read");
-  const canSeeInventory = canUse(user.role, activeModules, "inventory_read", "inventario");
-  const canRegisterArrival = canUse(user.role, activeModules, "visits_create");
+  const canSeeReception = canUse(user.role, moduleAccess, "visits_read");
+  const canSeePatients = canUse(user.role, moduleAccess, "patients_read", "recepcion");
+  const canSeeFollowUps = canUse(user.role, moduleAccess, "followups_read");
+  const canSeeInventory = canUse(user.role, moduleAccess, "inventory_read", "inventario");
+  const canRegisterArrival = canUse(user.role, moduleAccess, "visits_create");
   // El rol tiene trabajo asignado, pero su módulo todavía no se lanzó: no es lo
   // mismo que no tener acceso, y decirlo mal manda a la persona a pedir permisos
   // que ya tiene.

@@ -16,6 +16,8 @@ import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { countSuppliers, getSuppliers } from "@/modules/database/queries/inventory";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 const buttonClassName =
   "focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-[9px] border border-primary bg-primary px-3 text-sm font-semibold text-white";
@@ -30,9 +32,10 @@ export default async function SuppliersPage({
   }>;
 }) {
   const user = await requirePermission("suppliers_read", { module: "inventario" });
+  const moduleAccess = await getModuleAccessState();
   const params = await searchParams;
   const page = parsePage(params.page);
-  const canWrite = roleHasPermission(user.role, "suppliers_write");
+  const canWrite = canUse(user.role, moduleAccess, "suppliers_write");
   const selectedStatus =
     params.estado === "active" ||
     params.estado === "inactive" ||

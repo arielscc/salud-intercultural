@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { InternalRole } from "@/generated/prisma/client";
-import type { ActiveModules } from "@/features/modules/activation";
-import { canUse } from "@/features/modules/access";
+import { canUse, type ModuleAccessState } from "@/features/modules/access";
 import { sigecoNavItems, type SigecoNavItem } from "@/components/internal/nav-items";
 import { cn } from "@/lib/cn";
 
@@ -32,7 +31,7 @@ const navGroups: Array<{ label?: string; hrefs: string[] }> = [
   { label: "Cuenta", hrefs: ["/sigeco/mi-cuenta"] }
 ];
 
-function DesktopNavLink({ item }: { item: SigecoNavItem }) {
+function DesktopNavLink({ item, suspended }: { item: SigecoNavItem; suspended: boolean }) {
   const pathname = usePathname();
   const Icon = item.icon;
   const isActive = item.href === "/sigeco" ? pathname === "/sigeco" : pathname.startsWith(item.href);
@@ -51,19 +50,24 @@ function DesktopNavLink({ item }: { item: SigecoNavItem }) {
         aria-hidden="true"
       />
       {item.label}
+      {suspended ? (
+        <span className="ml-auto rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold text-warning">
+          Suspendido
+        </span>
+      ) : null}
     </Link>
   );
 }
 
 export function DesktopSidebarNav({
   role,
-  activeModules
+  moduleAccess
 }: {
   role: InternalRole;
-  activeModules: ActiveModules;
+  moduleAccess: ModuleAccessState;
 }) {
   const permittedItems = sigecoNavItems.filter((item) =>
-    canUse(role, activeModules, item.permission, item.module)
+    canUse(role, moduleAccess, item.permission, item.module)
   );
 
   // Todo item permitido que no esté asignado a un grupo se muestra igual en una
@@ -106,7 +110,11 @@ export function DesktopSidebarNav({
             ) : null}
             <div className="flex flex-col gap-0.5">
               {items.map((item) => (
-                <DesktopNavLink key={item.href} item={item} />
+                <DesktopNavLink
+                  key={item.href}
+                  item={item}
+                  suspended={moduleAccess.suspended.includes(item.module)}
+                />
               ))}
             </div>
           </section>

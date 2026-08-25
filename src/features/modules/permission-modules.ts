@@ -50,8 +50,10 @@ export const permissionModules: Record<InternalPermission, readonly SigecoModule
   visits_update: ["recepcion"],
   patient_route_read: ["recepcion"],
   patient_route_update: ["recepcion"],
-  visit_discontinuations_read: ["recepcion"],
-  visit_discontinuations_write: ["recepcion"],
+  // "No continuará" lo registran Recepción, Médico, Enfermería y Administración:
+  // el permiso pertenece a las cuatro áreas, no solo a Recepción.
+  visit_discontinuations_read: ["recepcion", "consulta", "enfermeria", "administracion"],
+  visit_discontinuations_write: ["recepcion", "consulta", "enfermeria", "administracion"],
   patient_consents_read: ["recepcion"],
   patient_consents_write: ["recepcion"],
   patient_duplicates_read: ["recepcion"],

@@ -59,6 +59,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 44. [Integración segura Payload-SIGECO](./payload-sigeco-integration.md)
 45. [Operación multi-sucursal](./multi-branch-operations.md)
 46. [Guía reproducible del piloto completo con el personal](./staff-pilot.md)
+47. [Lanzamiento y suspension de modulos](./module-launch-suspension.md)
 
 ## Flujo recomendado
 

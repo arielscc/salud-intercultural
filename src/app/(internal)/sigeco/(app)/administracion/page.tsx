@@ -42,6 +42,8 @@ import {
 } from "@/modules/database/queries/cash";
 import { OpenCashSessionCallout } from "@/features/cash/components/OpenCashSessionCallout";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { ArrowRight, Banknote, CalendarDays, Clock } from "lucide-react";
 import Link from "next/link";
 import { getBranchContext } from "@/features/branches/context";
@@ -118,6 +120,7 @@ export default async function AdministrationPage({
 }) {
   const query = await searchParams;
   const user = await requirePermission("sales_read");
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const isPersonalAdministrationAccount = user.role === "administracion";
   const isSuperAdmin = user.role === "super_admin";
@@ -271,11 +274,12 @@ export default async function AdministrationPage({
 
       <OpenCashSessionCallout
         user={user}
+        moduleAccess={moduleAccess}
         branch={activeBranch}
         returnTo="/sigeco/administracion"
       />
 
-      {roleHasPermission(user.role, "cash_movements_create") ? (
+      {canUse(user.role, moduleAccess, "cash_movements_create") ? (
         <CashExpenseDialogs
           cashSessionId={
             hasUsableCashSession

@@ -2,17 +2,14 @@ import { redirect } from "next/navigation";
 import type { InternalPermission, InternalRole } from "@/generated/prisma/client";
 import { appendAuditEvent, getRequestId } from "@/modules/audit/append";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
-import {
-  moduleIsActive,
-  modulesEnablingPermission,
-  permissionIsEnabled
-} from "@/features/modules/activation";
+import { modulesEnablingPermission } from "@/features/modules/activation";
+import { resolveModuleAccess } from "@/features/modules/access";
 import type { SigecoModuleCode } from "@/features/modules/catalog";
 import {
   moduleDisabledNotice,
   permissionDeniedNotice
 } from "@/features/modules/notices";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 import { getCurrentInternalUser } from "@/modules/permissions";
 import { sanitizeAuditContext } from "@/modules/audit/sanitize";
 
@@ -125,12 +122,14 @@ export async function runAuditedAction<T>(
   // El módulo apagado se registra como un rechazo propio: Dirección puede
   // filtrar `module.disabled` en la auditoría y ver qué se intentó usar antes de
   // que esa etapa estuviera lanzada, sin confundirlo con una falta de permiso.
-  const activeModules = await getActiveModules();
-  const moduleEnabled = input.module
-    ? moduleIsActive(activeModules, input.module)
-    : permissionIsEnabled(activeModules, input.permission);
+  const moduleAccess = resolveModuleAccess(
+    user.role,
+    await getModuleAccessState(),
+    input.permission,
+    input.module
+  );
 
-  if (!moduleEnabled) {
+  if (moduleAccess === "blocked") {
     await appendAuditEvent({
       actor,
       action: "module.disabled",

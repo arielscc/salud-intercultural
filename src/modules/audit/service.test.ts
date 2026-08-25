@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auditCreate: vi.fn(),
   getCurrentInternalUser: vi.fn(),
-  getActiveModules: vi.fn()
+  getModuleAccessState: vi.fn()
 }));
 
 vi.mock("next/headers", () => ({
@@ -29,7 +29,7 @@ vi.mock("@/modules/permissions", () => ({
 }));
 
 vi.mock("@/modules/database/queries/modules", () => ({
-  getActiveModules: mocks.getActiveModules
+  getModuleAccessState: mocks.getModuleAccessState
 }));
 
 import { sigecoModuleCodes } from "@/features/modules/catalog";
@@ -43,10 +43,13 @@ describe("runAuditedAction", () => {
   beforeEach(() => {
     mocks.auditCreate.mockReset();
     mocks.getCurrentInternalUser.mockReset();
-    mocks.getActiveModules.mockReset();
+    mocks.getModuleAccessState.mockReset();
     // Por defecto, todo lanzado: las pruebas existentes describen el sistema
     // completo y no deben cambiar de resultado por el gate de módulos.
-    mocks.getActiveModules.mockResolvedValue([...sigecoModuleCodes]);
+    mocks.getModuleAccessState.mockResolvedValue({
+      active: [...sigecoModuleCodes],
+      suspended: []
+    });
     mocks.auditCreate.mockResolvedValue({ id: "audit-1" });
     mocks.getCurrentInternalUser.mockResolvedValue({
       id: "user-1",
@@ -189,7 +192,7 @@ describe("gate de módulos en acciones auditadas", () => {
   beforeEach(() => {
     mocks.auditCreate.mockReset();
     mocks.getCurrentInternalUser.mockReset();
-    mocks.getActiveModules.mockReset();
+    mocks.getModuleAccessState.mockReset();
     mocks.auditCreate.mockResolvedValue({ id: "audit-module" });
     mocks.getCurrentInternalUser.mockResolvedValue({
       id: "user-1",
@@ -198,7 +201,7 @@ describe("gate de módulos en acciones auditadas", () => {
   });
 
   it("rechaza la acción de un módulo apagado sin ejecutarla", async () => {
-    mocks.getActiveModules.mockResolvedValue(["core"]);
+    mocks.getModuleAccessState.mockResolvedValue({ active: ["core"], suspended: [] });
     const operation = vi.fn();
 
     await expect(
@@ -216,7 +219,7 @@ describe("gate de módulos en acciones auditadas", () => {
   });
 
   it("audita el rechazo como module.disabled con la acción intentada", async () => {
-    mocks.getActiveModules.mockResolvedValue(["core"]);
+    mocks.getModuleAccessState.mockResolvedValue({ active: ["core"], suspended: [] });
 
     await expect(
       runAuditedAction(
@@ -246,7 +249,10 @@ describe("gate de módulos en acciones auditadas", () => {
   });
 
   it("distingue el rechazo por módulo del rechazo por permiso", async () => {
-    mocks.getActiveModules.mockResolvedValue([...sigecoModuleCodes]);
+    mocks.getModuleAccessState.mockResolvedValue({
+      active: [...sigecoModuleCodes],
+      suspended: []
+    });
     mocks.getCurrentInternalUser.mockResolvedValue({
       id: "user-2",
       role: "enfermeria"
@@ -273,7 +279,10 @@ describe("gate de módulos en acciones auditadas", () => {
   });
 
   it("no deja que el super administrador evada un módulo apagado", async () => {
-    mocks.getActiveModules.mockResolvedValue(["core", "administracion"]);
+    mocks.getModuleAccessState.mockResolvedValue({
+      active: ["core", "administracion"],
+      suspended: []
+    });
 
     await expect(
       runAuditedAction(
@@ -288,7 +297,10 @@ describe("gate de módulos en acciones auditadas", () => {
   });
 
   it("respeta el módulo fijado cuando el permiso lo comparten varios", async () => {
-    mocks.getActiveModules.mockResolvedValue(["core", "administracion"]);
+    mocks.getModuleAccessState.mockResolvedValue({
+      active: ["core", "administracion"],
+      suspended: []
+    });
 
     // Sin fijar el módulo, Administración alcanza para `patients_update`.
     await expect(
@@ -317,7 +329,10 @@ describe("gate de módulos en acciones auditadas", () => {
   });
 
   it("bloquea los permisos retirados aunque todo esté lanzado", async () => {
-    mocks.getActiveModules.mockResolvedValue([...sigecoModuleCodes]);
+    mocks.getModuleAccessState.mockResolvedValue({
+      active: [...sigecoModuleCodes],
+      suspended: []
+    });
 
     await expect(
       runAuditedAction(

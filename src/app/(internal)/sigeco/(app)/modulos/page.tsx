@@ -21,7 +21,8 @@ import { setModuleActivationAction } from "@/features/modules/actions";
 import { formatDateTime } from "@/lib/dates";
 import {
   getModuleActivationHistory,
-  getModuleActivationStates
+  getModuleActivationStates,
+  getModulePendingWork
 } from "@/modules/database/queries/modules";
 import { requirePermission } from "@/modules/permissions";
 
@@ -62,6 +63,12 @@ export default async function ModulesPage({ searchParams }: ModulesPageProps) {
 
   const canManage = roleHasPermission(user.role, "modules_manage");
   const activeModules = states.filter((state) => state.active).map((state) => state.code);
+  // Suspendido es el que estuvo lanzado y se apagó: ahí sí puede haber trabajo
+  // abierto que alguien tiene que resolver.
+  const suspendedCodes = states
+    .filter((state) => !state.active && state.deactivatedAt)
+    .map((state) => state.code);
+  const pendingWork = await getModulePendingWork(suspendedCodes);
   const notice = errorMessage(params.error, params.faltan);
 
   return (
@@ -187,6 +194,32 @@ export default async function ModulesPage({ searchParams }: ModulesPageProps) {
                   </>
                 ) : null}
               </dl>
+
+              {suspended ? (
+                <div className="rounded-[9px] border border-warning/30 bg-warning/10 p-3">
+                  <p className="text-xs font-semibold text-warning">
+                    Trabajo abierto que quedó dentro
+                  </p>
+                  <dl className="mt-2 grid gap-1 text-xs">
+                    {(pendingWork.find((work) => work.code === entry.code)?.items ?? []).map(
+                      (item) => (
+                        <div key={item.label} className="flex justify-between gap-3">
+                          <dt className="text-muted">{item.label}</dt>
+                          <dd className="font-semibold tabular-nums text-text">{item.count}</dd>
+                        </div>
+                      )
+                    )}
+                    {(pendingWork.find((work) => work.code === entry.code)?.items.length ?? 0) ===
+                    0 ? (
+                      <p className="text-muted">Este módulo no acumula pendientes.</p>
+                    ) : null}
+                  </dl>
+                  <p className="mt-2 text-xs text-muted">
+                    Se conserva tal como quedó. Reactivar el módulo no cierra ni
+                    reabre nada por su cuenta.
+                  </p>
+                </div>
+              ) : null}
 
               {canManage && !entry.alwaysActive ? (
                 <div className="border-t border-border pt-3">

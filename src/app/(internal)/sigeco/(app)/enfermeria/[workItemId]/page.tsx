@@ -51,6 +51,8 @@ import {
 } from "@/modules/database/queries/nursing";
 import { getPatientServiceSessionPackages } from "@/modules/database/queries/service-sessions";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { CheckCircle2, Stethoscope, X } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -82,6 +84,7 @@ function invalidVitalSignField(campo: string | undefined) {
 
 export default async function NursingWorkItemPage({ params, searchParams }: NursingWorkItemPageProps) {
   const user = await requirePermission("nursing_read", { module: "enfermeria" });
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const { workItemId } = await params;
   const query = await searchParams;
@@ -102,7 +105,7 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
   ];
 
   const patient = item.visit.patient;
-  const canWriteNursing = roleHasPermission(user.role, "nursing_write");
+  const canWriteNursing = canUse(user.role, moduleAccess, "nursing_write");
   const order = item.clinicalOrders[0];
   // Solo inyectables/procedimientos: excluye sueroterapia/ozono (sesiones) y estudios.
   const injectableOrder = item.clinicalOrders.find(
@@ -126,7 +129,7 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
             <div className="flex flex-col items-end gap-1.5">
               <VisitStatusPill status={item.visit.status} />
               {areaTiming?.area === "enfermeria" &&
-              roleHasPermission(user.role, "area_time_write") ? (
+              canUse(user.role, moduleAccess, "area_time_write", "enfermeria") ? (
                 <AreaTimeInline state={areaTiming} />
               ) : null}
             </div>

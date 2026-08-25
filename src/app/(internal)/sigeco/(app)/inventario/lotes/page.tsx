@@ -24,7 +24,7 @@ import {
 } from "@/modules/database/queries/purchases";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 
@@ -61,6 +61,7 @@ export default async function InventoryLotsPage({
   }>;
 }) {
   const user = await requirePermission("inventory_read", { module: "inventario" });
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const params = await searchParams;
   const page = parsePage(params.page);
@@ -81,12 +82,11 @@ export default async function InventoryLotsPage({
     itemId: params.item,
     branchCode: activeBranch.code
   };
-  const canAdjust = roleHasPermission(user.role, "inventory_lot_adjust");
+  const canAdjust = canUse(user.role, moduleAccess, "inventory_lot_adjust", "inventario");
   const canReadCosts = roleHasPermission(user.role, "inventory_cost_read");
-  const activeModules = await getActiveModules();
   // Compras puede estar apagada aunque Inventario esté lanzado: sin el módulo
   // el enlace llevaría a una pantalla bloqueada.
-  const canReadPurchases = canUse(user.role, activeModules, "purchases_read");
+  const canReadPurchases = canUse(user.role, moduleAccess, "purchases_read");
   const canReadSuppliers = roleHasPermission(user.role, "suppliers_read");
   const [lots, total, fefoIds, personnel] = await Promise.all([
     getInventoryLots({ ...filters, page, pageSize }),

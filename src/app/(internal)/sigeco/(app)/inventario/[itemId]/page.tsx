@@ -35,7 +35,7 @@ import {
   getInventoryItemById
 } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 import { canUse } from "@/features/modules/access";
 import { cn } from "@/lib/cn";
 import { getBranchContext } from "@/features/branches/context";
@@ -51,22 +51,22 @@ export default async function InventoryItemPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requirePermission("inventory_read", { module: "inventario" });
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const { itemId } = await params;
   const query = await searchParams;
   const item = await getInventoryItemById(itemId, activeBranch.code);
   if (!item) notFound();
 
-  const canWrite = roleHasPermission(user.role, "inventory_write");
-  const canAdjust = roleHasPermission(user.role, "inventory_adjust");
+  const canWrite = canUse(user.role, moduleAccess, "inventory_write");
+  const canAdjust = canUse(user.role, moduleAccess, "inventory_adjust");
   const canReadCosts = roleHasPermission(user.role, "inventory_cost_read");
   const canReadSuppliers = roleHasPermission(user.role, "suppliers_read");
-  const activeModules = await getActiveModules();
   // Compras puede estar apagada aunque Inventario esté lanzado: sin el módulo
   // el enlace llevaría a una pantalla bloqueada.
-  const canReadPurchases = canUse(user.role, activeModules, "purchases_read");
-  const canWriteSuppliers = roleHasPermission(user.role, "suppliers_write");
-  const canManageThreshold = roleHasPermission(user.role, "discount_threshold_manage");
+  const canReadPurchases = canUse(user.role, moduleAccess, "purchases_read");
+  const canWriteSuppliers = canUse(user.role, moduleAccess, "suppliers_write");
+  const canManageThreshold = canUse(user.role, moduleAccess, "discount_threshold_manage", "inventario");
   if (!item.active && !canWrite && !canReadCosts) notFound();
 
   const suppliers = canWriteSuppliers ? await getActiveSuppliers() : [];

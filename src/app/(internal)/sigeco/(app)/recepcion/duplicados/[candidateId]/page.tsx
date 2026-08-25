@@ -21,6 +21,8 @@ import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { getPatientDuplicateCandidate } from "@/modules/database/queries/patient-duplicates";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 
 const impactLabels: Record<string, string> = {
   convertedLeads: "Contactos previos",
@@ -126,6 +128,7 @@ export default async function PatientDuplicateComparisonPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requirePermission("patient_duplicates_read");
+  const moduleAccess = await getModuleAccessState();
   const [{ candidateId }, query] = await Promise.all([params, searchParams]);
   const candidate = await getPatientDuplicateCandidate(candidateId);
   if (!candidate) notFound();
@@ -138,8 +141,8 @@ export default async function PatientDuplicateComparisonPage({
     redirect("/sigeco/recepcion/duplicados?aviso=descartado");
   }
 
-  const canReview = roleHasPermission(user.role, "patient_duplicates_review");
-  const canMerge = roleHasPermission(user.role, "patient_duplicates_merge");
+  const canReview = canUse(user.role, moduleAccess, "patient_duplicates_review");
+  const canMerge = canUse(user.role, moduleAccess, "patient_duplicates_merge");
   const firstFields = personFields(candidate.patientA);
   const secondFields = personFields(candidate.patientB);
   const impactKeys = Object.keys(impactLabels);

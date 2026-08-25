@@ -70,6 +70,8 @@ import {
 import { getActiveStudyCatalogItems } from "@/modules/database/queries/service-catalog";
 import { getPrescriptionDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import type { SaleItemType } from "@/generated/prisma/client";
 import { ChevronDown, HeartPulse, Paperclip } from "lucide-react";
 import Link from "next/link";
@@ -223,6 +225,7 @@ export default async function ConsultationDetailPage({
   searchParams
 }: ConsultationDetailPageProps) {
   const user = await requirePermission("clinical_read");
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
   const [
@@ -330,20 +333,14 @@ export default async function ConsultationDetailPage({
       ? `${visit.symptomDurationValue} ${symptomDurationUnitLabels[visit.symptomDurationUnit].toLocaleLowerCase("es-BO")}`
       : "Sin registro";
   const consultationMotive = visit.clinicalConsultation?.motive ?? visit.reason ?? "Sin motivo registrado";
-  const canWriteClinical = roleHasPermission(user.role, "clinical_write");
-  const canFinalizeClinical = roleHasPermission(
-    user.role,
-    "clinical_finalize"
-  );
-  const canCorrectClinical = roleHasPermission(user.role, "clinical_correct");
-  const canRecordDiscontinuation = roleHasPermission(
-    user.role,
-    "visit_discontinuations_write"
-  );
+  const canWriteClinical = canUse(user.role, moduleAccess, "clinical_write");
+  const canFinalizeClinical = canUse(user.role, moduleAccess, "clinical_finalize");
+  const canCorrectClinical = canUse(user.role, moduleAccess, "clinical_correct");
+  const canRecordDiscontinuation = canUse(user.role, moduleAccess, "visit_discontinuations_write", "consulta");
   // Cronómetro del área: solo aplica cuando la visita está en Médico y el usuario
   // puede registrar tiempos. Acompaña la cabecera del paciente, sin tarjeta propia.
   const medicoAreaTiming =
-    areaTiming?.area === "medico" && roleHasPermission(user.role, "area_time_write")
+    areaTiming?.area === "medico" && canUse(user.role, moduleAccess, "area_time_write", "consulta")
       ? areaTiming
       : null;
   const canDerivePatient =

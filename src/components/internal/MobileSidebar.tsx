@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import type { InternalRole } from "@/generated/prisma/client";
-import type { ActiveModules } from "@/features/modules/activation";
+import type { ModuleAccessState } from "@/features/modules/access";
 import { SidebarNav } from "@/components/internal/SidebarNav";
 import {
   Drawer,
@@ -17,11 +17,11 @@ import {
 
 export function MobileSidebar({
   role,
-  activeModules,
+  moduleAccess,
   userSlot
 }: {
   role: InternalRole;
-  activeModules: ActiveModules;
+  moduleAccess: ModuleAccessState;
   userSlot: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -61,7 +61,7 @@ export function MobileSidebar({
           <div className="flex-1 overflow-y-auto">
             <SidebarNav
               role={role}
-              activeModules={activeModules}
+              moduleAccess={moduleAccess}
               onNavigate={() => setOpen(false)}
             />
           </div>

@@ -24,7 +24,7 @@ import {
   getServiceCatalogItemById
 } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
-import { getActiveModules } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
 import { canUse } from "@/features/modules/access";
 
 const linkClassName =
@@ -43,12 +43,12 @@ export default async function ServiceCatalogItemPage({
   const item = await getServiceCatalogItemById(itemId);
   if (!item) notFound();
 
-  const activeModules = await getActiveModules();
+  const moduleAccess = await getModuleAccessState();
   // La ficha del producto vive en Inventario; sin ese módulo se muestra el
   // nombre sin enlace, no una pantalla que rebota.
-  const canOpenInventory = canUse(user.role, activeModules, "inventory_read", "inventario");
-  const canWrite = roleHasPermission(user.role, "service_catalog_write");
-  const canManageThreshold = roleHasPermission(user.role, "discount_threshold_manage");
+  const canOpenInventory = canUse(user.role, moduleAccess, "inventory_read", "inventario");
+  const canWrite = canUse(user.role, moduleAccess, "service_catalog_write");
+  const canManageThreshold = canUse(user.role, moduleAccess, "discount_threshold_manage", "catalogo");
   if (!item.active && !canWrite) notFound();
 
   const cap = computeServiceCatalogMaxDiscountCents(item);

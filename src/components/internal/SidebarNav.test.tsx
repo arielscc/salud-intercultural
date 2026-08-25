@@ -2,15 +2,18 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { SidebarNav } from "@/components/internal/SidebarNav";
 import { normalizeActiveModules } from "@/features/modules/activation";
-import { sigecoModuleCodes } from "@/features/modules/catalog";
+import type { ModuleAccessState } from "@/features/modules/access";
+import { sigecoModuleCodes, type SigecoModuleCode } from "@/features/modules/catalog";
 
-const stageOne = normalizeActiveModules([
-  "administracion",
-  "inventario",
-  "compras",
-  "catalogo"
-]);
-const everything = normalizeActiveModules([...sigecoModuleCodes]);
+function access(
+  active: string[],
+  suspended: SigecoModuleCode[] = []
+): ModuleAccessState {
+  return { active: normalizeActiveModules(active), suspended };
+}
+
+const stageOne = access(["administracion", "inventario", "compras", "catalogo"]);
+const everything = access([...sigecoModuleCodes]);
 
 function labels() {
   return screen
@@ -21,7 +24,7 @@ function labels() {
 
 describe("SidebarNav", () => {
   it("muestra en la Etapa 1 solo Caja, Inventario, Compras, Catálogo y el núcleo", () => {
-    render(<SidebarNav role="super_admin" activeModules={stageOne} />);
+    render(<SidebarNav role="super_admin" moduleAccess={stageOne} />);
 
     expect(labels()).toEqual([
       "Inicio",
@@ -39,7 +42,7 @@ describe("SidebarNav", () => {
   });
 
   it("no ofrece ningún módulo clínico mientras no esté lanzado", () => {
-    render(<SidebarNav role="super_admin" activeModules={stageOne} />);
+    render(<SidebarNav role="super_admin" moduleAccess={stageOne} />);
 
     for (const label of ["Recepción", "Consulta", "Enfermería", "Seguimiento", "Opiniones"]) {
       expect(screen.queryByRole("link", { name: label })).toBeNull();
@@ -47,7 +50,7 @@ describe("SidebarNav", () => {
   });
 
   it("muestra todo el menú del rol cuando los once módulos están activos", () => {
-    render(<SidebarNav role="super_admin" activeModules={everything} />);
+    render(<SidebarNav role="super_admin" moduleAccess={everything} />);
 
     for (const label of ["Recepción", "Consulta", "Enfermería", "Caja", "Seguimiento"]) {
       expect(screen.getByRole("link", { name: label })).toBeTruthy();
@@ -55,7 +58,7 @@ describe("SidebarNav", () => {
   });
 
   it("sigue respetando el permiso del rol aunque el módulo esté activo", () => {
-    render(<SidebarNav role="enfermeria" activeModules={everything} />);
+    render(<SidebarNav role="enfermeria" moduleAccess={everything} />);
 
     expect(screen.getByRole("link", { name: "Enfermería" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Caja" })).toBeNull();
@@ -63,7 +66,7 @@ describe("SidebarNav", () => {
   });
 
   it("conserva el núcleo aunque no haya ningún módulo lanzado", () => {
-    render(<SidebarNav role="super_admin" activeModules={normalizeActiveModules([])} />);
+    render(<SidebarNav role="super_admin" moduleAccess={access([])} />);
 
     expect(labels()).toEqual([
       "Inicio",

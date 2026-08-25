@@ -74,7 +74,7 @@ describe("SIGECO privacy controls", () => {
     // `canUse` exige el permiso del rol y, ademas, que el modulo este lanzado:
     // la busqueda lleva a la ficha, que vive en Recepcion.
     expect(shell).toContain(
-      'canUse(user.role, activeModules, "patients_read", "recepcion")'
+      'canUse(user.role, moduleAccess, "patients_read", "recepcion")'
     );
   });
 });

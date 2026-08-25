@@ -51,6 +51,8 @@ import {
   getPatientSales
 } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";
+import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 
 const saleItemTypeOptions = Object.entries(saleItemTypeLabels) as Array<[SaleItemType, string]>;
@@ -81,6 +83,7 @@ export default async function AdministrationWorkItemPage({
   searchParams
 }: AdministrationWorkItemPageProps) {
   const user = await requirePermission("sales_read");
+  const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext(user);
   const { workItemId } = await params;
   const query = await searchParams;
@@ -104,7 +107,7 @@ export default async function AdministrationWorkItemPage({
   ]);
   const administrationAreaTiming =
     areaTiming?.area === "administracion" &&
-    roleHasPermission(user.role, "area_time_write")
+    canUse(user.role, moduleAccess, "area_time_write", "administracion")
       ? areaTiming
       : null;
   const order = item.clinicalOrders[0];
@@ -133,10 +136,7 @@ export default async function AdministrationWorkItemPage({
         (entry) => entry.type === "study" || entry.type === "nursing_application"
       )
   );
-  const canRecordDiscontinuation = roleHasPermission(
-    user.role,
-    "visit_discontinuations_write"
-  );
+  const canRecordDiscontinuation = canUse(user.role, moduleAccess, "visit_discontinuations_write", "administracion");
   // Lo que se le pidio cancelar al paciente, de la fuente mas precisa que exista:
   // la venta ya creada, el pedido del medico todavia sin confirmar o, si no hay
   // ninguna, las ordenes clinicas que originaron el pendiente.
@@ -272,6 +272,7 @@ export default async function AdministrationWorkItemPage({
         ) : null}
         <OpenCashSessionCallout
           user={user}
+        moduleAccess={moduleAccess}
           branch={activeBranch}
           returnTo={`/sigeco/administracion/${item.id}`}
           blocked={Boolean(cashError) && cashError !== "cash-session-stale-open"}
