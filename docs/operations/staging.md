@@ -47,8 +47,13 @@ En el sitio publico, SIGECO y Payload se bloquean los enlaces de WhatsApp, llama
 Una vez que `pnpm staging:check` pase y las migraciones esten aplicadas:
 
 ```bash
-REHEARSAL_CONFIRM=salud_intercultural_staging pnpm stage-one:rehearse
+REHEARSAL_CONFIRM=salud_intercultural_staging pnpm staging:rehearse
 ```
+
+`staging:rehearse` valida el aislamiento antes de correr y apunta a
+`.env.staging`. Existen tambien `staging:stage-one:check`, que revisa si la base
+esta lista para la Etapa 1, y `staging:modules`, para encender o apagar modulos
+en staging.
 
 Recorre los once pasos que Administracion hace el primer dia real —encender los
 modulos de la Etapa 1, producto con stock, abrir Caja, registrar un cliente sin
