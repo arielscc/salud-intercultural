@@ -6,9 +6,11 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 
 1. Una entidad editable o transaccional debe tener una sola fuente de verdad.
 2. Payload es la fuente de verdad para contenido editable, CMS y backoffice editorial.
-3. Prisma queda reservado para dominios operativos transaccionales futuros.
+3. Prisma es la fuente de verdad de los dominios operativos transaccionales de SIGECO.
 4. `src/data` es fallback tecnico y fuente inicial para seeds, no fuente de verdad editable.
 5. Si un dato necesita aparecer en otro sistema, debe consumirse o derivarse; no mantenerse como copia editable independiente.
+6. Payload, marketing y analytics no reciben pacientes, visitas ni historia
+   clínica; su límite termina en contenido público y leads.
 
 ## Tabla De Ownership
 
@@ -20,6 +22,16 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Testimonios | Payload | Payload Admin | Activo | `src/data/testimonials.ts` queda como fallback/seed. |
 | FAQs | Payload | Payload Admin | Activo | `src/data/faqs.ts` queda como fallback/seed. |
 | Leads | Payload | Payload Admin | Activo | Collection `lead-submissions`; sin modelo Prisma duplicado. |
+| Campañas de marketing | Payload | Payload Admin | Activo | Collection `marketing-campaigns`; SIGECO conserva una copia técnica no editable para enlazar la historia. |
+| Atribución de llegadas y ventas | Prisma | SIGECO | Activo | Fuentes, fotografía histórica por visita y métricas; Payload entrega identificadores y solo recibe agregados aprobados. |
+| Identidad, duplicados y alias de pacientes | Prisma | SIGECO | Activo | La ficha anterior se archiva y redirige; la fusión transaccional conserva historia y evidencia. |
+| Resultado de propuestas de tratamiento | Prisma | SIGECO, Médico y Administración | Activo | Decisión append-only; una aceptación crea una orden, no una venta ni un pago automáticos. |
+| Clasificación y resultado de seguimientos | Prisma | SIGECO, Recepción/Marlen y Médico | Activo | Tipo, relación, prioridad, responsable y resultado separados; llamadas médicas no se cierran como trabajo administrativo. |
+| Reglas y candidatos de recordatorios supervisados | Prisma | SIGECO, Dirección y Recepción/Marlen | Activo | Reglas versionadas y revisiones append-only; la generación idempotente no contacta ni crea una tarea sin aprobación humana. |
+| Encuestas, opiniones y reclamos | Prisma | SIGECO y Dirección | Piloto manual | Invitación, respuesta, clasificación, responsable, plazo e historia interna; Payload no recibe respuestas ni crea testimonios automáticamente. |
+| Abandono y pendientes de visita | Prisma | SIGECO, áreas operativas y Dirección | Activo | Conserva punto, área, motivo, responsable y pendientes; las tareas abiertas quedan bloqueadas, no eliminadas. |
+| Versiones y firma interna de consultas | Prisma | SIGECO, Médico y Dirección | Activo | La consulta vigente es una proyección; cada borrador, cierre o corrección conserva una fotografía histórica. |
+| Recetas y comprobantes emitidos | Prisma | SIGECO, Médico, Administración y Dirección | Activo | `GeneratedDocument` fotografía la fuente clínica o financiera; PDF es derivado privado y Payload no conserva copia editable. |
 | Configuracion global | Payload | Payload Admin | Activo | Global `site-settings`; config estatica solo fallback. |
 | Home editable | Payload | Payload Admin | Activo | Global `home-content`; `src/data/home.ts` queda como fallback/seed. |
 | Media | Payload | Payload Admin | Activo | Storage local o Vercel Blob segun ambiente. |
@@ -28,10 +40,16 @@ Documento canonico para definir que sistema es fuente de verdad de cada dominio 
 | Pagina Nosotros | Payload | Payload Admin | Activo | `src/data/about.ts` queda como fallback/seed. |
 | Pagina Tratamientos | Payload | Payload Admin | Activo | `pages/tratamientos` y `treatment-topics`; `src/data/problems.ts` y `src/data/treatments.ts` quedan como fallback/seed. |
 | Citas futuras | Prisma | UI custom futura | Futuro | Reglas de disponibilidad, solapamientos y estados. |
-| Pagos/facturacion futura | Prisma | UI custom futura | Futuro | Requiere consistencia transaccional y auditoria. |
-| Inventario futuro | Prisma | UI custom futura | Futuro | Stock, movimientos y constraints. |
-| Auditoria/eventos futura | Prisma | Lectura interna | Futuro | Idealmente append-only. |
-| Reportes analiticos internos futuros | Prisma | UI/reportes custom | Futuro | Consultas agregadas y metricas operativas. |
+| Pagos y Caja | Prisma + storage privado para comprobantes | SIGECO, Administración y Dirección | Activo | Sesiones, ventas, pagos, egresos, beneficiarios, conciliaciones y correcciones compensatorias; los comprobantes nunca son media pública. |
+| Catálogo, proveedores e inventario | Prisma | SIGECO, Administración y Dirección | Activo | Productos y proveedores versionados, asociaciones múltiples, costos referenciales, stock, movimientos y ajustes; Payload no mantiene una copia editable. |
+| Compras, recepciones, lotes y documentos | Prisma + storage privado | SIGECO, Administración y Dirección | Activo | Orden, pago, recepción y stock separados pero trazables; costos históricos y documentos privados no se editan en Payload. |
+| Sucursales y asignación del personal | Prisma | SIGECO, Dirección | Activo local | El paciente es global; cada operación conserva sede. El Alto está activa y Cochabamba permanece en preparación. |
+| Saldos y traslados por sucursal | Prisma | SIGECO, Administración y Dirección | Activo local | `BranchInventoryBalance` es el saldo operativo por sede; `InventoryTransfer` enlaza salida y entrada append-only. |
+| Borrador local de nueva compra | `sessionStorage` transitorio | SIGECO, Administración | Temporal, no es fuente de verdad | Solo campos administrativos aprobados, sin pacientes, clínica o archivos; se elimina al confirmar o cerrar sesión. |
+| Activación de módulos | Prisma | SIGECO, solo super administrador | Activo local | `ModuleActivation` guarda el estado; el catálogo, las dependencias y el orden viven en código. `ModuleActivationEvent` es append-only y PostgreSQL bloquea update y delete. |
+| Auditoría de SIGECO | Prisma | SIGECO, solo Dirección y super administrador | Activo | `AuditEvent` append-only; PostgreSQL bloquea update y delete. |
+| Adjuntos clínicos | Prisma + storage clínico privado | SIGECO, según permisos clínicos | Activo | Metadata y concesiones en Prisma; contenido fuera de Payload y de `public/`. |
+| Reportes analiticos internos | Prisma | SIGECO, Dirección | Activo | Captación, recorrido completo y tiempos por área se derivan de eventos, visitas, decisiones, ventas, pagos y seguimientos; no se copian a Payload. |
 | Integraciones transaccionales futuras | Prisma | Jobs/UI custom | Futuro | Idempotencia, retries y estados tecnicos. |
 | Workflows futuros | Prisma | UI custom futura | Futuro | Estados complejos, relaciones fuertes y transiciones. |
 
@@ -54,6 +72,7 @@ Ejemplos actuales:
 - `testimonials`
 - `faqs`
 - `lead-submissions`
+- `marketing-campaigns`
 - `site-settings`
 - `home-content`
 - `media`
@@ -80,7 +99,7 @@ No usar Prisma cuando el dato:
 
 Si un dominio operativo necesita aparecer en Payload, Payload debe mostrar una vista derivada o enlace operacional. No debe mantener una segunda copia editable del mismo registro.
 
-Ejemplos futuros:
+Ejemplos transaccionales:
 
 | Modelo futuro | Dominio | Motivo para Prisma | Nota de ownership |
 | --- | --- | --- | --- |
@@ -88,8 +107,9 @@ Ejemplos futuros:
 | `Payment` | Pagos | Conciliacion, estados externos, idempotencia y registros financieros. | Payload puede enlazar o mostrar resumen derivado. |
 | `Invoice` | Facturacion | Numeracion, relaciones fuertes y constraints fiscales/operativas. | Mantener emision y estado en Prisma. |
 | `InventoryItem` | Inventario | Stock actual, SKU y constraints de unicidad. | El contenido descriptivo publico, si existe, va en Payload separado y derivado. |
-| `StockMovement` | Inventario | Movimientos append-only, auditoria y calculo de stock. | No editar movimientos como contenido CMS. |
+| `InventoryMovement` | Inventario | Movimientos, auditoría y cálculo de stock. | No editar movimientos como contenido CMS. |
 | `AuditEvent` | Auditoria | Eventos append-only, trazabilidad y consultas internas. | No exponer como collection editable. |
+| `ClinicalAttachment` | Historia clínica | Relaciones, idempotencia, checksum, cuarentena y acceso temporal. | El contenido vive en storage privado; Payload media no participa. |
 | `IntegrationJob` | Integraciones | Retries, errores, idempotency keys y estados tecnicos. | Payload no debe ser cola de jobs. |
 | `WorkflowInstance` | Workflows | Transiciones, estados complejos y relaciones operativas. | La UI futura debe operar sobre Prisma. |
 

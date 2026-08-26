@@ -1,0 +1,1693 @@
+# Progress — Mejoras Integrales De SIGECO
+
+Última actualización: 2026-08-02.
+
+Plan de ejecución: [tasks.md](./tasks.md)
+
+## Estado General
+
+Las tareas fueron reorganizadas según el orden real de implementación. El plan ahora comienza con CI y termina con el piloto completo del personal.
+
+Las Tareas 1-7 y 9-29 están en progreso. La Tarea 8 está terminada. CI, las barreras de aislamiento,
+la auditoría, la administración de usuarios y los límites de privacidad están
+implementados localmente. Los adjuntos clínicos privados ya tienen
+implementación local. El backup cifrado y la restauración conjunta de
+PostgreSQL y adjuntos están demostrados en bases locales aisladas. El simulacro
+de incidentes y el gate técnico local también están aprobados, sin autorizar
+producción. Los consentimientos independientes ya están implementados en
+desarrollo, con retiro, historial y bloqueo de contacto. Las doce migraciones
+anteriores están en staging y las cuarenta y nueve migraciones actuales están
+aplicadas en desarrollo. Falta validar las treinta y siete
+nuevas mediante CI y staging, completar QA autenticado, cerrar los pendientes
+remotos antes de autorizar producción. Dirección ya aprobó el runbook y el
+funcionamiento del gate de la Tarea 8. Caja ya cuenta en desarrollo local con
+apertura, egresos estructurados, conciliación por canal, cierre y correcciones
+compensatorias.
+El catálogo y los proveedores ya se administran desde SIGECO con versiones,
+costos separados, asociaciones múltiples y permisos por rol.
+Compras, pagos a proveedores, recepciones parciales, lotes, vencimientos y
+movimientos de stock ya son trazables en desarrollo local.
+Las recetas y comprobantes internos ya se emiten desde sus fuentes vigentes,
+con versiones inmutables, PDF privado e identidad profesional confirmable.
+El recorrido completo ya puede reconciliar llegada, consulta, propuesta,
+venta, cobro, seguimiento y retorno sin duplicar una visita entre áreas.
+Los tiempos de Recepción, Consulta, Enfermería y Administración ya separan
+espera, atención y bloqueo mediante eventos inmutables.
+Los recordatorios de evolución, retorno y recuperación ya se preparan con
+reglas versionadas, consentimiento, horario, idempotencia y aprobación humana.
+El piloto manual de encuestas ya separa opinión, reclamo y posible incidente
+clínico, con enlace privado, responsable, plazo y tendencias.
+Los formularios críticos ya detienen envíos sin conexión y llegada, venta,
+pago, Caja, compras y stock reutilizan claves para no duplicar operaciones.
+Payload ya conserva las campañas editables; SIGECO recibe identificadores,
+mantiene una copia técnica y solo devuelve métricas agregadas con supresión de
+grupos pequeños.
+El Alto ya opera como sede activa en el modelo local y Cochabamba está
+configurada en preparación. Usuarios, colas, Caja, compras y stock quedan
+aislados por sede sin duplicar el expediente del paciente.
+El ensayo técnico local de la Tarea 29 recorrió llegada, consulta, propuesta,
+venta, pago, comprobante, seguimiento, retorno, Caja, compra, recepción, lote,
+corrección y abandono sin defectos críticos. Falta ejecutarlo con el personal,
+dispositivos físicos, red real y aprobación de Dirección en El Alto.
+
+## Resumen
+
+| Estado | Cantidad |
+| --- | ---: |
+| Pendiente | 0 |
+| En progreso | 28 |
+| Bloqueada | 0 |
+| Terminada | 1 |
+| Descartada | 0 |
+
+## Progreso Por Fase
+
+| Fase | Tareas | Estado | Gate |
+| --- | --- | --- | --- |
+| 1. Base segura | 1-8 | En progreso | Tarea 8 aprobada; producción conserva bloqueos remotos |
+| 2. Datos y flujo | 9-17 | En progreso | Recorrido clínico íntegro y auditable |
+| 3. Caja e inventario | 18-21 | En progreso | Caja, compra y stock reconcilian |
+| 4. Medición y continuidad | 22-27 | En progreso | Indicadores reconciliados y móvil validado |
+| 5. Expansión y piloto | 28-29 | En progreso | Ensayo técnico aprobado; piloto humano de El Alto pendiente |
+
+## Estado Por Tarea
+
+| # | Tarea | Prioridad | Estado | Dependencias |
+| --- | --- | --- | --- | --- |
+| 1 | CI y control de dependencias | P0 | En progreso | Ninguna |
+| 2 | Staging aislado | P0 | En progreso | 1 |
+| 3 | Auditoría append-only | P0 | En progreso | 1-2 |
+| 4 | Usuarios, roles y sesiones | P0 | En progreso | 3 |
+| 5 | Permisos, privacidad, logs y secretos | P0 | En progreso | 3-4 |
+| 6 | Adjuntos clínicos seguros | P0 | En progreso | 2-5 |
+| 7 | Backup y restauración | P0 | En progreso | 2, 6 |
+| 8 | Incidentes y gate de seguridad | P0 | Terminada | 1-7 |
+| 9 | Consentimientos | P0 | En progreso | 3-5, textos aprobados para local/staging |
+| 10 | Procedencia geográfica | P1 | En progreso | 8 |
+| 11 | Fuentes de captación | P1 | En progreso | 9-10 |
+| 12 | Duplicados y fusión | P1 | En progreso | 3-5 |
+| 13 | Actualización de bandejas | P1 | En progreso | 1-5 |
+| 14 | Resultado de propuesta | P1 | En progreso | 3, 4, 9 |
+| 15 | Tipos de seguimiento | P1 | En progreso | 9, 14 |
+| 16 | Abandono, bloqueo y pendientes | P1 | En progreso | 13, 15 |
+| 17 | Correcciones y firma clínica | P1 | En progreso | 3-5 |
+| 18 | Caja, dinero al personal, gastos y cierre | P0 | En progreso | 3-5, 8 |
+| 19 | Catálogo y proveedores | P0 | En progreso | 3-5, 18 |
+| 20 | Compras, recepciones, lotes y stock | P0 | En progreso | 18-19 |
+| 21 | Recetas y comprobantes | P1 | En progreso | 17-20 |
+| 22 | Reporte del recorrido completo | P1 | En progreso | 9-21 |
+| 23 | Tiempo por área | P1 | En progreso | 13, 16, 22 |
+| 24 | Recordatorios supervisados | P1 | En progreso | 9, 15 |
+| 25 | Encuestas y reclamos | P2 | En progreso | 9, 24, piloto manual |
+| 26 | Móvil y conectividad lenta | P1 | En progreso | 2, 5, 13, 18, 20 |
+| 27 | Integración Payload-SIGECO | P2 | En progreso | 3, 5, 9, 11, 22 |
+| 28 | Multi-sucursal | P1 | En progreso | 10, 18-20, 22, 26 |
+| 29 | Piloto completo con personal | P0 | En progreso | Módulos del despliegue |
+
+## Próximo Trabajo
+
+Estado de las tareas de la base segura:
+
+- **Tarea 1 — CI y control de dependencias:** pendiente de ejecución remota y protecciones.
+- **Tarea 2 — Staging completamente aislado:** pendiente de seed, deployment y validación de cuentas.
+- **Tarea 3 — Auditoría append-only:** implementación local terminada; pendiente de migración y QA remotos.
+- **Tarea 4 — Usuarios, roles y sesiones:** implementación local terminada; pendiente de integración y QA en staging.
+- **Tarea 5 — Permisos, privacidad, logs y secretos:** controles locales
+  implementados; pendiente de verificación remota y QA negativo por rol.
+- **Tarea 6 — Adjuntos clínicos seguros:** modelo, storage privado, permisos y
+  UI implementados y probados localmente; pendiente de integración autorizada,
+  QA negativo remoto por rol y Blob privado de staging.
+- **Tarea 7 — Backup y restauración comprobada:** copia cifrada y restauración
+  completa demostradas localmente; pendiente de aprobar y activar la estrategia
+  remota de producción.
+- **Tarea 8 — Respuesta a incidentes y gate de seguridad:** terminada; runbook,
+  simulacro, gate técnico y aprobación de Dirección documentados. Producción
+  sigue bloqueada por cinco evidencias remotas o humanas.
+- **Tarea 9 — Consentimientos y preferencias de contacto:** modelo append-only,
+  seis finalidades, permisos, historial, retiro y bloqueo de Seguimiento
+  implementados en desarrollo. Pendiente ejecutar integración con autorización,
+  QA por roles en staging y aprobación expresa de los textos para producción.
+- **Tarea 10 — Departamento y procedencia geográfica:** procedencia habitual,
+  fotografía histórica por visita, normalización y filtros implementados en
+  desarrollo local. Pendiente integración acumulada, QA de gstack al cierre y
+  validación en staging.
+- **Tarea 11 — Fuentes de captación y atribución:** catálogo administrable,
+  fuente principal y apoyos por visita, evidencia de campañas, formulario
+  público y reporte de llegada, plan, venta e ingreso implementados en
+  desarrollo local. Pendiente integración acumulada, actualización de Payload,
+  QA de gstack al cierre y validación en staging.
+- **Tarea 12 — Duplicados y fusión de pacientes:** normalización de teléfonos
+  y nombres, prevención al crear y editar, cola, comparación, simulación,
+  alias, redirección y fusión transaccional implementados en desarrollo local.
+  Pendiente integración acumulada, QA de gstack al cierre y validación por
+  roles en staging.
+- **Tarea 13 — Actualización de bandejas entre áreas:** polling visible y
+  controlado, actualización manual, estado de vigencia, protección de
+  formularios y menor frecuencia móvil implementados en las bandejas de
+  Recepción, Consulta, Enfermería y Administración. Pendiente QA acumulado,
+  medición del piloto y validación del recorrido en staging.
+- **Tarea 14 — Resultado de la propuesta de tratamiento:** decisión append-only
+  del médico, motivos, confirmación móvil, instrucción explícita para
+  Administración, relación con venta y pago, seguimiento consentido para
+  Recepción/Marlen e indicadores mensuales implementados en desarrollo local.
+  Pendiente integración acumulada, QA de gstack y validación por roles en
+  staging.
+- **Tarea 15 — Tipos y resultados de seguimiento:** propósito, relación,
+  prioridad, responsable, estado y resultado separados; filtros web, acciones
+  móviles, reprogramación y escalamiento urgente al médico implementados en
+  desarrollo local. Los seguimientos (clínicos y administrativos) los trabaja
+  Recepción; el rol técnico `seguimiento` se retiró el 2026-08-02. Pendiente
+  integración acumulada, QA de gstack y validación por roles en staging.
+- **Tarea 16 — Abandono, bloqueo y pendientes:** punto, área, motivo, usuario,
+  fecha y pendientes persistentes implementados en desarrollo local. Las
+  tareas y órdenes abiertas quedan bloqueadas, el seguimiento solo se crea con
+  consentimiento y el reporte agrupa abandonos por motivo. Pendiente
+  integración acumulada, QA de gstack y validación por roles en staging.
+- **Tarea 17 — Correcciones, cierre y firma clínica:** borrador, finalización,
+  autor, fecha, hora y versiones comparables implementados en desarrollo
+  local. Las correcciones exigen motivo, no modifican órdenes, ventas ni
+  aplicaciones y usan control de revisión contra cambios concurrentes.
+  Pendiente integración acumulada, QA de gstack y validación por roles en
+  staging.
+- **Tarea 18 — Caja, dinero al personal, gastos y cierre:** sesión de Caja,
+  cobros enlazados, entregas individuales al personal, compras urgentes con
+  comprobante privado opcional, otros egresos, conciliación por medio, cierre
+  imprimible y correcciones compensatorias implementados en desarrollo local.
+  Pendiente integración acumulada, QA web/móvil, validación por roles y
+  decisiones productivas de Dirección.
+- **Tarea 19 — Catálogo de productos y proveedores:** productos con categoría,
+  uso, precio, costo referencial, stock mínimo, estado y versiones;
+  proveedores con contacto, asociaciones múltiples y uno preferido
+  implementados en desarrollo local. El código no cambia ni se reutiliza,
+  Dirección revisa costos, Médico y Enfermería solo disponibilidad y
+  Recepción no accede al inventario. Pendiente integración acumulada, QA web/móvil,
+  revisión de datos reales y validación por roles en staging.
+- **Tarea 20 — Compras, recepciones, lotes y stock:** orden, pago, egreso,
+  recepción parcial, lote, costo histórico, vencimiento y kardex enlazados en
+  desarrollo local. Crédito no reduce Caja hasta pagar, una compra urgente no
+  duplica el egreso y FEFO excluye lotes vencidos. Pendiente integración
+  acumulada, QA web/móvil, datos reales y validación por roles en staging.
+- **Tarea 21 — Recetas y comprobantes versionados:** snapshot inmutable,
+  huella de fuente, versión, identidad profesional, PDF privado y auditoría de
+  generación, descarga y reimpresión implementados en desarrollo local. La
+  receta queda preparada para firma y sello; el comprobante se identifica como
+  interno y no fiscal. Pendiente integración acumulada, QA web/móvil, revisión
+  clínica/fiscal y validación por roles en staging.
+- **Tarea 22 — Reporte del recorrido completo:** cohorte por llegada, una fila
+  por visita, embudo, tendencia, fuente principal, dinero separado y tabla
+  reconciliable implementados en desarrollo local. Pendiente integración
+  acumulada, QA web/móvil, revisión de cifras por Dirección y validación por
+  roles en staging.
+- **Tarea 23 — Tiempo de atención por área:** eventos append-only, espera,
+  atención, bloqueo, promedio, mediana, P75, P90, franjas horarias y aviso
+  móvil implementados en desarrollo local. Pendiente integración acumulada,
+  QA web/móvil, medición del umbral y validación por roles en staging.
+- **Tarea 24 — Recordatorios automatizados y supervisados:** reglas y
+  plantillas versionadas, detección idempotente, horario boliviano, revisión
+  humana, doble comprobación de consentimiento, fallos y reintentos
+  implementados en desarrollo local. Ningún contacto sale automáticamente.
+  Pendiente integración acumulada, QA web/móvil, configuración de las tres
+  reglas reales y validación por roles en staging.
+- **Tarea 25 — Encuestas y reclamos:** enlaces privados manuales, formulario
+  corto, sexto consentimiento, separación de reclamos críticos, plazos,
+  responsables, historia y tendencias implementados en desarrollo local. No
+  existe automatización ni publicación de testimonios. Pendiente completar el
+  piloto, aprobar preguntas y textos `v2`, ejecutar QA acumulado y validar en
+  staging.
+- **Tarea 26 — Móvil y conectividad lenta:** estado de conexión, bloqueo de
+  envío offline, reintentos idempotentes, borrador administrativo seguro,
+  limpieza al logout, ficha de contingencia y targets de 44 px implementados
+  en desarrollo local. Historia clínica y adjuntos no se cachean. Pendiente
+  integración acumulada, simulación real de red, dispositivos físicos y QA
+  gstack al cierre.
+- **Tarea 27 — Integración segura Payload-SIGECO:** campañas editables en
+  Payload, copia técnica idempotente en SIGECO, contrato autenticado, métricas
+  agregadas con supresión y respaldo manual implementados en desarrollo local.
+  Pendiente integración acumulada, caída simulada y validación por roles en
+  staging.
+- **Tarea 28 — Multi-sucursal El Alto y Cochabamba:** El Alto activa y
+  Cochabamba en preparación, con pacientes únicos y operación, Caja, compras y
+  stock separados por sede. Pendiente staging, conteo físico, responsables y
+  autorización de apertura.
+- **Tarea 29 — Piloto completo con el personal:** ensayo técnico local aprobado
+  sin defectos críticos. Pendiente capacitación y ejecución por cada rol,
+  dispositivos físicos, red real, conciliación con valores reales y aprobación
+  de Dirección en El Alto.
+
+Para terminar la Tarea 1:
+
+- Publicar los cambios en una rama.
+- Observar los cinco jobs en GitHub Actions.
+- Confirmar que PostgreSQL efímero aplica migraciones y pasa integración.
+- Configurar los checks obligatorios en `staging` y `main`.
+- Registrar nombres y resultados de los checks.
+
+Para terminar la Tarea 2:
+
+- Configurar secretos Preview únicamente para la rama `staging`.
+- Ejecutar `pnpm staging:seed` y `pnpm staging:verify`.
+- Verificar los siete roles, media y bloqueo de comunicaciones en el deployment.
+
+La Tarea 6 empezó por instrucción explícita de Dirección. El QA local autenticado
+ya cubrió carga, lectura temporal y eliminación. La Tarea 7 ya incluye metadata
+y contenido de adjuntos locales; su activación remota depende de contar con el
+Blob clínico privado y las credenciales separadas aprobadas.
+
+## Decisiones Vigentes
+
+- `tasks.md` es la única fuente de tareas activas.
+- Este archivo es la única fuente de estado y avance.
+- **Modo de ejecución vigente (2026-08-02):** la implementación de cada tarea
+  nueva no ejecuta QA de navegador (gstack, capturas, responsive), pruebas
+  unitarias, pruebas de integración ni build. Solo se corren lint y typecheck.
+  Lo no ejecutado se documenta como pendiente y evidencia; se valida después en
+  el cierre acumulado (CI, staging y piloto). El gate de cierre no cambia.
+- El médico cierra la propuesta del tratamiento.
+- Una aceptación crea una instrucción para Administración, pero la venta y el
+  pago se registran después y no se inventan automáticamente.
+- El seguimiento de pacientes (clínico y administrativo) pertenece a Recepción;
+  una llamada médica solo la cierra el médico. El rol técnico `seguimiento` se
+  retiró el 2026-08-02 y sus cuentas (Yazmin) se reasignaron a Recepción.
+- Administración controla Caja, gastos, compras e inventario.
+- Recepción (Marlen y Yazmin) realiza el seguimiento de pacientes en
+  tratamiento y la comunicación por llamadas y WhatsApp. No hace ventas, Caja
+  ni inventario.
+- Una entrega grupal de dinero registra beneficiarios y montos individuales.
+- Registrar una compra no aumenta stock; la recepción confirmada sí.
+- Compra, pago/egreso, recepción y movimiento de stock quedan enlazados.
+- Los registros históricos se corrigen, no se borran.
+- El reporte del recorrido usa la llegada de la visita como fecha de cohorte y
+  nunca duplica la visita por cambios de área.
+- “Fuente que genera ingresos” no significa rentabilidad neta mientras SIGECO
+  no registre y distribuya el costo de campaña.
+- Abrir una pantalla no inicia automáticamente la atención; el responsable
+  pulsa “Iniciar atención” para que el tiempo provenga de un evento real.
+- Los recorridos anteriores a la Tarea 23 conservan su duración total, pero no
+  se usan para inventar espera o atención.
+- Una regla de recordatorio solo prepara trabajo. Marlen aprueba antes de crear
+  la tarea y el contacto real conserva su intento y resultado en Seguimientos.
+- Las encuestas permanecen manuales hasta cerrar el piloto. Una calificación o
+  comentario nunca se publica ni se convierte automáticamente en testimonio.
+- Recuperar conexión no reintenta dinero o stock automáticamente. El empleado
+  revisa y vuelve a guardar con la misma clave de idempotencia.
+- Solo la compra administrativa admite borrador local; nunca pacientes,
+  historia clínica, adjuntos o archivos.
+- Payload es la fuente editable de campañas. SIGECO conserva una copia técnica
+  para atribución y nunca devuelve registros individuales a Marketing.
+- Una falla de Payload no bloquea la llegada: se conserva la fuente manual y la
+  campaña exacta queda pendiente de conciliación.
+- Web y móvil responsive usan las mismas reglas y permisos.
+- El Alto debe estabilizarse antes de activar Cochabamba.
+- Recepción pregunta “Facebook” de forma general; no exige que el paciente distinga publicidad de contenido orgánico.
+- El detalle pagado u orgánico solo se atribuye internamente cuando una campaña o enlace entrega evidencia.
+- Una fusión de pacientes archiva la ficha anterior, conserva su código como
+  alias y nunca borra su evidencia histórica.
+- “No continuará” es abandono durante la visita y exige motivo. No equivale a
+  cancelación ni a atención completada.
+- Los pendientes de una visita abandonada se bloquean y conservan; nunca se
+  marcan automáticamente como terminados.
+- Recepción revisa posibles duplicados; solo el super administrador puede
+  ejecutar la fusión.
+- Las bandejas operativas revisan cambios cada 30 segundos en escritorio y 60
+  segundos en móvil; se pausan sin conexión, en segundo plano o ante datos sin
+  aplicar.
+- Agenda y citas quedan aplazadas hasta un piloto manual.
+- FHIR queda fuera del plan actual.
+
+## Decisiones Pendientes Que No Bloquean La Tarea 1
+
+### Consentimientos
+
+- La versión `v2`, ampliada por la Tarea 25 para encuestas, está aprobada solo
+  para desarrollo y staging.
+- Antes de producción, Dirección debe revisar y autorizar expresamente la
+  versión exacta; hasta entonces el gate productivo permanece cerrado.
+
+### Caja
+
+- Administración abre y solicita el cierre; Dirección aprueba diferencias y
+  registra correcciones.
+- El límite local inicial es Bs 20. Dirección debe aprobar el valor exacto
+  antes de producción.
+- Definir qué gastos exigen comprobante.
+- Definir cuánto tiempo puede quedar pendiente un comprobante.
+
+### Inventario
+
+- Definir qué categorías usan lote y vencimiento.
+- Definir si se bloquea la venta de producto vencido.
+- Definir quién autoriza merma, daño y devolución.
+
+### Documentos
+
+- Confirmar requisitos clínicos y tributarios de receta y comprobante.
+
+## Registro De La Reorganización
+
+### 2026-07-28 — Numeración Y Documentación
+
+**Estado anterior:** existían 21 tareas principales, una Tarea 19 dividida en numeración secundaria y cuatro archivos dentro del directorio.
+
+**Estado nuevo:** existen 29 tareas consecutivas en orden de implementación y únicamente dos archivos activos: `tasks.md` y `progress.md`.
+
+**Cambios:**
+
+- Seguridad pasó del número 19 a las tareas 1-8.
+- Los puntos operativos fueron renumerados según sus dependencias.
+- Caja, catálogo y compras se dividieron en las tareas 18-20.
+- Correcciones clínicas quedó como Tarea 17.
+- El piloto completo quedó al final como Tarea 29.
+- La matriz del backlog anterior se incorporó en `tasks.md`.
+- Agenda y FHIR quedaron documentados como aplazados, no como tareas activas.
+- El backlog `sigeco-mejoras-futuras` permanece como antecedente técnico, pero no controla estados.
+
+**Validación documental requerida:**
+
+- Deben existir exactamente dos archivos en este directorio.
+- Deben existir 29 encabezados de tareas en `tasks.md`.
+- Esta tabla debe contener 29 filas de estado.
+- Las referencias antiguas deben apuntar a `tasks.md` o `progress.md`.
+
+### 2026-07-28 — Tarea 1 — CI Y Control De Dependencias
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsable:** equipo técnico.
+
+**Commit sugerido:** `ci(sigeco): add quality gates and dependency controls`
+
+#### Resultado Implementado Localmente
+
+- Creado `.github/workflows/ci.yml`.
+- Configurados triggers para PR hacia `develop`, `staging` y `main`, push a `develop` y ejecución manual.
+- Configurados cinco jobs independientes: quality, unit-tests, integration-tests, build y dependency-audit.
+- Integración usa PostgreSQL 16 efímero y la base `salud_intercultural_test`.
+- El token del workflow solo tiene `contents: read`.
+- Las variables del workflow son sintéticas y no usan secretos remotos.
+- Node quedó limitado a la versión mayor 22.
+- pnpm se actualizó y fijó en `11.17.0`.
+- Next, Payload, Prisma, React, PostgreSQL client, Vitest, Vite, PostCSS, Sharp y dependencias relacionadas fueron actualizadas.
+- Se agregaron overrides mínimos para PostCSS y Sharp transitivos.
+- Se corrigieron las etiquetas de fuente Facebook para coincidir con el enum Prisma vigente.
+- Se actualizaron testing, ramas, deploy y el plan de GitHub Actions.
+
+#### Control De Vulnerabilidades
+
+- Baseline inicial: 22 vulnerabilidades altas.
+- Estado actual de producción: 0 altas o críticas; permanecen 4 bajas y 14 moderadas.
+- Excepción temporal de desarrollo: `GHSA-mh99-v99m-4gvg` en `brace-expansion`, alcanzada únicamente por ESLint/minimatch.
+- Forzar la versión corregida rompe ESLint; ESLint 10 también fue descartado temporalmente porque los plugins actuales no son compatibles.
+- CI bloquea cualquier otra vulnerabilidad alta o crítica.
+
+#### Validación Ejecutada
+
+- `pnpm install --frozen-lockfile`: pasó.
+- `pnpm peers check`: pasó.
+- `pnpm audit:prod`: pasó.
+- `pnpm audit:high`: pasó con la única excepción documentada.
+- `pnpm lint`: pasó.
+- `pnpm test`: pasó, 22 archivos y 75 pruebas.
+- `pnpm typecheck`: pasó.
+- `pnpm run build`: pasó con Next.js 16.2.12.
+- `.github/workflows/ci.yml`: YAML válido con cinco jobs detectados.
+- `pnpm test:integration`: no pudo ejecutarse localmente porque Docker/PostgreSQL no están disponibles en este WSL; falló antes de modificar datos con `P1001`.
+
+#### Pendientes Para Cerrar
+
+- Publicar la rama y observar los cinco jobs en GitHub Actions.
+- Confirmar que el job de integración aplica todas las migraciones y pasa con PostgreSQL 16.
+- Configurar checks obligatorios y protección de `staging` y `main`.
+- Registrar evidencia de la primera ejecución remota.
+
+### 2026-07-29 — Ajuste De La Fuente Facebook
+
+**Motivo:** la mayoría de los pacientes son adultos mayores y no necesariamente puede distinguir entre una publicación normal y una publicidad pagada.
+
+**Resultado:**
+
+- Recepción muestra una sola opción: `Facebook`.
+- Los valores anteriores `facebook_ads` y `facebook_organic` se aceptan por compatibilidad, pero se normalizan a `facebook`.
+- La migración convierte registros históricos y elimina duplicados de Facebook en la lista de fuentes del paciente.
+- El detalle pagado u orgánico queda reservado para la atribución interna automática definida en la Tarea 11.
+- La Tarea 11 continúa pendiente porque todavía no se implementaron el catálogo administrable, los enlaces de campaña ni los reportes de atribución.
+
+**Validación:** esquema Prisma válido, lint y typecheck aprobados, 22 archivos y 77 pruebas unitarias aprobadas. La migración no pudo probarse localmente porque Docker no está disponible en este WSL; debe validarse en el job de integración de CI.
+
+**Commit sugerido:** `fix(sigeco): simplify Facebook capture source`
+
+### 2026-07-29 — Tarea 2 — Staging Completamente Aislado
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsable:** equipo técnico.
+
+#### Resultado Implementado Localmente
+
+- Validación central de `APP_ENV`, URLs, base, schema Payload, storage, comunicaciones y analytics.
+- El build, Prisma y Payload se niegan a usar una configuración de staging incompleta o mezclada con producción.
+- `.env.staging.example` documenta únicamente placeholders y recursos exclusivos.
+- Vercel Blob usa `STAGING_BLOB_READ_WRITE_TOKEN` y el prefijo remoto `staging/`;
+  producción conserva `BLOB_READ_WRITE_TOKEN`.
+- La marca persistente `STAGING · DATOS SINTÉTICOS · CONTACTOS BLOQUEADOS` aparece en sitio público, SIGECO y Payload.
+- WhatsApp, llamadas, SMS y correo quedan neutralizados; no basta con ocultar la marca.
+- `/api/leads` rechaza datos de contacto que no sean sintéticos cuando corre en staging.
+- Analytics y verificación productiva se rechazan en staging.
+- El seed crea cuentas QA para los siete roles vigentes, cinco pacientes sintéticos, bandejas operativas, seguimiento e inventario.
+- Los correos usan el dominio reservado `.invalid`; el rol deprecado `captacion` no recibe cuenta.
+- El reset requiere `CONFIRM_STAGING_RESET=RESET-SIGECO-STAGING` y restaura el estado sintético.
+- Creada la guía [staging.md](../../operations/staging.md) con preparación, migración, seed, verificación, reinicio y prohibiciones.
+
+#### Validación Ejecutada
+
+- `pnpm env:check`: pasó para local.
+- Configuración sintética completa de staging con `STAGING_BLOB_READ_WRITE_TOKEN`: pasó.
+- El `.env.staging` privado ya supera ambiente, URL, base, schema y aislamiento;
+  todavía espera el token real del store QA bajo el nuevo nombre.
+- `pnpm lint`: pasó.
+- `pnpm typecheck`: pasó.
+- `pnpm test:unit`: pasó, 26 archivos y 97 pruebas.
+- `pnpm run build`: pasó con 18 páginas estáticas.
+- QA de navegador en `/sigeco/login`: marca visible a 390x844 y 1280x800, sin overflow horizontal.
+- Al pulsar `Contactar soporte`, la URL no cambió y la marca mostró `CONTACTO REAL BLOQUEADO`.
+
+#### Pendientes Para Cerrar
+
+- Configurar variables y secretos por rama en Vercel.
+- Activar control de acceso al deployment de staging.
+- Ejecutar `pnpm staging:seed` y `pnpm staging:verify` contra los recursos reales.
+- Entrar con las siete cuentas y verificar permisos.
+- Subir media QA y confirmar que no aparece en el store productivo.
+- El reset remoto no se ejecutó porque la migración pudo recuperarse sin borrar la base.
+
+#### Ajuste Durante El Aprovisionamiento De Blob
+
+- Vercel detectó que `BLOB_READ_WRITE_TOKEN` ya pertenece al store productivo.
+- El store QA se crea con el prefijo personalizado `STAGING_BLOB`.
+- SIGECO selecciona `STAGING_BLOB_READ_WRITE_TOKEN` únicamente en staging.
+- Ya no es necesario copiar el token QA bajo el nombre productivo.
+- Falta limitar el token QA a Preview de la rama `staging` y retirar el token
+  productivo de cualquier alcance Preview general.
+
+#### Recuperación De La Primera Migración Remota
+
+- La primera ejecución de `pnpm staging:migrate` aplicó once migraciones y
+  detectó correctamente un error en
+  `20260729000000_general_facebook_capture_source`.
+- La causa fue un nombre de tabla incorrecto: el SQL usaba `InternalLead`,
+  pero el modelo y el historial crean la tabla `Lead`.
+- Se corrigió la migración y se agregó
+  `scripts/migration-files.test.ts` como prueba de regresión.
+- Prisma marcó únicamente esa migración como revertida; no se reinició ni se
+  borró la base de staging.
+- La segunda ejecución aplicó la migración corregida y confirmó las doce
+  migraciones instaladas.
+
+**Commit sugerido:** `chore(sigeco): isolate staging environment`
+
+### 2026-07-29 — Tarea 3 — Auditoría Append-Only
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Creado el modelo Prisma `AuditEvent` con actor, rol, acción, entidad, resultado,
+  fecha, `requestId` y contexto operativo permitido.
+- La migración agrega un trigger de PostgreSQL que rechaza `UPDATE` y `DELETE`.
+- Creado un servicio común que registra exactamente un evento de éxito, fallo o
+  acceso denegado para cada acción crítica.
+- La limpieza defensiva elimina claves de contraseñas, tokens, sesiones, texto
+  clínico, notas y archivos, además de limitar tamaño y profundidad.
+- Cubiertos los flujos funcionales vigentes: sesiones, pacientes, visitas,
+  consulta, enfermería, estudios, Caja, ventas, pagos, seguimiento e inventario.
+- Por decisión operativa, solo se auditan acciones importantes. Búsquedas,
+  apertura de fichas, listados, filtros, paginación y consulta del visor no
+  generan eventos; conservan sus validaciones de permisos.
+- Creado `audit_read`, disponible únicamente para Dirección y super administrador.
+- Creado `/sigeco/auditoria` con filtros por fecha, persona, acción y entidad en
+  escritorio, y tarjetas simplificadas con paginación en móvil.
+- Documentada la forma obligatoria de incorporar auditoría en las siguientes tareas.
+
+#### Archivos Y Migraciones
+
+- Migración `20260729130000_append_only_audit_events`.
+- Módulos nuevos en `src/modules/audit`.
+- Visor nuevo en `src/app/(internal)/sigeco/(app)/auditoria`.
+- Guía técnica [audit-events.md](../../operations/audit-events.md).
+- Reporte [2026-07-29-tarea-3-auditoria-append-only.md](../task-reports/2026-07-29-tarea-3-auditoria-append-only.md).
+
+#### Validación Ejecutada
+
+- `pnpm test`: pasó, 29 archivos y 109 pruebas unitarias.
+- `pnpm lint`: pasó sin advertencias.
+- `pnpm typecheck`: pasó.
+- `pnpm run build`: pasó y generó `/sigeco/auditoria` como ruta dinámica.
+- Pruebas de exactamente un evento para éxito, fallo y denegación.
+- Prueba de cobertura que impide dejar una server action crítica sin auditoría
+  y exige autorización en las lecturas excluidas.
+- Pruebas de exclusión de secretos, texto clínico y archivos.
+- Prueba estática del trigger append-only.
+- Prueba de integración preparada para demostrar que PostgreSQL permite insertar,
+  pero rechaza actualizar y borrar.
+- La integración local quedó detenida por la protección de Prisma: el comando
+  necesita reiniciar irreversiblemente la base de pruebas
+  `salud_intercultural_test` en `localhost:5432` y requiere consentimiento
+  explícito. CI la ejecutará en PostgreSQL efímero.
+
+#### Pendientes Para Cerrar
+
+- Ejecutar `pnpm test:integration` en CI con PostgreSQL 16.
+- Aplicar la nueva migración en staging.
+- Probar el visor con Dirección y super administrador y confirmar la denegación al resto.
+- Completar QA responsive en 390, 768, 1024, 1280 y 1440 px.
+- Compras, adjuntos, reportes y exportaciones se auditarán cuando se
+  implementen sus módulos en las tareas correspondientes.
+
+**Commit sugerido:** `feat(sigeco): add append-only audit events`
+
+### 2026-07-29 — Tarea 4 — Usuarios, Roles Y Sesiones
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsable:** Super administrador y equipo técnico.
+
+#### Resultado Implementado Localmente
+
+- Creado `users_manage`, exclusivo de `super_admin`; todos los demás roles
+  conservan únicamente la gestión de su propia cuenta.
+- Creada `/sigeco/usuarios` para altas y revisión general en escritorio.
+- Creada `/sigeco/usuarios/[userId]` para rol, estado, último acceso,
+  desbloqueo, cambio obligatorio y revocación de sesiones.
+- Creada `/sigeco/mi-cuenta` para contraseña y sesiones propias, usable en móvil.
+- Creada `/sigeco/cambiar-contrasena` para primer ingreso o cambio forzado.
+- Las cuentas nuevas usan contraseña temporal de al menos 12 caracteres y no
+  acceden a módulos hasta reemplazarla.
+- El bloqueo de cambio obligatorio también se aplica a server actions.
+- Cambiar rol o estado revoca sesiones; desactivar una cuenta corta su acceso.
+- Nadie puede cambiar su propio rol o desactivarse.
+- El último super administrador activo no puede desactivarse ni degradarse.
+- `captacion` sigue visible solo para migrar registros antiguos y nunca puede
+  asignarse a una cuenta nueva.
+- Las sesiones guardan una etiqueta breve de dispositivo, sin user-agent completo
+  ni dirección IP.
+- Creación, acceso, desbloqueo, contraseñas y revocaciones generan auditoría.
+
+#### Archivos Y Migraciones
+
+- Migración `20260729160000_manage_internal_users_sessions`, aplicada en desarrollo.
+- Actions auditadas en `src/features/internal-auth/user-management-actions.ts`.
+- Reglas transaccionales en `src/modules/database/queries/internal-users.ts`.
+- Guía [internal-users-sessions.md](../../operations/internal-users-sessions.md).
+- Reporte [2026-07-29-tarea-4-usuarios-roles-sesiones.md](../task-reports/2026-07-29-tarea-4-usuarios-roles-sesiones.md).
+
+#### Validación Ejecutada
+
+- `pnpm test`: 33 archivos y 123 pruebas unitarias aprobadas.
+- `pnpm lint`: pasó sin advertencias.
+- `pnpm typecheck`: pasó.
+- `pnpm run build`: pasó; usuarios, Mi cuenta y cambio obligatorio son rutas dinámicas.
+- Matriz negativa confirma que únicamente `super_admin` posee `users_manage`.
+- Pruebas de rol deprecado, contraseña temporal, confirmación, etiquetas de
+  dispositivo y bloqueo por cambio obligatorio.
+- Pruebas de integración preparadas para último administrador, cambio propio,
+  revocación inmediata y rol deprecado.
+
+#### Pendientes Para Cerrar
+
+- Ejecutar `pnpm test:integration` en CI con PostgreSQL 16 efímero.
+- Aplicar la migración en staging y verificar las siete cuentas QA.
+- Probar creación, cambio de rol, desactivación, desbloqueo y revocación.
+- Completar QA autenticado en 390, 768, 1024, 1280 y 1440 px.
+
+**Commit sugerido:** `feat(sigeco): manage users roles and sessions`
+
+### 2026-07-29 — Tarea 5 — Permisos, Privacidad, Logs Y Secretos
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Documentada la matriz de acceso por rol y módulo.
+- Todas las páginas de datos y las 38 server actions actuales tienen una
+  política automatizada de permiso.
+- La navegación se contrasta con el permiso exigido por el servidor.
+- La búsqueda global de pacientes se oculta sin `patients_read`.
+- Login, duplicados, búsqueda de pacientes y errores de stock dejaron de
+  incluir datos sensibles en URLs.
+- SIGECO, Payload Admin y API usan `no-store`, `no-referrer` y `noindex`.
+- Prisma no imprime consultas y los scripts omiten mensajes libres que podrían
+  contener credenciales o datos personales.
+- Staging y producción exigen un `PAYLOAD_SECRET` fuerte de al menos 32 caracteres.
+- El JSON-LD escapa contenido administrable para evitar inyección.
+- Todas las acciones de GitHub están fijadas a commits inmutables.
+- Payload, marketing y analytics no importan consultas clínicas.
+- Propietarios y procedimientos de rotación de secretos quedaron documentados.
+
+#### Archivos Y Documentación
+
+- Pruebas en `scripts/security-boundaries.test.ts`,
+  `scripts/privacy-controls.test.ts` y `scripts/secret-policy.test.ts`.
+- Guía [permissions-privacy-secrets.md](../../operations/permissions-privacy-secrets.md).
+- Reporte
+  [2026-07-29-tarea-5-permisos-privacidad-logs-secretos.md](../task-reports/2026-07-29-tarea-5-permisos-privacidad-logs-secretos.md).
+- No requiere una migración nueva.
+
+#### Validación Ejecutada
+
+- Pruebas específicas: 5 archivos y 32 pruebas aprobadas.
+- Suite completa: 37 archivos y 143 pruebas aprobadas.
+- `pnpm lint`, `pnpm typecheck` y `pnpm run build`: aprobados.
+- `pnpm staging:check`: aprobado con base, storage y Blob de staging,
+  comunicaciones bloqueadas y analytics deshabilitado.
+- `pnpm deps:check`: 0 vulnerabilidades altas o críticas; 4 bajas y 14 moderadas.
+
+#### Pendientes Para Cerrar
+
+- Ejecutar integración y los cinco jobs en CI.
+- Verificar headers en el deployment de staging.
+- Entrar con los siete roles QA y probar navegación visible y URL directa.
+- Confirmar en Vercel propietario y fecha de rotación de cada secreto.
+- Rotar `PAYLOAD_SECRET` si algún despliegue remoto utilizó el fallback anterior.
+
+**Commit sugerido:** `test(sigeco): enforce privacy and permission boundaries`
+
+### 2026-07-29 — Tarea 6 — Adjuntos Clínicos Seguros
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Unificadas las estructuras anteriores de adjuntos en un modelo clínico privado
+  relacionado con paciente, visita, estudio, usuario que sube y usuario que
+  elimina.
+- Añadidos permisos separados para ver, subir y eliminar archivos.
+- Los archivos locales se guardan fuera de `public/`, con rutas opacas, directorios
+  `0700` y archivos `0600`.
+- Staging y producción quedan obligados a usar un Blob Store privado distinto del
+  almacenamiento editorial de Payload.
+- Cada archivo se valida por tamaño, nombre, extensión, MIME, firma real,
+  estructura básica, marcador EICAR y SHA-256 antes de quedar disponible.
+- Cada lectura exige sesión, permiso, mismo origen y una concesión aleatoria de
+  dos minutos, un solo uso y vinculada al usuario.
+- Subida, lectura, rechazo y eliminación controlada generan auditoría sin guardar
+  tokens, nombres originales, checksum o texto clínico.
+- La ficha del paciente permite carga múltiple, progreso individual, cámara,
+  compresión de JPG, reintento idempotente, vista previa y descarga.
+- La eliminación borra el objeto privado, invalida concesiones y conserva la
+  metadata histórica como `deleted`.
+
+#### Archivos Y Documentación
+
+- Migración `20260729140000_secure_clinical_attachments`.
+- Módulo `src/modules/clinical-attachments/`.
+- API privada `src/app/(internal)/sigeco/api/clinical-attachments/`.
+- Interfaz `src/components/internal/clinical-attachments/ClinicalAttachmentsPanel.tsx`.
+- Guía [clinical-attachments.md](../../operations/clinical-attachments.md).
+- Reporte
+  [2026-07-29-tarea-6-adjuntos-clinicos-seguros.md](../task-reports/2026-07-29-tarea-6-adjuntos-clinicos-seguros.md).
+
+#### Validación Ejecutada
+
+- Migración aplicada únicamente a la base local de desarrollo.
+- Suite unitaria: 39 archivos y 160 pruebas aprobadas.
+- `pnpm lint`, `pnpm typecheck`, `pnpm env:check`, `prisma validate` y
+  `pnpm run build`: aprobados.
+- `pnpm deps:check`: sin vulnerabilidades altas o críticas; permanecen 4 bajas
+  y 14 moderadas.
+- QA autenticado local en escritorio y móvil: carga, progreso, previsualización,
+  descarga autorizada, eliminación y ausencia de desbordamiento horizontal.
+- Petición anónima a la concesión temporal: rechazada con `401`.
+- Pruebas automatizadas cubren tipos falsificados, PDF truncado, EICAR, exceso
+  de tamaño, traversal, idempotencia, concesión de un uso y relaciones cruzadas.
+
+#### Pendientes Para Cerrar
+
+- Ejecutar `pnpm test:integration` cuando Dirección autorice el reinicio
+  destructivo de la base exclusiva `salud_intercultural_test`.
+- Crear Blob Stores clínicos privados y separados para staging y producción.
+- Aplicar la migración y validar con los roles QA en staging.
+- Validar la exportación y restauración de metadata y objetos desde el Blob
+  clínico privado cuando se active el procedimiento remoto de la Tarea 7.
+- Evaluar un motor antimalware real antes de describir los archivos como
+  “analizados por antivirus”.
+
+**Commit sugerido:** `feat(sigeco): secure clinical attachments`
+
+### 2026-07-29 — Tarea 7 — Backup Y Restauración Comprobada
+
+**Estado anterior:** Pendiente.
+
+**Estado nuevo:** En progreso.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Definidos RPO de 6 horas y RTO de 4 horas.
+- Implementado un paquete coordinado con PostgreSQL, adjuntos clínicos y
+  manifiesto de conteos, migraciones, tamaños y SHA-256.
+- `pg_dump`, los conteos y la metadata usan el mismo snapshot consistente de
+  PostgreSQL; una diferencia con los objetos físicos bloquea la copia.
+- El paquete se cifra y autentica con AES-256-GCM y una clave derivada mediante
+  `scrypt`; la clave no aparece en argumentos ni logs.
+- La creación rechaza bases remotas, staging y producción.
+- La restauración solo acepta una base local vacía con nombre controlado,
+  directorio vacío y confirmación exacta.
+- La comprobación posterior compara pacientes, visitas, Caja, inventario,
+  usuarios por rol, auditoría, metadata y contenido de adjuntos.
+- Programado un simulacro sintético mensual en GitHub Actions y una ejecución
+  manual trimestral por otra persona autorizada.
+- Documentadas frecuencia, retención, separación de credenciales, responsables
+  y pasos de activación remota.
+
+#### Archivos Y Documentación
+
+- Implementación y pruebas en `scripts/backup/`.
+- Comandos `backup:create:local`, `backup:restore:local` y
+  `backup:drill:local`.
+- Workflow `.github/workflows/backup-restore-drill.yml`.
+- Guía [backup-restore.md](../../operations/backup-restore.md).
+- Reporte
+  [2026-07-29-tarea-7-backup-restauracion-comprobada.md](../task-reports/2026-07-29-tarea-7-backup-restauracion-comprobada.md).
+- No requiere una migración nueva.
+
+#### Validación Ejecutada
+
+- Simulacro final `ms6gm2gq_cf63188f` aprobado únicamente en PostgreSQL local.
+- Aplicadas y restauradas 15 migraciones en dos bases sintéticas aisladas.
+- Backup: 407 ms; restauración y verificación: 2.507 ms; total: 8.091 ms.
+- Verificados un paciente, una visita, Caja por Bs 125, un producto con stock
+  7, un `super_admin`, un evento de auditoría y un adjunto clínico.
+- Cifrado autenticado, checksum y limpieza de texto plano: aprobados.
+- Evidencia privada con permisos `0700/0600`.
+- Las dos bases efímeras fueron eliminadas y se confirmó que no quedaron
+  destinos temporales.
+- Pruebas focalizadas: 3 archivos y 23 pruebas aprobadas.
+- Suite completa: 41 archivos y 179 pruebas aprobadas.
+- `pnpm lint`, `pnpm typecheck`, `pnpm env:check`, `prisma validate`,
+  `git diff --check` y `pnpm run build`: aprobados.
+- `pnpm deps:check`: sin vulnerabilidades altas o críticas; permanecen 4 bajas
+  y 14 moderadas.
+#### Pendientes Para Cerrar
+
+- Aprobar RPO, RTO, retención y responsables con Dirección.
+- Activar historial o snapshots adecuados en Neon.
+- Configurar un destino de backup externo y separado.
+- Crear credenciales exclusivas de lectura, almacenamiento y restauración.
+- Implementar la exportación paginada del Blob clínico privado.
+- Restaurar una copia real en infraestructura remota aislada y firmar el
+  resultado.
+- Observar la primera ejecución mensual del nuevo workflow.
+
+**Commit sugerido:** `docs(ops): prove sigeco backup and restore`
+
+### 2026-07-29 — Tarea 8 — Respuesta A Incidentes Y Gate De Seguridad
+
+**Estado anterior:** En progreso.
+
+**Estado nuevo:** Terminada.
+
+**Responsables:** equipo técnico y Dirección.
+
+#### Resultado Implementado Localmente
+
+- Creado un runbook para acceso indebido, teléfono perdido, pérdida de datos,
+  malware, indisponibilidad y secreto expuesto.
+- Definidas severidades, responsables, evidencia mínima, comunicación,
+  contención, recuperación y revisión posterior.
+- Implementado un simulacro local con dos sesiones sintéticas, revocación,
+  cambio obligatorio de contraseña y auditoría append-only.
+- El mismo ejercicio ejecuta el backup y la restauración cifrada de la Tarea 7.
+- Implementado un gate local que exige evidencia menor a 90 días, artefactos de
+  las Tareas 1–8, pruebas de seguridad y dependencias sin altas o críticas.
+- El gate local nunca aprueba producción; conserva cinco bloqueos remotos o
+  humanos visibles.
+- La auditoría CSO local no confirmó hallazgos críticos ni altos.
+- Dirección aprobó expresamente el runbook y el gate de la Tarea 8 sin
+  autorizar producción.
+
+#### Archivos Y Documentación
+
+- Scripts y pruebas en `scripts/security/`.
+- Comandos `security:incident:drill:local` y `security:gate:local`.
+- Guía [incident-response.md](../../operations/incident-response.md).
+- Reporte
+  [2026-07-29-tarea-8-respuesta-incidentes-gate-seguridad.md](../task-reports/2026-07-29-tarea-8-respuesta-incidentes-gate-seguridad.md).
+- Aprobación estructurada
+  [task-8-approval.json](../security-gate/task-8-approval.json).
+- No requiere una migración nueva.
+
+#### Validación Ejecutada
+
+- Simulacro `ms6hi8bf_ad569853` aprobado únicamente en PostgreSQL local.
+- Dos sesiones revocadas, cero restantes y cambio de contraseña exigido.
+- Contención: 19 ms; auditoría append-only protegida.
+- Restauradas 15 migraciones y un adjunto; recuperación: 2.576 ms.
+- Duración completa del simulacro: 14.333 ms.
+- No quedaron bases temporales; evidencia con permisos `0700/0600`.
+- Gate local aprobado con `criticalOrHighFindings=0`,
+  `taskImplementationApproval=true`, `productionApproval=false` y cinco
+  bloqueos remotos.
+- Pruebas focalizadas: 4 archivos y 40 pruebas aprobadas.
+- Suite completa: 42 archivos y 203 pruebas aprobadas.
+- `pnpm lint`, `pnpm typecheck`, `pnpm env:check`, `prisma validate`,
+  `git diff --check` y `pnpm run build`: aprobados.
+- `pnpm deps:check`: sin vulnerabilidades altas o críticas; permanecen 4 bajas
+  y 14 moderadas.
+- `pnpm test:integration` no es un criterio de cierre de esta tarea y requiere
+  consentimiento textual específico porque reinicia la base exclusiva
+  `salud_intercultural_test`. La protección no se omitió y no se reinició
+  ninguna base.
+
+#### Bloqueos Que Permanecen Para Producción
+
+- Confirmar los cinco checks remotos y branch protection.
+- Cerrar QA de siete roles, headers y secretos en staging.
+- Probar Blob clínico privado, auditoría y revocación remotamente.
+- Restaurar y firmar una copia real fuera de producción.
+- Completar propietarios y fechas de rotación.
+- Ejecutar la integración cuando exista el consentimiento textual nuevo que
+  Prisma exige para reiniciar `salud_intercultural_test`.
+
+Estos puntos no reabren la Tarea 8. El gate los conserva visibles y bloquea
+producción hasta que las tareas responsables aporten evidencia y Dirección
+emita una autorización posterior.
+
+**Commit sugerido:** `docs(ops): complete sigeco security readiness`
+
+## 2026-07-30 — Tarea 16 — Abandono, Bloqueo Y Pendientes
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: áreas operativas y Dirección para revisión.
+
+### Resultado
+
+- “No continuará” exige motivo y registra el punto real de salida.
+- Se conservan área, estado anterior, usuario, fecha, nota y pendientes.
+- SIGECO detecta órdenes, estudios, cobros, entregas y seguimientos abiertos.
+- Las tareas y órdenes sin terminar quedan bloqueadas y visibles.
+- El seguimiento de recuperación requiere consentimiento vigente y pertenece a
+  Recepción/Marlen.
+- Se habilitó el registro desde Recepción, Consulta, Enfermería y Caja.
+- El reporte web agrupa por motivo y muestra los pendientes por visita.
+
+### Archivos Y Migraciones
+
+- Modelo, política, schema, acciones y consultas de interrupción de visita.
+- Formularios responsive y reporte `/sigeco/recepcion/abandonos`.
+- Permisos separados de lectura y escritura.
+- Migración local `20260730142202_visit_discontinuations`, con backfill
+  conservador para abandonos anteriores.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Prisma format, validate y generate aprobados.
+- TypeScript y lint aprobados.
+- 4 archivos y 25 pruebas enfocadas aprobados.
+- Migración aplicada únicamente a `salud_intercultural_dev`.
+- Los 4 abandonos históricos quedaron migrados y no existen visitas abandonadas
+  sin su evento asociado.
+
+### Pendientes
+
+- Ejecutar integración, build y QA gstack en el cierre acumulado.
+- Validar los cuatro puntos de salida con cuentas de cada área en staging.
+- Confirmar la cuenta activa de Marlen y revisar el reporte con Dirección.
+- No aplicar la migración en producción sin autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): record abandonment and blocked work`
+
+## 2026-07-30 — Tarea 17 — Correcciones, Cierre Y Firma Clínica
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Médico y Dirección para revisión.
+
+### Resultado
+
+- La consulta distingue borrador y finalizada.
+- Guardar, finalizar y corregir crea versiones con autor, fecha y hora.
+- La versión finalizada no vuelve a editarse como borrador.
+- Corregir exige tipo y motivo y mantiene visible el contenido anterior.
+- El historial compara versiones y resalta campos modificados.
+- Las revisiones evitan que dos pestañas se sobrescriban.
+- Recetas, órdenes, ventas, cobros y aplicaciones no cambian con una corrección.
+- Una visita con consulta en borrador no puede cerrarse como completada.
+
+### Archivos Y Migraciones
+
+- Modelo, política, schemas, acciones y consultas de versiones clínicas.
+- Formulario responsive de corrección e historial comparable.
+- Permisos separados para finalizar y corregir.
+- Migración local `20260730154007_clinical_record_versions`, con versión
+  conservadora para consultas anteriores.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Prisma validate, generate y migración local aprobados; 24 migraciones al día.
+- Las 5 consultas históricas tienen una versión de borrador y ninguna recibió
+  una firma inventada.
+- TypeScript y lint aprobados.
+- 6 archivos y 35 pruebas enfocadas aprobados.
+
+### Pendientes
+
+- Ejecutar integración, build y QA gstack en el cierre acumulado.
+- Validar Médico y Dirección en staging.
+- Confirmar con Dirección el alcance de la firma clínica interna.
+- No aplicar la migración en producción sin autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): version clinical records`
+
+## 2026-07-30 — Tarea 18 — Caja, Dinero Al Personal, Gastos Y Cierre
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Administración y Dirección para revisión.
+
+### Resultado
+
+- Caja tiene apertura, responsable, turno, sucursal y efectivo inicial.
+- Cada cobro se enlaza a una sesión abierta; sin ella no se guarda el pago.
+- El dinero entregado al personal conserva beneficiarios y montos
+  individuales.
+- La compra urgente conserva artículo, cantidad, precio, responsables,
+  autorización, comprobante opcional y pendiente de inventario.
+- Otros egresos identifican receptor, responsable, autorización y motivo.
+- Efectivo, QR, tarjeta, transferencia y otros medios se concilian por
+  separado.
+- Diferencias mayores al límite bloquean Caja hasta la aprobación de Dirección.
+- Devoluciones y reintegros compensan al movimiento original sin borrarlo.
+- El cierre es imprimible y los formularios admiten teclado numérico y cámara
+  desde móvil.
+
+### Archivos Y Migraciones
+
+- Modelos, permisos, schemas, acciones y consultas de Caja.
+- Pantalla responsive de apertura, egresos, movimientos, filtros y cierre.
+- Almacenamiento privado y lectura protegida de comprobantes.
+- Migraciones locales `20260730162455_cash_sessions_expenses_close` y
+  `20260730174605_cash_receipt_integrity`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Prisma format, validate, generate y migraciones locales aprobados; 26 migraciones
+  al día.
+- Ambiente local aprobado; producción exige configurar expresamente el límite
+  autorizado por Dirección.
+- TypeScript y lint aprobados.
+- 6 archivos y 51 pruebas enfocadas aprobados.
+- La cobertura de integración quedó escrita para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración, build y QA gstack en el cierre acumulado.
+- Validar Administración y Dirección en staging.
+- Aprobar el límite productivo y la política de comprobantes.
+- Probar cámara y cierre en teléfonos reales.
+- No aplicar la migración en producción sin autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): add expenses and daily cash close`
+
+## 2026-07-30 — Tarea 19 — Catálogo De Productos Y Proveedores
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Administración y Dirección para revisión.
+
+### Resultado
+
+- Productos con categoría, unidad, uso, precio, costo referencial, stock
+  mínimo y estado.
+- Catálogo con búsqueda, filtros, alta rápida y edición guiada responsive.
+- Código interno único, normalizado, inmutable y no reutilizable.
+- Proveedores con empresa, contacto, teléfonos, correo, dirección y notas.
+- Varios proveedores por producto y como máximo uno preferido.
+- Productos y proveedores se desactivan sin borrar historia.
+- Cada cambio conserva versión, responsable, fecha y motivo.
+- Administración modifica; Dirección revisa costos y proveedores; Médico y
+  Enfermería solo disponibilidad activa; Seguimiento/Yazmin no accede.
+- Ventas solo utiliza productos activos y habilitados para venta.
+
+### Archivos Y Migraciones
+
+- Modelo, permisos, schemas, acciones y consultas de catálogo y proveedores.
+- Pantallas responsive de catálogo, producto, proveedores e historial.
+- Migración local `20260730181717_product_catalog_suppliers`, con conversión
+  conservadora del proveedor anterior y versiones iniciales.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Prisma format, validate, generate y migración local aprobados; 27 migraciones
+  al día.
+- TypeScript y lint aprobados.
+- 4 archivos y 32 pruebas enfocadas aprobados.
+- La cobertura de integración quedó ampliada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración, build y QA gstack en el cierre acumulado.
+- Validar Administración, Dirección, Médico y Enfermería en staging.
+- Revisar categorías, unidades, precios, costos y proveedores reales.
+- Confirmar costos históricos de compra durante la Tarea 20.
+- Probar alta y edición en teléfonos reales.
+- No aplicar la migración en producción sin autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): manage products and suppliers`
+
+## 2026-07-30 — Tarea 20 — Compras, Recepciones, Lotes Y Stock
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Administración; Dirección autoriza ajustes y revisa.
+
+### Resultado
+
+- Compras con proveedor, sucursal, documento, pago previsto, líneas y estados.
+- Pago real enlazado con Caja; crédito sin salida anticipada y compras urgentes
+  sin egreso duplicado.
+- Recepciones parciales idempotentes con responsable, ubicación, documento,
+  costo, lote y vencimiento.
+- Entrada de stock única por línea recibida y comparación pedido/recibido.
+- FEFO para salidas automáticas, sin usar lotes vencidos.
+- Mermas, daños, vencimientos, devoluciones y correcciones autorizadas.
+- Kardex enlazado a compra, recepción y lote; historia protegida contra borrado.
+- Documentos privados con permiso, `no-store` y checksum.
+- Formularios responsive con cámara y componentes globales de fecha.
+
+### Archivos Y Migraciones
+
+- Modelo, permisos, schemas, actions, consultas y almacenamiento privado.
+- Pantallas de compras, detalle, recepción y lotes.
+- Migración local `20260730192059_purchases_receipts_batches_stock`.
+- Guía operativa y reporte de cambios.
+
+### Validación
+
+- Prisma generate y TypeScript aprobados; 28 migraciones locales al día.
+- 2 archivos y 10 pruebas enfocadas aprobados.
+- Pruebas de integración ampliadas, reservadas para el cierre acumulado.
+- `git diff --check` aprobado.
+
+### Pendientes
+
+- Ejecutar lint, integración, build y QA gstack en el cierre acumulado.
+- Probar cámara y operación completa en teléfonos reales.
+- Validar roles y datos reales en staging.
+- No aplicar la migración en producción sin aviso y autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): add purchases batches and stock receipts`
+
+## 2026-07-30 — Tarea 21 — Recetas Y Comprobantes Versionados
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Médico emite y corrige recetas; Administración emite
+comprobantes; Dirección confirma identidad y requisitos.
+
+### Resultado
+
+- Receta generada solo desde una consulta finalizada y la receta clínica
+  vigente.
+- Corrección con motivo, nueva `Prescription` y nueva versión documental.
+- Comprobante generado desde productos, descuento, total, pagos, devoluciones
+  y saldo reconciliados.
+- Una fuente sin cambios reutiliza la misma versión.
+- Snapshot JSON, huella SHA-256, número y cadena de versiones append-only.
+- Perfil profesional obligatorio con título, especialidad y dos registros.
+- PDF autenticado con vista previa, descarga y reimpresión controlada.
+- Comprobante rotulado “No es factura fiscal” y receta preparada para firma y
+  sello.
+
+### Archivos Y Migraciones
+
+- Modelo, permiso, schemas, actions, servicio de generación y PDF.
+- Pantallas de configuración, emisión, corrección e historial.
+- Migración local
+  `20260730201257_versioned_prescriptions_receipts`.
+- Guía operativa y reporte de cambios.
+
+### Validación
+
+- Prisma validate, migración local, Prisma generate y TypeScript aprobados; 29
+  migraciones locales al día.
+- Seguridad y pruebas enfocadas: 4 archivos, 14 pruebas aprobadas.
+- Integración de idempotencia, versiones e inmutabilidad agregada, reservada
+  para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar lint global, integración, build y QA gstack al cierre acumulado.
+- Probar PDF e impresión en teléfonos reales.
+- Confirmar datos profesionales y tipos de receta con Dirección y asesoría
+  clínica.
+- Confirmar el alcance no fiscal con asesoría contable.
+- Validar roles y flujo en staging.
+- No aplicar migración ni configuración en producción sin aviso y autorización
+  expresa.
+
+**Commit sugerido:** `feat(sigeco): generate versioned documents`
+
+## 2026-07-30 — Tarea 22 — Reporte Del Recorrido Completo
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección; equipo técnico para implementación y reconciliación.
+
+### Resultado
+
+- Reporte de cohorte basado en la fecha de llegada de cada visita.
+- Una visita se cuenta una sola vez aunque pase por varias áreas.
+- Llegadas, consultas, propuestas, aceptaciones, compras, abandonos,
+  seguimientos, primeras visitas y retornos se derivan de registros fuente.
+- Cantidad de ventas, dinero vendido, cobrado y pendiente se muestran por
+  separado.
+- Fuente principal única y categoría “Sin fuente registrada” para no esconder
+  faltantes.
+- Filtros por período, fuente, ciudad, médico y sucursal.
+- Embudo, tendencia con días en cero, resultados por fuente y tabla
+  reconciliable.
+- Indicadores de calidad para fuente faltante y venta sin aceptación vigente.
+- Acceso limitado a Dirección y super administrador mediante `reports_read`.
+
+### Archivos Y Migraciones
+
+- Consulta de datos y agregación pura del recorrido.
+- Pantalla responsive y componentes de embudo y tendencia.
+- Prueba unitaria de fórmulas y cobertura de integración reservada.
+- Migración local `20260730205836_patient_journey_branch`, que agrega la
+  sucursal de llegada a la visita con valor inicial `el-alto`.
+- Guía operativa, reporte de tarea y referencias técnicas actualizadas.
+
+### Validación
+
+- Prisma generate y TypeScript aprobados; 30 migraciones locales al día.
+- Lint enfocado aprobado.
+- Seguridad y fórmulas: 2 archivos y 14 pruebas aprobadas.
+- `git diff --check` aprobado.
+- La prueba de integración fue escrita y se ejecutará con el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack al cierre
+  acumulado.
+- Reconciliar una muestra manual de visitas, decisiones, ventas y cobros con
+  Dirección.
+- Probar filtros, gráficos y tabla en teléfonos reales.
+- Validar roles y cifras en staging.
+- Confirmar sucursales reales durante la Tarea 28.
+- No aplicar la migración ni publicar el reporte en producción sin aviso y
+  autorización expresa.
+
+**Commit sugerido:** `feat(sigeco): report patient journey`
+
+## 2026-07-30 — Tarea 23 — Tiempo De Atención Por Área
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección revisa; cada área registra su propia atención.
+
+### Resultado
+
+- Eventos inmutables de entrada, atención, bloqueo, reanudación y salida.
+- Secuencia por paso para ordenar eventos incluso dentro del mismo milisegundo.
+- Entrada y salida automáticas al cambiar de área, completar o abandonar.
+- Control visible en Recepción, Consulta, Enfermería y Administración.
+- Tiempo móvil actualizado en pantalla sin consultar la base cada 30 segundos.
+- Aviso no invasivo después de 30 minutos de espera.
+- Reporte con promedio, mediana, P75, P90, día, hora, área y sucursal.
+- Sesiones activas separadas de las estadísticas cerradas.
+- Visitas canceladas y datos de prueba excluidos.
+- Abandonos conservados hasta el evento de salida.
+
+### Archivos Y Migraciones
+
+- Modelo, permiso, actions, consultas y agregación estadística.
+- Controles responsive y reporte de Dirección.
+- Seed de staging preparado para marcar fixtures como prueba.
+- Migraciones locales `20260730213127_area_service_times` y
+  `20260730214500_area_time_event_sequence`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local confirmado; staging y producción no fueron modificados.
+- Prisma format, validate, generate y 32 migraciones locales al día.
+- TypeScript y lint enfocado aprobados.
+- Fórmulas, permisos y seguridad: 3 archivos y 34 pruebas aprobadas.
+- `git diff --check` aprobado.
+- Integración transaccional escrita y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack al cierre
+  acumulado.
+- Validar cada rol y recorrido en staging.
+- Probar controles y avisos en teléfonos reales.
+- Medir si el aviso inicial de 30 minutos es correcto durante el piloto.
+- Reconciliar una muestra manual con Dirección.
+- No aplicar migraciones ni publicar en producción sin aviso y autorización.
+
+**Commit sugerido:** `feat(sigeco): measure time by area`
+
+## 2026-08-01 — Tarea 24 — Recordatorios Automatizados Y Supervisados
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Marlen revisa; Dirección configura reglas.
+
+### Resultado
+
+- Reglas con versiones inmutables para evolución, retorno y recuperación.
+- Evento, tipo, canal, demora, período, horario, días, plantilla, estado y
+  responsable explícitos.
+- Detección idempotente por regla y evento de origen.
+- Vista previa y aprobación humana antes de crear `FollowUpTask`.
+- Consentimiento y canal comprobados al detectar y al aprobar.
+- Horario calculado en `America/La_Paz`.
+- Bloqueos, fallos, descartes y reintentos visibles con historia append-only.
+- Acciones responsive para preparar, aprobar, reprogramar y continuar al
+  contacto y resultado existentes.
+
+### Archivos Y Migración
+
+- Modelo, permisos, policy, schemas, actions, queries, UI y pruebas.
+- Ruta `/sigeco/seguimientos/recordatorios` enlazada desde Seguimientos.
+- Migración local `20260801090000_supervised_reminders`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local confirmado; comunicaciones bloqueadas.
+- Staging y producción no fueron modificados.
+- Prisma format, validate, generate y 33 migraciones locales al día.
+- TypeScript y lint enfocado aprobados.
+- Política, permisos y seguridad: 3 archivos y 33 pruebas aprobadas.
+- Integración transaccional escrita y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack al cierre
+  acumulado.
+- Configurar con Dirección las reglas reales y confirmar la cuenta de Marlen.
+- Validar permisos, textos, horarios y móvil en staging.
+- No aplicar la migración ni activar reglas en producción sin aviso y
+  autorización.
+
+**Commit sugerido:** `feat(sigeco): automate supervised reminders`
+
+## 2026-08-01 — Tarea 25 — Encuestas Y Reclamos
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección.
+
+### Resultado
+
+- Piloto manual sin cron ni conexión a recordatorios automáticos.
+- Enlace aleatorio guardado solo como SHA-256, con vencimiento, cancelación y
+  rotación por visita.
+- Formulario corto sin información interna ni herramientas de analytics.
+- Encuesta, comentario, reclamo y posible incidente clínico separados.
+- Plazos iniciales de 4, 24 o 48 horas según prioridad.
+- Responsable, estado, clasificación, prioridad y notas internas trazables.
+- Respuesta y eventos internos protegidos como append-only.
+- Tendencias de 90 días por tipo, área y calificación.
+- Sexto consentimiento específico para encuestas; versión vigente `v2`.
+- Cero integración con Payload o publicación automática de testimonios.
+
+### Archivos Y Migración
+
+- Modelo, permisos, policy, schemas, actions, queries, fachada pública, API y
+  UI responsive.
+- Rutas `/sigeco/opiniones` y `/encuesta/[token]`.
+- Migración local `20260801120000_feedback_complaints`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local confirmado; staging y producción no fueron modificados.
+- Prisma format, validate, generate y 34 migraciones locales al día.
+- TypeScript y lint enfocado aprobados.
+- Políticas, schemas, consentimientos, ambiente, permisos y seguridad: 7
+  archivos y 68 pruebas aprobadas.
+- Integración transaccional escrita y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Completar el piloto manual y aprobar preguntas, responsables y plazos.
+- Aprobar expresamente los seis textos de consentimiento `v2`.
+- Ejecutar integración completa, lint global, build y QA gstack acumulado.
+- Validar móvil, roles y ausencia de analytics en staging.
+- No migrar ni habilitar producción sin aviso y autorización.
+
+**Commit sugerido:** `feat(sigeco): add feedback and complaints`
+
+## 2026-08-01 — Tarea 26 — Móvil Y Conectividad Lenta
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: equipo técnico.
+
+### Resultado
+
+- Estado global en línea, lento, sin conexión y recuperado.
+- Envío offline bloqueado sin borrar los campos de la pantalla.
+- Guardando, guardado y error diferenciados sin confirmar antes del servidor.
+- Idempotencia completada para llegada, venta, pago y stock manual; Caja,
+  compras, recepciones y lotes conservan sus claves existentes.
+- Borrador local estricto solo para compras administrativas, sin pacientes,
+  datos clínicos ni archivos.
+- Limpieza de almacenamiento `sigeco.*` al cerrar la sesión actual.
+- Ficha imprimible `/sigeco/contingencia` y proceso de doble revisión.
+- Targets móviles principales de 44 px, teclados apropiados y cámara donde
+  corresponde.
+- Cero PWA, service worker, caché clínico o reintento financiero automático.
+
+### Archivos Y Migración
+
+- Políticas y almacenamiento en `src/features/mobile-resilience`.
+- Guard de conexión, formularios, logout, controles táctiles y borrador de
+  compra actualizados.
+- Claves idempotentes en queries de visitas, ventas, pagos e inventario.
+- Migración local `20260801160000_mobile_resilience_idempotency`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local; staging y producción no fueron modificados.
+- Prisma format, validate, generate y 35 migraciones locales al día.
+- TypeScript y lint enfocado aprobados.
+- Conexión, storage, borrador seguro, schemas, privacidad y límites de seguridad:
+  10 archivos y 48 pruebas aprobadas.
+- Integración de reintentos ampliada y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack acumulado.
+- Simular red lenta, corte y respuesta perdida en staging.
+- Validar cámara y targets táctiles en teléfonos físicos.
+- Ensayar y aprobar la ficha de contingencia con el personal.
+- No migrar ni habilitar producción sin aviso y autorización.
+
+**Commit sugerido:** `feat(sigeco): improve mobile resilience`
+
+## 2026-08-01 — Tarea 27 — Integración Segura Payload-SIGECO
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsables: Marketing y TI.
+
+### Resultado
+
+- Payload conserva campañas editables en `marketing-campaigns`.
+- SIGECO mantiene una copia técnica idempotente para enlazar las llegadas.
+- Crear, activar o desactivar campañas dejó de ser una operación de SIGECO.
+- Contrato privado con token exclusivo, 16 KB por campaña, 60 solicitudes por
+  minuto y períodos máximos de 366 días.
+- Solo salen período, código y totales agregados; grupos menores a cinco se
+  suprimen.
+- La sincronización y las exportaciones importantes quedan auditadas.
+- Una caída de Payload no bloquea el registro de la llegada ni obliga a
+  repetirla; se conserva la fuente manual.
+
+### Archivos Y Migración
+
+- Collection Payload `src/payload/collections/MarketingCampaigns.ts`.
+- Contratos, autenticación, sincronización y métricas en
+  `src/modules/payload-sigeco`.
+- APIs privadas bajo `src/app/api/integrations/payload-sigeco`.
+- Migración local `20260801170000_payload_sigeco_campaign_ownership`.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local; staging y producción no fueron modificados.
+- Prisma format, validate, generate y 36 migraciones locales al día.
+- Tipos de Payload regenerados y seed idempotente aprobado.
+- TypeScript y lint enfocado aprobados.
+- Contrato, autenticación, supresión, fallback y seguridad: 10 archivos y 67
+  pruebas aprobadas.
+- Cuatro campañas institucionales verificadas como enlazadas a Payload.
+- Integración de reintentos ampliada y reservada para el cierre acumulado.
+
+### Pendientes
+
+- Ejecutar integración completa, lint global, build y QA gstack acumulado.
+- Configurar un token exclusivo y aplicar migración/seed en staging.
+- Simular caída, reintentos y conciliación con Marketing y Recepción.
+- Confirmar el umbral mínimo de cinco con Dirección.
+- No migrar ni habilitar producción sin aviso y autorización.
+
+**Commit sugerido:** `feat(sigeco): integrate campaign attribution safely`
+
+## 2026-08-01 — Tarea 28 — Multi-Sucursal El Alto Y Cochabamba
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección.
+
+### Resultado
+
+- El Alto quedó activa y Cochabamba preparada, sin habilitar operación real.
+- Paciente único con visitas, colas, Caja, ventas, pagos y compras por sede.
+- Usuarios con una o varias sucursales y una activa predeterminada.
+- Selector global confirmado, visible también en móvil.
+- Stock por producto y sede; traslados con salida y entrada enlazadas. Los lotes
+  trasladados conservan partida, costo y vencimiento en la sede destino.
+- Dirección dispone de detalle y consolidado; roles operativos no.
+- La prueba sintética de Cochabamba no contamina indicadores reales.
+
+### Archivos Y Migraciones
+
+- Modelos y consultas multi-sucursal en Prisma y módulos de base de datos.
+- Pantallas `/sigeco/sucursales` e `/sigeco/inventario/traslados`.
+- Migraciones `20260801185354_multi_branch_el_alto_cochabamba` y
+  `20260801190000_multi_branch_transfer_append_only`.
+- Migración `20260801210000_inventory_transfer_lot_traceability` para enlazar
+  lotes físicos entre origen y destino.
+- Guía operativa y reporte de cambios de la tarea.
+
+### Validación
+
+- Ambiente local; staging y producción no fueron modificados.
+- 40 migraciones locales al día y seed sintético de Cochabamba aprobado.
+- 356 pruebas unitarias, 53 integraciones, lint, TypeScript, seguridad y build
+  aprobados en la revisión acumulada de gstack.
+- El QA visual y el piloto con el personal permanecen en la Tarea 29.
+
+### Pendientes
+
+- Aplicar y probar en staging con todos los roles.
+- Confirmar responsables, stock físico y fecha de apertura.
+- Pedir autorización antes de migrar o activar producción.
+
+**Commit sugerido:** `feat(sigeco): support multi-branch operations`
+
+## 2026-08-02 — Tarea 29 — Piloto Completo Con El Personal
+
+Estado anterior: Pendiente.
+
+Estado nuevo: En progreso.
+
+Responsable: Dirección.
+
+### Resultado
+
+- Guía operativa reproducible con 30 casos ordenados, rutas, responsables,
+  pantallas, valores exactos, resultados esperados, errores controlados,
+  emergencias, documentos, evidencia y aprobación.
+- Juego maestro `P29-R01` para paciente, consulta, consentimientos, propuesta,
+  Enfermería, Caja, dos productos, proveedor, compras, lotes, venta,
+  seguimiento, reclamo, retorno, abandono y duplicado.
+- Matriz de rutas y permisos, pruebas de teléfono/tableta/computadora, red
+  lenta, doble envío, contingencia en papel e incidente de sesión perdida.
+- Plantillas para registrar defectos, reconciliar dinero y stock y obtener la
+  firma real del personal y Dirección.
+- Ensayo técnico local con datos ficticios desde llegada hasta seguimiento,
+  propuesta aceptada, venta pagada y comprobante versionado.
+- Caja reconciliada: Bs 100 iniciales + Bs 1 de cobro - Bs 10 de almuerzo -
+  Bs 10 de compra urgente = Bs 81 contados, diferencia cero.
+- Compra a crédito y recepción de 2 unidades con lote propio, costo histórico,
+  ubicación y vencimiento 2 de agosto de 2027.
+- Corrección clínica conservada como versión nueva y abandono conservado con
+  pendientes bloqueados.
+- Rol Recepción limitado a sus módulos y acceso directo a Consulta rechazado.
+- Dashboard sin desbordamiento horizontal en teléfono, tableta y escritorio.
+- Cero defectos críticos encontrados en el ensayo técnico.
+
+### Archivos Y Datos Locales
+
+- Guía `docs/operations/staff-pilot.md`.
+- Reporte `docs/project/task-reports/2026-08-02-tarea-29-piloto-completo-personal.md`.
+- Evidencia de QA local en `.gstack/qa-reports/`.
+- Paciente, venta, Caja, proveedor, compra y lote sintéticos permanecen solo en
+  la base de desarrollo y no representan operaciones reales.
+- Staging y producción no fueron modificados.
+- La guía deja explícito que las visitas manuales QA no reciben automáticamente
+  `isTestData=true`; por eso el recorrido empieza en local, no debe ejecutarse
+  en producción y puede formar parte de los indicadores del ambiente probado.
+
+### Validación
+
+- Recorrido autenticado, Caja, comprobante, consentimiento, seguimiento,
+  compra, lote, corrección y abandono: aprobados localmente.
+- Responsive automatizado: 390 × 844, 820 × 1180 y 1440 × 900 aprobados.
+- Permiso positivo de Recepción y denegación de Consulta: aprobados.
+- Gstack QA ejecutado con capturas locales.
+- Lint, TypeScript, 356 pruebas unitarias, 53 integraciones, control de
+  dependencias, seguridad local, build y `git diff --check`: aprobados.
+- La guía reproducible fue contrastada con las rutas actuales y sus enlaces
+  documentales fueron comprobados; esta ampliación no ejecutó migraciones ni
+  modificó ambientes.
+- Permanecen como avisos no bloqueantes la deprecación conocida de `pg` y el
+  trazado amplio de documentos de compras informado por Turbopack.
+
+### Pendientes
+
+- Crear las cuentas QA locales y capacitar a cada empleado sin prestar cuentas.
+- Ejecutar y firmar primero los 30 casos en `develop` y localhost.
+- Probar con teléfono y tableta físicos sobre la red de la clínica.
+- Confirmar Caja, stock físico y responsables reales de El Alto.
+- Resolver defectos críticos, si aparecen, y obtener aprobación por área de
+  Dirección.
+- Después de aprobar local, preparar migraciones y cuentas para repetir el
+  recorrido en staging con un ID distinto.
+- Avisar y pedir autorización antes de cualquier operación en producción.
+- Ejecutar y firmar los 30 casos reproducibles con el personal; documentar
+  cualquier caso no aplicable en vez de omitirlo silenciosamente.
+
+**Commit sugerido:** `test(sigeco): validate clinic operation`
+
+## Cómo Actualizar El Progreso
+
+Al iniciar:
+
+1. Cambiar la tarea a `En progreso`.
+2. Actualizar los conteos.
+3. Registrar fecha, alcance y responsable.
+
+Al terminar:
+
+1. Verificar el gate definido en `tasks.md`.
+2. Cambiar a `Terminada`.
+3. Registrar archivos, migraciones, pruebas, QA web/móvil y pendientes.
+4. Actualizar la documentación técnica afectada.
+
+## 2026-08-02 — Decisión — Retiro Del Rol Seguimiento
+
+A pedido de Dirección, el rol interno `seguimiento` se retira: el seguimiento de
+pacientes (clínico y administrativo) lo hace ahora Recepción.
+
+- El rol se marca **deprecado** (igual que `captacion`): no se asigna a cuentas
+  nuevas, desaparece del selector y conserva solo acceso mínimo.
+- Migración `20260802120000_reassign_seguimiento_to_reception`: reasigna a
+  Recepción las cuentas que tenían el rol (Yazmin). El valor permanece en el
+  enum de Prisma por el historial y la auditoría.
+- Recepción ya tenía los permisos y la política para trabajar los seguimientos;
+  no se agregaron permisos nuevos. Se retiró `seguimiento` de la política de
+  clasificación y de las consultas de asignación.
+- Documentado en `permissions-privacy-secrets.md` (matriz sin columna
+  Seguimiento) y `follow-up-classification.md`.
+- Redacción actualizada en toda la documentación viva (guías de operación,
+  plan activo, estado y guías históricas con nota). Los documentos de
+  negocio/estrategia en `docs/masters/` y `CLINICA_PRE_SIGECO.md` describen a
+  Yazmin como persona (comunicación) y ya asignan el seguimiento a
+  Marlen/Recepción: no mencionan el rol técnico y no requieren cambios. Los
+  reportes fechados no se modifican porque son evidencia.
+
+## 2026-08-02 — Decisión — Modo De Ejecución Sin gstack, Pruebas Ni Build
+
+A pedido de Dirección, la implementación de las próximas tareas cambia su modo
+de validación por tarea:
+
+- **No se ejecutan** QA de navegador (gstack, capturas, responsive), pruebas
+  unitarias, pruebas de integración ni build durante la tarea.
+- **Se mantienen** lint y typecheck como red mínima de seguridad.
+- La validación no ejecutada se registra como pendiente y evidencia documental
+  en el reporte de la tarea y en este archivo.
+- Esa validación se corre después en el cierre acumulado (CI, staging y piloto),
+  no por tarea.
+- El gate de cierre de `tasks.md` no cambia: gstack, pruebas y build siguen
+  siendo requisitos para dar una tarea por `Terminada`; solo cambia cuándo y
+  quién los ejecuta.
+
+Referencia cruzada: sección **Modo De Ejecución Vigente** en
+[tasks.md](./tasks.md) y bullet correspondiente en **Decisiones Vigentes**.
+
+## Plantilla De Avance
+
+```markdown
+## AAAA-MM-DD — Tarea N — Nombre
+
+Estado anterior:
+Estado nuevo:
+Responsable:
+
+### Resultado
+
+- Qué se implementó o decidió.
+
+### Archivos Y Migraciones
+
+- Archivos modificados.
+- Migraciones o cambios de datos.
+
+### Validación
+
+- Lint, tipos, pruebas y build.
+- Pruebas de permisos.
+- QA web y móvil.
+
+### Pendientes
+
+- Riesgos, decisiones o trabajo posterior.
+```

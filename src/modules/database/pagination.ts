@@ -7,6 +7,11 @@ export type PaginationInput = {
   pageSize?: number;
 };
 
+export function parsePage(value?: string) {
+  const page = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(page) && page > 0 ? page : DEFAULT_PAGE;
+}
+
 export type Pagination = {
   page: number;
   pageSize: number;

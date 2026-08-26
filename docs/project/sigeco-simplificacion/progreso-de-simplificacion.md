@@ -1,0 +1,425 @@
+# Progreso De Simplificacion Sigeco (V3.7)
+
+Registro de avance del plan [Tareas de simplificacion](./tareas-de-simplificacion.md). Cada tarea terminada agrega aqui su entrada con fecha, archivos tocados, validaciones ejecutadas y pendientes que deja.
+
+> **Aclaración operativa vigente (actualizada 2026-08-02):** este archivo conserva decisiones técnicas e históricas de la simplificación. El **rol técnico `seguimiento` fue retirado el 2026-08-02**: el seguimiento de pacientes (clínico y administrativo) lo hace ahora Recepción y las cuentas que tenían ese rol se reasignaron a Recepción. Yazmin usa el rol Recepción y su trabajo sigue siendo comunicación: responder mensajes y llamadas de WhatsApp y del número de la clínica, llamar a personas que requieren información, contactar a quienes no lograron llegar y realizar recojos coordinados. Lo que este archivo menciona más abajo sobre un rol `seguimiento` es historia del plan.
+
+## Estado General
+
+| Tarea | Nombre | Estado |
+| --- | --- | --- |
+| 1 | Modelo de datos de la simplificacion | Completada (2026-07-10) |
+| 2 | Funnel de recepcion | Completada (2026-07-10) |
+| 3 | Retirar UI y termino lead | Completada (2026-07-10) |
+| 4 | Fusionar Pacientes y Visitas en Recepcion | Completada (2026-07-10) |
+| 5 | Rol seguimiento y retiro de captacion | Completada (2026-07-11) |
+| 6 | Flujo de visita flexible | Completada (2026-07-11) |
+| 7 | Edicion de ficha de paciente | Completada (2026-07-11) |
+| 8 | Consulta medica prellenada y formularios simplificados | Completada (2026-07-11) |
+| 9 | Dashboard centrado en recepcion | Completada (2026-07-11) |
+| 10 | Documentacion y QA final | Completada (2026-07-11) |
+
+El cierre documental consolidado se realizara en la Tarea 10, no de forma parcial durante las Tareas 8 y 9. La implementacion de GitHub Actions y los pendientes operativos/clinicos que no formen parte directa de la simplificacion quedan registrados en el backlog posterior de [Tareas de simplificacion](./tareas-de-simplificacion.md) y en el [plan de GitHub Actions](../github-actions-implementation-plan.md).
+
+## Contexto Y Decisiones (2026-07-10)
+
+Origen: al usuario le parecio que el flujo completo del paciente exige demasiado llenado (~89 campos en 13 formularios y 7+ pantallas, con datos pedidos hasta 3 veces). Se hizo un analisis con diagramas (artefacto "Analisis de flujo Sigeco") y el usuario respondio 5 preguntas de validacion. Feedback incorporado al plan:
+
+1. El diagrama del flujo as-built es correcto, PERO el flujo no es lineal: el paciente puede abandonar en cualquier punto (incluso despues de la consulta), y tras la consulta puede ir a enfermeria, a administracion a comprar algo, o irse. En ese momento se aprobó que el seguimiento lo hicieran Marlen o Yazmin. Esta decisión histórica fue reemplazada por la aclaración operativa vigente al inicio del documento: Marlen realiza el seguimiento del tratamiento y Yazmin no. -> Tarea 6 y rol nuevo en Tarea 5.
+2. Ajustes al funnel: fecha de nacimiento en vez de edad; genero opcional y solo cuando tenga utilidad; "desde cuando" guarda cantidad + unidad; "ya se atendio" se guarda en la visita (cambia por problema); enfermedad de base y medicacion son campos separados en la misma pantalla. Preguntas agregadas: tipo de visita (primera consulta / control / nuevo problema / revision de resultados), preferencia de contacto para seguimiento (WhatsApp / llamada / ambos / prefiere no) y si trae analisis o estudios.
+3. Aprobada la fusion Pacientes + Visitas -> modulo "Recepcion".
+4. El rol captacion se desactiva; Yazmin pasa al rol nuevo `seguimiento`.
+5. Aprobados los campos nuevos de base de datos (version mejorada: ver resumen de modelo en el plan de tareas).
+
+Restricciones fijas: los datos de leads NO se borran (solo su UI); migraciones solo aditivas; sistema visual Marea intacto; sin integracion con el otro proyecto del usuario por ahora.
+
+## Entradas Por Tarea
+
+### Tarea 1 — Modelo De Datos De La Simplificacion (2026-07-10)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `prisma/schema.prisma`: enums nuevos `FollowUpContactPreference`, `VisitIntakeType`, `SymptomDurationUnit`; valor `seguimiento` agregado a `InternalRole`; campos nuevos en `Patient` (`currentMedication`, `followUpPreference`) y en `Visit` (`intakeType`, `symptomDurationValue`, `symptomDurationUnit`, `previouslyTreated`, `bringsStudies`).
+- `prisma/migrations/20260710000000_v3_7_simplification/migration.sql`: migracion 100% aditiva (sin DROP); aplicada sobre la base dev sin perdida de datos (conteos de `Patient`, `Visit` y `Lead` verificados antes/despues por SQL).
+- `src/features/internal-auth/permissions.ts`: rol `seguimiento` (label "Seguimiento") con permisos `internal_access`, `patients_read`, `followups_read`, `followups_write`; export `deprecatedInternalRoles` marcando `captacion` como deprecado (sus permisos de leads se retiran en la Tarea 3).
+- `src/features/internal-auth/permissions.test.ts`: test nuevo del alcance del rol `seguimiento`.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (18 archivos, 55 tests), `pnpm test:integration` (8 archivos, 9 tests; reset de la base de test autorizado por el usuario), `pnpm run build`. Columnas nuevas verificadas en la base dev via `information_schema`.
+
+**Pendientes que deja:** ninguno propio. El rol `captacion` conserva sus permisos actuales hasta la Tarea 3; el usuario de Yazmin se reasigna en la Tarea 5.
+
+**Commit sugerido:** `feat(sigeco): add simplification data model`
+
+### Tarea 2 — Funnel De Recepcion (2026-07-10)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx`: pagina nueva del funnel (permiso `visits_create`), con avisos de error y duplicado.
+- `src/components/internal/reception/IntakeFunnel.tsx`: componente cliente del funnel de 4 pasos segun la especificacion aprobada. Paso 0 de busqueda (nombre/telefono/codigo) con prellenado de ficha existente; chips tocables para ciudad (El Alto/La Paz/Otra), genero, unidad de duracion, tipo de visita, si/no, alergias ("Ninguna conocida"), fuente y preferencia de seguimiento; edad calculada en vivo desde la fecha de nacimiento; validacion por paso (solo nombre, telefono y motivo obligatorios); deteccion de telefono duplicado al avanzar del paso 1 (compara los ultimos 8 digitos normalizados, tolera guiones y espacios) con opcion de usar la ficha existente o continuar como nuevo.
+- `src/features/reception/actions.ts`: `submitReceptionIntakeAction` (crea/actualiza paciente + abre visita con check-in; verifica permisos `patients_create`/`patients_update` segun el caso y duplicados como respaldo server-side) y `searchReceptionPatientsAction` (busqueda para prellenado, minimo 2 caracteres).
+- `src/features/reception/schemas/intake.schema.ts` + `.test.ts`: schema zod del funnel completo con refine de duracion (cantidad y unidad juntas o ninguna) y mapeo a registro limpio (5 tests).
+- `src/features/reception/labels.ts`: labels de `VisitIntakeType`, `SymptomDurationUnit` y `FollowUpContactPreference`.
+- `src/modules/database/queries/reception.ts`: `createReceptionIntake` (transaccion unica: paciente nuevo o actualizado + visita completa) y `searchReceptionPatients`.
+- `src/modules/database/queries/visits.ts`: refactor sin cambio de comportamiento — la creacion de visita se extrajo a `createVisitInTransaction` (reusada por `createVisitRecord` y por el intake) y acepta los campos nuevos del funnel.
+- `src/modules/database/queries/reception.integration.test.ts`: 4 tests (funnel completo, paciente existente sin duplicar, minimo de 3 campos, busqueda por nombre/telefono/codigo).
+- `src/app/(internal)/sigeco/(app)/visitas/page.tsx`: boton "Registrar llegada" hacia `/sigeco/recepcion/nuevo` (punto de entrada temporal hasta la fusion de la Tarea 4).
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (19 archivos, 60 tests), `pnpm test:integration` (9 archivos, 13 tests), `pnpm run build`. Prueba en navegador con datos reales: paciente nuevo completo creado en ~15 toques (ficha `SI-000002` + visita abierta y redirigida a su detalle, 15 campos verificados por SQL), prellenado desde busqueda y deteccion de duplicado por telefono con guiones.
+
+**Pendientes que deja:** la ficha de QA `SI-000002` (Rosa Huanca Flores) queda en la base dev como dato de prueba. Los formularios viejos de alta de paciente/visita siguen activos hasta la Tarea 4. La deteccion de duplicados asume celulares de 8 digitos (formato boliviano); si se registran fijos habra que revisarla.
+
+**Commit sugerido:** `feat(sigeco): add reception intake funnel`
+
+### Tarea 3 — Retirar UI Y Termino Lead (2026-07-10)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(internal)/sigeco/(app)/leads/` eliminado (lista, detalle y alta); `/sigeco/leads` ahora responde 404.
+- `src/components/internal/nav-items.ts`: entrada "Leads" fuera del sidebar (8 secciones visibles).
+- `src/app/(internal)/sigeco/(app)/page.tsx` (dashboard): fuera los KPIs de leads (nuevos, recordatorios vencidos, no responden) y la tabla "Leads recientes"; accion del header ahora es "Registrar llegada" hacia el funnel. Quedan los KPIs de seguimientos hoy y stock bajo como version interina; el dashboard definitivo llega en la Tarea 9.
+- `src/components/internal/StatusPill.tsx`: eliminado `LeadStatusPill` (sin usos restantes).
+- `src/app/(internal)/sigeco/(app)/seguimientos/{page,[taskId]/page}.tsx`: columna "Paciente / Lead" -> "Paciente" y fallback visible "Lead" -> "Sin ficha". El acceso a `task.lead` se mantiene para que los seguimientos historicos ligados a leads conserven nombre y telefono.
+- `src/app/(internal)/sigeco/(app)/pacientes/nuevo/page.tsx`: retirado el parametro `leadId` y el hidden `sourceLeadId` (la conversion lead->paciente ya no tiene UI).
+- `src/features/internal-auth/permissions.ts`: permisos `leads_*` retirados de TODOS los roles (super_admin, direccion, recepcion, captacion, administracion). El enum `InternalPermission` queda intacto en Prisma.
+- `src/features/internal-auth/permissions.test.ts`: test actualizado — ningun rol conserva permisos de leads.
+- `src/features/crm/actions.ts`, `src/modules/database/queries/leads-v3.ts`: marcados LEGACY con comentario (sin UI que los invoque; conservados junto a los datos y sus tests de integracion).
+
+**Sin tocar (fuera de alcance):** modelos y datos de leads en Prisma (verificado: 2 leads intactos en dev), el concepto "lead" del sitio publico/Payload (`/api/leads`, `LeadSubmissions`, formulario de contacto web) que es independiente de Sigeco, y `sourceLeadId` en el schema de pacientes (logica, sin UI).
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (60), `pnpm test:integration` (13, incluye las suites legacy de leads), `pnpm run build`. Navegador: dashboard y sidebar sin rastro de leads, `/sigeco/leads` 404, seguimientos con "Paciente"/"Sin ficha".
+
+**Pendientes que deja:** el dashboard queda minimo (2 KPIs) hasta la Tarea 9. El destino final de los datos historicos de leads (exportar/migrar al otro proyecto) sigue abierto.
+
+**Commit sugerido:** `feat(sigeco): remove leads ui and terminology`
+
+### Tarea 4 — Fusionar Pacientes Y Visitas En Recepcion (2026-07-10)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(internal)/sigeco/(app)/recepcion/page.tsx`: modulo nuevo con dos vistas por query param `?vista=`: "Hoy" (visitas activas con filtro de estado, permiso `visits_read`) y "Pacientes" (busqueda del padron completo, permiso `patients_read`). Accion principal "Registrar llegada" hacia el funnel.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: ficha de paciente movida (git mv) desde `pacientes/[id]`. El formulario viejo "Abrir visita" se reemplazo por un boton al funnel con `?paciente=<id>` (prellenado, arranca en paso 1). El form "Crear seguimiento" se mantiene.
+- `src/app/(internal)/sigeco/(app)/recepcion/visitas/[id]/page.tsx`: detalle de visita movido desde `visitas/[id]`; el nombre del paciente ahora enlaza a su ficha.
+- `src/app/(internal)/sigeco/(app)/recepcion/nuevo/page.tsx` + `IntakeFunnel.tsx` + `queries/reception.ts`: soporte de prellenado por `?paciente=` (query `getReceptionPatientById`, prop `initialPatient`, select compartido `receptionPatientSelect`).
+- Rutas viejas convertidas en redirects: `/sigeco/pacientes` -> `?vista=pacientes`, `/sigeco/pacientes/nuevo` -> funnel, `/sigeco/pacientes/[id]` y `/sigeco/visitas/[id]` -> sus rutas nuevas, `/sigeco/visitas` -> `/sigeco/recepcion`. Ningun marcador viejo se rompe.
+- `src/components/internal/nav-items.ts`: sidebar 8 -> 7 secciones ("Recepcion" reemplaza a Pacientes y Visitas; activo por `startsWith` cubre todo el modulo).
+- Actions actualizadas a las rutas nuevas (revalidate/redirect): `reception`, `visits`, `patients` (marcada LEGACY: el alta manual fue reemplazada por el funnel), `clinical-care`, `follow-ups`, `nursing`, `sales`, `studies`.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (60), `pnpm test:integration` (13), `pnpm run build`. Navegador: ambas vistas de Recepcion, redirects de las 3 rutas viejas verificados autenticado, ficha -> funnel prellenado (banner SI-000002, paso 1), detalle de visita en ruta nueva.
+
+**Pendientes que deja:** la edicion de la ficha permanente sigue pendiente (Tarea 7). El detalle de paciente y el de visita siguen siendo paginas separadas (unificarlas en pestanias puede evaluarse despues del QA con usuarios reales).
+
+**Commit sugerido:** `feat(sigeco): merge patients and visits into reception module`
+
+### Tarea 5 — Rol Seguimiento Y Retiro De Captacion (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/features/internal-auth/permissions.ts`: `recepcion` gana `followups_read`/`followups_write` (Marlen tambien trabaja seguimientos); `captacion` queda reducido a solo `internal_access` hasta que sus usuarios sean reasignados; export nuevo `assignableInternalRoles` (todos los roles menos los deprecados) derivado del mapa de permisos.
+- `src/features/internal-auth/permissions.test.ts`: tests nuevos de recepcion con seguimientos, captacion retirado y roles asignables (63 tests unitarios en total).
+- `scripts/set-internal-user-role.ts` + script `internal:set-role` en `package.json`: reasigna el rol de un usuario interno existente sin hardcodear datos personales. Uso: `INTERNAL_USER_EMAIL=<email> INTERNAL_USER_ROLE=seguimiento pnpm internal:set-role`. Rechaza roles deprecados (`captacion`) y roles desconocidos con mensaje claro. **Para reasignar a Yazmin en staging/produccion se corre ese comando con su email.**
+- `src/components/internal/nav-items.ts` + `SidebarNav.tsx` + `MobileSidebar.tsx` + `InternalShell.tsx`: cada item del sidebar declara el permiso que lo habilita y la navegacion se filtra por el rol del usuario (seguimiento ve Inicio + Seguimiento; captacion retirado ve solo Inicio; recepcion ve Inicio + Recepcion + Seguimiento).
+- `src/app/(internal)/sigeco/(app)/page.tsx` (dashboard): los KPIs y la accion "Registrar llegada" se muestran segun permisos del rol (`followups_read`, `inventory_read`, `visits_create`); se elimino el filtro especial de captacion y técnicamente la bandeja quedó disponible para Marlen y Yazmin. La aclaración operativa vigente limita su uso clínico a Marlen; Yazmin no trabaja el seguimiento del tratamiento. También se agregó el mensaje "Tu rol no tiene modulos asignados" para roles sin ningun modulo (captacion en transito).
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: la ficha muestra la preferencia de contacto ("Seguimiento" en los datos del paciente); si es "Prefiere no recibir seguimiento", panel de advertencia antes del form "Crear seguimiento" (advierte, no bloquea: puede haber razon clinica). Las tarjetas "Registrar llegada" y "Crear seguimiento" ahora se muestran solo a roles con `visits_create` / `followups_write`.
+- `src/app/(internal)/sigeco/(app)/seguimientos/page.tsx`: la bandeja marca "Pidio no recibir seguimiento" bajo el telefono de las tareas cuyo paciente rechazo el contacto.
+- `src/app/(internal)/sigeco/(app)/seguimientos/[taskId]/page.tsx`: advertencia equivalente en el detalle de la tarea, encima de los botones Llamar/WhatsApp y del form "Registrar contacto".
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (63), `pnpm test:integration` (13; reset de la base de test con el consentimiento ya otorgado), `pnpm run build`. Navegador (headless autenticado): login con rol `seguimiento` ve solo Inicio + Seguimiento, sin "Registrar llegada", con acceso a la bandeja y a fichas de pacientes pero rechazado en `/sigeco/recepcion` e `/sigeco/inventario`; login con rol `captacion` ve solo Inicio con el mensaje de rol sin modulos y es rechazado en seguimientos y fichas; rol `recepcion` ve y accede a Seguimiento; super_admin conserva las 7 secciones. El script se probo en dev: rechazo `captacion` y reasigno `seguimiento@test.si` de captacion a seguimiento. Advertencias de "no contactar" verificadas en ficha, bandeja y detalle de tarea con captura de pantalla.
+
+**Datos de QA en dev:** usuarios nuevos `seguimiento@test.si` (rol seguimiento) y `captacion@test.si` (rol captacion, para ver el estado retirado); la paciente SI-000002 Rosa Huanca Flores quedo con preferencia "Prefiere no recibir seguimiento" (antes WhatsApp) y una tarea de seguimiento pendiente creada por el usuario QA de seguimiento, para poder revisar las advertencias en vivo.
+
+**Pendientes que deja:** reasignar el usuario real de Yazmin en staging/produccion con `pnpm internal:set-role` (documentado arriba). La edicion de la preferencia de contacto desde la ficha llega con la Tarea 7.
+
+**Commit sugerido:** `feat(sigeco): add seguimiento role and retire captacion`
+
+### Tarea 6 — Flujo De Visita Flexible (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/features/visits/schemas/visit.schema.ts`: schema nuevo `visitFlowSchema` (visitId + flow `left`/`complete`/`to_nursing`/`to_administration` + nota opcional); helpers `closedVisitStatuses` e `isActiveVisitStatus` compartidos entre action y UI.
+- `src/features/visits/actions.ts`: action nueva `applyVisitFlowAction` (permiso `visits_update`). Mapea cada flujo a estado + area + nota por defecto; en `left` conserva el area actual de la ruta para dejar rastro de donde abandono y genera la nota "Se retiró en <area>". Guard: si la visita ya esta cerrada redirige a su detalle con `?error=cerrada` sin tocar nada. Revalida recepcion, consultas, administracion y el dashboard.
+- `src/modules/database/queries/visits.ts`: query liviana `getVisitFlowState` (status + area actual) para el guard.
+- `src/features/internal-auth/permissions.ts` + `.test.ts`: `administracion` gana `visits_update` (Maria cierra visitas tras el cobro); test nuevo verifica que no gana `visits_create`.
+- `src/app/(internal)/sigeco/(app)/recepcion/page.tsx`: columna nueva en la vista "Hoy" con el boton rapido "Se retiró" por fila (solo visitas activas, un toque, sin formulario).
+- `src/app/(internal)/sigeco/(app)/recepcion/visitas/[id]/page.tsx`: tarjeta "Acciones rápidas" ("Cerrar visita" y "Se retiró sin completar") visible en cualquier estado activo, encima del form "Derivar paciente"; banner de advertencia cuando llega `?error=cerrada`.
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: tarjeta "Salida del paciente" con tres destinos post-consulta: "Enviar a enfermería", "Enviar a administración" y "Se va — cerrar visita" (salida directa sin pasar por enfermeria ni caja).
+- `src/app/(internal)/sigeco/(app)/administracion/[workItemId]/page.tsx`: tarjeta "Salida del paciente" en el pendiente administrativo: "Cerrar visita" en un toque (paciente que solo compra/paga y se va) y "Se retiró sin completar".
+- `src/modules/database/queries/visit-flow.integration.test.ts`: 4 tests de integracion que cubren los tres caminos de aceptacion (consulta -> administracion -> salida, consulta -> salida directa, abandono en recepcion) verificando `VisitStatusHistory` completo, `completedAt`, ruta inactiva y area donde abandono.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (64), `pnpm test:integration` (17, 4 nuevos), `pnpm run build`. Navegador (autenticado): camino completo recepcion -> consulta -> administracion -> cierre en un toque con la visita de Rosa (historial SQL verificado: 4 transiciones con notas); salida directa desde consulta con la visita QA V3; visita nueva por funnel abandonada con un toque desde la lista de recepcion (nota automatica "Se retiró en recepción", area conservada, fila desaparece de la vista activa); en visitas cerradas las acciones rapidas se ocultan y el banner de `?error=cerrada` se muestra.
+
+**Datos de QA en dev:** las tres visitas quedaron cerradas (2 `completed`, 1 `left_without_care`) con su historial completo como evidencia; no quedan visitas activas.
+
+**Pendientes que deja:** enfermeria no tiene aun boton de salida propio (el paciente que termina en enfermeria se cierra desde el detalle de visita o administracion); puede evaluarse tras el QA con usuarios reales. El dashboard mostrara "abandonos del dia" en la Tarea 9.
+
+**Commit sugerido:** `feat(sigeco): support flexible visit flow and exits`
+
+### Tarea 7 — Edicion De Ficha De Paciente (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/components/internal/reception/funnel-fields.tsx`: modulo nuevo con las piezas compartidas del funnel (`ChipOption`, chips de ciudad, `cityStateFrom`, `calculateAge`, `normalizePhone`, constante `NO_KNOWN_ALLERGIES`); `IntakeFunnel.tsx` ahora importa de aqui (sin cambios de comportamiento, regresion verificada en navegador).
+- `src/components/internal/reception/PatientEditForm.tsx`: formulario cliente de edicion con los mismos chips y campos del funnel en 3 tarjetas (Identificacion, Antecedentes, Origen y seguimiento), estado espejado en inputs ocultos, validacion inline de nombre/telefono antes de enviar, edad calculada en vivo, boton Cancelar de vuelta a la ficha.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/editar/page.tsx`: pagina de edicion (permiso `patients_update`) con banner para `?error=invalid`.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: boton "Editar ficha" en la cabecera de la ficha, visible solo con `patients_update`.
+- `src/features/reception/schemas/intake.schema.ts` + `.test.ts`: `patientEditSchema` y `toPatientEditRecord` (mismos campos permanentes del funnel; a diferencia del intake, un campo vaciado se limpia a `null` en la ficha); 3 tests unitarios nuevos.
+- `src/features/reception/actions.ts`: `updateReceptionPatientAction` (permiso `patients_update`, invalido -> `?error=invalid`, exito -> revalida y vuelve a la ficha).
+- `src/modules/database/queries/reception.ts`: `updateReceptionPatient` (update simple por id, nunca crea registros).
+- `src/modules/database/queries/reception.integration.test.ts`: test nuevo "corrects patient data in place without creating duplicates" (mismo id y codigo interno, conteo de pacientes estable, campos corregidos y limpiados).
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (67), `pnpm test:integration` (18), `pnpm run build`. Navegador: boton "Editar ficha" en la ficha de Rosa -> formulario prellenado con los chips correctos (ciudad, genero, "Ninguna conocida") -> correccion real (ciudad a La Paz, medicacion actualizada) -> redirect a la ficha con los datos nuevos y conteo de pacientes intacto (verificado por SQL). El funnel sigue funcionando tras la extraccion de piezas compartidas. El rol `seguimiento` (solo `patients_read`) no ve el boton y `/editar` lo rebota a Inicio.
+
+**Nota de QA:** durante la primera prueba el dev server devolvio un 500 con TypeError en el submit; era cache corrupta de `.next` por haber corrido `pnpm build` con `next dev` activo (no un bug del codigo): tras reiniciar el server la edicion funciono. Evitar correr build y dev a la vez.
+
+**Datos de QA en dev:** la ficha SI-000002 (Rosa) quedo con ciudad "La Paz" y medicacion "Enalapril 10 mg cada noche" como evidencia de la edicion.
+
+**Pendientes que deja:** la edicion no verifica colision de telefono con otra ficha existente (la deteccion de duplicados vive en el alta); anotado para evaluar tras el QA con usuarios reales.
+
+**Commit sugerido:** `feat(sigeco): add patient record editing`
+
+### Tarea 8 — Consulta Medica Prellenada Y Formularios Simplificados (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: cabecera clinica con todo el contexto capturado en recepcion (motivo, duracion, tipo de visita, atencion previa, estudios, edad calculada, alergias, enfermedad de base y medicacion). El motivo deja de pedirse por segunda vez y se envia como dato de solo lectura al guardar la consulta. Receta, evolucion e indicacion para otra area pasan a secciones colapsables, abiertas solo cuando ya tienen contenido.
+- `src/components/internal/ui/CollapsibleSection.tsx`: patron reutilizable basado en `details/summary`, con estado nativo, foco visible e icono de expansion.
+- `src/app/(internal)/sigeco/(app)/enfermeria/[workItemId]/page.tsx`: signos vitales, aplicacion clinica y estudio quedan colapsados; se abre automaticamente el formulario que corresponde al tipo de orden medica. La indicacion sigue prellenando el registro de aplicacion o estudio.
+- `src/modules/database/queries/inventory.ts`: error tipado `InsufficientStockError` con producto, existencia y cantidad solicitada, manteniendo el rollback transaccional.
+- `src/features/sales/actions.ts` y `src/app/(internal)/sigeco/(app)/administracion/[workItemId]/page.tsx`: una venta con stock insuficiente vuelve a la misma tarea y muestra un error visible con cantidades; errores de formulario tambien vuelven al contexto de la tarea.
+- `src/modules/database/queries/inventory-error.test.ts` y `inventory.integration.test.ts`: cobertura del error envuelto y del rollback total de venta, item, cobro y movimiento de caja.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (20 archivos, 69 tests) y `pnpm test:integration` (10 archivos, 19 tests). Navegador autenticado en escritorio y 390px: resumen completo de consulta sin campo Motivo duplicado; formularios de enfermeria colapsados con Aplicacion clinica abierta para una orden de suero; alerta de stock visible sin overflow horizontal. Prueba real de venta: solicitud de 999 unidades con stock 61, rollback SQL y redirect con producto/cantidades correctos.
+
+**Pendientes que deja:** la Tarea 10 debe repetir estos caminos dentro del QA final por roles. Los formularios colapsables reducen carga visual sin retirar campos clinicos propios de cada area.
+
+**Commit sugerido:** `feat(sigeco): prefill consultation and simplify clinical forms`
+
+### Tarea 9 — Dashboard Centrado En Recepcion (2026-07-11)
+
+**Estado:** Completada.
+
+**Archivos tocados:**
+
+- `src/modules/database/queries/reception.ts`: query `getReceptionDashboardSummary` con rango diario local. Calcula pacientes unicos que llegaron hoy, rutas activas agrupadas por area, abandonos ocurridos hoy desde `VisitStatusHistory` y las 8 llegadas mas recientes.
+- `src/app/(internal)/sigeco/(app)/page.tsx`: dashboard operativo con KPIs de pacientes del dia, visitas activas, abandonos, seguimientos de hoy/vencidos y stock bajo; desglose de visitas activas por area; tabla de ultimas llegadas con enlace al detalle; accesos rapidos para registrar llegada y buscar paciente.
+- El contenido se filtra por permisos: las metricas de recepcion requieren `visits_read`, seguimientos requieren `followups_read`, inventario requiere `inventory_read` y cada acceso rapido conserva su permiso especifico.
+- `src/modules/database/queries/reception.integration.test.ts`: escenario nuevo con dos pacientes unicos, tres llegadas, dos rutas activas y un abandono, verificando conteos, agrupacion y listado reciente.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (20 archivos, 69 tests) y `pnpm test:integration` (10 archivos, 20 tests). Navegador autenticado con datos reales en 1440x900 y 390x844: seis KPIs, accesos rapidos, areas activas y ultimas llegadas sin overflow horizontal (`scrollWidth=390`, `innerWidth=390`) ni solapamientos.
+
+**Pendientes que deja:** la Tarea 10 debe ejecutar el QA final por cada rol y consolidar la documentacion V3.7. Los conteos del dashboard estan listos para esa validacion, pero todavia no constituyen reportes historicos o analitica avanzada.
+
+**Commit sugerido:** `feat(sigeco): refocus dashboard on reception metrics`
+
+### Tarea 10 — Documentacion Y QA Final (2026-07-11)
+
+**Estado:** Completada. V3.7 queda cerrada localmente; promocion a staging y produccion sigue siendo trabajo separado.
+
+**Documentacion consolidada:**
+
+- `docs/project/v3-implementation-status.md`: estado V3.7, flujo vigente, rutas, validacion, QA y backlog unico posterior.
+- `docs/project/v3-technical-implementation.md`: arquitectura actual, ownership Payload/Prisma, contratos transaccionales, permisos, responsive y deploy.
+- `docs/operations/sigeco-v3-full-flow-testing.md`: guia ejecutable del funnel, consulta prellenada, cuatro caminos de salida, enfermeria, caja, inventario, seguimiento y matriz de roles.
+- `docs/operations/testing.md`, `branch-flow.md`, `deploy.md`, indices de proyecto y operaciones: comandos, suite de integracion, staging y checklist vigentes.
+
+**QA funcional:**
+
+- Matriz de roles verificada cambiando temporalmente `test@test.si` mediante el script oficial y restaurandolo a `super_admin`: recepcion, seguimiento, medico, enfermeria, administracion y direccion muestran solo sus modulos; URLs no autorizadas regresan a `/sigeco`.
+- Flujo real nuevo: `Paciente QA Cierre V37`, registro minimo en funnel, visita abierta, abandono en recepcion, salida de la lista activa e historial con area y nota persistentes.
+- Redirects legacy de pacientes y visitas llegan a Recepcion; `/sigeco/leads` permanece retirado.
+- Las 17 pantallas activas de Sigeco cargaron a 390x844. Las diez rutas publicas cargaron en 390x844 y 1440x900 sin desplazamiento lateral. Payload conserva `/admin/login`.
+
+**Hallazgos corregidos:**
+
+1. La tabla de Recepcion podia ensanchar el documento a 390px. Se corrigio el `min-width` de las tarjetas, se aislo el overflow en el shell y se reforzo el scope `.sigeco-app`; la tabla conserva scroll interno.
+2. Una visita cerrada ocultaba acciones rapidas pero aun mostraba el formulario de derivacion y la query permitia reabrirla. El formulario ahora solo existe para visitas activas y `updateVisitRouteStatus` bloquea toda transicion posterior con `ClosedVisitTransitionError`; prueba de integracion agregada.
+
+**Validaciones:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (20 archivos, 69 tests), `pnpm test:integration` (10 archivos, 21 tests) y `pnpm run build`. Migraciones reproducidas desde cero hasta V3.7.
+
+**Pendientes posteriores:** auditoria append-only, storage clinico seguro, auditoria formal de privacidad/permisos, backup/restauracion, realtime/polling, staging aislado, vulnerabilidades altas y GitHub Actions. Lista priorizada en [Estado de implementacion V3](../v3-implementation-status.md).
+
+**Commit sugerido:** `docs(sigeco): document simplification and run final qa`
+
+## Ajustes Post-Cierre (2026-07-11)
+
+Correcciones pedidas por el usuario durante su QA manual con la guia de flujo completo.
+
+### Chips sin punto al seleccionar
+
+- `src/components/internal/reception/funnel-fields.tsx`: `ChipOption` ya no muestra el punto al inicio del chip seleccionado; la seleccion se distingue solo por borde, fondo y color de texto. Aplica a funnel y edicion de ficha (componente compartido).
+- Validaciones: lint y tests unitarios.
+
+**Commit sugerido:** `style(sigeco): remove dot from selected chips`
+
+### Fuentes de captacion multiples
+
+"Como nos conocio?" permite elegir una o varias fuentes.
+
+- `prisma/schema.prisma` + `prisma/migrations/20260711200000_multi_capture_sources/`: campo nuevo `Patient.captureSources PatientCaptureSource[]` (aditivo) con backfill desde `captureSource`. El campo unico se conserva y sigue guardando la primera fuente elegida (compatibilidad con datos y consultas existentes).
+- `src/features/reception/schemas/intake.schema.ts` + `.test.ts`: el form serializa la lista como CSV en un input oculto (`captureSources`); el schema la parsea y valida contra el enum; `captureSource` se deriva de la primera. 4 tests actualizados/nuevos (incluye rechazo de fuente desconocida).
+- `src/modules/database/queries/reception.ts`: tipos y select incluyen `captureSources`; `src/modules/database/queries/patients.ts`: el alta legacy mantiene el invariante (`captureSources = [captureSource]`).
+- `src/components/internal/reception/IntakeFunnel.tsx` y `PatientEditForm.tsx`: chips de fuente con toggle multiple y label "(puede elegir varios)"; el prellenado desde ficha existente carga la lista.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: "Fuente" muestra todas las fuentes separadas por " · ".
+- `src/modules/database/queries/reception.integration.test.ts`: la edicion verifica la lista persistida.
+- `docs/operations/sigeco-v3-full-flow-testing.md`: la guia usa dos fuentes (Referido + Facebook Ads) en el paso 4.
+
+Validaciones: lint, typecheck, `pnpm test` (70), `pnpm test:integration` (21), build. Navegador: edicion de SI-000002 con dos fuentes (base: `{referral,facebook_ads}`, ficha "Referido · Facebook Ads") y funnel nuevo completo con TikTok + Volante (SI-000004, base `{tiktok,flyer}`, `captureSource=tiktok`).
+
+Datos de QA en dev: paciente nuevo SI-000004 "Paciente QA Fuentes" con una visita abierta.
+
+Nota operativa: si `next dev` estaba corriendo al aplicar la migracion, hay que reiniciarlo para que cargue el cliente Prisma regenerado (el server viejo da `PrismaClientValidationError`).
+
+**Commit sugerido:** `feat(sigeco): allow multiple capture sources`
+
+### "Es paciente nuevo" arranca limpio y siembra desde la busqueda
+
+Bug reportado por el usuario: si primero se entraba a una ficha desde el buscador y luego se volvia al paso 0 y se pulsaba "Es paciente nuevo", el paso 1 conservaba los datos del paciente anterior (riesgo de crear un duplicado con datos ajenos).
+
+- `src/components/internal/reception/IntakeFunnel.tsx`: `startAsNewPatient` resetea todos los campos permanentes del paciente y siembra solo el termino buscado: si parece telefono (`[+()\d\s-]`) llena telefono, si es texto llena nombre, y si el buscador esta vacio el paso 1 arranca vacio. Los campos de la visita del dia (paso 2) no se tocan.
+- Comportamientos confirmados como esperados (no eran bugs): entrar por un resultado de busqueda prellena los pasos 1, 3 y 4 con el banner de ficha existente; el paso 2 ("A que viene?") siempre arranca vacio porque son datos de la visita de hoy, no del paciente.
+- `docs/operations/sigeco-v3-full-flow-testing.md`: paso 0 documenta la siembra.
+
+Validaciones: lint, 70 tests unitarios. Navegador: escenario exacto del reporte (buscar "julia mamani condori" -> entrar a la ficha -> Atras -> "Es paciente nuevo" deja solo el nombre buscado y el resto vacio), variante con telefono buscado (siembra telefono) y buscador vacio (todo vacio).
+
+**Commit sugerido:** `fix(sigeco): reset new patient funnel and seed it from search`
+
+### Rediseno de ficha de paciente, timeline y acciones visibles
+
+Pedido del usuario: la ficha se veia pequena, el timeline poco visual, faltaban ejemplos en los campos de nota y las acciones rapidas de la visita no estaban visibles.
+
+- `src/components/internal/ui/TimelineItem.tsx`: rediseno del timeline compartido (aplica a ficha, visita, consulta y caja) al estilo changelog elegido por el usuario (referencia: shadcn studio, bloque timeline-component-05): columna izquierda con pill oscura de estado y fecha alineadas a la derecha, punto teal con halo sobre el riel vertical entre columnas, titulo y cuerpo (en panel suave) a la derecha; en movil se apila en una columna. API intacta; los 6 llamadores que pasaban `aside` como span estilizado ahora pasan el texto plano (el pill lo estiliza el componente).
+- `src/components/internal/ui/InfoRow.tsx`: valor sube de `text-sm` a 15px para mejorar lectura en todas las fichas y detalles.
+- `src/lib/age.ts`: helper `calculateAgeFromDate` para server components.
+- `src/app/(internal)/sigeco/(app)/recepcion/pacientes/[id]/page.tsx`: cabecera nueva con avatar de iniciales, nombre en 2xl, codigo en teal y chips de edad / genero / ciudad (+ chip de advertencia "No contactar" si aplica); el grid inferior queda con telefono, fuente(s) y preferencia. Placeholder de ejemplo en "Notas" de Crear seguimiento.
+- `src/app/(internal)/sigeco/(app)/recepcion/visitas/[id]/page.tsx`: "Cerrar visita" y "Se retiro sin completar" se movieron de la tarjeta lateral a la tarjeta principal de la visita (visibles sin scroll tambien en movil); la tarjeta lateral "Acciones rapidas" se elimino. Placeholder de ejemplo en la "Nota" de Derivar paciente.
+
+Validaciones: lint, typecheck, 70 tests unitarios, build. Navegador: ficha de Julia y detalle de visita verificados en 1280px y 390x844 sin overflow (`scrollWidth=390`).
+
+**Commit sugerido:** `style(sigeco): polish patient record, timeline and visit actions`
+
+### Selector de fecha y hora con calendario (shadcn studio)
+
+Pedido del usuario: reemplazar los `<input type="date">` / `<input type="datetime-local">` nativos por un calendario en popover, tomando como referencia los componentes de shadcn studio (`docs/components/date-picker` y `docs/components/calendar`), instalados via CLI (no copiados a mano) y adaptados al estilo Marea.
+
+- `components.json`: se agrego el bloque `registries` (patron `@shadcn-studio` / `@ss-components` / `@ss-blocks` / `@ss-themes`, documentado en `docs/getting-started/how-to-use-shadcn-cli`) y se cambio `style` a `radix-vega` (unico estilo valido para instalar de ese registro; el proyecto no tenia ningun componente shadcn instalado todavia, asi que no rompe nada existente).
+- Instalado con `pnpm dlx shadcn@latest add @ss-components/calendar-09` (calendario con dropdown de mes/ano, confirmado en el sitio via "View code") y `@ss-components/date-picker-10` (combo fecha + hora). Se agregaron `react-day-picker`, `date-fns` y el paquete unificado `radix-ui` como dependencias. `date-fns` quedo fijada en `4.1.0` exacta para compartir la misma copia que ya traia Payload (y que exige `react-day-picker`), evitando una tercera copia en `node_modules`.
+- `src/components/ui/{button,calendar,popover}.tsx`: los archivos generados usan sintaxis de Tailwind v4 (`rounded-(--cell-radius)`, `--spacing(8)`, variantes `in-data-*`) que no compila en Tailwind 3.4 de este proyecto, y tokens genericos de shadcn (`bg-popover`, `text-primary-foreground`, `--radius-md`) sin definir. Se reescribieron a sintaxis v3 valida y a los tokens Marea existentes (`bg-surface`, `text-text`, `bg-primary`, `rounded-[9px]`/`[7px]`, `focus-ring`, `internalInputClassName`), sin agregar variables CSS nuevas.
+- `src/components/internal/ui/DatePickerField.tsx` (nuevo): dos componentes reutilizables sobre esos primitivos.
+  - `DatePickerField`: controlado con el mismo string `yyyy-MM-dd` que usaba el input nativo (drop-in, sin tocar el resto del formulario); calendario con dropdown de mes/ano (rango 1900-hoy) para llegar rapido a decadas atras; fechas futuras deshabilitadas.
+  - `DateTimePickerField`: pensado para forms de server actions (no controlados desde el padre); expone un input oculto con el mismo `name` y formato `yyyy-MM-ddTHH:mm` que el `datetime-local` que reemplaza. Arranca prellenado con fecha/hora actuales.
+- Reemplazos: fecha de nacimiento en `IntakeFunnel.tsx` y `PatientEditForm.tsx` (`DatePickerField`); "Fecha y hora" de Crear seguimiento en la ficha de paciente y "Hora" de Registrar aplicacion en enfermeria (`DateTimePickerField`).
+- Se borraron los archivos de demo sin usar (`src/components/shadcn-studio/`) una vez construidos los componentes propios, y luego `src/components/ui/{input,label}.tsx`, que el CLI instalo para esos demos y quedaron sin ningun consumidor.
+
+Validaciones: lint, typecheck, 70 tests unitarios. Navegador: funnel (dropdown de ano hasta 1988, edad recalculada a 46 anos al elegir 15/jul/1979), Crear seguimiento en ficha de Rosa (tarea creada con `dueAt` correcto, verificado en base de datos) y Hora de aplicacion en enfermeria de Ariel (formato compacto "12 jul 2026" sin cortarse en la columna angosta).
+
+Nota operativa: Docker (Postgres) estaba caido al iniciar esta verificacion; se reanudo con Docker Desktop antes de continuar.
+
+**Commit sugerido:** `feat(sigeco): add popover date and datetime pickers from shadcn studio`
+
+### Centralizacion de fechas y horas con date-fns (zona America/La_Paz)
+
+Pedido del usuario: migrar todo el manejo de fechas/horas a date-fns, ya instalado por los pickers. La revision previa encontro ademas un bug latente: todo el formateo (21 llamadas repetidas a `toLocaleString("es-BO")` en 12 archivos) y los rangos de "hoy" de las queries usaban la zona horaria del servidor, asi que en un despliegue UTC las horas se verian 4 horas adelantadas y el "hoy" del dashboard empezaria a las 20:00 de Bolivia.
+
+- `src/lib/dates.ts` (nuevo): helpers centrales sobre date-fns + `@date-fns/tz` (`TZDate`), siempre en `APP_TIME_ZONE = "America/La_Paz"` sin importar donde corra el servidor. `formatDateTime` ("13 jul 2026, 14:30", formato elegido por el usuario, sin segundos), `formatDate`, `formatTime`, `formatLongDate` (header del shell), `formatMonthYearFromDateOnly` (testimonios publicos), `toDateOnlyString` (Date -> "yyyy-MM-dd" en UTC, para inputs de fecha de nacimiento), `dayRange` y `monthRange` (limites del dia/mes boliviano como instantes UTC).
+- Reemplazos de formateo: las 19 llamadas `toLocaleString("es-BO")` -> `formatDateTime` (paginas de recepcion, visitas, pacientes, consultas, seguimientos, ventas, inventario), `toLocaleTimeString` del dashboard -> `formatTime`, `Intl.DateTimeFormat` del shell -> `formatLongDate` y el de testimonios -> `formatMonthYearFromDateOnly`.
+- Queries: `sales.ts`, `reception.ts` y `follow-ups.ts` tenian cada uno su propia copia de `dayRange`/`getDayRange` con `setHours(0,0,0,0)`; las tres ahora importan `dayRange`/`monthRange` de `lib/dates`.
+- Edad: `src/lib/age.ts` compara los componentes UTC de `birthDate` (se guarda como medianoche UTC) contra el "hoy" boliviano via `TZDate`; el `calculateAge` cliente de `funnel-fields.tsx` se reescribio con `parse` + `differenceInYears` (corre en el navegador, zona de quien edita).
+- Las 3 conversiones `birthDate.toISOString().slice(0, 10)` (actions de recepcion, pagina nuevo, pagina editar) ahora usan `toDateOnlyString`.
+- Sin cambios: expiracion de sesion y bloqueo por intentos fallidos (matematica de milisegundos, mas clara asi).
+- Dependencia nueva: `@date-fns/tz` fijada en `1.5.0` exacta (la misma copia que ya traia react-day-picker).
+
+Validaciones: lint, tsc, 70 tests unitarios. Script de verificacion ejecutado con `TZ=UTC` y `TZ=America/La_Paz`: salida identica en ambos (formatos, rangos a las 04:00Z = medianoche boliviana, edad). Navegador: header del shell, tabla de visitas de la ficha ("12 jul 2026, 09:15"), detalle de visita, testimonios publicos ("febrero de 2026") y edad en editar ficha (38 anos).
+
+**Commit sugerido:** `refactor(dates): centralize date and time handling with date-fns in La Paz timezone`
+
+### Drawer de navegacion movil (shadcn studio)
+
+Pedido del usuario: reemplazar el menu movil hecho a mano del dashboard de Sigeco por el componente Drawer de shadcn studio (`docs/components/drawer`, variante `left`), siguiendo el "View Code" del sitio. Nota de alcance: en esta tanda de tareas de diseno solo se implementa la UI; tests, typecheck y QA de navegador quedan para una fase final conjunta.
+
+- El "View Code" de la variante con direcciones (drawer-04) ofrece el CLI `pnpm dlx shadcn@latest add @ss-components/drawer-04`, pero no se uso: instala un demo que arrastra `input`/`label` (recien borrados como huerfanos) y la propia pagina recomienda copiar el codigo directamente. Se copio el primitivo `drawer` del registry oficial de shadcn (base vaul) y se agrego la dependencia `vaul ^1.1.2`.
+- `src/components/ui/drawer.tsx` (nuevo): adaptado a Tailwind 3.4 y tokens Marea igual que los otros primitivos instalados: overlay `bg-text/30` (el mismo velo del menu anterior), panel `bg-surface` con `border-border`, radios `rounded-[12px]` en las variantes top/bottom, handle `bg-border`, titulo `text-text`, descripcion `text-muted`. Se quitaron las clases `animate-in`/`animate-out` del original (requieren el plugin tailwindcss-animate, no instalado); vaul anima el deslizamiento del panel y el fade del overlay con sus propios estilos inyectados.
+- `src/components/internal/MobileSidebar.tsx`: reescrito sobre `Drawer direction="left"` controlado (`open`/`onOpenChange`), conservando el diseno anterior: trigger hamburguesa, panel de 264px, header Sigeco con `DrawerTitle`/`DrawerDescription` (vaul los exige para accesibilidad), boton X (`DrawerClose`), `SidebarNav` que cierra al navegar y `userSlot` al pie. El ancho se define con `data-[vaul-drawer-direction=left]:w-[264px]` (mismo grupo de variante que el `w-3/4` base, para que tailwind-merge lo reemplace; un `w-[264px]` plano perderia por especificidad CSS). Se gana sobre la version manual: gesto de arrastre para cerrar, cierre con Escape, bloqueo del scroll de fondo y manejo de foco.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+**Commit sugerido:** `feat(sigeco): replace mobile nav with left drawer from shadcn studio`
+
+### KPIs del dashboard compactos en movil con acento de color por card
+
+Pedido del usuario: que las cards del dashboard (Pacientes de hoy, Visitas activas, Abandonos hoy, Seguimientos hoy, Seguimientos vencidos, Stock bajo) entren 3 por fila en movil (grilla 3x2) y que cada una tenga un estilo que la identifique, tomando como referencia los componentes de shadcn studio. Nota de alcance: solo UI; tests y QA quedan para la fase final.
+
+- Referencia visual: los "Statistics Component" de shadcn studio (blocks de dashboard). Las 3 variantes publicadas (13, 15 y 19) son bloques de cuenta paga — su "Get Code" redirige a pricing y el registry devuelve 401 — asi que no se instalo nada: se replico a mano el patron de la variante 13 (badge de icono en cuadrado redondeado con color propio por card) con los tokens Marea de `sigeco.css`.
+- `src/components/internal/ui/KpiCard.tsx` (rediseno): nuevo prop `tone` (`primary` por defecto, retrocompatible con inventario, administracion y seguimientos que no lo pasan) que pinta el badge del icono con tinte al 10% + icono en el color pleno: `primary`, `primary-dark`, `secondary`, `accent`, `error`, `muted`. Layout nuevo: badge arriba, valor, label debajo. Compacta en movil (p-2.5, valor text-lg, label 10.5px, badge 28px) y amplia desde `sm` (p-[18px], valor 26px, badge 36px como antes). El pill de estado (`flag`) y la `note` se ocultan en movil por espacio; a cambio, cuando hay flag el badge muestra un punto de color (warning/error) en la esquina, visible solo en movil.
+- `src/app/(internal)/sigeco/(app)/page.tsx`: la seccion de KPIs pasa de 1 columna en movil a `grid-cols-3 gap-2` (3x2 exacto con las 6 cards); desde `sm` se mantiene el comportamiento anterior (2/3/6 columnas). Tonos asignados: Pacientes de hoy `primary` (teal), Visitas activas `secondary` (verde), Abandonos hoy `error` (rojo), Seguimientos hoy `accent` (ambar), Seguimientos vencidos `primary-dark` (teal profundo), Stock bajo `muted` (pizarra).
+- No se agrego una septima card: en el codigo ya existen 6 KPIs (el usuario contaba 5, probablemente porque su rol de prueba no ve "Stock bajo" por el permiso `inventory_read`), y con 6 la grilla 3x2 queda completa; una septima la romperia (3+3+1).
+- Pendiente de QA (fase final): verificar que los labels largos ("Seguimientos vencidos") quepan en cards de ~110px a 390px de ancho, y decidir si ocultar el flag en movil es aceptable para lectores de pantalla.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+**Commit sugerido:** `feat(sigeco): compact 3x2 kpi grid on mobile with per-card accent tones`
+
+### Acciones del dashboard a mitad y mitad en movil
+
+Pedido del usuario: que "Buscar paciente" y "Registrar llegada" ocupen 50% y 50% del ancho total. Se aplico solo en movil (en desktop los botones siguen a tamano natural junto al titulo, como hasta ahora). Nota de alcance: solo UI; QA en la fase final.
+
+- `src/components/internal/ui/PageHeader.tsx`: nuevo prop opcional `actionsClassName` que se mezcla con las clases del contenedor de acciones. Es opt-in para no cambiar el layout movil de las demas paginas que usan `PageHeader` sin pasar por QA.
+- `src/app/(internal)/sigeco/(app)/page.tsx`: el dashboard pasa `actionsClassName="w-full sm:w-auto"` (la fila de acciones ocupa todo el ancho en movil) y cada Link de accion agrega `flex-1 sm:flex-none` (mitad y mitad; el boton base ya centra su contenido con `justify-center`). Si el rol solo ve un boton, ese ocupa el ancho completo.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+**Commit sugerido:** `style(sigeco): stretch dashboard header actions half width each on mobile`
+
+## Simplificacion De La Pantalla Del Medico (2026-08-05)
+
+Cuatro cambios pedidos por el usuario para aligerar `/sigeco/consultas/[visitId]` (menos secciones y menos tiempo de decision para el medico). Se ejecutaron desde un documento de planificacion que luego se borro por pedido del usuario; su contenido queda resumido aqui. Contexto previo de la misma sesion: se quito el bloque "Resultado de la propuesta" y el estado "aceptado" se auto-registra al derivar a Administracion (ver memoria `treatment-proposal-outcome-simplification`). Modo de trabajo vigente: solo `lint` + `typecheck` por tarea; `pnpm test` / `test:integration` / `build` quedan pendientes para el cierre.
+
+### Tarea 3 y 4 — Eliminar "Indicacion para otra area" y "Ordenes clinicas emitidas"
+
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: se eliminaron ambos `Card` de la columna derecha (el form manual `createClinicalOrderAction` y la lista `visit.clinicalOrders`). Se limpiaron consts e imports huerfanos (`orderTypeOptions`, `targetAreaOptions`, `TimelineItem`, `createClinicalOrderAction`, `clinicalOrderStatusLabels`/`clinicalOrderTypeLabels`, `routeAreaLabels`, tipos `ClinicalOrderType`/`PatientRouteArea`).
+- **No se toco backend:** `ClinicalOrder`, `createClinicalOrderAction` y el include `clinicalOrders` se conservan; solo se retiro la UI del medico. Las ordenes siguen visibles/accionables en sus areas destino.
+
+**Commit sugerido:** `feat(sigeco): remove manual clinical order and emitted orders blocks`
+
+### Tarea 2 — Resumir "Salida del paciente"
+
+- `src/components/internal/visit-discontinuations/VisitDiscontinuationForm.tsx`: el motivo pasa de `<select>` de 8 opciones a **chips** (radios estilados con `peer`, un toque, validacion nativa). Se elimino la grilla de 6 checkboxes "¿que queda pendiente?" porque el server ya los auto-detecta (`deriveVisitPendingTypes`). La prop `defaultPendingTypes` se conserva pero ahora viaja como **hidden inputs** (las otras pantallas que la usan —admin workitem y recepcion visita— no cambian de comportamiento). Se mantuvieron el seguimiento de recuperacion (es de abandono, distinto al de la Tarea 1) y la nota opcional.
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: la llamada ya no pasa `defaultPendingTypes` (el server detecta "consultation" pendiente solo).
+
+**Commit sugerido:** `feat(sigeco): condense patient-exit block to reason chips`
+
+### Tarea 1 — Seguimiento que se activa al pagar el tratamiento
+
+Antes el bloque "Agendar seguimiento" solo funcionaba con una venta ya registrada. Ahora el medico lo agenda en la consulta y Recepcion lo ve solo cuando el paciente paga.
+
+- `prisma/schema.prisma` + `prisma/migrations/20260805150000_follow_up_awaiting_payment/`: valor nuevo `awaiting_payment` en el enum `FollowUpStatus` (aditivo, `ADD VALUE IF NOT EXISTS`).
+- `src/modules/database/queries/follow-ups.ts`: `createFollowUpTaskRecord` acepta un `status` opcional (default `pending`) usado en el create y en el historial. `buildFollowUpTaskWhere` excluye `awaiting_payment` de la bandeja (los conteos ya filtraban por `pending`).
+- `src/features/follow-ups/actions.ts`: `createDoctorVisitFollowUpAction` deja de exigir venta (`getVisitLatestSale` retirado) y crea la tarea con `status: "awaiting_payment"` sin `saleId`.
+- `src/features/follow-ups/labels.ts`: label "En espera de pago" para el estado nuevo.
+- `src/modules/database/queries/sales.ts`: helper `activateAwaitingPaymentFollowUps(tx, visitId)` (idempotente, deja historial) enganchado en los tres puntos donde una venta de la visita queda saldada (`balanceCents === 0`): `createPaymentRecord`, `createSaleRecord` y `confirmDoctorOrderSale`. Al saldar, los seguimientos en espera pasan a `pending` y recien ahi entran a la bandeja de Recepcion.
+- `src/app/(internal)/sigeco/(app)/consultas/[visitId]/page.tsx`: el form se muestra siempre (sin candado de venta); agrega el **medio de contacto** que el paciente indico en el funnel (`Patient.followUpPreference`, con `contactPreferenceLabels`) y un aviso de que se activara al pagar.
+
+**Decisiones tomadas (aprobadas en el doc de planificacion):** activacion al **pago total** (balance 0), no abono parcial; almacenamiento con estado `awaiting_payment` (reuso del modelo `FollowUpTask`).
+
+**Commit sugerido:** `feat(sigeco): schedule visit follow-up that activates on treatment payment`
+
+### Validaciones y pendientes (para las 4 tareas)
+
+- Ejecutado por tarea: `lint` + `typecheck` (verdes). Migraciones `20260805150000_follow_up_awaiting_payment` y las de anulacion aplicadas al dev; cliente Prisma regenerado.
+- **Pendiente:** `pnpm test`, `pnpm test:integration` y `pnpm run build` — importante por la Tarea 1 (toca el flujo de dinero: `sales.ts`) y por el filtrado de bandeja de seguimientos. Verificar en navegador el flujo completo: agendar seguimiento en consulta -> pagar la venta -> aparece en Recepcion.
+- **Mejora anotada, no aplicada:** reemplazar el `datetime-local` obligatorio por chips de "cuando" relativos calculando `dueAt` desde la fecha de pago.
+- Visitas que nunca pagan dejan el seguimiento en `awaiting_payment` indefinidamente; definir despues su limpieza al cerrar/abandonar la visita.

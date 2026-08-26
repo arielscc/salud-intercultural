@@ -12,8 +12,25 @@ El proyecto separa la suite rapida de los tests que usan PostgreSQL real.
 | Unitarios explicitos | `pnpm test:unit` | No | Alias de la suite rapida. |
 | Watch local | `pnpm test:watch` | No | Desarrollo iterativo. |
 | Integracion DB | `pnpm test:integration` | Si | Flujos criticos contra `salud_intercultural_test`. |
+| Simulacro de recuperación | `pnpm backup:drill:local` | Sí, dos bases sintéticas | Prueba backup cifrado, restauración, dominios y adjuntos sin tocar desarrollo. |
+| Simulacro de incidente | `pnpm security:incident:drill:local` | Sí, bases sintéticas | Prueba revocación, auditoría append-only y recuperación cifrada. |
+| Gate técnico local | `pnpm security:gate:local` | Lee evidencia local | Verifica controles técnicos sin aprobar producción. |
+| Dependencias | `pnpm deps:check` | No | Peers y vulnerabilidades altas/criticas. |
 
 `pnpm test` excluye archivos `*.integration.test.ts` y `*.integration.test.tsx`.
+
+La suite rápida también bloquea regresiones de seguridad:
+
+- páginas y acciones sin permiso de servidor;
+- diferencias entre navegación y límite del servidor;
+- acceso clínico desde Payload, marketing o analytics;
+- datos personales o de stock dentro de URLs;
+- query logs de Prisma y errores de scripts con datos sensibles;
+- secretos con prefijo público o formatos de credencial dentro del repositorio;
+- GitHub Actions que no estén fijadas a un commit inmutable;
+- contenido CMS capaz de cerrar un script JSON-LD.
+- rutas de adjuntos sin permiso, storage público, nombres inseguros, MIME
+  suplantado, checksum y claves capaces de escapar del directorio privado.
 
 ## Base De Test
 
@@ -65,17 +82,25 @@ Los tests nunca deben usar `.env.staging`, `.env.production.local`, Neon remoto 
 
 ## Integracion Actual
 
-La cobertura de integracion actual esta en:
+La suite contiene 11 archivos y cubre:
 
-- `src/modules/database/queries/leads.integration.test.ts`
+- Leads publicos e internos legacy, preservados sin UI operativa.
+- Funnel de recepcion, pacientes, visitas y dashboard.
+- Flujo flexible y bloqueo de reapertura de visitas cerradas.
+- Abandono detallado, pendientes conservados, trabajo bloqueado y seguimiento
+  de recuperación sujeto a consentimiento.
+- Consulta clinica, enfermeria y estudios.
+- Versiones de consulta, firma interna, corrección, relaciones intactas y
+  rechazo de modificaciones concurrentes.
+- Ventas, pagos y caja.
+- Inventario, rollback por stock insuficiente y alertas.
+- Seguimientos y cronologia del paciente.
+- Adjuntos clínicos: asociación, idempotencia, concesión de un uso, checksum y
+  eliminación de contenido.
 
-Cubre:
-
-- `createLeadRecord`
-- `getLeads`
-- `updateLeadStatus`
-
-Cada test limpia la collection Payload `lead-submissions` antes de correr. El reset completo de la base ocurre antes de la suite de integracion.
+El baseline anterior de V3.7 era 21 tests de integración. La Tarea 6 agrega dos
+casos de adjuntos. El reset completo ocurre antes de la suite; cada archivo
+también limpia los registros que crea.
 
 ## Agregar Tests De Integracion
 
@@ -89,9 +114,9 @@ Convenciones:
 
 Candidatos recomendados:
 
-- `POST /api/leads` contra DB real.
-- Queries de leads adicionales.
-- Seeds minimos si se vuelven parte de un contrato.
+- Acciones autenticadas con permisos negativos por rol.
+- Activación y restauración remota de una copia coordinada de producción,
+  después de aprobar credenciales y destino externo.
 - Fallbacks CMS criticos si empiezan a depender de DB real.
 
 ## Validacion Recomendada
@@ -100,13 +125,47 @@ Antes de abrir PR o promover cambios:
 
 ```bash
 pnpm lint
-pnpm test
 pnpm typecheck
+pnpm test
+pnpm test:integration
 pnpm run build
 ```
 
-Si el cambio toca queries, migraciones, Prisma o scripts de DB, agregar:
+Detener `next dev` antes del build; ambos procesos usan `.next`.
+
+El simulacro de recuperación usa datos sintéticos y sus propias bases efímeras.
+No reemplaza `pnpm test:integration` ni utiliza
+`salud_intercultural_dev`. Consultar
+[Backup y restauración de SIGECO](./backup-restore.md).
+
+## CI En GitHub
+
+`.github/workflows/ci.yml` ejecuta en jobs separados:
+
+- `quality`: lint y typecheck.
+- `unit-tests`: suite rapida.
+- `integration-tests`: PostgreSQL 16 efimero, migraciones desde cero e integracion.
+- `build`: build de produccion sin lecturas CMS.
+- `dependency-audit`: peers y auditoria de dependencias.
+
+El workflow usa Node.js 22, la version de pnpm fijada en `package.json`, permisos `contents: read` y variables sinteticas. No usa secretos, bases o archivos de staging/produccion.
+
+## Control De Dependencias
+
+Comandos:
 
 ```bash
-pnpm test:integration
+pnpm peers check
+pnpm audit:prod
+pnpm audit:high
 ```
+
+`audit:prod` bloquea vulnerabilidades altas o criticas de produccion. `audit:high` hace lo mismo sobre todo el arbol con una excepcion temporal:
+
+- `GHSA-mh99-v99m-4gvg` afecta `brace-expansion` a traves de ESLint/minimatch.
+- Es una ruta exclusiva de desarrollo que procesa patrones del repositorio.
+- Forzar `brace-expansion` 5 sobre `minimatch` 3 rompe lint.
+- ESLint 10 fue evaluado, pero los plugins actuales todavia no son compatibles.
+- La excepcion debe retirarse cuando la cadena de plugins admita ESLint 10 o publique una solucion compatible.
+
+Los overrides de `postcss` y `sharp` viven en `pnpm-workspace.yaml`. No agregar overrides amplios sin ejecutar lint, tipos, tests y build.

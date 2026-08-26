@@ -1,5 +1,11 @@
 export const adminResourceLinks = [
   {
+    label: "Campañas",
+    description: "Códigos y cuentas que se relacionan con llegadas agregadas.",
+    href: "/admin/collections/marketing-campaigns",
+    slug: "marketing-campaigns"
+  },
+  {
     label: "Leads",
     description: "Consultas recibidas desde el sitio publico.",
     href: "/admin/collections/lead-submissions",

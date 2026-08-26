@@ -1,0 +1,50 @@
+name: Backup Restore Drill
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 09:00 en Bolivia (UTC-4), el primer día de cada mes.
+    - cron: "0 13 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-restore-drill
+  cancel-in-progress: false
+
+env:
+  CI: "true"
+  APP_ENV: local
+  NEXT_PUBLIC_APP_ENV: local
+  DATABASE_ENVIRONMENT: local
+  STORAGE_ENVIRONMENT: local
+  EXTERNAL_COMMUNICATIONS_MODE: blocked
+  DATABASE_URL: postgresql://salud_intercultural:salud_intercultural@127.0.0.1:5432/salud_intercultural_dev?schema=public
+
+jobs:
+  local-recovery-drill:
+    name: Encrypted local recovery drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start isolated PostgreSQL
+        run: docker compose up -d --wait postgres
+
+      - name: Prove encrypted backup and complete restore
+        run: pnpm backup:drill:local

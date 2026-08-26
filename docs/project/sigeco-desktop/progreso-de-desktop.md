@@ -1,0 +1,307 @@
+# Progreso De Sigeco Desktop Complementario
+
+Ultima actualizacion: 2026-07-16.
+
+## Estado General
+
+Iniciativa cerrada. Las 10 tareas desktop quedaron implementadas, verificadas y documentadas sin regresiones visibles bajo 1024 px.
+
+| Tarea | Estado | Nota |
+| --- | --- | --- |
+| 1. Navegacion y contexto | Completada | Sidebar agrupada y breadcrumbs desde `lg` |
+| 2. Busqueda global de pacientes | Completada | Command search desktop en el header |
+| 3. Toolbar de bandejas | Completada | Patron comun aplicado a los 6 modulos |
+| 4. Tabla operativa | Completada | Semantica, foco y columnas prioritarias |
+| 5. Lista + preview | Completada | Piloto en Recepcion/Hoy desde `xl` |
+| 6. Detalles persistentes | Completada | Contexto y acciones en rail `xl` |
+| 7. Historiales y secciones | Completada | Tabs/hash en ficha y metadata collapsible |
+| 8. Formularios por flujo | Completada | Grillas relacionadas y acciones sticky |
+| 9. Confirmacion y feedback | Completada | Alert Dialog y Toaster desktop |
+| 10. QA y cierre | Completada | Checks y QA responsive en verde |
+
+## Baseline Congelado
+
+- Mobile first cerrado en `docs/project/sigeco-movil/progreso-de-movil.md`.
+- Todo viewport menor a 1024 px queda fuera del alcance visual y funcional de esta iniciativa.
+- Sistema Marea vigente; no se autoriza un rediseno de marca.
+- Tareas 5 y 10 de la iniciativa movil ya no condicionan esta lista: no se agrega paginacion ni se altera el conjunto de datos servido.
+
+## Tarea 1 - Navegacion Y Contexto Desktop (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `DesktopSidebarNav`: usa los mismos items, permisos, rutas, iconos, etiquetas y orden relativo de `sigecoNavItems`, pero agrega una presentacion exclusiva de escritorio con Inicio sin grupo y secciones Atencion, Operacion y Control.
+- `InternalShell` usa la navegacion agrupada dentro de la sidebar `lg`; `SidebarNav` y `MobileSidebar` no cambiaron, por lo que el drawer conserva exactamente su lista plana.
+- Nuevo `DesktopBreadcrumb` centralizado en el layout interno. Reconoce las rutas reales de llegada, ficha/edicion de paciente, visita, consulta, enfermeria, cobro, venta, seguimiento e inventario; enlaza solo ancestros validos y marca el ultimo nivel con `aria-current=page`.
+- El breadcrumb completo usa `hidden lg:flex`, iconos Lucide y tokens Marea. No se agregaron queries, props a paginas, dependencias ni logica de negocio.
+- `docs/design/sigeco-visual-system.md` ahora refleja los 7 modulos vigentes, sus grupos desktop y la convivencia con retornos moviles.
+
+Decisiones:
+
+- El agrupamiento no se agrego al array compartido ni al componente movil. Se implemento como una vista desktop separada para cumplir el contrato de preservacion bajo 1024 px.
+- Los segmentos dinamicos usan etiquetas funcionales (Ficha, Atencion, Tarea, Cobro, Comprobante, Contacto, Producto) en vez de IDs o transformacion automatica de URLs.
+- No se muestra breadcrumb en bandejas: sidebar + titulo ya dan contexto suficiente y el alcance lo pide en detalles y formularios.
+
+Validacion focal: ESLint sobre los cuatro archivos de implementacion, `git diff --check` y verificacion estatica de rutas/breakpoints, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): add desktop navigation hierarchy and breadcrumbs`
+
+## Tarea 2 - Busqueda Global De Pacientes En Header (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `DesktopPatientSearch`, inspirado en Command, Autocomplete y Popover de shadcn studio y adaptado a Marea. El trigger ocupa el espacio flexible del header sin desplazar fecha, usuario o logout.
+- Reutiliza `searchReceptionPatientsAction`, su permiso `patients_read`, el minimo de 2 caracteres, debounce de 300 ms y el formato nombre + codigo + telefono del autocomplete movil.
+- El panel soporta flechas, Enter, Escape, seleccion por puntero, estados inicial/loading/vacio, roles combobox/listbox/option y resultado activo anunciado con `aria-activedescendant`.
+- `Ctrl+K` y `Cmd+K` abren la busqueda. Al cerrar o navegar se limpia el estado y el foco vuelve explicitamente al trigger.
+- El componente completo usa `hidden lg:block`; ademas, tanto el atajo global como el efecto que consulta verifican `matchMedia("(min-width: 1024px)")`. No se emiten consultas ocultas en movil o tableta.
+- No se modifico `PatientAutocomplete`, su aislamiento movil, las queries, el ranking ni las rutas.
+
+Decisiones:
+
+- Se reutilizo el Popover Radix ya instalado en lugar de agregar un command palette completo: los resultados vienen del servidor y no requieren filtrado local ni una coleccion adicional.
+- La busqueda cubre solo pacientes, como pide el alcance. Otras entidades requeririan permisos, ranking y destinos propios.
+- El texto visible del atajo usa `Ctrl K` por estabilidad de layout; el handler acepta tambien `Cmd+K` en macOS.
+
+Validacion focal: ESLint sobre `DesktopPatientSearch` e `InternalShell`, `git diff --check` y auditoria estatica del aislamiento responsive, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): add desktop patient command search`
+
+## Tarea 3 - Toolbar Comun Para Bandejas (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `DesktopTableToolbar` en `ui/`: banda operativa exclusiva `lg` con slots para vistas, filtros/busqueda, contador y acciones. Usa bordes horizontales, superficie Marea y distribucion estable sin presentarse como card.
+- Recepcion integra Hoy/Pacientes, filtro de estado o busqueda segun la vista, contador y Registrar llegada. Los forms conservan los mismos nombres, defaults, metodo GET y search params.
+- Seguimientos integra Vencidos/Hoy/Proximos y el contador del filtro activo, conservando los mismos enlaces y paginacion.
+- Consulta, Enfermeria, Caja e Inventario usan la misma zona con el conteo de su cola actual; no se inventaron filtros, busquedas ni acciones sin soporte existente.
+- Los tabs y cards de filtro anteriores siguen visibles entre `sm` y `lg`; solo se les agrego `lg:hidden`. Los componentes moviles `MobileTabs`, `MobileAutoSubmitSelect`, `PatientAutocomplete` y RecordList no cambiaron.
+- La accion Registrar llegada permanece en `PageHeader` bajo `lg` y se mueve al extremo derecho de la toolbar solo en desktop.
+
+Decisiones:
+
+- La toolbar no administra estado cliente. Links y forms siguen usando los search params existentes como unica fuente de verdad.
+- Los contadores muestran el lote visible y, donde existe total confiable por paginacion, tambien el total. No se agregaron queries.
+- Los modulos sin controles existentes reciben solo contador; esto conserva una anatomia comun sin anticipar funcionalidades de tareas futuras.
+
+Validacion focal: ESLint sobre el componente y las seis bandejas, `git diff --check` y auditoria estatica de ramas responsive, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): unify desktop work queue toolbars`
+
+## Tarea 4 - Tabla Desktop Operativa (2026-07-15)
+
+Que se hizo:
+
+- `Table` admite caption accesible y, desde `lg`, usa encabezados pegajosos dentro del scroll real de `main`, overflow horizontal visible y foco de fila con fondo + ring mediante `focus-within`.
+- Las seis bandejas tienen captions especificos: visitas/pacientes de Recepcion, Consulta, Enfermeria, Caja, Seguimientos e Inventario.
+- Se definieron prioridades solo para el rango 1024-1279 px con `lg:hidden xl:table-cell`: telefono y llegada en visitas de Recepcion, ciudad en padron, telefono en Consulta y Seguimientos, indicacion en Caja y SKU en Inventario. En `xl` reaparecen; bajo `lg` la tabla de tableta conserva todas sus columnas.
+- Identidad, estado, area/plazo y acciones permanecen visibles. Enfermeria conserva sus cuatro columnas porque ya caben sin reducir contexto.
+- Los conteos de visitas del padron se alinearon a la derecha; el stock ya mantenia alineacion numerica y todas las cifras conservan `tabular-nums`.
+- La accion secundaria `Se retiro` pasa en desktop a un popover contextual de elipsis con label accesible. Entre `sm` y `lg` conserva el boton directo y la card movil no cambia.
+
+Decisiones:
+
+- No se agrego ordenamiento, seleccion ni configuracion persistente de columnas: requieren estado y contratos que no existen en esta tarea.
+- Se uso el Popover Radix existente para la unica accion secundaria actual, evitando una dependencia nueva. La accion y su server action no cambiaron.
+- El foco de fila no depende solo del color: agrega un ring interior mientras un enlace o control de la fila tiene foco.
+
+Validacion focal: ESLint sobre la tabla base, el popover de acciones y las seis bandejas, `git diff --check`, auditoria de captions y correspondencia `Th`/`Td`, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): improve desktop operational data tables`
+
+## Tarea 5 - Piloto Lista Y Preview Persistente (2026-07-15)
+
+Que se hizo:
+
+- Recepcion/Hoy tiene una rama master-detail exclusiva desde `xl`: lista compacta y escaneable a la izquierda, preview pegajoso a la derecha. El bloque actual queda intacto con `xl:hidden` para movil, tableta y desktop de 1024-1279 px.
+- La seleccion se representa con `?visita=<id>` y conserva `status`. Los links usan `scroll={false}`, por lo que cambiar de registro no pierde la posicion; back/forward del navegador recorre selecciones.
+- La fila seleccionada combina fondo y ring, expone `aria-current` y mantiene visibles paciente, codigo, llegada, area, pendientes y estado.
+- El preview reutiliza exclusivamente los datos ya cargados por `getVisits`: identidad, telefono, estado, area, llegada, motivo y cantidad de tareas. No se agregaron queries ni cargas ocultas.
+- Las acciones de consulta abren el detalle completo de visita o la ficha del paciente. La edicion y las server actions permanecen en sus paginas originales.
+- Nuevo `DesktopPreviewDismiss`: boton de cierre con icono Lucide y Escape; el listener solo actua con `matchMedia("(min-width: 1280px)")` y limpia la seleccion sin scroll.
+
+Decisiones:
+
+- Se uso grid estable en vez de Resizable: introducir tamanos persistentes y manejo de puntero no aporta valor probado en el primer piloto. El patron puede evolucionar despues de QA y uso real.
+- No se selecciona automaticamente la primera visita: la URL sigue siendo la unica fuente de seleccion y back/forward no recibe estados implicitos.
+- El preview no replica formularios ni acciones destructivas; evita dos superficies de edicion y mantiene clara la separacion entre inspeccionar y actuar.
+- El piloto no se extendio a Pacientes ni a otros modulos. Primero debe superar la validacion integral y demostrar reduccion real de cambios de contexto.
+
+Validacion focal: ESLint sobre Recepcion y `DesktopPreviewDismiss`, `git diff --check`, auditoria de aislamiento `xl`, estado en URL y contrato de `getVisits`, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): pilot desktop queue detail preview`
+
+## Tarea 6 - Detalles Con Resumen Y Acciones Persistentes (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `DesktopDetailContext`: encabezado compacto para el rail con eyebrow/codigo, nombre, metadato y estado opcional. Vive oculto hasta `xl`, usa tokens Marea y no crea una card adicional.
+- La segunda columna de ficha de paciente, visita, consulta, enfermeria, cobro administrativo, venta con saldo, seguimiento e inventario es pegajosa desde `xl`, con alto maximo relativo al viewport, scroll propio y overscroll contenido.
+- El contexto dentro del rail tambien es sticky: identidad y estado permanecen arriba mientras el usuario recorre formularios y acciones de la columna lateral.
+- Cada pantalla reutiliza datos ya cargados: codigo/nombre/telefono y estado de visita, venta, seguimiento o stock. No se agregaron queries, permisos, server actions ni estados cliente.
+- Los formularios existentes permanecen en su columna y conservan sus acciones primarias/secundarias. No se duplicaron submits ni se movieron acciones destructivas junto a la identidad.
+- Breadcrumbs de la Tarea 1, resumen principal de la primera columna y back links moviles siguen siendo la anatomia de entrada; este cambio agrega persistencia desktop sin reemplazarlos.
+
+Decisiones:
+
+- El rail empieza en `xl` porque es el mismo breakpoint de las dos columnas; bajo 1280 px las clases base y `max-sm:contents` quedan intactas.
+- El rail puede desplazarse internamente cuando sus formularios superan 800 px de alto. Esto mantiene accesible la accion sin inmovilizar toda la pagina.
+- Una venta sin saldo no crea segunda columna ni rail: no existe accion pendiente que justificar y la identidad permanece en el resumen principal.
+- El contexto es una banda sin marco con separador inferior, evitando cards anidadas o una tercera jerarquia visual.
+
+Validacion focal: ESLint sobre el componente y los ocho detalles, `git diff --check` y auditoria estructural de ubicacion/aislamiento `xl`, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): add persistent desktop detail context`
+
+## Tarea 7 - Historiales Y Secciones Escaneables (2026-07-16)
+
+Que se hizo:
+
+- Nuevo `DesktopSectionTabs`: tablist accesible desde `xl`, tabs con contador, paneles enlazados por `aria-controls`/`aria-labelledby` y navegacion ArrowLeft, ArrowRight, Home y End.
+- La seleccion vive en el hash (`#historial-visitas`, `#historial-enfermeria`, `#historial-estudios`, `#historial-administracion`, `#historial-seguimiento`). `pushState`, popstate y hashchange conservan back/forward y enlaces directos.
+- Nuevo `DesktopSectionPanel`: bajo `xl` usa `display: contents` y muestra todos los hijos en su orden original; desde `xl` solo muestra el panel activo. No se duplicaron cards ni datos.
+- La ficha de paciente agrupa sus cinco historiales pares: Visitas, Enfermeria, Estudios, Administracion y Seguimiento. Cada panel conserva su heading, contenido, links y estado vacio existente.
+- `Ficha permanente` conserva su card actual bajo `xl` y usa un `CollapsibleSection` exclusivo desktop para alergias, antecedentes y observaciones.
+
+Clasificacion aplicada:
+
+- Siempre visible: identidad, resumen, alertas, estado, trabajo actual y acciones.
+- Tabs: historiales independientes de la ficha que no necesitan comparacion simultanea.
+- Visibles juntos: tareas + ruta de visita, ordenes + estudios clinicos y detalle + pagos de venta, porque existe relacion operativa o necesidad de contraste.
+- Sin tabs: historial de seguimiento y movimientos de inventario en sus detalles, porque cada pantalla tiene una sola serie historica.
+- Collapsible: metadata permanente secundaria; nunca consecuencias, alertas o formularios activos.
+
+Decisiones:
+
+- No se extendieron tabs por uniformidad visual. GOV.UK advierte que ocultar contenido perjudica comparacion y descubrimiento; se aplicaron solo donde reduce longitud sin aumentar memoria.
+- Los tabs usan anchors con hash en vez de estado efimero para que enlaces, refresh y back/forward sean recuperables.
+- No se agregaron queries, carga diferida ni cambios de negocio: cambiar tab solo controla presentacion desktop de datos ya renderizados.
+
+Validacion focal: ESLint sobre `DesktopSectionTabs` y la ficha de paciente, `git diff --check`, auditoria de roles/relaciones, hashes y cardinalidad de cards, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): organize desktop detail histories`
+
+## Tarea 8 - Formularios Desktop Por Flujo (2026-07-16)
+
+Que se hizo:
+
+- Nuevo `FormActions`: conserva la fila de acciones base y desde `lg` se vuelve pegajosa al borde inferior, con fondo Marea. Se aplica al funnel, edicion de paciente, guardar consulta, registrar aplicacion y crear venta.
+- El funnel amplia su contenedor solo desde `lg` y organiza cada paso en dos columnas segun relacion: identidad; motivo/duracion/tipo; antecedentes/medicacion; origen/seguimiento. Motivo, ciudad, genero, alergias, alertas y resumen conservan ancho completo cuando forman un bloque unico.
+- El error por paso del funnel permanece junto a las acciones y se vuelve visible sobre el footer sticky en desktop. No cambia validacion ni avance entre pasos.
+- La edicion de paciente amplia su contenedor solo desde `lg` y usa una grilla 1.1/0.9: Identificacion a la izquierda; Antecedentes y Origen/seguimiento a la derecha. Telefono + fecha y enfermedad + medicacion son las unicas parejas internas.
+- La edicion muestra un resumen de error desktop antes de las secciones y conserva el aviso inferior bajo `lg`. Nombre y telefono muestran ademas el error junto al campo; nombre expone `aria-invalid` y `aria-describedby`.
+- Los formularios largos de Consulta, aplicacion de Enfermeria y venta reutilizan el footer comun. Sus agrupaciones clinicas, Collapsible, labels y orden de campos no cambiaron.
+- Los formularios cortos del rail (estado, nota, contacto, stock) no se forzaron a dos columnas: su ancho y secuencia no justifican dividirlos.
+
+Decisiones:
+
+- Todas las grillas, anchos, sticky y resumen duplicado usan prefijo `lg`; las clases base moviles permanecen iguales.
+- No se crearon columnas por simetria. Campos que requieren lectura secuencial o espacio para chips/textarea conservan ancho completo.
+- `FormActions` no duplica botones ni forms: mueve solo la presentacion del mismo submit y mantiene `useFormStatus`/server actions existentes.
+- No se agregaron validaciones de negocio. Los errores de servidor siguen en sus banners de pagina y los errores cliente existentes solo ganan una segunda ubicacion desktop.
+
+Validacion focal: ESLint sobre el componente, funnel, edicion y tres detalles largos, `git diff --check` y auditoria de aislamiento `lg`/helpers moviles, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): structure desktop forms by workflow`
+
+## Tarea 9 - Confirmacion Y Feedback Desktop (2026-07-16)
+
+Que se hizo:
+
+- Nuevo wrapper shadcn-style `ui/alert-dialog` sobre Radix ya instalado: overlay, contenido centrado, header, descripcion, footer, cancel y action adaptados a tokens/radios Marea.
+- `ConfirmForm` conserva el bottom sheet cuando `matchMedia("(max-width: 639px)")` y agrega Alert Dialog cuando `matchMedia("(min-width: 1024px)")`. El rango 640-1023 conserva el submit directo previo, cumpliendo el baseline de tableta.
+- Las seis instancias actuales (retiro en Recepcion, cierre/retiro de visita, salida de Consulta y cierre/retiro de Caja) pasan por el mismo flujo; ninguna irreversible desktop envia con el primer click.
+- El dialog muestra titulo, consecuencia y label verbo + sustantivo existentes. Cancelar recibe foco inicial para prevenir confirmacion accidental; al cerrar se restaura foco al control que inicio el submit.
+- `confirmingRef` bloquea confirmaciones repetidas antes de `requestSubmit`; `confirmedRef` permite exactamente el submit confirmado y se consume en el siguiente `onSubmit`.
+- El layout mantiene el Toaster movil inferior en `sm:hidden` y agrega un Toaster desktop `hidden lg:block` en `top-right`. Ambos consumen los avisos existentes de `NoticeForm`, `ConfirmForm` y `ActionNotice`; no se duplicaron codigos ni server actions.
+
+Decisiones:
+
+- No se reemplazo el Drawer movil por Alert Dialog ni se cambio la posicion de sus toasts.
+- Tableta queda sin Toaster y con submit directo, igual al baseline congelado; esta iniciativa solo interviene desde `lg`.
+- Se reutilizo `radix-ui` y `sonner` instalados. No se agregaron dependencias ni una segunda capa de estado global.
+- El foco inicial va a Cancelar, no a la accion destructiva. Escape y click de cancelacion cierran mediante las primitivas de Radix.
+
+Validacion focal: ESLint sobre Alert Dialog, ConfirmForm y layout, `git diff --check`, auditoria de breakpoints, Toasters e instancias irreversibles, todo OK. Lint global, tipos, tests, build y QA responsive integral quedan consolidados en la Tarea 10.
+
+Commit sugerido: `feat(sigeco): add desktop confirmations and action feedback`
+
+## Tarea 10 - QA Integral Y Cierre Documental (2026-07-16)
+
+### Checks Automatizados
+
+- Formato/whitespace: `git diff --check` OK. El proyecto no declara script de format ni dependencia directa de Prettier; no se invento un formatter fuera del toolchain.
+- `pnpm lint`: OK, cero warnings.
+- `pnpm typecheck`: OK; Prisma Client, tipos Payload, rutas Next y TypeScript completados.
+- `pnpm test:unit`: 20 archivos, 70 tests OK.
+- `pnpm test:integration`: reset completo de PostgreSQL de pruebas, 10 archivos, 21 tests OK.
+- `pnpm run build`: OK con Next.js 16.2.6; 18 paginas estaticas generadas y todas las rutas Sigeco compiladas.
+
+La matriz completa se repitio despues de la unica correccion hallada durante QA.
+
+### QA Responsive
+
+Viewports recorridos con navegador autenticado:
+
+| Viewport | Resultado |
+| --- | --- |
+| 390x844 | Cards moviles, drawer, tabs tactiles y retorno visibles; sin toolbar/sidebar/busqueda/preview desktop; sin overflow |
+| 768x1024 | Drawer y tabla tablet existentes; sin controles desktop; columnas completas y sin overflow |
+| 1024x768 | Sidebar agrupada, command search, toolbar y tabla compacta; sin master-detail; sin overflow |
+| 1280x800 | Master-detail de Recepcion activo, toolbar estable y preview persistente; sin overflow |
+| 1440x900 | Composicion completa desktop, detalles con rail, tabs e interfaces de formulario estables; sin overflow |
+
+Capturas guardadas durante la sesion en `/tmp`:
+
+- `sigeco-desktop-qa-recepcion-390x844.png`
+- `sigeco-desktop-qa-recepcion-768x1024.png`
+- `sigeco-desktop-qa-recepcion-1024x768.png`
+- `sigeco-desktop-qa-recepcion-1280.png`
+- `sigeco-desktop-qa-recepcion-1440.png`
+- `sigeco-desktop-qa-patient-390.png`
+- `sigeco-desktop-qa-patient-1440.png`
+- `sigeco-desktop-qa-edit-1440.png`
+
+### Flujos Verificados
+
+- Sidebar desktop agrupada en Atencion, Operacion y Control; drawer movil conserva lista plana.
+- Busqueda global: `Ctrl+K`, apertura, Escape, cierre y retorno de foco al trigger.
+- Recepcion: toolbar, filtro, seleccion `?visita=`, preview, preservacion de scroll y cero overflow.
+- Bandejas de Consulta, Enfermeria, Caja, Seguimiento e Inventario: toolbar y tabla visibles en desktop, sin overflow.
+- Ficha: breadcrumb, contexto sticky, Ficha permanente collapsible y cinco tabs; hash, panel activo y back del navegador verificados.
+- Movil de ficha: tabs desktop ocultos y los cinco historiales visibles en orden; retorno visible en captura.
+- Edicion: grid 1.1/0.9, dos columnas internas relacionadas y acciones sticky a 1440; sin solapamientos.
+- Alert Dialog: primer click no ejecuta, Cancelar recibe foco, Escape cierra y el foco vuelve a `Cerrar visita`; no se confirmo ninguna accion destructiva durante QA.
+- Consola del navegador: sin errores en los recorridos finales.
+
+### Matriz De Roles
+
+Se creo `qa-desktop@test.si` solo en la base local, con password efimero no versionado. Cada rol se verifico con cierre y nueva sesion para evitar cache de permisos:
+
+- Recepcion: Inicio, Recepcion, Seguimiento.
+- Medico: Inicio, Recepcion, Consulta, Enfermeria, Seguimiento.
+- Enfermeria: Inicio, Recepcion, Enfermeria.
+- Administracion: Inicio, Recepcion, Caja, Seguimiento, Inventario.
+- Seguimiento: Inicio, Seguimiento.
+- Direccion: todos los modulos de lectura.
+- Super admin: todos los modulos.
+
+El usuario QA temporal y sus sesiones se eliminaron al terminar. `test@test.si` no se modifico.
+
+### Hallazgo Y Correccion
+
+QA encontro una propagacion de Escape: al cerrar la busqueda global tambien podia cerrarse de forma diferida el preview de Recepcion. `DesktopPreviewDismiss` ahora ignora eventos con `defaultPrevented`; se verifico que Escape cierre la busqueda, preserve `?visita=`, mantenga el preview visible y restaure foco en Buscar paciente.
+
+### Resultado
+
+- Tareas 1-10 completadas.
+- Cero fallos automatizados.
+- Cero overflow horizontal en la matriz responsive.
+- Cero controles desktop visibles bajo 1024 px.
+- Sin cambios pendientes de alcance funcional; paginacion nueva y personalizacion de columnas siguen fuera de esta iniciativa.
+
+Commit sugerido: `docs(sigeco): close desktop information architecture initiative`
+
+## Estado Final
+
+Sigeco desktop complementario queda cerrado. El siguiente trabajo debe partir de uso real o un nuevo backlog, no extender automaticamente el piloto master-detail ni agregar tabs por uniformidad.

@@ -1,4 +1,5 @@
 import type { Payload } from "payload";
+import { isStagingEnvironment } from "@/lib/deployment-environment";
 
 type LeadDetailActionsProps = {
   id?: number | string;
@@ -10,11 +11,13 @@ function normalizePhone(phone: string) {
 }
 
 function createWhatsAppHref(phone: string, name?: string | null) {
+  if (isStagingEnvironment()) return "#staging-contact-blocked";
   const message = `Hola${name ? ` ${name}` : ""}, te escribimos de Salud Intercultural sobre tu consulta.`;
   return `https://wa.me/${normalizePhone(phone)}?text=${encodeURIComponent(message)}`;
 }
 
 function createCallHref(phone: string) {
+  if (isStagingEnvironment()) return "#staging-contact-blocked";
   return `tel:${phone.replace(/\s+/g, "")}`;
 }
 

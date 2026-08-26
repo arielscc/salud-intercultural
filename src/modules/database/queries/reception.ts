@@ -1,0 +1,281 @@
+import type {
+  FollowUpContactPreference,
+  PatientCaptureSource,
+  PatientGender,
+  PatientRouteArea,
+  SymptomDurationUnit,
+  VisitIntakeType
+} from "@/generated/prisma/client";
+import { dayRange } from "@/lib/dates";
+import { prisma, withDatabaseError } from "@/modules/database";
+import { createVisitInTransaction } from "@/modules/database/queries/visits";
+import { createVisitAttributionInTransaction } from "@/modules/database/queries/attribution";
+import { patientSearchWhere } from "@/modules/database/queries/patient-search";
+import type { AttributionEvidenceKind } from "@/generated/prisma/client";
+import {
+  normalizePatientName,
+  normalizePatientPhone
+} from "@/features/patient-duplicates/normalize";
+import { recordDuplicateCandidatesInTransaction } from "@/modules/database/queries/patient-duplicates";
+
+export type ReceptionIntakeRecordInput = {
+  idempotencyKey?: string;
+  userId?: string;
+  branchCode?: string;
+  patientId?: string;
+  patient: {
+    fullName: string;
+    phone: string;
+    secondaryPhone?: string;
+    birthDate?: Date;
+    gender?: PatientGender;
+    city?: string;
+    department?: string | null;
+    country?: string;
+    captureSource?: PatientCaptureSource;
+    captureSources?: PatientCaptureSource[];
+    allergies?: string;
+    relevantHistory?: string;
+    currentMedication?: string;
+    followUpPreference?: FollowUpContactPreference;
+  };
+  visit: {
+    reason: string;
+    intakeType?: VisitIntakeType;
+    symptomDurationValue?: number;
+    symptomDurationUnit?: SymptomDurationUnit;
+    previouslyTreated?: boolean;
+    bringsStudies?: boolean;
+    originCity: string;
+    originDepartment?: string;
+    originCountry: string;
+    originMatchesPatient: boolean;
+  };
+  attribution: {
+    primarySourceCode: string;
+    supportSourceCodes: string[];
+    campaignId?: string;
+    evidenceKind?: AttributionEvidenceKind;
+    externalEvidenceCode?: string;
+  };
+};
+
+export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
+  return withDatabaseError("createReceptionIntake", async () => {
+    return prisma.$transaction(async (tx) => {
+      const reused = input.idempotencyKey
+        ? await tx.visit.findUnique({
+            where: { idempotencyKey: input.idempotencyKey },
+            include: {
+              attribution: {
+                include: {
+                  campaign: true,
+                  touches: { include: { source: true } }
+                }
+              }
+            }
+          })
+        : null;
+      if (reused?.attribution) {
+        return {
+          patientId: reused.patientId,
+          visit: reused,
+          attribution: reused.attribution
+        };
+      }
+
+      let patientId = input.patientId;
+      const {
+        captureSource,
+        captureSources,
+        ...patientProfile
+      } = input.patient;
+
+      if (patientId) {
+        await tx.patient.update({
+          where: { id: patientId },
+          // La fuente original del paciente no cambia en visitas posteriores.
+          data: {
+            ...patientProfile,
+            normalizedName: normalizePatientName(patientProfile.fullName),
+            normalizedPhone: normalizePatientPhone(patientProfile.phone),
+            normalizedSecondaryPhone: patientProfile.secondaryPhone
+              ? normalizePatientPhone(patientProfile.secondaryPhone)
+              : ""
+          }
+        });
+      } else {
+        const patientCount = await tx.patient.count();
+        const patient = await tx.patient.create({
+          data: {
+            internalCode: `SI-${String(patientCount + 1).padStart(6, "0")}`,
+            ...patientProfile,
+            normalizedName: normalizePatientName(patientProfile.fullName),
+            normalizedPhone: normalizePatientPhone(patientProfile.phone),
+            normalizedSecondaryPhone: patientProfile.secondaryPhone
+              ? normalizePatientPhone(patientProfile.secondaryPhone)
+              : "",
+            gender: input.patient.gender ?? "unknown",
+            captureSource: captureSource ?? "other",
+            captureSources:
+              captureSources && captureSources.length > 0
+                ? captureSources
+                : [captureSource ?? "other"],
+            followUpPreference: input.patient.followUpPreference ?? "unknown"
+          }
+        });
+        patientId = patient.id;
+      }
+
+      const visit = await createVisitInTransaction(tx, {
+        idempotencyKey: input.idempotencyKey,
+        patientId,
+        userId: input.userId,
+        branchCode: input.branchCode,
+        note: "Llegada registrada en recepción",
+        ...input.visit
+      });
+      const attribution = await createVisitAttributionInTransaction(tx, {
+        patientId,
+        visitId: visit.id,
+        capturedById: input.userId,
+        ...input.attribution
+      });
+      await recordDuplicateCandidatesInTransaction(tx, patientId);
+
+      return { patientId, visit, attribution };
+    });
+  });
+}
+
+const receptionPatientSelect = {
+  id: true,
+  internalCode: true,
+  fullName: true,
+  phone: true,
+  secondaryPhone: true,
+  birthDate: true,
+  gender: true,
+  city: true,
+  department: true,
+  country: true,
+  captureSource: true,
+  captureSources: true,
+  allergies: true,
+  relevantHistory: true,
+  currentMedication: true,
+  followUpPreference: true,
+  mergedIntoId: true
+} as const;
+
+export type ReceptionPatientEditData = {
+  fullName: string;
+  phone: string;
+  birthDate: Date | null;
+  gender: PatientGender;
+  city: string;
+  department: string | null;
+  country: string;
+  allergies: string | null;
+  relevantHistory: string | null;
+  currentMedication: string | null;
+};
+
+const dashboardRouteAreas: PatientRouteArea[] = [
+  "recepcion",
+  "medico",
+  "enfermeria",
+  "administracion",
+  "seguimiento",
+  "cierre"
+];
+
+export async function getReceptionDashboardSummary(date = new Date(), branchCode?: string) {
+  const day = dayRange(date);
+
+  return withDatabaseError("getReceptionDashboardSummary", async () => {
+    const [todayPatients, activeGroups, abandonmentEvents, latestArrivals] = await Promise.all([
+      prisma.visit.findMany({
+        where: { branchCode, checkedInAt: { gte: day.start, lt: day.end } },
+        distinct: ["patientId"],
+        select: { patientId: true }
+      }),
+      prisma.patientRoute.groupBy({
+        by: ["currentArea"],
+        where: { active: true, visit: { branchCode } },
+        _count: { _all: true }
+      }),
+      prisma.visitStatusHistory.findMany({
+        where: {
+          toStatus: "left_without_care",
+          visit: { branchCode },
+          createdAt: { gte: day.start, lt: day.end }
+        },
+        distinct: ["visitId"],
+        select: { visitId: true }
+      }),
+      prisma.visit.findMany({
+        where: { branchCode, checkedInAt: { gte: day.start, lt: day.end } },
+        include: { patient: true, route: true },
+        orderBy: { checkedInAt: "desc" },
+        take: 8
+      })
+    ]);
+
+    const activeByArea = Object.fromEntries(
+      dashboardRouteAreas.map((area) => [
+        area,
+        activeGroups.find((group) => group.currentArea === area)?._count._all ?? 0
+      ])
+    ) as Record<PatientRouteArea, number>;
+
+    return {
+      patientsToday: todayPatients.length,
+      activeTotal: activeGroups.reduce((total, group) => total + group._count._all, 0),
+      activeByArea,
+      abandonmentsToday: abandonmentEvents.length,
+      latestArrivals
+    };
+  });
+}
+
+export async function updateReceptionPatient(id: string, data: ReceptionPatientEditData) {
+  return withDatabaseError("updateReceptionPatient", async () => {
+    return prisma.$transaction(async (tx) => {
+      const patient = await tx.patient.update({
+        where: { id },
+        data: {
+          ...data,
+          normalizedName: normalizePatientName(data.fullName),
+          normalizedPhone: normalizePatientPhone(data.phone)
+        },
+        select: receptionPatientSelect
+      });
+      await recordDuplicateCandidatesInTransaction(tx, id);
+      return patient;
+    });
+  });
+}
+
+export async function getReceptionPatientById(id: string) {
+  return withDatabaseError("getReceptionPatientById", async () => {
+    return prisma.patient.findUnique({
+      where: { id },
+      select: receptionPatientSelect
+    });
+  });
+}
+
+export async function searchReceptionPatients(search: string) {
+  return withDatabaseError("searchReceptionPatients", async () => {
+    return prisma.patient.findMany({
+      where: {
+        ...patientSearchWhere(search),
+        mergedIntoId: null
+      },
+      select: receptionPatientSelect,
+      orderBy: { updatedAt: "desc" },
+      take: 5
+    });
+  });
+}

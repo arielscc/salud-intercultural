@@ -1,0 +1,55 @@
+{
+  "_lea_esto_primero": [
+    "Copia este archivo a .data/datos-maestros-etapa-1.json y reemplaza TODO por datos reales.",
+    "Los montos van en bolivianos, con punto decimal: 35 o 35.50. Nunca en centavos.",
+    "stockContado es lo que se contó fisicamente el dia del conteo. Usa 0 si no hay existencias.",
+    "El codigo de cada producto y de cada oferta es tuyo y no se puede repetir.",
+    "No uses codigos que empiecen con DEMO- ni QA-: son de los datos de prueba."
+  ],
+  "sucursal": "el-alto",
+  "conteoFisico": {
+    "fecha": "2026-09-01",
+    "responsable": "Nombre y apellido de quien contó"
+  },
+  "proveedores": [
+    {
+      "nombre": "Nombre real del proveedor",
+      "contacto": "Persona de contacto",
+      "telefono": "22000000",
+      "whatsapp": "70000000",
+      "email": "ventas@proveedor.bo",
+      "direccion": "Dirección del proveedor",
+      "notas": "Días de entrega, condiciones de pago"
+    }
+  ],
+  "productos": [
+    {
+      "codigo": "P-001",
+      "sku": "Código del proveedor, si lo usan",
+      "nombre": "Nombre del producto tal como se vende",
+      "descripcion": "Detalle que ayude a no confundirlo con otro",
+      "categoria": "Sueros",
+      "unidad": "bolsa",
+      "uso": "sale",
+      "precioVenta": "35.00",
+      "costoReferencial": "18.00",
+      "descuentoMaximo": "5.00",
+      "stockMinimo": 10,
+      "stockContado": 40,
+      "proveedor": "Nombre real del proveedor"
+    }
+  ],
+  "catalogo": [
+    {
+      "codigo": "SRV-001",
+      "nombre": "Nombre del servicio como lo pide el paciente",
+      "descripcion": "Qué incluye",
+      "categoria": "Servicios",
+      "tipo": "service",
+      "precio": "150.00",
+      "descuentoMaximo": "20.00",
+      "requiereEnfermeria": true,
+      "sesiones": 1
+    }
+  ]
+}

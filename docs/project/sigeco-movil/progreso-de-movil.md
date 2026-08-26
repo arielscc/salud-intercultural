@@ -1,0 +1,308 @@
+# Progreso De Sigeco Movil Primero
+
+Registro vivo de la iniciativa definida en `docs/project/sigeco-movil/tareas-de-movil.md`. Cada tarea deja aqui su entrada al implementarse: que se hizo, hallazgos, pendientes y commit sugerido. Las validaciones (lint, tsc, tests, QA de navegador) se corren todas juntas en la Tarea 11, no por tarea.
+
+**Estado de la iniciativa:** cerrada el 2026-07-15. Las Tareas 1-11 estan implementadas y la matriz final de calidad paso completa.
+
+## Estado General
+
+| Tarea | Nombre | Estado |
+| --- | --- | --- |
+| 1 | Patron de lista responsive y Recepcion en cards | Implementada (QA en Tarea 11) |
+| 2 | Resto de listas de trabajo en cards | Implementada (QA en Tarea 11) |
+| 3 | Feedback de acciones con toasts (sonner) | Implementada (QA en Tarea 11) |
+| 4 | Confirmacion de acciones irreversibles | Implementada (QA en Tarea 11) |
+| 5 | Estados de carga (skeleton y spinner) | Implementada (QA en Tarea 11) |
+| 6 | Busqueda de pacientes con autocomplete | Implementada (QA en Tarea 11) |
+| 7 | Acciones principales y retorno en detalles moviles | Implementada (QA en Tarea 11) |
+| 8 | Filtros y tabs tactiles | Implementada (QA en Tarea 11) |
+| 9 | Telefono con mascara y teclado numerico | Implementada (QA en Tarea 11) |
+| 10 | Paginacion de listas largas | Implementada (QA en Tarea 11) |
+| 11 | QA integral y cierre documental | Completada |
+
+## Contexto Y Decisiones (2026-07-14)
+
+- Origen: el usuario pidio una evaluacion completa de diseno y usabilidad de Sigeco orientada a uso mayoritario desde telefonos, reutilizando componentes de shadcn studio. La evaluacion completa (fortalezas, 10 hallazgos priorizados y mapa de componentes) vive en la seccion "Evaluacion Completa" del doc de tareas.
+- Modo de trabajo acordado para la tanda: solo implementar UI y documentar; nada de tests/QA por tarea. Todo se valida junto en la Tarea 11.
+- Base ya construida antes de esta iniciativa (ver progreso de simplificacion): drawer de navegacion movil (vaul), KPIs compactos 3x2 con tonos, acciones del header del dashboard al 50% en movil, pickers de fecha/hora en popover, fechas centralizadas en date-fns.
+- Instalacion de componentes: los "components" de shadcn studio son gratuitos e instalables con CLI (`pnpm dlx shadcn@latest add @ss-components/...`, estilo `radix-vega` ya configurado en `components.json`); los "blocks" (statistics, widgets) son de cuenta paga y se replican a mano. Todo se adapta a Tailwind 3.4 + tokens Marea.
+- Los `<select>` nativos se conservan dentro de formularios por decision explicita (el picker del sistema es mejor experiencia en movil); ver Tarea 8.
+- Orden recomendado de implementacion: el del doc de tareas (impacto descendente segun la tabla de hallazgos). Las tareas 1-2 (listas) desbloquean la mayor ganancia; 3-5 dan percepcion de solidez; 6-10 pulen flujos concretos.
+
+## Contexto Y Decisiones (2026-07-15)
+
+- El usuario endurecio el alcance: las tareas modifican solo la version movil; la version web/desktop no cambia en nada visible ni de comportamiento. La regla transversal 4 del doc de tareas se reescribio con las tres tecnicas de aislamiento permitidas (ramas CSS por breakpoint, `matchMedia` en el handler, atributos inertes en desktop).
+- Se hizo investigacion externa de arquitectura de informacion y presentacion de datos en movil (NN/g, UXmatters, CSS-Tricks y otros); resultados y fuentes en `docs/project/sigeco-movil/investigacion-diseno-movil.md`. La investigacion valida el patron cards-bajo-sm de las Tareas 1-2, define las guias de bottom sheet para la Tarea 4 (modal, scrim, cierre visible, confirmar en rojo con verbo + sustantivo) y fundamenta los atributos de teclado de la Tarea 9.
+- Tareas 5 (estados de carga) y 10 (paginacion) quedan pospuestas: no pueden aislarse a movil (`loading.tsx`, estados pending y datos paginados afectan ambos viewports). Se retomaran cuando el usuario habilite cambios compartidos.
+- Orden de ejecucion resultante: 1, 2, 7, 3, 4, 6, 8, 9, 11.
+- La Tarea 11 (QA) suma la verificacion explicita "desktop intacto" en 1280px sobre toda pantalla tocada.
+- El usuario habilito despues las excepciones compartidas necesarias para las Tareas 5 y 10. Skeletons, estados pending y datos paginados pasan a movil y escritorio.
+
+## Entradas Por Tarea
+
+### Tarea 1 — Patron De Lista Responsive Y Recepcion En Cards (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/ui/RecordList.tsx` con cuatro piezas: `RecordList` (ul con `divide-y`, solo movil via `sm:hidden`), `RecordItem` (fila tocable: titulo con link estirado `after:absolute after:inset-0` que hace tap-target a toda la fila, status arriba a la derecha, lineas secundarias libres como children, accion opcional abajo a la derecha con `relative` para quedar sobre el link estirado), `RecordListEmpty` (estado vacio) y `RecordTable` (wrapper `hidden sm:block` que conserva la tabla actual intacta en desktop). Sin dependencias nuevas: es el patron list/card de shadcn studio replicado con tokens Marea (no hay item gratuito equivalente en el registry para listas de registros).
+- `recepcion/page.tsx`: ambas vistas dentro del mismo `Card p-0` ahora renderizan `RecordList` (movil) + `RecordTable` con la `Table` original (desktop). Vista Hoy: titulo = paciente, pill de estado, linea llegada + area, linea telefono, chip "N pendientes" solo si hay, y "Se retiro" como boton separado con target `min-h-10` (40px). Vista Pacientes: titulo = nombre, chip "N visitas", linea codigo + telefono, linea ciudad (solo si tiene).
+- Deduplicaciones en la pagina: el form "Se retiro" se extrajo a `VisitLeftForm` (usado por tabla y card) y los mensajes de vacio a `emptyVisitsMessage`/`emptyPatientsMessage` (usados por ambas presentaciones).
+
+Decisiones:
+
+- Filas divididas dentro del Card (patron lista) en vez de cards sueltas con borde propio: mayor densidad y menos ruido visual en 390px, alineado con la investigacion (registro = titulo + 1-2 datos + estado; el detalle vive en su pagina).
+- En movil el chip "Tareas" se omite cuando es cero (en la tabla se muestra "—"); la ausencia comunica lo mismo y ahorra una linea.
+- Regla solo movil respetada: la tabla desktop no cambio ni una clase; el markup movil es rama nueva `sm:hidden`.
+
+Pendientes para el QA (Tarea 11): verificar que el link estirado no tape el boton "Se retiro" en dispositivos reales; revisar nombres largos junto a pills anchas en 390px.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+Commit sugerido: `feat(sigeco): add responsive record list and apply to reception`
+
+### Tarea 2 — Resto De Listas De Trabajo En Cards (2026-07-15)
+
+Que se hizo:
+
+- `RecordItem` se extendio para las tablas secundarias: `href` ahora es opcional (filas no navegables como items de venta, pagos y movimientos renderizan el titulo como texto y no llevan estado activo tactil) y `title` acepta ReactNode (titulos con formato: fecha de visita, montos en tabular-nums).
+- Bandejas convertidas (mismo patron de la Tarea 1: `RecordList` movil + `RecordTable` con la tabla intacta):
+  - Consultas: titulo paciente, pill de estado, llegada + area, telefono, chip "Registrada" si hay consulta.
+  - Enfermeria: titulo paciente, chip de estado, codigo, tarea (font-medium, truncada), descripcion, indicacion (tipo + medico).
+  - Caja (pendientes derivados): titulo paciente, chip de venta/area con tono, codigo, tarea, descripcion, indicacion, total + saldo.
+  - Seguimientos: titulo paciente, chip de estado, "Vence {fecha}" como primera linea (en error si vencido), tarea, codigo + telefono, aviso "Pidio no recibir seguimiento".
+  - Inventario (productos): titulo producto, chip "Stock bajo" solo si aplica, codigo + SKU, "Stock X · Minimo Y" con stock resaltado, mensaje de alerta si existe.
+- Tablas secundarias convertidas: ultimas llegadas del dashboard (hora + area), visitas de la ficha de paciente (fecha como titulo + area), cronologia administrativa de la ficha (total como titulo, chip de estado, pagado + saldo), detalle de venta (descripcion + total destacado, tipo + cantidad x precio), pagos de venta (monto como titulo, chip de metodo, fecha, referencia) y movimientos de inventario (tipo como titulo, delta con color como status, stock despues + fecha, motivo).
+- Mensajes de vacio compartidos entre tabla y lista movil en cada pagina (constantes extraidas para los multilinea; los de una linea se reutilizan inline).
+
+Decisiones:
+
+- En movil, "Vence" en seguimientos sube a primera linea (el vencimiento es el dato operativo del modulo; el doc de tareas pedia vencimiento visible).
+- En las cards se agrego contexto minimo que en la tabla daba el header ("Vence", "Stock", "Stock despues", "Pagado", "Ref."), siguiendo la guia de no depender de encabezados en filas moviles.
+- Valores "—" de columnas opcionales (SKU, ciudad, referencia, tarea sin chip) se omiten en la card en vez de mostrarse vacios.
+- Regla solo movil respetada en las 9 paginas tocadas: ninguna tabla desktop cambio de markup; todo lo nuevo vive en ramas `sm:hidden`.
+
+Pendientes para el QA (Tarea 11): cards de Caja con 5 lineas (verificar densidad en 390px); truncados con `min-w-0` dentro del grid; verificar que el detalle de venta sin filas vacias no muestre lista vacia sin mensaje (los items de venta siempre existen).
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+Commit sugerido: `feat(sigeco): render all work queues as cards on mobile`
+
+### Tarea 3 — Feedback De Acciones Con Toasts (2026-07-15)
+
+Que se hizo:
+
+- Dependencia nueva: `sonner` 2.0.7 (instalada directa con pnpm; el item de shadcn studio arrastra next-themes y demos, se replico el wrapper a mano como con el drawer).
+- `src/components/ui/sonner.tsx`: Toaster adaptado a Marea (unstyled + classNames con tokens: `bg-surface`, `border-border`, radio 9px, titulo `text-text`, icono por tipo con `text-success`/`text-error`/`text-warning`), posicion `bottom-center` (zona del pulgar), duracion 3.5 s.
+- Montaje solo movil en `(app)/layout.tsx`: `<div className="sm:hidden"><Toaster /></div>` dentro de `InternalShell` (queda dentro de `.sigeco-app`, los tokens resuelven; position fixed no se recorta porque no hay ancestros con transform). En >= 640 px el contenedor se oculta y desktop no muestra ningun toast.
+- Mecanismo 1 — actions que redirigen: se agrego `?aviso=<codigo>` al redirect de exito en 6 actions (`submitReceptionIntakeAction` y `createVisitAction` -> `llegada-registrada`, `updateReceptionPatientAction` -> `ficha-actualizada`, `createFollowUpTaskAction` -> `seguimiento-creado`, `createInventoryItemAction` -> `producto-creado`, `createSaleAction` -> `venta-creada`). `src/components/internal/ActionNotice.tsx` (cliente, montado en el layout bajo Suspense) lee el param, dispara el toast y limpia la URL con `router.replace` sin scroll.
+- Mecanismo 2 — actions que solo revalidan: `src/components/internal/NoticeForm.tsx` (cliente) envuelve el form con `useActionState`, ejecuta la server action recibida por prop y dispara el toast al resolver; si la action termina en redirect (exito con destino o `?error=`), el toast no se dispara y lo maneja la pagina destino. Aplicado en 8 paginas: recepcion (Se retiro), detalle de visita (Cerrar visita, Se retiro, Actualizar ruta), consulta (Guardar consulta, Crear indicacion, 3 salidas del paciente), enfermeria (signos, aplicacion, estudio, estado de tarea, nota), venta (Registrar pago), seguimiento (contacto), inventario item (entrada, ajuste), caja workItem (Cerrar visita, Se retiro).
+- Mensajes cortos en espanol: "Llegada registrada", "Visita cerrada", "Retiro registrado", "Consulta guardada", "Cobro registrado", etc.
+
+Decisiones:
+
+- El toast se dispara tambien en desktop (NoticeForm no distingue viewport) pero el Toaster esta oculto desde `sm`, asi que desktop no muestra nada y su flujo queda identico; se evito `matchMedia` porque el aislamiento CSS basta.
+- Los errores de validacion mantienen su comportamiento actual (redirects `?error=` y avisos inline); fuera de alcance por definicion de la tarea.
+- Se cubrieron tambien acciones hermanas de las listadas (estudio, nota y estado en enfermeria, entrada de stock, venta creada) por vivir en las mismas paginas y costar una linea cada una.
+
+Pendientes para el QA (Tarea 11): verificar que el toast no tape el boton recien tocado en 390x844; probar aviso + limpieza de URL con filtros activos (`?vista=pacientes&aviso=...`); confirmar que NoticeForm no rompe el submit sin JS (progressive enhancement de useActionState).
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+Commit sugerido: `feat(sigeco): add sonner toasts for action feedback`
+
+### Tarea 4 — Confirmacion De Acciones Irreversibles (2026-07-15)
+
+Que se hizo:
+
+- `src/components/internal/ConfirmForm.tsx` (cliente): form para acciones irreversibles sobre el Drawer vaul ya instalado. En el submit evalua `window.matchMedia("(max-width: 639px)")`; en movil hace preventDefault y abre un bottom sheet modal (scrim, handle, Escape y arrastre para cancelar) con titulo verbo + sustantivo, la consecuencia explicada, boton confirmar en variante `danger` (rojo) y boton Cancelar visible (guias NN/g). Al confirmar hace `requestSubmit()` del form con un flag que deja pasar el segundo submit. En desktop `matches` es false y el submit pasa directo, identico a hoy. Integra el toast de exito de la Tarea 3 (useActionState, mismo patron de NoticeForm).
+- Aplicado reemplazando NoticeForm por ConfirmForm en todos los flujos irreversibles (`applyVisitFlowAction` con `complete` o `left`):
+  - Recepcion, fila "Se retiro" (card movil y tabla): `VisitLeftForm` ahora recibe `patientName` para la consecuencia ("La visita de {nombre} se cerrara como retiro...").
+  - Detalle de visita: "Cerrar visita" y "Se retiro sin completar".
+  - Consulta: "Se va — cerrar visita" (las derivaciones a enfermeria/administracion siguen sin confirmacion: son reversibles via ruta).
+  - Caja (workItem): "Cerrar visita" y "Se retiro sin completar".
+
+Decisiones:
+
+- Se extendio el alcance a Consulta y Caja (el doc listaba recepcion + detalle de visita) porque el criterio de aceptacion es global ("ningun toque simple ejecuta una accion irreversible en movil") y los mismos flujos `complete`/`left` viven ahi; costo marginal.
+- "Actualizar ruta" y las derivaciones quedan como NoticeForm sin confirmacion: son acciones reversibles (fuera de alcance por definicion).
+- Confirmar en rojo tambien para "Cerrar visita" (no es negativa pero si irreversible; el rojo comunica irreversibilidad segun la investigacion).
+- No se instalo alert-dialog: el drawer bottom cubre movil y en desktop no hay confirmacion por la regla solo movil.
+
+Pendientes para el QA (Tarea 11): confirmar que el sheet abre sobre el teclado tactil cerrado; verificar doble submit rapido (flag `confirmedRef`); probar cancelar por arrastre, Escape y boton; verificar en desktop que el submit sigue directo sin flash del drawer.
+
+Validaciones: pendientes — QA integral al final de la tanda de tareas de diseno.
+
+Commit sugerido: `feat(sigeco): confirm irreversible visit actions with bottom sheet`
+
+### Tarea 5 — Estados De Carga: Skeleton Y Spinner (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/ui/Skeleton.tsx`: bloque de carga con `animate-pulse`, radio Marea de 7px y `bg-surface-soft`. Se replico el patron simple de skeleton en lugar de instalar demos o dependencias adicionales.
+- Nuevo `src/components/internal/ModuleLoading.tsx`: compositor accesible con `role=status`, aviso para lectores de pantalla y siluetas estables de `PageHeader`, KPIs, lista y panel lateral. Recibe cantidad de KPIs, acciones, filas y presencia de rail para parecerse a cada modulo sin duplicar markup.
+- Boundaries `loading.tsx` para dashboard, Recepcion, Consulta, Enfermeria, Caja, Seguimiento e Inventario. Los boundaries de modulo cubren tambien sus rutas de detalle mientras los Server Components resuelven datos.
+- `src/components/internal/SubmitButton.tsx` generaliza `useFormStatus`: deshabilita durante el envio, expone `aria-busy`, muestra spinner y admite texto pending sin perder variantes ni tamanos del `Button` Marea.
+- Los formularios principales de Recepcion, Consulta, Enfermeria, Caja, Seguimiento e Inventario usan `SubmitButton`, incluidos funnel de llegada y edicion de paciente. El login interno tambien muestra progreso. Los forms GET de busqueda y filtros se conservan porque no ejecutan server actions y su UX se resuelve en las Tareas 6 y 8.
+
+Decisiones:
+
+- Excepcion aprobada a la regla solo movil: `loading.tsx` y `useFormStatus` cambian necesariamente el comportamiento compartido. El feedback de carga queda activo tambien en escritorio.
+- No se agrego Suspense granular ni se tocaron queries. Cada boundary reemplaza el contenido de la ruta dentro del shell existente, que permanece visible y navegable.
+- Un solo compositor mantiene coherencia visual y permite que cada modulo ajuste su silueta con props pequenas, sin crear siete copias divergentes.
+
+Pendientes para el QA (Tarea 11): simular navegacion lenta en un navegador sin rutas precargadas para medir que el skeleton aparezca sin flash, confirmar que no haya saltos de ancho en labels largos y recorrer todos los boundaries en 390x844 y 1280px.
+
+Validaciones: `pnpm lint` OK, `pnpm typecheck` OK, `pnpm test` 70 tests OK, `pnpm test:integration` 21 tests OK y `pnpm run build` OK. Navegador: el login muestra spinner, texto "Ingresando...", `aria-busy` y boton deshabilitado durante la server action; dashboard estable sin overflow horizontal en 390x844 y 1280x900. La latencia artificial no produjo una captura confiable del boundary porque Next habia precargado la ruta; queda como escenario explicito para la Tarea 11.
+
+Commit sugerido: `feat(sigeco): add loading skeletons and pending button states`
+
+### Tarea 6 — Busqueda De Pacientes Con Autocomplete (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/reception/PatientAutocomplete.tsx`: combobox movil inspirado en el patron autocomplete/command de shadcn studio, adaptado directamente a Marea y a la server action existente. No agrega dependencias ni filtrado paralelo en cliente.
+- La busqueda arranca desde 2 caracteres con debounce de 300 ms, invalida respuestas obsoletas y muestra hasta los 5 resultados que entrega `searchReceptionPatientsAction`, con nombre, codigo y telefono.
+- El combobox soporta flechas arriba/abajo, Enter para elegir, Escape para cerrar, `role=combobox`, `aria-controls`, `aria-activedescendant`, lista con `role=listbox` y estado seleccionado. El panel limita su alto a `min(17rem, 35dvh)` para convivir con el teclado tactil.
+- En Recepcion, vista Pacientes, el autocomplete vive en `sm:hidden` y navega a la ficha al elegir. El formulario GET existente se conserva completo dentro de `hidden sm:block`; el padron y sus cards/tabla no cambian.
+- En el paso 0 del funnel, el autocomplete movil comparte `searchTerm`, precarga la ficha elegida mediante `prefillFromPatient` y conserva "Es paciente nuevo" para sembrar nombre o telefono. La busqueda manual, sus resultados y su boton existentes quedan intactos desde `sm`.
+
+Decisiones:
+
+- La server action y la query no cambiaron: se conserva ranking por `updatedAt desc`, limite de 5 y busqueda por nombre, telefonos o codigo.
+- Aunque el bloque movil existe en el DOM de escritorio, el efecto verifica `matchMedia("(max-width: 639px)")` antes de consultar. Asi el formulario desktop no dispara una segunda busqueda oculta.
+- Se replico solo la interaccion necesaria del patron command/autocomplete en vez de instalar un command palette completo: los resultados vienen del servidor y no necesitan coleccion, filtrado ni estado global adicionales.
+
+Pendientes para el QA (Tarea 11): probar escritura rapida y respuestas fuera de orden, teclado abierto en 390x844, seleccion tactil y por teclado, resultado vacio, navegacion a ficha, precarga del funnel y confirmacion de que desktop conserva el flujo manual sin consultas duplicadas.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): patient search autocomplete in reception and intake`
+
+### Tarea 7 — Acciones Principales Y Retorno En Detalles Moviles (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/MobileBackLink.tsx`: enlace compartido `sm:hidden` con chevron, etiqueta del modulo, foco Marea y objetivo tactil de 40px. Se agrego al inicio de los ocho detalles: visita, consulta, enfermeria, pendiente de Caja, venta/cobro, seguimiento, ficha de paciente e item de inventario.
+- Los enlaces regresan al padre operativo correcto: Recepcion (visita y ficha), Consulta, Enfermeria, Caja (pendiente y venta), Seguimiento e Inventario. La ficha vuelve directamente a la vista `?vista=pacientes`.
+- Las dos columnas de cada detalle usan `max-sm:contents`: solo debajo de 640px sus cards participan directamente del grid padre y pueden intercalarse; desde `sm` los wrappers conservan el `grid gap-4` original.
+- Cada card usa `max-sm:order-*` para dejar primero la ficha y despues la accion del rol: Derivar paciente, Salida del paciente, Registrar aplicacion, Registrar venta, Registrar cobro, Registrar contacto, Registrar llegada/Crear seguimiento y Entrada/Ajuste de stock. Historiales, tablas y formularios secundarios quedan despues.
+
+Decisiones:
+
+- El reordenamiento se limito con `max-sm` en vez de usar `order-*` base: tablet y escritorio conservan exactamente la estructura anterior, incluidas las dos columnas desde `xl`.
+- No se agregaron barras inferiores pegajosas. Tras el nuevo orden, cada accion principal empieza inmediatamente despues de la ficha y su submit queda dentro del primer bloque o tras un scroll corto; una barra fija duplicaria acciones, restaria viewport al teclado y podria tapar toasts o confirmaciones.
+- No se duplicaron cards ni formularios para movil. `display: contents` permite un solo markup y evita dos server actions equivalentes en el DOM.
+
+Pendientes para el QA (Tarea 11): verificar los ocho retornos, medir acceso a cada submit en 390x844, confirmar orden condicional cuando la visita esta cerrada o el rol no tiene una accion, revisar foco/lectura con `display: contents` y comparar tablet/escritorio contra el estado anterior.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): mobile-first ordering and back links on detail pages`
+
+### Tarea 8 — Filtros Y Tabs Tactiles (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/MobileTabs.tsx`: control segmentado `sm:hidden` inspirado en tabs/toggle-group de shadcn studio, con links de 40px, foco Marea, estado activo por `aria-current`, scroll horizontal seguro y contador opcional.
+- Recepcion usa `MobileTabs` para Hoy/Pacientes. Los links `ViewTab` anteriores se conservan sin cambios dentro de `hidden sm:flex`.
+- Seguimiento usa el mismo componente para Vencidos/Hoy/Proximos y muestra los conteos ya disponibles en `getFollowUpWorkSummary`. El nav y `FilterTab` anteriores se conservan dentro de `hidden sm:flex`.
+- Nuevo `src/components/internal/MobileAutoSubmitSelect.tsx`: mantiene el select nativo y llama `form.requestSubmit()` al cambiar solo cuando `matchMedia("(max-width: 639px)")` coincide.
+- El filtro de estado de Recepcion tiene una rama movil con envio en un toque y una rama `hidden sm:block` con el form, select y boton "Filtrar" originales.
+
+Decisiones:
+
+- Los tabs son links reales y no estado cliente: conservan URLs compartibles, historial del navegador, apertura en otra pestana y operacion nativa con teclado.
+- No se reemplazaron selects de formularios por listboxes custom. El selector del sistema sigue siendo la mejor superficie tactil; solo cambia el momento de envio en telefono.
+- Los contadores son opcionales: Seguimiento los muestra porque ya existen para las tres vistas; Recepcion no ejecuta queries adicionales solo para decorar sus tabs.
+- La condicion de viewport se evalua en el handler. El select movil oculto en desktop no puede autoenviar y el flujo desktop sigue requiriendo el boton actual.
+
+Pendientes para el QA (Tarea 11): cambiar estados con un toque en 390x844, verificar Atrás/Adelante y URLs, recorrer tabs por teclado, revisar conteos de tres digitos y scroll horizontal, confirmar estado activo visible y comparar controles desktop desde 640px.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): one-tap filters and unified view tabs`
+
+### Tarea 9 — Telefono Con Mascara Y Teclado Numerico (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/reception/PhoneInput.tsx`: input controlado Marea con `type=tel`, `inputMode=tel`, `autoComplete=tel`, `enterKeyHint=next` y placeholder local `7123 4567`.
+- La funcion pura `formatBolivianPhone` elimina caracteres ajenos, limita el numero local a 8 digitos y presenta `7123 4567` o `+591 7123 4567` cuando detecta el codigo de pais opcional.
+- La mascara se aplica en `onChange` solo cuando coinciden telefono (`max-width: 639px`) y puntero tactil (`pointer: coarse`). Numeros pegados con espacios, guiones o parentesis se normalizan visualmente en ese momento.
+- El funnel paso 1 y la edicion de ficha reemplazan sus inputs inline por `PhoneInput`; ambos conservan el mismo estado `phone`, validacion previa e input oculto que llega a las server actions.
+
+Decisiones:
+
+- No se cambiaron schemas, actions, queries ni datos existentes. Los formatos producidos siguen dentro del contrato actual `^[+()\d\s-]+$` y `cleanText` los guarda como antes.
+- La mascara no reescribe un telefono historico solo por abrir la ficha. Se activa cuando el usuario realmente edita o pega el valor, evitando cambios silenciosos de datos.
+- En desktop y dispositivos sin puntero tactil, `onChange` entrega el texto original sin mascara. Los atributos `tel` y autocomplete son inertes para el teclado fisico y ayudan a gestores de formularios.
+- Se replico la mascara local necesaria en vez de agregar una libreria internacional: el alcance aprobado es Bolivia, 8 digitos y prefijo +591 opcional.
+
+Pendientes para el QA (Tarea 11): probar escritura, borrado y pegado con `76543210`, `7654-3210`, `+591 76543210` y `59176543210`; confirmar teclado telefonico, posicion del cursor, limite de 8 digitos, deteccion de duplicados y comportamiento desktop sin mascara.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): masked phone input with numeric keyboard`
+
+### Tarea 10 — Paginacion De Listas Largas (2026-07-15)
+
+Que se hizo:
+
+- Nuevo `src/components/internal/ui/Pagination.tsx`: navegacion server-side con links reales y search params. En movil muestra anterior, posicion y siguiente; desde `sm` muestra rango de registros, paginas numeradas, elipsis y controles anterior/siguiente.
+- `src/modules/database/pagination.ts` incorpora `parsePage` para normalizar parametros ausentes o invalidos a pagina 1; las queries conservan el `getPagination` existente para calcular `skip` y `take`.
+- Recepcion pagina el padron cada 30 pacientes. El conteo aplica la misma busqueda por nombre, telefono, codigo o ciudad, y los enlaces preservan `vista=pacientes` y `search`.
+- Seguimientos pagina cada 60 tareas y reutiliza los conteos ya disponibles de Vencidos/Hoy/Proximos. Cambiar de filtro reinicia la pagina; navegar entre paginas conserva `filtro`.
+- Inventario pagina cada 80 productos. Se agrego un conteo propio con el mismo criterio de la lista, que incluye activos e inactivos y por eso no reutiliza el KPI de productos activos.
+
+Decisiones:
+
+- Se mantuvieron los cortes actuales de 30, 60 y 80 registros para no alterar densidad ni ordenamiento; la tarea elimina el truncado silencioso al permitir avanzar mas alla del primer corte.
+- Los formularios de busqueda y los tabs no conservan `page`: un criterio nuevo siempre comienza en la pagina 1. Solo el componente de paginacion propaga los filtros activos.
+- Excepcion aprobada a la regla solo movil: la consulta paginada es necesariamente compartida. La presentacion se adapta por breakpoint dentro del mismo control accesible.
+
+Pendientes para el QA (Tarea 11): poblar mas registros que cada `pageSize`, recorrer primera/intermedia/ultima pagina, probar busqueda y filtros con varias paginas, validar historial Atrás/Adelante y comparar 390x844 con escritorio.
+
+Validaciones: pendientes por acuerdo — lint, tipos, tests, build y QA responsive se ejecutan juntos en la Tarea 11.
+
+Commit sugerido: `feat(sigeco): paginate patient, follow-up and inventory lists`
+
+### Tarea 11 — QA Integral Y Cierre Documental (2026-07-15)
+
+Validaciones automatizadas finales:
+
+- `pnpm lint`: OK, cero warnings.
+- `pnpm typecheck`: OK; Prisma, tipos Payload, rutas Next y `tsc --noEmit` completaron.
+- `pnpm test`: 20 archivos y 70/70 tests unitarios OK.
+- `pnpm test:integration`: 10 archivos y 21/21 tests de integracion OK contra PostgreSQL 16 efimero local, con las 11 migraciones aplicadas desde cero.
+- `pnpm run build`: OK; build de produccion Next 16.2.6, TypeScript y 18 paginas estaticas generadas.
+
+QA de navegador movil (390x844):
+
+- Dashboard, Recepcion, Consulta, Enfermeria, Caja, Seguimiento e Inventario recorridos autenticados. En las seis bandejas se mostro la lista movil y ninguna tabla; `scrollWidth === 390` en todas.
+- Se recorrio un detalle real de visita, consulta, enfermeria, pendiente de Caja, venta, seguimiento, paciente e inventario. Todos mostraron el enlace `Volver` correcto, la accion del rol antes de historiales y cero overflow horizontal.
+- Funnel de llegada completo con paciente nuevo: cuatro pasos, telefono tactil `7654-3210` normalizado visualmente a `7654 3210`, `inputMode=tel`, pending `Registrando...`, redireccion al detalle y toast `Llegada registrada`.
+- Autocomplete de Recepcion: busqueda desde `Ari`, listbox con resultado, seleccion por teclado y navegacion a la ficha correcta.
+- Tabs/filtros: Recepcion Hoy/Pacientes y Seguimiento Vencidos/Hoy/Proximos conservaron URLs y estado activo. La accion reversible de ruta mostro pending y toast `Ruta actualizada`.
+- Confirmacion irreversible: `Cerrar visita` abrio bottom sheet modal con consecuencia, confirmar en rojo, cancelar y cierre por Escape; no ejecuto la accion durante esta prueba.
+- Alta de inventario: pending, redireccion al detalle y toast `Producto creado`.
+- Paginacion con fixtures por encima de los limites: pacientes 30, seguimientos 60 e inventario 80. Las tres listas llegaron a pagina 2/2, conservaron `vista`, `search` o `filtro` y mantuvieron `scrollWidth === 390`.
+- KPIs: ningun label quedo recortado. El flag visual movil tiene ahora equivalente `sr-only` (`Alerta: ...`) para lectores de pantalla.
+
+QA de navegador desktop (1280x800):
+
+- Las siete pantallas principales mostraron sus tablas y ocultaron las listas/cards moviles; los siete detalles recorridos ocultaron los links `Volver` moviles. `scrollWidth === 1280` en todas.
+- Los formularios GET de busqueda/filtro conservaron el flujo desktop; el autocomplete movil, los tabs moviles y el toaster no tuvieron superficie visible.
+- Una accion irreversible sobre el registro QA temporal se envio directamente, sin dialogo, y termino en estado Finalizada. No aparecio toast visible en desktop.
+- Consola y red se limpiaron antes de la pasada final: sin errores de aplicacion y sin respuestas 4xx/5xx.
+
+Hallazgos corregidos durante el cierre:
+
+- `KpiCard`: la etiqueta del flag estaba oculta tambien para lectores de pantalla en movil; se agrego texto `sr-only sm:hidden` sin alterar la presentacion visual.
+- Layouts raiz Sigeco/publico: se declaro `data-scroll-behavior="smooth"` para que Next gestione correctamente las transiciones cuando `globals.css` aplica scroll suave y deje de emitir la advertencia de desarrollo.
+
+Pendientes conscientes:
+
+- El skeleton de navegacion se habia validado funcionalmente en la Tarea 5 y todos sus boundaries compilaron; no se obtuvo captura determinista con red artificialmente lenta porque el navegador de QA no ofrece throttling y Next precarga rutas. No bloquea el cierre: pending de formularios, boundaries y build estan verificados.
+- Las capturas usan el badge flotante de Next dev en la esquina inferior derecha; no existe en produccion.
+
+Commit sugerido: `docs(sigeco): close mobile-first initiative with qa notes`

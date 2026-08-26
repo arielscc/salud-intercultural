@@ -39,11 +39,11 @@ Sintoma:
 
 Solucion:
 
-1. Configurar `BLOB_READ_WRITE_TOKEN` en Vercel.
+1. Configurar `BLOB_READ_WRITE_TOKEN` en produccion o `STAGING_BLOB_READ_WRITE_TOKEN` en staging.
 2. Hacer redeploy.
 3. Confirmar que el Blob Store estao conectado al proyecto.
 
-Sin `BLOB_READ_WRITE_TOKEN`, local usa `public/media`; Vercel necesita storage persistente.
+Sin el token correspondiente al ambiente, local usa `public/media`; Vercel necesita storage persistente.
 
 ## `next/image` Rechaza Imagen De Blob
 

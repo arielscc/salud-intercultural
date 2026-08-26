@@ -11,6 +11,7 @@ import { teamMembers } from "../src/data/team";
 import { testimonials } from "../src/data/testimonials";
 import { treatmentsContent } from "../src/data/treatments";
 import { seo } from "../src/lib/seo";
+import { reportScriptError } from "./safe-error";
 
 type PayloadClient = Awaited<ReturnType<typeof getPayload>>;
 type SeededServiceDoc = {
@@ -161,6 +162,70 @@ function seoData(seo: { title?: string; description?: string }) {
     title: seo.title ? limitText(seo.title, 70) : undefined,
     description: seo.description ? limitText(seo.description, 170) : undefined
   };
+}
+
+const marketingCampaigns = [
+  {
+    code: "TIKTOK-DR",
+    name: "Contenido orgánico del Dr. Franco",
+    sourceCode: "tiktok" as const,
+    accountLabel: "TikTok del Dr. Franco",
+    accountHandle: "@clinicademedicinanatural",
+    trafficType: "organic" as const,
+    active: true
+  },
+  {
+    code: "TIKTOK-DRA",
+    name: "Contenido orgánico de la Dra. Cinthia",
+    sourceCode: "tiktok" as const,
+    accountLabel: "TikTok de la Dra. Cinthia",
+    accountHandle: "@clinica_medicina_natural",
+    trafficType: "organic" as const,
+    active: true
+  },
+  {
+    code: "FACEBOOK-CLINICA",
+    name: "Contenido orgánico de Facebook",
+    sourceCode: "facebook" as const,
+    accountLabel: "Facebook de la clínica",
+    accountHandle: "ClinicaDeMedicinaNaturalYTradicional",
+    trafficType: "organic" as const,
+    active: true
+  },
+  {
+    code: "WEB-FORM",
+    name: "Formulario del sitio web",
+    sourceCode: "website" as const,
+    accountLabel: "Sitio web de la clínica",
+    trafficType: "organic" as const,
+    active: true
+  }
+];
+
+async function seedMarketingCampaigns(payload: PayloadClient) {
+  for (const campaign of marketingCampaigns) {
+    const existing = await payload.find({
+      collection: "marketing-campaigns",
+      limit: 1,
+      overrideAccess: true,
+      where: { code: { equals: campaign.code } }
+    });
+
+    if (existing.docs[0]) {
+      await payload.update({
+        collection: "marketing-campaigns",
+        id: existing.docs[0].id,
+        data: campaign,
+        overrideAccess: true
+      });
+    } else {
+      await payload.create({
+        collection: "marketing-campaigns",
+        data: campaign,
+        overrideAccess: true
+      });
+    }
+  }
 }
 
 async function upsertBySlug<T extends Record<string, unknown>>(
@@ -462,6 +527,7 @@ async function main() {
   const payload = await getPayload({ config });
 
   await seedAdmin(payload);
+  await seedMarketingCampaigns(payload);
   const serviceDocs = await seedServices(payload);
   await seedTeamMembers(payload);
   await seedTestimonials(payload);
@@ -478,6 +544,6 @@ main()
     process.exit(0);
   })
   .catch((error) => {
-    console.error(error);
+    reportScriptError("Payload seed", error);
     process.exit(1);
   });

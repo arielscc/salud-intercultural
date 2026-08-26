@@ -34,6 +34,22 @@ export const createLeadSchema = z.object({
     emptyToUndefined,
     z.string().trim().min(1).max(300).optional()
   ),
+  campaignCode: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().min(2).max(80).optional()
+  ),
+  utmSource: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().max(120).optional()
+  ),
+  utmMedium: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().max(120).optional()
+  ),
+  utmCampaign: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().max(160).optional()
+  ),
   website: z.string().max(0).optional()
 });
 
@@ -48,6 +64,14 @@ export function sanitizeLeadInput(input: CreateLeadInput) {
     message: input.message ? cleanText(input.message) : undefined,
     source: input.source,
     status: input.status,
-    pagePath: input.pagePath ? cleanText(input.pagePath) : undefined
+    pagePath: input.pagePath ? cleanText(input.pagePath) : undefined,
+    campaignCode: input.campaignCode
+      ? cleanText(input.campaignCode).toUpperCase()
+      : undefined,
+    utmSource: input.utmSource ? cleanText(input.utmSource) : undefined,
+    utmMedium: input.utmMedium ? cleanText(input.utmMedium) : undefined,
+    utmCampaign: input.utmCampaign
+      ? cleanText(input.utmCampaign)
+      : undefined
   };
 }

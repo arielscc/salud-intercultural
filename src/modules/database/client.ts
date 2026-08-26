@@ -1,11 +1,13 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { assertEnvironmentIsolation } from "@/lib/deployment-environment";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   __saludInterculturalPrisma?: PrismaClient;
 };
 
 function createPrismaClient() {
+  assertEnvironmentIsolation();
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
@@ -16,17 +18,26 @@ function createPrismaClient() {
 
   return new PrismaClient({
     adapter,
+    errorFormat: "minimal",
     log:
       process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
+        ? ["error", "warn"]
         : ["error"]
   });
 }
 
-export const prisma = globalForPrisma.__saludInterculturalPrisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.__saludInterculturalPrisma = prisma;
+function getPrismaClient() {
+  globalForPrisma.__saludInterculturalPrisma ??= createPrismaClient();
+  return globalForPrisma.__saludInterculturalPrisma;
 }
 
-export type DatabaseClient = typeof prisma;
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property) {
+    const client = getPrismaClient();
+    const value = Reflect.get(client, property);
+
+    return typeof value === "function" ? value.bind(client) : value;
+  }
+});
+
+export type DatabaseClient = PrismaClient;

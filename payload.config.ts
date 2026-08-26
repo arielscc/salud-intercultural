@@ -6,9 +6,22 @@ import { vercelBlobStorage } from "@payloadcms/storage-vercel-blob";
 import sharp from "sharp";
 import { collections } from "./src/payload/collections/index.ts";
 import { globals } from "./src/payload/globals/index.ts";
+import {
+  assertEnvironmentIsolation,
+  resolveBlobReadWriteToken,
+  resolvePayloadSecret
+} from "./src/lib/deployment-environment.ts";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
+const environment = assertEnvironmentIsolation();
+const blobReadWriteToken = resolveBlobReadWriteToken();
+const storagePrefix =
+  environment.storageEnvironment === "staging"
+    ? "staging"
+    : environment.storageEnvironment === "production"
+      ? "production"
+      : undefined;
 
 export default buildConfig({
   admin: {
@@ -25,11 +38,32 @@ export default buildConfig({
           path: "@/payload/admin/AdminDashboard",
           exportName: "AdminDashboard"
         }
-      ]
+      ],
+      graphics: {
+        Icon: {
+          path: "@/payload/admin/BrandIcon",
+          exportName: "BrandIcon"
+        },
+        Logo: {
+          path: "@/payload/admin/BrandLogo",
+          exportName: "BrandLogo"
+        }
+      }
     },
     importMap: {
       baseDir: path.resolve(dirname)
-    }
+    },
+    meta: {
+      icons: [
+        {
+          rel: "icon",
+          type: "image/svg+xml",
+          url: "/admin-favicon.svg"
+        }
+      ],
+      titleSuffix: "- Salud Intercultural"
+    },
+    theme: "light"
   },
   collections,
   db: postgresAdapter({
@@ -41,14 +75,14 @@ export default buildConfig({
   globals,
   plugins: [
     vercelBlobStorage({
-      enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      enabled: Boolean(blobReadWriteToken),
       collections: {
-        media: true
+        media: storagePrefix ? { prefix: storagePrefix } : true
       },
-      token: process.env.BLOB_READ_WRITE_TOKEN
+      token: blobReadWriteToken
     })
   ],
-  secret: process.env.PAYLOAD_SECRET || "development-payload-secret",
+  secret: resolvePayloadSecret(),
   sharp,
   typescript: {
     outputFile: path.resolve(dirname, "src/types/payload-types.ts")

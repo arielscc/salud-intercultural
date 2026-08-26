@@ -1,0 +1,234 @@
+# Progress — Dashboard Del Médico
+
+Última actualización: 2026-08-03.
+
+Plan de ejecución: [tasks.md](./tasks.md)
+
+## Estado General
+
+Las ocho tareas tienen implementación local. Las Tareas 1–7 están guardadas en
+commits y siguen en progreso según su propio cierre. La Tarea 8 está terminada
+en el árbol de trabajo, sin commit: validaciones automáticas, integración y QA
+de navegador aprobados.
+
+## Resumen
+
+| Estado | Cantidad |
+| --- | ---: |
+| Pendiente | 0 |
+| En progreso | 7 |
+| Terminada | 1 |
+
+## Estado Por Tarea
+
+| # | Tarea | Prioridad | Estado | Dependencias |
+| --- | --- | --- | --- | --- |
+| 1 | Catálogo de servicios y tratamientos | P0 | En progreso | Ninguna |
+| 2 | El médico arma el pedido en la consulta | P0 | En progreso | 1 |
+| 3 | Administración confirma, valida descuento y cobra | P0 | En progreso | 2, Caja (plan integral 18) |
+| 4 | Suero y servicio con pago previo antes de Enfermería | P1 | En progreso | 2-3 |
+| 5 | Sesiones de servicio | P1 | En progreso | 1-4 |
+| 6 | Historial del paciente en la consulta | P1 | En progreso | 1-3 |
+| 7 | Seguimiento estricto por compra | P1 | En progreso | 3, 6 |
+| 8 | Catálogo administrable de estudios | P2 | Terminada | 1 |
+
+## Análisis De Brechas (2026-08-03)
+
+Estado del código al crear el plan:
+
+- 🟢 Ordenar estudios con precio y derivar a pago (existe; catálogo hardcodeado).
+- 🟢 Abandono en consulta con motivo (existe).
+- 🟢 Indicaciones al derivar a otra área (existe, básico).
+- 🟢 El médico elige productos/servicios con precio y descuento (implementado en
+  la Tarea 2, 2026-08-03: pedido estructurado con tope duro de descuento; el cobro
+  sigue siendo de Administración en la Tarea 3).
+- 🟢 Suero pagado antes de Enfermería (implementado en la Tarea 4, 2026-08-03:
+  `requiresNursing` + derivación solo con la venta pagada; `serum` fuera de la
+  derivación directa).
+- 🟢 Historial entre visitas: tratamientos y costos previos y precarga de receta
+  (implementado en la Tarea 6, 2026-08-03: tarjeta de historial + precarga de
+  receta rápida, solo lectura).
+- 🟢 Seguimiento estricto por compra (implementado en la Tarea 7, 2026-08-03:
+  el médico agenda a Recepción solo con venta registrada; validado en servidor).
+- 🟢 Catálogo administrable de servicios y tratamientos (implementado en la
+  Tarea 1, 2026-08-03; pendiente el cierre acumulado de QA/pruebas/build).
+- 🟢 Catálogo administrable de estudios (implementado en la Tarea 8,
+  2026-08-03: catálogo dinámico compartido por Consulta y Recepción; conserva
+  pago en Administración antes de Enfermería).
+
+## Decisiones Vigentes
+
+- **Cobro:** el médico arma el pedido (servicios, tratamientos, productos) con
+  precio y descuento; **Administración confirma y cobra** en Caja. El médico no
+  maneja dinero.
+- **Catálogo:** los servicios (sueroterapia, ozonoterapia, etc.) y los
+  tratamientos (conjuntos de productos) viven en un **catálogo nuevo, separado
+  de Productos**. Nada hardcodeado; siempre hay opción de texto libre.
+- **Descuento:** cada **producto** lleva un **umbral de descuento máximo** que
+  **solo Dirección y Super administrador** pueden editar. El descuento que aplica
+  el médico **no puede superar la suma** de los umbrales de los productos del
+  pedido (tope duro). Un Tratamiento toma como tope la suma de sus productos; un
+  Servicio sin productos lleva su propio umbral. Administración **valida**
+  (aprueba o rechaza) el descuento aplicado cuando el paciente lo pide, antes de
+  cobrar.
+- **Sesiones:** los servicios definen número de sesiones y precio; el costo puede
+  definirse en el catálogo **o** en la primera visita / al asignar las sesiones.
+  Hay **precio por paquete** (mayor descuento) y **por sesión individual**
+  (descuento similar o menor). **Cada sesión cuenta como un número de visita.**
+- **Suero/servicio:** se paga antes de ejecutarse; Administración deriva a
+  Enfermería con la orden e indicaciones después del cobro.
+- **Seguimiento (#6):** el médico solo puede agendar seguimiento (fecha, hora y
+  motivo, hacia Recepción) si existe una **venta registrada** en la visita.
+- **Historial:** una atención puede tener **1 a n reconsultas**, todas
+  registradas; el médico ve un **resumen de cada consulta** (diagnóstico,
+  tratamiento/servicio, costo, sesiones) y la receta rápida se precarga desde la
+  consulta anterior (vacía en la primera visita).
+
+## Decisiones Pendientes De Confirmar
+
+- Resuelto (2026-08-03): el umbral de descuento máximo por producto lo definen
+  **Dirección y Super administrador**; el médico no puede superar la suma de esos
+  umbrales.
+- Resuelto (2026-08-03): existen **precio por paquete** (mayor descuento) y
+  **por sesión individual** (descuento similar o menor).
+- El usuario seguirá agregando reglas; el plan puede crecer.
+
+## Registro
+
+### 2026-08-03 — Tarea 8 Implementada (Catálogo Administrable De Estudios)
+
+- `ServiceCatalogKind` incorpora `study`; Administración puede crear, editar,
+  filtrar, activar y desactivar estudios desde `/sigeco/catalogo`.
+- Consulta y Recepción obtienen los estudios activos desde la base de datos. El
+  servidor valida identificadores, tipo, estado, precios y duplicados antes de
+  crear la orden y la venta.
+- Se conserva el recorrido: ordenar → pagar en Administración → ejecutar en
+  Enfermería. El nombre y precio quedan como fotografía histórica.
+- Migraciones `20260803210000_service_catalog_study_kind`,
+  `20260803210500_seed_study_catalog` y
+  `20260803211000_seed_study_catalog_versions`, aplicadas solo en local. Hay 49
+  migraciones locales al día y los cuatro estudios tienen su versión inicial.
+- Prisma format/validate/generate, lint, typecheck, 4 pruebas específicas, 363
+  pruebas unitarias, build, dependencias y gate de seguridad aprobados.
+- QA autenticado aprobado en Catálogo, alta móvil de estudio y selector de
+  estudios en Consulta; cuatro ofertas y precios correctos, sin errores de
+  consola. El reintento de Recepción no pudo completarse por la sesión del
+  automatizador, pero comparte el componente y queda cubierto por código.
+- Integración ejecutada con autorización explícita contra únicamente
+  `salud_intercultural_test`: 49 migraciones, 23 archivos y 54 pruebas
+  aprobadas. Incluye catálogo → orden → rechazo antes del pago → pago →
+  liberación a Enfermería.
+- Estado: **Terminada**, sin commit por instrucción de Dirección. Detalle:
+  [reporte de tarea](../task-reports/2026-08-03-catalogo-administrable-estudios.md).
+
+### 2026-08-03 — Creación Del Plan
+
+- Se definieron 8 tareas para el dashboard del médico a partir del análisis de
+  brechas y las reglas de Dirección.
+- Decisiones confirmadas vía preguntas: modelo de cobro (médico arma, Admin
+  cobra), catálogo nuevo de servicios/tratamientos, descuento máximo por oferta
+  con validación de Administración, seguimiento estricto por venta, y manejo de
+  sesiones con cada sesión como número de visita.
+
+### 2026-08-03 — Tarea 7 Implementada (Seguimiento Estricto Por Compra)
+
+- Tarjeta "Agendar seguimiento (Recepción)" en la consulta: tipo, fecha/hora,
+  motivo y notas; se asigna a Recepción y enlaza `visitId`/`saleId`.
+- Solo con venta registrada en la visita (UI + validación en servidor con
+  `getVisitLatestSale`; deniega e audita `follow_up_requires_sale`). Rol médico/
+  super admin. Sin consentimiento: se avisa y el contacto queda bloqueado.
+- Sin migración. Estado: **En progreso** (código + lint + typecheck; QA/pruebas/
+  build al cierre acumulado).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-seguimiento-estricto-por-compra.md).
+
+### 2026-08-03 — Tarea 6 Implementada (Historial Del Paciente)
+
+- `getPatientConsultationHistory` carga las visitas previas (consulta, ventas e
+  ítems con costo, sesiones y última receta). Nueva tarjeta "Historial del
+  paciente" (plegada) con resumen por visita (1..n reconsultas).
+- "Receta rápida" se precarga desde la consulta anterior; vacía en la primera
+  visita; la receta actual manda. Solo lectura del historial.
+- Sin migración. Estado: **En progreso** (código + lint + typecheck; QA/pruebas/
+  build al cierre acumulado).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-historial-paciente-consulta.md).
+
+### 2026-08-03 — Tarea 5 Implementada (Sesiones De Servicio)
+
+- Paquetes `ServiceSessionPackage` + `ServiceSessionUse`; creados al derivar a
+  Enfermería (venta pagada). Modo de precio por línea (paquete o sesión) con
+  precarga de precio; total de sesiones según el modo.
+- Consumo por sesión en Enfermería (cada sesión = una visita), con conteo de
+  usadas/restantes; el paquete se completa al llegar al total. Vista en la ficha
+  del paciente. Precios en fotografía (sin cambio retroactivo).
+- Migración `20260803200000_service_session_packages` (aplicada en local).
+- Estado: **En progreso** (código + lint + typecheck; QA/pruebas/build al cierre
+  acumulado). Falta validar el recorrido de retorno del paciente (Recepción crea
+  la visita y deriva a Enfermería) en QA.
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-sesiones-de-servicio.md).
+
+### 2026-08-03 — Tarea 4 Implementada (Suero Con Pago Previo)
+
+- Catálogo marca `requiresNursing` (suero/ozono); el pedido lo guarda por línea.
+- Administración solo puede "Enviar a Enfermería" cuando la venta del pedido está
+  pagada; crea la tarea de Enfermería con orden e indicaciones y mueve la visita
+  a `in_nursing`. Bloqueo por saldo; derivación idempotente
+  (`nursingReleasedAt`/`nursingWorkItemId`).
+- Se quitó `serum` de la derivación directa en consulta (reemplazo del camino sin
+  pago). Migración `20260803180000_doctor_order_nursing_release` (aplicada).
+- Estado: **En progreso** (código + lint + typecheck; QA/pruebas/build al cierre
+  acumulado).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-suero-pago-previo-enfermeria.md).
+
+### 2026-08-03 — Tarea 3 Implementada (Administración Confirma Y Cobra)
+
+- Panel "Confirmar pedido del médico" en la tarea administrativa: convierte el
+  pedido `submitted` en una `Sale` multi-línea y lo enlaza (`Sale.doctorOrderId`).
+- Validación de descuento (aprobar/rechazar) auditada con quién y cuándo; el tope
+  se revalida en servidor. Cobro inicial en Caja; el saldo se cobra en la venta.
+- Idempotente por pedido (no duplica venta ni cobro). La cola de Administración
+  marca "Pedido del médico por confirmar".
+- Migración aditiva `20260803160000_doctor_order_confirm_sale` (aplicada en local).
+- Estado: **En progreso** (código + lint + typecheck listos; QA/pruebas/build al
+  cierre acumulado).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-administracion-confirma-cobra.md).
+
+### 2026-08-03 — Tarea 2 Implementada (El Médico Arma El Pedido)
+
+- Pedido estructurado `DoctorOrder` + `DoctorOrderLine` (uno por visita), estados
+  `draft`/`submitted`/`confirmed`/`cancelled`. UI nueva "Pedido para
+  Administración" en la consulta.
+- Selector de servicios/tratamientos (catálogo) y productos (inventario) o texto
+  libre; precio predefinido editable y descuento por línea, cantidad y sesiones.
+- Tope de descuento **duro** validado en servidor: el descuento total no supera
+  la suma de umbrales por producto (`discount-over-cap`). No crea venta ni cobro:
+  "Enviar a Administración" solo marca `submitted` (requiere consulta finalizada).
+- Migración aditiva `20260803140000_doctor_order` (aplicada en local).
+- Estado: **En progreso** (código + lint + typecheck listos; QA/pruebas/build al
+  cierre acumulado). Consumo por Administración = Tarea 3.
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-medico-arma-pedido.md).
+
+### 2026-08-03 — Tarea 1 Implementada (Catálogo De Servicios Y Tratamientos)
+
+- Catálogo nuevo separado de Productos: modelos `ServiceCatalogItem`,
+  `ServiceCatalogComponent` y `ServiceCatalogItemVersion` (append-only), enum
+  `ServiceCatalogKind` (service/treatment; `study` se agregó en la Tarea 8) y
+  CRUD en `/sigeco/catalogo`.
+- Umbral de descuento por producto (`InventoryItem.maxDiscountCents`) editable
+  solo por Dirección/Super admin; el tope de un tratamiento es la suma de los
+  umbrales de sus productos; los servicios sin productos usan `ownMaxDiscountCents`.
+- Permisos nuevos: `service_catalog_read`, `service_catalog_write` y
+  `discount_threshold_manage`, con auditoría en todas las escrituras.
+- Migración aditiva `20260803120000_service_treatment_catalog` (no aplicada aún).
+- Estado: **En progreso** (código + lint + typecheck listos; QA de navegador,
+  pruebas y build pendientes para el cierre acumulado, según el modo vigente).
+- Detalle: [reporte de tarea](../task-reports/2026-08-03-catalogo-servicios-tratamientos.md).
+
+### 2026-08-03 — Reglas Adicionales De Descuento, Sesiones E Historial
+
+- Umbral de descuento máximo **por producto**, editable solo por Dirección y
+  Super administrador; el descuento del médico no puede superar la suma de esos
+  umbrales (tope duro). Administración valida el descuento aplicado.
+- Precios **por paquete** (mayor descuento) y **por sesión individual**
+  (descuento similar o menor).
+- Una atención puede tener **1 a n reconsultas**, todas registradas, con
+  **resumen de cada consulta** disponible para el médico.

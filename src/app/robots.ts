@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
+import { resolveDeploymentEnvironment } from "@/lib/deployment-environment";
 import { siteUrl } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = resolveDeploymentEnvironment() === "production";
 
   return {
     rules: [

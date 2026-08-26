@@ -17,8 +17,19 @@ const pageMessages: Record<string, string> = {
   "/testimonios": "Hola, quiero consultar por la atención de Salud Intercultural."
 };
 
+export const blockedStagingContactHref = "#staging-contact-blocked";
+
+function contactsAreBlocked() {
+  return process.env.NEXT_PUBLIC_APP_ENV === "staging";
+}
+
 function normalizePhoneNumber(phone: string) {
   return phone.replace(/[^\d]/g, "");
+}
+
+function normalizeWhatsAppPhoneNumber(phone: string) {
+  const digits = normalizePhoneNumber(phone);
+  return digits.length === 8 ? `591${digits}` : digits;
 }
 
 export function createWhatsAppMessage(context: WhatsAppMessageContext = {}) {
@@ -41,8 +52,21 @@ export function createWhatsAppLink(
   message: string = defaultWhatsAppMessage,
   phoneNumber: string = siteConfig.conversion.whatsappPhone
 ) {
-  const phone = normalizePhoneNumber(phoneNumber);
+  if (contactsAreBlocked()) return blockedStagingContactHref;
+
+  const phone = normalizeWhatsAppPhoneNumber(phoneNumber);
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+export function createDirectWhatsAppLink(
+  phoneNumber: string,
+  message?: string | null
+) {
+  if (contactsAreBlocked()) return blockedStagingContactHref;
+
+  const phone = normalizeWhatsAppPhoneNumber(phoneNumber);
+  const text = message?.trim();
+  return text ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : `https://wa.me/${phone}`;
 }
 
 export function createContextualWhatsAppLink(
@@ -53,6 +77,7 @@ export function createContextualWhatsAppLink(
 }
 
 export function createCallLink(phone: string = siteConfig.conversion.callPhone) {
+  if (contactsAreBlocked()) return blockedStagingContactHref;
   return `tel:${phone.replace(/\s+/g, "")}`;
 }
 

@@ -121,8 +121,7 @@ La fuente se registra cuando el paciente llega físicamente a la clínica.
 
 **Opciones iniciales:**
 
-- Facebook Ads
-- Facebook Orgánico
+- Facebook
 - TikTok
 - WhatsApp
 - Referido
@@ -169,7 +168,7 @@ Nueva Visita
 | Dirección | Dra. Cinthia |
 | Médico | Dr. Franco |
 | Recepción | Marlen |
-| Captación y Seguimiento Comercial | Yazmin |
+| Comunicación y apoyo para la llegada | Yazmin |
 | Administración | María |
 | Enfermería | Enfermera 1 / Enfermera 2 |
 | Marketing y TI | Ariel |
@@ -234,39 +233,29 @@ No puede:
 
 ---
 
-### Captación y Seguimiento Comercial
+### Comunicación y apoyo para la llegada
 
 **Responsable:** Yazmin
 
-**Objetivo:** Convertir interesados en pacientes presenciales.
+**Objetivo:** Responder solicitudes de información y ayudar a recuperar las visitas que no se realizaron.
 
-Puede:
+Sus únicas tareas son:
 
-- Registrar leads
-- Registrar interesados
-- Registrar canal de origen
-- Registrar ciudad
-- Registrar síntomas generales
-- Registrar intención de visita
-- Registrar fecha estimada de visita
-- Registrar observaciones comerciales
-- Registrar historial de llamadas
-- Registrar resultados de contacto
-- Crear recordatorios
-- Actualizar estados
-
-Debe visualizar:
-
-- Nombre
-- Teléfono
-- Ciudad
-- Canal de origen
-- Historial de contacto
-- Recordatorios
-- Estado del interesado
+- Responder mensajes de WhatsApp.
+- Responder llamadas realizadas por WhatsApp.
+- Responder llamadas al número telefónico de la clínica.
+- Llamar a las personas que solicitaron o necesitan información.
+- Contactar a las personas que tenían una visita prevista, pero no lograron llegar.
+- Recoger a pacientes que no pueden llegar a la clínica por sus propios medios, cuando el recojo haya sido coordinado internamente.
 
 No puede:
 
+- Registrar pacientes o leads en SIGECO
+- Realizar seguimiento de pacientes que ya están en tratamiento
+- Consultar la evolución del tratamiento
+- Recordar controles clínicos
+- Moderar lives o administrar comentarios de redes sociales
+- Crear contenido o medir campañas
 - Ver diagnósticos
 - Ver estudios clínicos
 - Ver resonancias

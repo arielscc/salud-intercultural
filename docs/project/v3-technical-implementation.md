@@ -1,927 +1,600 @@
-# Implementacion Tecnica V3
+# Implementacion Tecnica V3.7
 
-Roadmap tecnico para implementar V3 como sistema interno de gestion clinica y operativa de Salud Intercultural.
-
-Este documento traduce los lineamientos funcionales de `docs/masters` a una estrategia tecnica implementable dentro de la arquitectura actual. No reemplaza los documentos maestros: los usa como fuente funcional para construir decisiones tecnicas, tareas y criterios de aceptacion.
-
-## Fuentes
-
-- [Documento de Negocio V3.0](../masters/Documento_de_Negocio_V3_0.md)
-- [Documento Maestro Estrategico](../masters/Documento_Maestro_Estratégico.md)
-- [Arquitectura V2](../architecture/v2-architecture.md)
-- [Ownership de datos](../architecture/data-ownership.md)
-- [Sistema visual publico](../design/public-visual-system.md)
-- [Accesibilidad y UX responsive](../operations/accessibility-responsive.md)
+Arquitectura vigente de Sigeco despues de la simplificacion V3.7.
 
 ## Decisiones Base
 
-1. V3 se implementa sobre el monolito modular actual de Next.js App Router.
-2. No se migra a monorepo en V3.
-3. La ruta del sistema interno sera `/sigeco`.
-4. Payload conserva `/admin` para CMS, contenido publico, media y administracion editorial.
-5. Prisma/PostgreSQL sera la fuente de verdad para datos operativos transaccionales.
-6. La UI operativa sera custom en `src/app/(internal)`, optimizada para mobile-first.
-7. La autenticacion interna sera separada de Payload.
-8. Los roles V3 se definen desde V3.1.
-9. El viewport base de diseno y QA sera Android promedio de 390px de ancho.
-10. V3 adopta tokens internos nuevos inspirados en principios de UI/UX profesional, dashboards operativos y mobile UI, sin rebranding de Salud Intercultural.
-11. Toda visita activa debe tener control de ruta y comunicacion operativa en tiempo real entre areas.
+1. Monolito modular con Next.js App Router.
+2. Payload conserva contenido publico, media y CMS en `/admin`.
+3. Prisma/PostgreSQL es la fuente de verdad transaccional de Sigeco.
+4. La autenticacion interna es independiente de Payload.
+5. La UI interna vive bajo `/sigeco` y usa el sistema visual Marea.
+6. La base de datos es la fuente de verdad; realtime futuro solo transportara actualizaciones.
+7. Toda operacion sensible valida permisos en servidor.
+8. Las migraciones preservan datos y se prueban contra PostgreSQL real.
 
-## Objetivo Tecnico De V3
-
-Construir el primer sistema operativo interno de la clinica, centrado en el paciente, capaz de registrar y consultar el ciclo:
-
-```txt
-Lead
-↓
-Interesado
-↓
-Paciente
-↓
-Visita
-↓
-Consulta / Estudios / Enfermeria
-↓
-Venta / Cobro / Inventario
-↓
-Seguimiento
-↓
-Nueva visita
-```
-
-V3 debe priorizar trazabilidad, permisos, rapidez de registro en mobile y consistencia de datos sobre automatizaciones avanzadas.
-
-La ruta del paciente debe mantenerse actualizada mientras la visita esta activa. Cuando un area registra una indicacion o tarea para otra area, el sistema debe reflejarlo en la bandeja de trabajo correspondiente sin depender de comunicacion verbal.
-
-## Arquitectura Propuesta
-
-### Rutas
-
-```txt
-src/app/
-├── (public)/
-├── (payload)/
-└── (internal)/
-    └── sigeco/
-        ├── layout.tsx
-        ├── page.tsx
-        ├── login/
-        ├── leads/
-        ├── pacientes/
-        ├── visitas/
-        ├── consultas/
-        ├── enfermeria/
-        ├── administracion/
-        ├── seguimientos/
-        ├── inventario/
-        └── configuracion/
-```
-
-### Modulos
-
-```txt
-src/features/
-├── internal-auth/
-├── internal-shell/
-├── crm/
-├── patients/
-├── visits/
-├── patient-routing/
-├── realtime-workflow/
-├── clinical-care/
-├── nursing/
-├── sales/
-├── follow-ups/
-└── inventory/
-
-src/modules/
-├── auth/
-├── database/
-├── permissions/
-├── realtime/
-└── audit/
-```
-
-### Componentes Internos
-
-```txt
-src/components/internal/
-├── AppShell.tsx
-├── BottomNav.tsx
-├── HeaderBar.tsx
-├── QuickActionButton.tsx
-├── EntityList.tsx
-├── EntitySearch.tsx
-├── StatusPill.tsx
-├── Timeline.tsx
-├── FormSection.tsx
-├── ActionSheet.tsx
-├── ConfirmDialog.tsx
-└── EmptyState.tsx
-```
-
-### APIs Internas
-
-Preferir Server Actions para operaciones cercanas a formularios y Route Handlers cuando se requieran integraciones, endpoints consumibles por cliente o control explicito de metodo HTTP.
-
-```txt
-src/app/api/internal/
-├── auth/
-├── leads/
-├── patients/
-├── visits/
-├── clinical/
-├── nursing/
-├── sales/
-├── follow-ups/
-└── inventory/
-```
-
-## Ownership De Datos
-
-### Prisma
-
-Usar Prisma para:
-
-- Usuarios internos y sesiones.
-- Roles y permisos.
-- Leads operativos V3.
-- Pacientes.
-- Visitas.
-- Consultas, diagnosticos, tratamientos y recetas.
-- Estudios, signos vitales y aplicaciones clinicas.
-- Ventas, cobros y productos entregados.
-- Seguimientos y recordatorios.
-- Inventario, movimientos y alertas.
-- Ruta activa del paciente.
-- Tareas entre areas y notificaciones internas.
-- Auditoria operativa.
+## Limites De Ownership
 
 ### Payload
 
-Payload mantiene:
+- Paginas y contenido publico.
+- Servicios, tratamientos, equipo, testimonios y FAQs.
+- Media editorial.
+- Formulario publico y `lead-submissions` del sitio web.
+- Campañas y enlaces de marketing en `marketing-campaigns`.
 
-- Sitio publico.
-- CMS editorial.
-- Media.
-- Servicios, tratamientos publicos, equipo, testimonios, FAQs y paginas.
-- Leads publicos V2 mientras se migra o sincroniza el flujo V3.
+### Prisma
 
-### Regla De Integracion Leads V2 -> V3
+- Usuarios y sesiones internas.
+- Pacientes, visitas, rutas y tareas entre areas.
+- Consulta vigente, versiones, firma interna, diagnosticos, recetas y
+  evoluciones.
+- Resultado y versiones de propuestas de tratamiento.
+- Enfermeria, estudios y adjuntos modelados.
+- Ventas, pagos, caja e inventario.
+- Seguimientos e historial operativo.
+- Copia técnica de campañas, atribución por visita y reportes internos.
 
-La collection actual `lead-submissions` no debe duplicarse indefinidamente como fuente editable paralela.
+### Contrato Payload-SIGECO
 
-V3.1 debe definir una migracion controlada:
+Payload edita la campaña y SIGECO la refleja de forma idempotente mediante un
+identificador externo y una revisión. El contrato usa un token exclusivo,
+rechaza campos desconocidos y no comparte pacientes ni clínica. La respuesta a
+Marketing contiene únicamente totales agregados por período y campaña; grupos
+menores a cinco se ocultan. Si Payload no responde durante una llegada,
+Recepción continúa con la fuente manual y la campaña queda pendiente, sin
+repetir al paciente o la visita. La operación está documentada en [Integración
+segura Payload-SIGECO](../operations/payload-sigeco-integration.md).
 
-1. Mantener el formulario publico actual sin romper conversion.
-2. Crear modelo Prisma `Lead` operativo.
-3. Definir si el endpoint publico escribe directamente en Prisma, o si se crea una tarea de migracion desde Payload.
-4. Exponer en `/sigeco/leads` el pipeline comercial operativo.
-5. Dejar Payload como historico o vista secundaria solo si se documenta.
+Los modelos internos legacy de leads permanecen para preservar datos historicos, pero no tienen ruta, navegacion ni permisos activos en Sigeco.
 
-## Comunicacion Operativa En Tiempo Real
-
-### Regla Tecnica
-
-Toda accion que derive trabajo a otra area debe crear un evento persistente y una tarea operativa para el area destino.
-
-La base de datos es la fuente de verdad. La capa de tiempo real solo entrega actualizaciones a la UI; no debe ser la unica fuente del estado.
-
-### Casos Iniciales
-
-- Recepcion envia paciente a consulta.
-- Medico indica signos vitales, estudio, aplicacion clinica, suero, receta, producto o cobro.
-- Enfermeria recibe indicacion, ejecuta y registra resultado.
-- Administracion recibe venta, cobro o entrega pendiente.
-- Seguimiento recibe tarea posterior a consulta, venta o llamada.
-
-### Modelos Prisma Transversales
+## Estructura Principal
 
 ```txt
-PatientRoute
-PatientRouteStep
-VisitWorkItem
-VisitWorkItemEvent
-ClinicalOrder
-InternalNotification
-RealtimeDeliveryState
+src/app/
+  (public)/
+  (payload)/
+  (internal)/sigeco/
+    (app)/
+      recepcion/
+      consultas/
+      enfermeria/
+      administracion/
+      seguimientos/
+      inventario/
+
+src/features/
+  reception/
+  visits/
+  clinical-care/
+  clinical-records/
+  nursing/
+  studies/
+  sales/
+  follow-ups/
+  inventory/
+  internal-auth/
+
+src/modules/
+  auth/
+  database/
+  permissions/
 ```
 
-### Conceptos
-
-`PatientRoute` representa la ruta activa de una visita.
-
-`PatientRouteStep` representa el paso actual o historico de la visita: recepcion, consulta, enfermeria, administracion, seguimiento o cierre.
-
-`VisitWorkItem` representa una tarea que un area debe ejecutar durante la visita.
-
-`ClinicalOrder` representa una indicacion clinica estructurada creada por el medico, por ejemplo aplicar suero ABC, tomar signos vitales o realizar estudio.
-
-`InternalNotification` representa el aviso visible para usuarios o roles de destino.
-
-`RealtimeDeliveryState` registra entrega, lectura o reintento de notificaciones cuando aplique.
-
-### Estados De Work Item
+## Flujo De Escritura
 
 ```txt
-pending
-acknowledged
-in_progress
-completed
-cancelled
-blocked
+UI Server Component / Client Component
+  -> Server Action
+  -> Zod schema
+  -> requirePermission
+  -> query transaccional Prisma
+  -> revalidatePath / redirect
 ```
 
-### Areas De Destino
-
-```txt
-recepcion
-medico
-enfermeria
-administracion
-seguimiento
-direccion
-```
-
-### Implementacion Recomendada
-
-1. Crear eventos persistentes en PostgreSQL dentro de la misma transaccion que cambia la visita, consulta, indicacion, venta o seguimiento.
-2. Invalidar y refrescar vistas server-side con datos actuales.
-3. Entregar avisos a la UI interna mediante una abstraccion `src/modules/realtime`.
-4. Empezar con polling corto o Server-Sent Events segun compatibilidad del hosting.
-5. Mantener la interfaz preparada para cambiar a WebSocket o servicio realtime externo si la operacion lo exige.
-
-No implementar la logica de negocio directamente en WebSocket, SSE o cliente. El estado valido siempre debe reconstruirse desde Prisma.
-
-### UI Requerida
-
-- Indicador de visita activa y area actual.
-- Bandeja por area: "Pendiente", "En proceso", "Completado".
-- Badge de nuevas indicaciones.
-- Timeline de ruta del paciente.
-- Estado de lectura o toma de tarea cuando aplique.
-- Accion rapida "tomar tarea" para evitar doble ejecucion.
-- Refresco visible sin perder datos escritos en formularios.
-
-### Permisos
-
-- Cada rol ve solo tareas destinadas a su area o autorizadas por permiso.
-- Direccion puede ver la ruta completa.
-- Captacion no ve tareas clinicas sensibles.
-- Enfermeria ve indicaciones operativas necesarias, pero no puede modificar diagnosticos.
-- Administracion ve cobros, productos y servicios pendientes, pero no modifica consulta clinica.
-
-### Criterios Transversales
-
-- Una indicacion medica para enfermeria aparece en la bandeja de enfermeria sin recargar manualmente cuando la infraestructura realtime este activa.
-- Si la entrega realtime falla, la tarea sigue visible al refrescar o por polling.
-- Cada tarea conserva autor, area origen, area destino, paciente, visita, estado y timestamps.
-- Completar una tarea actualiza la ruta y el expediente cronologico.
-- Los eventos de ruta quedan auditados.
-
-## Autenticacion Interna
-
-V3 usara auth interna separada de Payload.
-
-### Requisitos
-
-- Login en `/sigeco/login`.
-- Sesion HTTP-only.
-- Proteccion server-side de rutas internas.
-- Logout.
-- Hash seguro de passwords.
-- Bloqueo basico por intentos fallidos.
-- Expiracion configurable.
-- Usuario tecnico `super_admin` inicial via seed seguro.
-
-### Modelos Iniciales
-
-```txt
-InternalUser
-InternalSession
-InternalRole
-InternalPermission
-InternalUserRole
-```
-
-### Roles V3
-
-```txt
-super_admin
-direccion
-medico
-recepcion
-captacion
-administracion
-enfermeria
-```
-
-### Politica De Permisos
-
-Los permisos deben declararse por accion y modulo:
-
-```txt
-module.action
-```
-
-Ejemplos:
-
-```txt
-leads.read
-leads.update
-patients.create
-patients.read
-visits.create
-clinical.write
-nursing.write
-sales.write
-inventory.adjust
-reports.read
-```
-
-## Mobile-First V3
-
-V3 se disena primero para 390px de ancho.
-
-### Principios
-
-1. Cada flujo critico debe completarse en una mano o con interaccion tactil comoda.
-2. Los formularios largos deben dividirse en secciones progresivas.
-3. Las acciones frecuentes deben estar visibles en la parte inferior o en barras persistentes.
-4. Las listas deben priorizar busqueda, filtros rapidos y estados visuales.
-5. Los dashboards deben mostrar primero alertas y tareas accionables, no graficos decorativos.
-6. Los textos clinicos deben ser legibles, escaneables y sin densidad excesiva en mobile.
-7. Desktop amplia informacion y tablas, pero no define el flujo base.
-
-### Reglas UI
-
-- Target tactil minimo recomendado: 44px.
-- Formularios con labels persistentes.
-- Inputs con teclado adecuado: telefono, numero, fecha, texto.
-- Estados visibles: loading, empty, error, success, offline/no disponible si aplica.
-- Navegacion primaria por bottom nav en mobile.
-- Acciones secundarias en action sheets.
-- Evitar tablas horizontales como UI primaria en mobile.
-- Usar timelines para historial clinico y visitas.
-- Usar cards compactas solo para items repetidos; no anidar cards.
-
-### Tokens Internos
-
-Crear una extension interna del sistema visual:
-
-```txt
-src/config/internal-design-system.ts
-```
-
-Lineamientos:
-
-- Mantener teal medico y verde intercultural como identidad.
-- Reducir decoracion respecto al sitio publico.
-- Usar superficies claras, bordes definidos y estados de prioridad.
-- Incorporar colores funcionales: pendiente, activo, vencido, critico, completado.
-- Tipografia compacta: headings funcionales, labels claros, metadata pequena.
-- Radio menor que el sitio publico para una UI mas operativa.
-- Dashboard interno con densidad moderada, no estilo landing.
-
-## Estrategia De Implementacion
-
-Cada fase debe implementarse como entrega independiente, con migraciones, UI, permisos, validaciones y tests propios.
-
-Orden:
-
-1. V3.1A: CRM/leads internos.
-2. V3.1B: pacientes, recepcion y visitas.
-3. V3.2: atencion medica.
-4. V3.3: estudios y enfermeria.
-5. V3.4: administracion y ventas.
-6. V3.5: seguimiento.
-7. V3.6: inventario.
-
-## V3.1A - CRM Y Leads Internos
-
-### Objetivo
-
-Convertir los leads actuales en un pipeline operativo para captacion y seguimiento comercial, preparado para mobile.
-
-### Modelos Prisma
-
-```txt
-Lead
-LeadContactAttempt
-LeadReminder
-LeadStatusHistory
-LeadSource
-```
-
-### Estados
-
-```txt
-new
-contacted
-interested
-wants_visit
-reminder_pending
-confirmed_attendance
-no_answer
-discarded
-converted_to_patient
-```
-
-### Tareas Independientes
-
-- Crear migracion Prisma para `Lead`, estados, fuente, responsable y timestamps.
-- Crear modelos de historial de contacto, recordatorios e historial de estado.
-- Implementar schemas Zod de creacion y actualizacion de lead.
-- Crear repositorio de queries en `src/modules/database/queries/leads-v3.ts`.
-- Crear auth interna minima y roles base antes de exponer `/sigeco`.
-- Crear layout interno `/sigeco` protegido.
-- Crear `/sigeco/login`.
-- Crear `/sigeco/leads` con lista mobile-first.
-- Crear busqueda por nombre, telefono y ciudad.
-- Crear filtros por estado, fuente y responsable.
-- Crear detalle de lead con timeline comercial.
-- Crear formulario de nuevo lead manual.
-- Crear acciones rapidas: llamar, WhatsApp, cambiar estado, crear recordatorio.
-- Crear registro de intento de contacto.
-- Crear recordatorios pendientes por usuario.
-- Definir estrategia de migracion desde `lead-submissions`.
-- Ajustar endpoint publico `/api/leads` solo cuando se decida el cambio de fuente.
-- Crear tests unitarios de schemas y permisos.
-- Crear tests de queries principales.
-- Documentar flujo en `docs/operations/leads.md` cuando se active V3.
-
-### Criterios De Aceptacion
-
-- Un usuario con rol `captacion` puede entrar a `/sigeco/leads`.
-- Un usuario no autenticado es enviado a `/sigeco/login`.
-- Un lead puede crearse, buscarse, actualizarse y cambiar de estado desde mobile 390px.
-- Cada cambio de estado genera historial.
-- Cada llamada o contacto queda registrado.
-- Un recordatorio pendiente aparece en la vista de trabajo.
-- No se expone informacion clinica en el modulo comercial.
-- `pnpm lint`, `pnpm test` y `pnpm typecheck` pasan para el alcance.
-
-## V3.1B - Pacientes, Recepcion Y Visitas
-
-### Objetivo
-
-Crear el expediente permanente del paciente y el flujo base de visita presencial.
-
-### Modelos Prisma
-
-```txt
-Patient
-PatientContact
-PatientCaptureSource
-PatientNote
-Visit
-VisitStatusHistory
-ReceptionCheckIn
-```
-
-### Estados De Visita
-
-```txt
-in_reception
-in_consultation
-in_nursing
-in_administration
-completed
-left_without_care
-cancelled
-```
-
-### Tareas Independientes
-
-- Crear migracion Prisma para pacientes.
-- Crear migracion Prisma para visitas y estados.
-- Crear indice unico operativo para evitar duplicados obvios por telefono/documento si existe.
-- Crear schemas Zod para paciente y visita.
-- Crear queries `patients.ts` y `visits.ts`.
-- Crear `/sigeco/pacientes` con busqueda mobile-first.
-- Crear formulario de paciente con datos minimos.
-- Crear deteccion de posibles duplicados antes de crear paciente.
-- Crear detalle de paciente con ficha permanente.
-- Crear timeline cronologico de visitas.
-- Crear accion "registrar llegada".
-- Crear `/sigeco/visitas` como lista de atencion del dia.
-- Crear cambio de estado de visita.
-- Crear `PatientRoute` y `PatientRouteStep` para visitas activas.
-- Crear bandejas base por area para tareas de visita.
-- Crear eventos de ruta cuando recepcion deriva a consulta, enfermeria o administracion.
-- Crear conversion de lead a paciente.
-- Crear relacion `Lead -> Patient` cuando aplique.
-- Crear permisos para recepcion, captacion, direccion y super_admin.
-- Crear tests de creacion de paciente, duplicados y apertura de visita.
-- Crear seed de roles y usuario interno inicial.
-
-### Criterios De Aceptacion
-
-- Recepcion puede buscar paciente por nombre o telefono desde mobile.
-- Recepcion puede crear paciente con datos minimos.
-- Recepcion puede registrar llegada sin cita previa.
-- Una visita queda asociada a un paciente.
-- El historial del paciente muestra visitas en orden cronologico.
-- Captacion puede convertir un lead en paciente sin acceder a datos clinicos futuros.
-- El flujo completo funciona en viewport de 390px sin tablas obligatorias.
-- Una visita activa muestra area actual, siguiente paso y tareas pendientes.
-- Cuando recepcion deriva al paciente, el area destino ve la visita en su bandeja de trabajo.
-
-## V3.2 - Atencion Medica
-
-### Objetivo
-
-Registrar la consulta clinica, diagnosticos, indicaciones, tratamiento personalizado, receta y evolucion dentro de la visita del paciente.
-
-### Modelos Prisma
-
-```txt
-ClinicalConsultation
-Diagnosis
-TreatmentPlan
-Prescription
-PrescriptionItem
-ClinicalEvolution
-ClinicalNote
-ClinicalOrder
-```
-
-### Tareas Independientes
-
-- Crear migracion Prisma para consulta y diagnosticos.
-- Crear migracion Prisma para tratamientos personalizados y recetas.
-- Crear schemas Zod para consulta, diagnostico, tratamiento y receta.
-- Crear queries `clinical-care.ts`.
-- Crear `/sigeco/consultas` como lista de pacientes en consulta.
-- Crear pantalla de consulta por visita.
-- Crear formulario de motivo, hallazgos, diagnostico principal y secundarios.
-- Crear registro de plan de tratamiento.
-- Crear receta con multiples items.
-- Crear orden clinica estructurada para enfermeria, estudios, aplicacion, suero, administracion o seguimiento.
-- Crear evento de ruta cuando el medico derive trabajo a otra area.
-- Crear evolucion clinica como entrada cronologica.
-- Crear vista de expediente clinico para medico.
-- Restringir escritura clinica a rol `medico` y `super_admin`.
-- Permitir lectura a direccion segun permiso.
-- Bloquear lectura clinica para captacion.
-- Crear auditoria para cambios clinicos sensibles.
-- Crear estados de guardado y borrador si el formulario es largo.
-- Crear impresion/exportacion simple de receta si se decide en fase.
-- Crear tests de permisos clinicos.
-- Crear tests de queries de expediente.
-
-### Criterios De Aceptacion
-
-- Medico puede abrir una visita en estado `in_consultation`.
-- Medico puede registrar diagnostico, observaciones, plan y receta.
-- Medico puede crear una indicacion para enfermeria, como aplicar suero ABC, asociada a paciente y visita.
-- La indicacion medica crea una tarea visible para el area destino.
-- El expediente muestra la consulta dentro de la cronologia del paciente.
-- Captacion no puede ver diagnosticos ni estudios.
-- Recepcion no puede modificar diagnosticos ni tratamientos.
-- Los formularios clinicos son usables en 390px con secciones progresivas.
-
-## V3.3 - Estudios Y Enfermeria
-
-### Objetivo
-
-Registrar estudios, resonancia, signos vitales, aplicaciones clinicas y observaciones de enfermeria asociados al paciente y visita.
-
-### Modelos Prisma
-
-```txt
-Study
-StudyAttachment
-VitalSigns
-NursingApplication
-NursingNote
-ClinicalAttachment
-NursingWorkItemResult
-```
-
-### Tareas Independientes
-
-- Crear migracion Prisma para estudios.
-- Crear migracion Prisma para signos vitales.
-- Crear migracion Prisma para aplicaciones clinicas.
-- Definir almacenamiento de adjuntos clinicos y politica de privacidad.
-- Crear schemas Zod para estudios, signos vitales y aplicaciones.
-- Crear queries `nursing.ts` y `studies.ts`.
-- Crear `/sigeco/enfermeria` como lista de trabajo.
-- Crear bandeja de indicaciones recibidas desde consulta.
-- Crear accion "tomar tarea" para indicaciones de enfermeria.
-- Crear formulario de signos vitales.
-- Crear formulario de aplicacion clinica.
-- Crear registro de resonancia asociado a expediente.
-- Crear registro de laboratorio/ecografia/otros estudios.
-- Crear adjuntos solo si hay decision de storage segura.
-- Crear permisos de enfermeria: escribir signos, estudios y aplicaciones; no crear diagnosticos.
-- Crear vista de estudios para medico.
-- Crear timeline de enfermeria dentro del paciente.
-- Crear tests de permisos de enfermeria.
-- Crear tests de asociacion estudio-paciente-visita.
-
-### Criterios De Aceptacion
-
-- Enfermeria puede registrar signos vitales desde mobile.
-- Enfermeria recibe indicaciones creadas por el medico dentro de la visita activa.
-- Enfermeria puede ver que debe aplicar, a que paciente, con que indicacion y quien la registro.
-- Enfermeria puede marcar la tarea como en proceso, completada o bloqueada.
-- Enfermeria puede registrar aplicacion clinica con medicamento, cantidad, responsable y hora.
-- Una resonancia queda asociada al expediente del paciente.
-- Medico puede revisar estudios.
-- Enfermeria no puede crear ni modificar diagnosticos.
-- Todo registro queda asociado a paciente y, cuando aplique, a visita.
-
-## V3.4 - Administracion, Ventas Y Cobros
-
-### Objetivo
-
-Registrar ventas, cobros, productos entregados y servicios realizados, asociando cada operacion al paciente y visita.
-
-### Modelos Prisma
-
-```txt
-Sale
-SaleItem
-Payment
-PaymentMethod
-DeliveredProduct
-CashMovement
-```
-
-### Tareas Independientes
-
-- Crear migracion Prisma para ventas.
-- Crear migracion Prisma para pagos y movimientos de caja.
-- Crear schemas Zod para venta, item y cobro.
-- Crear queries `sales.ts`.
-- Crear `/sigeco/administracion` como lista de pacientes pendientes de cobro.
-- Crear bandeja de cobros, entregas o servicios pendientes derivados desde consulta o enfermeria.
-- Crear formulario de venta mobile-first.
-- Crear seleccion de paciente y visita.
-- Crear items de venta: tratamiento, medicamento, resonancia, suero, servicio, estudio.
-- Crear registro de forma de pago.
-- Crear estado de pago: pendiente, parcial, pagado, anulado.
-- Crear comprobante interno simple.
-- Crear permisos para administracion y direccion.
-- Bloquear diagnosticos para administracion.
-- Preparar eventos para descuento de inventario en V3.6.
-- Crear tests de totales, estados y permisos.
-- Crear reportes basicos de ventas del dia y mes.
-
-### Criterios De Aceptacion
-
-- Administracion puede registrar una venta asociada a paciente.
-- Administracion recibe tareas pendientes cuando otra area deriva cobro, producto, servicio o estudio.
-- Administracion puede registrar cobro y forma de pago.
-- Direccion puede ver ventas del dia y mes.
-- Administracion no puede modificar diagnosticos ni estudios.
-- Una venta queda visible en la cronologia administrativa del paciente.
-- Los calculos de total no dependen de valores del cliente.
-
-## V3.5 - Seguimiento
-
-### Objetivo
-
-Crear recordatorios, llamadas, tareas de seguimiento y estados posteriores a consulta o venta.
-
-### Modelos Prisma
-
-```txt
-FollowUpTask
-FollowUpAttempt
-FollowUpStatusHistory
-FollowUpTemplate
-```
-
-### Estados
-
-```txt
-pending
-done
-improved
-not_improved
-no_answer
-wants_return
-requires_new_visit
-requires_doctor_call
-cancelled
-```
-
-### Tareas Independientes
-
-- Crear migracion Prisma para seguimientos.
-- Crear schemas Zod de tarea e intento de seguimiento.
-- Crear queries `follow-ups.ts`.
-- Crear `/sigeco/seguimientos` como bandeja diaria.
-- Crear filtros por vencido, hoy, proximo, responsable y estado.
-- Crear accion rapida de WhatsApp/llamada.
-- Crear registro de resultado de contacto.
-- Crear recordatorio desde lead, paciente, consulta o venta.
-- Crear seguimiento automaticamente cuando una indicacion, consulta o venta lo requiera.
-- Crear tarea de seguimiento desde la ruta activa del paciente.
-- Crear asignacion de responsable.
-- Crear permisos para captacion, administracion, medico y direccion segun tipo de seguimiento.
-- Crear vista de historial de seguimiento en paciente.
-- Crear indicadores de pendientes en dashboard interno.
-- Crear tests de vencimientos y permisos.
-
-### Criterios De Aceptacion
-
-- Un seguimiento puede crearse desde un paciente.
-- Un seguimiento puede originarse desde una tarea o indicacion de la visita activa.
-- Un seguimiento puede marcarse como realizado con resultado.
-- Los seguimientos vencidos aparecen destacados.
-- El historial del paciente muestra llamadas y resultados.
-- Captacion no accede a informacion clinica restringida al resolver tareas comerciales.
-
-## V3.6 - Inventario
-
-### Objetivo
-
-Gestionar productos, stock, movimientos, alertas y descuento automatico por venta.
-
-### Modelos Prisma
-
-```txt
-InventoryItem
-InventoryMovement
-InventoryAdjustment
-Supplier
-InventoryAlert
-```
-
-### Tipos De Movimiento
-
-```txt
-entry
-automatic_sale_exit
-authorized_manual_adjustment
-correction
-```
-
-### Tareas Independientes
-
-- Crear migracion Prisma para productos.
-- Crear migracion Prisma para movimientos append-only.
-- Crear constraints para SKU/codigo interno cuando aplique.
-- Crear schemas Zod para producto, movimiento y ajuste.
-- Crear queries `inventory.ts`.
-- Crear `/sigeco/inventario`.
-- Crear lista de productos con stock actual.
-- Crear alertas de stock bajo.
-- Crear entrada de stock.
-- Crear ajuste manual autorizado.
-- Crear descuento automatico de stock desde venta.
-- Crear bloqueo o alerta cuando una venta excede stock disponible.
-- Crear historial de movimientos por producto.
-- Crear permisos: administracion puede registrar ventas, direccion ve reportes, super_admin ajusta, inventario ajusta si se crea rol futuro.
-- Crear tests de movimientos, stock calculado y descuento por venta.
-- Crear reporte de productos con stock bajo.
-
-### Criterios De Aceptacion
-
-- Una venta con item inventariable genera salida automatica de stock.
-- Todo movimiento queda registrado y no se edita como contenido CMS.
-- Productos bajo minimo aparecen en alerta.
-- Ajustes manuales requieren permiso autorizado.
-- Direccion puede ver stock bajo.
-- El stock actual se calcula o mantiene de forma consistente desde movimientos.
-
-## Dashboard Interno V3
-
-### Ruta
-
-```txt
-/sigeco
-```
-
-### Widgets Iniciales
-
-- Leads nuevos.
-- Leads con recordatorio pendiente.
-- Pacientes atendidos hoy.
-- Visitas activas.
-- Tareas por area en tiempo real.
-- Indicaciones pendientes de ejecutar.
-- Seguimientos vencidos.
-- Ventas del dia.
-- Productos con stock bajo.
-
-### Tareas Independientes
-
-- Crear queries agregadas por rol.
-- Crear dashboard mobile-first con tarjetas compactas.
-- Crear resumen de ruta activa por area.
-- Crear feed de eventos recientes de visita.
-- Mostrar acciones prioritarias antes que graficos.
-- Crear estados de carga y error.
-- Filtrar widgets segun permisos.
-
-## Seguridad Y Privacidad
-
-### Reglas
-
-- No enviar PII ni datos clinicos a analytics.
-- No exponer diagnosticos a roles comerciales.
-- Registrar auditoria para cambios clinicos, ventas, ajustes de inventario y permisos.
-- Registrar auditoria para cambios de ruta, indicaciones y tareas entre areas.
-- Validar permisos en servidor, no solo en UI.
-- Sanitizar entradas de texto.
-- Usar rate limit en endpoints sensibles.
-- Mantener sesiones en cookies HTTP-only.
-- Evitar logs con datos clinicos o telefonos completos.
-
-### Tareas Independientes
-
-- Crear modulo `src/modules/permissions`.
-- Crear helper server-side `requireInternalUser`.
-- Crear helper `requirePermission`.
-- Crear modulo `src/modules/audit`.
-- Crear tabla `AuditEvent`.
-- Crear tests de acceso denegado por rol.
-
-## Testing Y QA
-
-### Minimos Por Fase
-
-- Unit tests para schemas Zod.
-- Unit tests para permisos.
-- Tests de queries criticas.
-- Tests de Server Actions o route handlers.
-- Tests responsive manuales en 390px.
-- Validacion de teclado y foco.
-
-### Comandos
+Las paginas consultan mediante modulos de `src/modules/database/queries`. Los formularios no calculan totales financieros ni stock definitivo en cliente.
+
+## Modelo Operativo
+
+### Paciente Y Llegada
+
+`Patient` contiene datos permanentes. `Visit` contiene el motivo y contexto de la llegada actual. El funnel nunca guarda como dato permanente lo que puede cambiar entre visitas.
+
+`createReceptionIntake` ejecuta en una sola transaccion:
+
+1. Crear o actualizar paciente.
+2. Crear visita.
+3. Registrar check-in e historial inicial.
+4. Abrir `PatientRoute` en recepcion.
+5. Crear el primer `VisitWorkItem`.
+6. Crear `VisitAttribution` con fuente principal, apoyos y evidencia verificable.
+
+La fuente original del `Patient` solo se define al crear la ficha. Las visitas
+posteriores no la reemplazan. Cada `VisitAttribution` funciona como fotografía
+histórica y sus `VisitAttributionTouch` distinguen la fuente principal de los
+canales de apoyo.
+
+`CaptureSource` es el catálogo administrable. `CaptureCampaign` resuelve cuenta
+exacta y tráfico orgánico o pagado únicamente desde códigos de enlace o
+formulario. Si no hay evidencia, el detalle queda como no identificado.
+
+### Ruta Flexible
+
+`PatientRoute` mantiene el area actual y si la ruta sigue activa. Cada transicion agrega `PatientRouteStep`, `VisitStatusHistory` y una tarea operativa.
+
+Estados cerrados:
+
+- `completed`
+- `left_without_care`
+- `cancelled`
+
+Una vez cerrada, la visita no admite nuevas transiciones. La invariante vive en `updateVisitRouteStatus`, dentro de la transaccion, y tambien se refleja ocultando acciones en UI.
+
+### Consulta Prellenada
+
+La consulta lee directamente el contexto de `Visit` y `Patient`: motivo, duracion, tipo de visita, atencion previa, estudios, edad, alergias, antecedentes y medicacion. El motivo no se solicita de nuevo.
+
+Receta, evolucion y ordenes usan secciones colapsables. Una orden crea de forma persistente un `VisitWorkItem` para el area destino.
+
+### Resultado De La Propuesta
+
+`TreatmentProposalOutcome` conserva una secuencia append-only por consulta. El
+resultado vigente es el evento que no fue reemplazado. Los índices parciales
+impiden dos eventos iniciales y dos aceptaciones para la misma consulta; un
+trigger de PostgreSQL bloquea edición y borrado.
+
+`recordTreatmentProposalOutcome` usa una transacción serializable. Cuando el
+paciente acepta, cambia la ruta a Administración, crea `VisitWorkItem` y
+`ClinicalOrder`, y después inserta el resultado enlazado. No invoca
+`createSaleRecord`: Administración continúa siendo responsable de registrar los
+conceptos vendidos y sus pagos.
+
+Cuando el resultado es `needs_time`, se consulta el último `PatientConsent` de
+seguimiento. Solo una decisión concedida permite crear `FollowUpTask`; se
+prefiere un usuario activo de Recepción llamado Marlen y nunca se asigna
+automáticamente a Comunicación.
+
+La guía operativa vive en
+[Resultado de la propuesta de tratamiento](../operations/treatment-proposal-outcomes.md).
+
+### Clasificación De Seguimientos
+
+`FollowUpTask` separa:
+
+- `type`: propósito del contacto;
+- `domain`: relación clínica o administrativa;
+- `priority`: orden operativo;
+- `status`: pendiente, terminado o cancelado;
+- `result`: respuesta o resultado más reciente;
+- `assignedToId` y `dueAt`: responsable y vencimiento.
+
+`FollowUpAttempt.result` usa `FollowUpResult`; ya no modifica el estado con
+valores como “mejoró”. `No responde` y `Reprogramado` actualizan `dueAt` y
+mantienen la tarea pendiente.
+
+`createFollowUpAttemptRecord` valida consentimiento, resultado permitido y rol
+dentro de una transacción. Cuando el resultado es `worsened` o
+`escalated_to_doctor`, crea una tarea urgente `doctor_call` relacionada mediante
+`escalatedFromTaskId`. Solo Médico o Super administrador pueden resolverla.
+
+La asignación clínica busca Recepción/Marlen; el trabajo administrativo lo
+atienden Recepción o Administración. El rol técnico `seguimiento` se retiró el
+2026-08-02 y su trabajo pasó a Recepción. La guía completa vive en
+[Tipos y resultados de seguimiento](../operations/follow-up-classification.md).
+
+### Recordatorios Automatizados Y Supervisados
+
+`SupervisedReminderRule` conserva una identidad estable y apunta a una
+`SupervisedReminderRuleVersion` activa. Cada cambio crea otra versión; un
+trigger bloquea `UPDATE` y `DELETE` sobre la historia. Dirección administra
+reglas con `reminder_rules_manage` y Recepción revisa candidatos con
+`reminders_review`.
+
+`generateSupervisedReminderCandidates` consulta eventos compatibles:
+`Visit.completedAt`, `TreatmentProposalOutcome` aceptado o
+`VisitDiscontinuation`. La clave `regla:evento:origen` no contiene la versión,
+por lo que una nueva plantilla no duplica el mismo trabajo. La fecha se ajusta
+al horario y días permitidos en `America/La_Paz`.
+
+Cada `SupervisedReminderCandidate` conserva la vista previa, regla exacta,
+origen, canal, fecha, bloqueo, error y reintento. La generación no envía nada.
+Al aprobar, el servidor vuelve a leer el consentimiento vigente y crea como
+máximo una `FollowUpTask` mediante una relación única. El contacto y resultado
+real continúan en `FollowUpAttempt`.
+
+`SupervisedReminderReviewEvent` registra aprobación, bloqueo, descarte, fallo o
+reintento como eventos append-only. La guía vive en
+[Recordatorios automatizados y supervisados](../operations/supervised-reminders.md).
+
+### Encuestas Y Reclamos
+
+`PatientFeedbackRequest` conserva visita, responsable, canal, versión de
+cuestionario y vencimiento. El token de 32 bytes se devuelve una sola vez; la
+base guarda solamente SHA-256. Un índice parcial permite un único enlace
+abierto por visita y rotarlo invalida el anterior.
+
+La ruta pública usa una fachada mínima. No devuelve paciente, visita,
+responsable, clasificación o notas y vive en un root layout sin analytics.
+`PatientFeedback` guarda la respuesta append-only y posee relación única con
+la visita para impedir respuestas duplicadas.
+
+`classifyPatientFeedback` crea una `PatientFeedbackCase`: una señal de posible
+riesgo en salud queda `clinical_safety/critical` con cuatro horas; un reclamo
+común queda prioritario con 24 horas; una opinión que requiere revisión usa 48
+horas. Una encuesta positiva sin comentario se cierra sin inventar un reclamo.
+
+Dirección modifica la proyección del caso con `feedback_manage`. Cada cambio
+de responsable, clasificación, estado, plazo o nota agrega un
+`PatientFeedbackCaseEvent` append-only. Payload no participa. La guía vive en
+[Encuestas, opiniones y reclamos](../operations/patient-feedback-complaints.md).
+
+### Abandono, Bloqueo Y Pendientes
+
+`VisitDiscontinuation` registra un único evento por visita con:
+
+- `fromStatus` y `area`: punto exacto de salida;
+- `reason`: motivo normalizado;
+- `pendingTypes`: fotografía de consulta, estudio, aplicación, cobro, entrega
+  o seguimiento todavía pendientes;
+- `recordedById` y `occurredAt`: responsable y fecha;
+- `followUpTaskId`: recuperación relacionada cuando existe.
+
+`recordVisitDiscontinuation` usa una transacción serializable. Combina lo
+seleccionado por el empleado con pendientes detectados en órdenes, estudios,
+ventas, entregas y seguimientos. Después bloquea `VisitWorkItem` y
+`ClinicalOrder` abiertos, cierra la ruta como `left_without_care`, crea el
+evento y, si se solicitó y existe consentimiento vigente, crea una tarea
+`treatment_recovery` para Recepción/Marlen.
+
+El flujo general rechaza el valor heredado `left`; así ninguna acción puede
+crear un abandono sin motivo. Los permisos `visit_discontinuations_read` y
+`visit_discontinuations_write` separan revisión y operación. Dirección puede
+leer `/sigeco/recepcion/abandonos`, pero solo las áreas operativas registran el
+evento.
+
+La guía completa vive en
+[Abandono, bloqueo y pendientes](../operations/visit-discontinuations.md).
+
+### Ventas E Inventario
+
+`createSaleRecord` calcula subtotal, descuento, total, pago y saldo en servidor. Si existe un item inventariable, el descuento de stock ocurre dentro de la misma transaccion.
+
+`InsufficientStockError` aborta la transaccion completa y conserva producto, existencia y cantidad solicitada para mostrar un error seguro en la UI. No se crea venta, pago ni movimiento de caja parcial.
+
+## Permisos
+
+| Rol | Modulos principales |
+| --- | --- |
+| `super_admin` | Todos. |
+| `direccion` | Lectura de todos los modulos y reportes. |
+| `recepcion` | Recepcion, pacientes, visitas y seguimientos. |
+| `medico` | Recepcion lectura, consulta, enfermeria lectura y seguimientos. |
+| `enfermeria` | Recepcion lectura, enfermeria y estudios. |
+| `administracion` | Recepcion lectura, caja, seguimientos administrativos e inventario. |
+| `seguimiento` | Pacientes lectura y seguimientos administrativos. |
+
+`captacion` esta deprecado y solo conserva acceso base hasta que sus usuarios sean reasignados.
+
+`users_manage` pertenece únicamente a `super_admin`. La administración completa
+vive en `/sigeco/usuarios`; cada empleado gestiona contraseña y sesiones propias
+en `/sigeco/mi-cuenta`. Las cuentas con `mustChangePassword` quedan limitadas a
+`/sigeco/cambiar-contrasena` hasta completar el cambio.
+
+La matriz completa y las reglas para páginas, actions, archivos, URLs, logs,
+caché y secretos viven en
+[Permisos, privacidad, logs y secretos](../operations/permissions-privacy-secrets.md).
+Las pruebas enumeran cada página de datos y cada server action; Payload y
+analytics tienen un límite automático que impide importar consultas clínicas.
+
+### Adjuntos Clínicos
+
+`ClinicalAttachment` conserva metadata, relaciones, checksum, estado de
+cuarentena y responsable. El contenido usa un adapter separado:
+
+- `.data/clinical-files` fuera de `public/` en local;
+- Vercel Blob privado y exclusivo en staging o producción.
+
+La ficha del paciente permite selección múltiple, cámara móvil, compresión JPG,
+progreso y reintento idempotente. Ver y descargar requiere `attachments_read`
+y una concesión de dos minutos y un solo uso enviada por `POST`. El token no
+aparece en la URL y el contenido se verifica por SHA-256 antes de entregarse.
+
+La operación completa vive en
+[Adjuntos clínicos seguros](../operations/clinical-attachments.md).
+
+### Versiones Y Firma Clínica
+
+`ClinicalConsultation` conserva la proyección vigente y un contador
+`revision`. `ClinicalConsultationVersion` guarda una fotografía inmutable desde
+la aplicación por cada borrador, cierre o corrección.
+
+El cierre registra `finalizedById` y `finalizedAt`. No representa una firma
+criptográfica: identifica la cuenta autenticada que aprobó el contenido.
+
+Cada escritura envía `expectedRevision`. La actualización usa esa revisión
+como condición dentro de una transacción serializable; si otra pestaña cambió
+primero, la segunda operación se rechaza.
+
+Una corrección finalizada:
+
+1. exige tipo y motivo;
+2. crea otra versión;
+3. actualiza la proyección vigente;
+4. conserva las versiones anteriores;
+5. no modifica recetas, órdenes, ventas, cobros ni aplicaciones.
+
+El cierre de una visita consulta el estado clínico y rechaza `completed` si
+existe una consulta en borrador. La operación se documenta en
+[Correcciones, cierre y firma clínica](../operations/clinical-record-versioning.md).
+
+### Sesiones, Egresos Y Cierre De Caja
+
+`CashSession` delimita la jornada de una caja física. Una restricción parcial
+impide otra sesión `open` o `pending_approval` para la misma sucursal y caja.
+Cada cobro nuevo obtiene y bloquea la sesión abierta dentro de su transacción;
+si no existe, ni el pago ni la venta con cobro inicial se confirman.
+
+`CashMovement` conserva sesión, canal, tipo, usuario, autorización y referencia
+al movimiento original. `CashExpense` separa los datos del egreso y
+`CashExpenseBeneficiary` guarda las líneas individuales de una entrega grupal.
+Las claves de idempotencia evitan duplicar aperturas, egresos y correcciones.
+
+El cierre calcula el neto por efectivo, QR, tarjeta, transferencia y otros
+medios. `CashSessionReconciliation` fotografía el esperado, reportado y la
+diferencia. Las discrepancias superiores al límite configurable bloquean la
+sesión hasta que Dirección aprueba.
+
+PostgreSQL rechaza movimientos sobre una Caja no abierta y el borrado de
+evidencia financiera. Las devoluciones y reintegros insertan movimientos
+compensatorios. Los comprobantes de compra se validan y se guardan bajo un
+prefijo separado del storage privado; su lectura compara SHA-256 antes de
+servir el contenido.
+
+La operación completa vive en
+[Caja, egresos y cierre diario](../operations/cash-sessions-expenses-close.md).
+
+### Catálogo De Productos Y Proveedores
+
+`InventoryItem` conserva la ficha vigente, disponibilidad, precio de venta,
+costo referencial y una revisión optimista. `InventoryItemCatalogVersion`
+fotografía cada alta, edición, cambio de estado o cambio de proveedores.
+
+`InventoryItemSupplier` permite varias alternativas y una restricción parcial
+admite como máximo un proveedor preferido activo por producto. `Supplier`
+conserva la ficha vigente y `SupplierVersion` su historial.
+
+La base impide modificar el código interno, borrar productos, proveedores o
+asociaciones y editar o borrar versiones. Los registros maestros se desactivan.
+Los códigos, SKU y nombres de proveedor se comparan sin distinguir mayúsculas.
+
+Administración modifica catálogo y proveedores; Dirección lee costos y
+contactos; Médico y Enfermería solo ven disponibilidad activa. El selector de
+ventas muestra productos activos aptos para venta y la transacción valida
+nuevamente ese contrato antes de descontar stock.
+
+El costo referencial pertenece a la ficha vigente. Los costos reales de compra
+se guardan por línea y recepción para que una edición del catálogo no
+reescriba el pasado.
+
+La operación completa vive en
+[Catálogo de productos y proveedores](../operations/product-catalog-suppliers.md).
+
+### Compras, Recepciones, Lotes Y Stock
+
+`Purchase` conserva la orden y su estado; `PurchaseLine` fotografía
+descripción, unidad, cantidad y costo acordado. `PurchasePayment` enlaza cada
+pago real con `CashSession` y `CashMovement`. Una compra a crédito no crea pago
+y una compra urgente reutiliza el movimiento del egreso existente.
+
+`PurchaseReceipt` conserva quién, cuándo, dónde y con qué documento recibió.
+Cada `PurchaseReceiptLine` crea un `InventoryLot` y un único
+`InventoryMovement` de entrada. Cantidades y constraints impiden recibir más
+de lo pedido; claves de idempotencia y relaciones únicas impiden aplicar dos
+veces la recepción.
+
+Las salidas de venta distribuyen existencias por FEFO entre lotes vigentes.
+`InventoryLotAdjustment` registra daño, merma, vencimiento, devolución o
+corrección, con autorización de Dirección y movimiento compensatorio. Los
+eventos financieros, recepciones, documentos, movimientos y ajustes son
+append-only.
+
+`PurchaseDocument` guarda metadata y SHA-256 en Prisma; el contenido usa
+storage privado, autorización server-side y `no-store`. Payload no participa.
+
+La operación completa vive en
+[Compras, recepciones, lotes y stock](../operations/purchases-receipts-batches-stock.md).
+
+### Recetas Y Comprobantes Versionados
+
+`Prescription` conserva versión y referencia a la receta anterior.
+`ClinicalProfessionalProfile` separa la identidad profesional confirmada de la
+cuenta de acceso. `GeneratedDocument` guarda una fotografía JSON inmutable,
+huella SHA-256 de la fuente, número, versión y relación con receta o venta.
+
+La huella hace idempotente la emisión: la misma fuente devuelve la versión ya
+existente; un cambio clínico o financiero crea la siguiente. Un trigger impide
+`UPDATE` y `DELETE`. El PDF se construye desde la fotografía, nunca desde datos
+que pudieron cambiar después.
+
+El endpoint PDF determina el permiso por tipo, exige sesión, usa `no-store` y
+audita descarga o reimpresión. Payload y el sitio público no acceden al módulo.
+
+La operación y el gate productivo viven en
+[Recetas y comprobantes versionados](../operations/versioned-prescriptions-receipts.md).
+
+### Reporte Del Recorrido Completo
+
+`Visit` es la unidad estable del reporte y conserva `branchCode`. El período se
+ancla a `checkedInAt` en `America/La_Paz`. La consulta
+`getPatientJourneyReport` carga una fila por visita y relaciona consulta,
+decisión vigente, ventas no anuladas, seguimiento, abandono y atribución
+principal.
+
+`aggregatePatientJourney` es una función pura que rechaza identificadores de
+visita duplicados. Separa visitas con compra, cantidad de ventas,
+`totalCents`, `paidCents` y `balanceCents`. También calcula embudo, días con
+cero actividad, fuentes y señales de calidad sin modificar registros.
+
+La tabla reconciliable enlaza cada fila al registro de visita. Los totales se
+calculan sobre todo el conjunto filtrado y la paginación solo afecta la
+presentación.
+
+Las fórmulas y exclusiones viven en
+[Reporte del recorrido completo](../operations/patient-journey-report.md).
+
+### Tiempo De Atención Por Área
+
+`VisitAreaTimeEvent` conserva eventos append-only por
+`PatientRouteStep`: entrada, inicio de atención, bloqueo, reanudación y salida.
+`sequence` ordena transiciones concurrentes aun cuando compartan timestamp. Un
+trigger PostgreSQL rechaza actualización y borrado.
+
+La entrada y salida se agregan dentro de las mismas transacciones que mueven la
+ruta. El inicio de atención es explícito: abrir una pantalla no demuestra que
+el personal ya comenzó. `area_time_write` permite operar solamente al rol del
+área actual; Dirección conserva lectura mediante `reports_read`.
+
+`aggregateAreaTimeReport` reconstruye intervalos de espera, atención y bloqueo.
+Calcula promedio, mediana, P75 y P90 sobre sesiones cerradas. Visitas
+canceladas y `isTestData` quedan fuera; abandonos se conservan hasta la salida.
+Los pasos anteriores se marcan `inferred` y no atribuyen fases que nunca fueron
+registradas.
+
+El reporte y las reglas operativas viven en
+[Tiempo de atención por área](../operations/area-service-times.md).
+
+### Consentimientos
+
+`PatientConsent` registra eventos independientes para seguimiento,
+recordatorios, educación, promociones e imagen/voz. Cada evento conserva texto,
+versión, decisión, canales, fecha, forma de confirmación, responsable y
+referencia al evento anterior. Un trigger rechaza edición y borrado.
+
+Recepción registra la respuesta desde la ficha. Los métodos remotos de
+Seguimiento se muestran y se validan en servidor según la decisión más
+reciente. `Patient.followUpPreference` queda solo como compatibilidad histórica
+y nunca concede un uso nuevo.
+
+La guía operativa y el gate productivo viven en
+[Consentimientos y preferencias de contacto](../operations/patient-consents.md).
+
+## Actualización De Bandejas
+
+Recepción, Consulta, Enfermería y Administración comparten una política de
+polling con `router.refresh()`: 30 segundos en escritorio y 60 en móvil. La URL
+permanece estable para conservar filtros, paginación y selección.
+
+El polling se pausa cuando la pestaña está oculta, no existe conexión, ya hay
+una solicitud activa o un formulario contiene cambios sin aplicar. Las
+métricas técnicas permanecen en la sesión del navegador y no contienen datos
+del paciente. La base de datos sigue siendo la fuente de verdad; SSE o
+WebSocket solo se evaluarán con evidencia del piloto.
+
+La operación se documenta en
+[Actualización de bandejas operativas](../operations/operational-queue-refresh.md).
+
+## Resiliencia Móvil Y Conectividad
+
+`ConnectivityGuard` observa `navigator.onLine` y, cuando está disponible, la
+calidad informada por Network Information. Un listener de captura impide
+submits mientras el navegador está offline, sin vaciar o recargar el form. Al
+reconectar no existe replay automático: operaciones monetarias y de stock
+requieren revisión humana.
+
+`Visit`, `Sale`, `Payment` e `InventoryMovement` agregan una clave única
+opcional para no reescribir registros históricos. La UI nueva siempre envía un
+UUID estable por formulario. Caja, compras, recepciones y lotes reutilizan las
+claves incorporadas por las Tareas 18 y 20. Los queries consultan primero la
+clave y devuelven el registro existente antes de ejecutar efectos asociados.
+
+`sigeco.safe-draft.purchase.v1` es el único borrador local autorizado. Un
+schema estricto acepta solo datos administrativos de la compra, vive en
+`sessionStorage` y se elimina tras confirmación o logout. No se almacenan
+pacientes, clínica ni archivos. Las rutas `/sigeco/*` continúan con
+`private, no-store` y no se registra service worker.
+
+La contingencia física se prepara desde `/sigeco/contingencia`; la hoja exige
+número temporal, transcripción, ID definitivo y doble revisión de dinero o
+stock. La operación completa vive en
+[Móvil y conectividad lenta](../operations/mobile-slow-connectivity.md).
+
+## Dashboard
+
+`getReceptionDashboardSummary` calcula con rango diario local:
+
+- Pacientes unicos por `patientId`.
+- Rutas activas agrupadas por area.
+- Abandonos por evento `VisitStatusHistory` ocurrido durante el dia.
+- Ultimas ocho llegadas.
+
+Seguimientos e inventario mantienen queries independientes y solo se ejecutan cuando el rol tiene permiso.
+
+## Responsive
+
+- Viewport base: 390px.
+- El shell aisla overflow horizontal del documento.
+- Las tablas anchas desplazan su contenido dentro de `overflow-x-auto`.
+- Acciones y formularios usan columnas responsivas y controles tactiles.
+- Marea esta scopeado por `.sigeco-app` y no altera sitio publico ni Payload.
+
+## Pruebas
 
 ```bash
-pnpm lint
 pnpm test
-pnpm typecheck
-pnpm run build
-```
-
-Si hay migraciones o queries transaccionales:
-
-```bash
 pnpm test:integration
 ```
 
-## Migraciones Y Seeds
+La suite rapida cubre schemas, permisos, componentes y helpers. La suite de integracion reinicia exclusivamente `salud_intercultural_test`, aplica todas las migraciones y valida contratos transaccionales.
 
-### Reglas
+Contratos criticos cubiertos:
 
-- Cada fase que agregue modelos debe incluir migracion Prisma.
-- Los roles y permisos iniciales deben seedearse.
-- El primer `super_admin` debe crearse solo mediante variables seguras o comando local documentado.
-- No crear datos clinicos reales en seeds.
-- Los seeds de prueba deben usar datos ficticios.
+- Funnel de paciente nuevo y existente.
+- Ruta flexible y bloqueo de reapertura.
+- Consulta, enfermeria y estudios.
+- Ventas, pagos y caja.
+- Stock, rollback y alertas.
+- Tipos, resultados, roles y escalamiento de seguimientos; dashboard.
+- Motivo, punto de salida, bloqueo y pendientes de visitas interrumpidas.
+- Auditoría append-only, usuarios, roles y sesiones.
+- Adjuntos clínicos privados, idempotencia y acceso temporal.
+- Detección normalizada, cola, alias y fusión transaccional de pacientes.
+- Intervalos, pausas y protección de formularios en bandejas operativas.
+- Validación del resultado, motivos permitidos y límite de permiso clínico.
+- Borrador, cierre, corrección, comparación y concurrencia optimista de la
+  consulta clínica.
 
-### Variables Probables
+## Deploy
 
-```env
-INTERNAL_AUTH_SECRET=""
-INTERNAL_SESSION_SECONDS="28800"
-INTERNAL_LOCK_MINUTES="10"
-INTERNAL_ADMIN_EMAIL=""
-INTERNAL_ADMIN_PASSWORD=""
+```txt
+develop -> staging -> main
 ```
 
-Estas variables deben agregarse a `.env.example` y `docs/operations/environment-variables.md` cuando se implemente auth interna.
+Antes de promover:
 
-## Definicion De Terminado V3
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:integration
+pnpm run build
+```
 
-Una fase V3 queda cerrada cuando:
+Detener `next dev` antes de `next build`; ambos comparten `.next`. Las migraciones remotas se ejecutan por separado con `pnpm db:deploy` y backup previo.
 
-1. Modelos Prisma y migraciones estan implementados.
-2. Queries y validaciones estan cubiertas.
-3. UI `/sigeco` funciona en mobile 390px.
-4. Permisos server-side estan aplicados.
-5. Estados loading, empty, error y success existen.
-6. Documentacion operativa afectada esta actualizada.
-7. No hay duplicacion editable entre Payload y Prisma.
-8. Tests relevantes pasan.
-9. `pnpm lint`, `pnpm test`, `pnpm typecheck` y `pnpm run build` pasan antes de promover.
+## Trabajo Posterior
 
-## Riesgos Tecnicos
+- Cierre remoto de CI y staging aislado.
+- Endurecimiento adicional de permisos, privacidad, logs y secretos.
+- Activación remota del backup coordinado y respuesta a incidentes. El
+  simulacro local cifrado de base y adjuntos está documentado en
+  [Backup y restauración de SIGECO](../operations/backup-restore.md).
+- El runbook y la separación entre gate local y aprobación productiva están en
+  [Respuesta a incidentes](../operations/incident-response.md). Dirección ya
+  aprobó la implementación de la Tarea 8; la autorización de producción sigue
+  separada y bloqueada.
+- Multi-sucursal preparada localmente: El Alto activa, Cochabamba en
+  preparación, selector validado, Caja y stock aislados, traslados enlazados y
+  consolidado exclusivo de Dirección. Ver
+  [Operación multi-sucursal](../operations/multi-branch-operations.md).
 
-- Duplicar leads entre Payload y Prisma sin definir ownership final.
-- Crear pantallas internas tipo desktop y despues intentar adaptarlas a mobile.
-- Subestimar permisos clinicos y exponer informacion sensible.
-- Mezclar CMS editorial con operacion transaccional.
-- Implementar ventas antes de definir relacion con inventario.
-- Crear formularios clinicos largos sin guardado progresivo.
-- No auditar cambios sensibles desde el inicio.
-
-## Primer Paso Recomendado
-
-Iniciar con una rama V3.1A enfocada solo en:
-
-1. Auth interna separada.
-2. Roles y permisos base.
-3. Shell mobile-first `/sigeco`.
-4. Modelos Prisma de leads operativos.
-5. Pipeline de leads y recordatorios.
-
-No comenzar pacientes, consultas ni ventas hasta cerrar este cimiento.
+El orden técnico y funcional vigente vive en [Tasks de mejoras integrales](./sigeco-mejoras-integrales/tasks.md). Su estado se controla únicamente en [Progress](./sigeco-mejoras-integrales/progress.md).

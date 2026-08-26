@@ -9,6 +9,7 @@ out/
 # production
 build/
 dist/
+.data/
 
 # TypeScript
 *.tsbuildinfo
@@ -47,3 +48,10 @@ Thumbs.db
 # local Codex metadata
 .agents/
 .codex/
+.gstack/
+
+
+docs/masters/Ideas/
+.vercel
+.env*
+capturas/

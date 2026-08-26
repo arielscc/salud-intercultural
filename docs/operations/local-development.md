@@ -32,12 +32,16 @@ PAYLOAD_SECRET="local-development-secret-change-me"
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
 PAYLOAD_DB_SCHEMA="payload"
 BLOB_READ_WRITE_TOKEN=""
+CLINICAL_FILES_STORAGE_DRIVER="local"
+CLINICAL_FILES_LOCAL_PATH=".data/clinical-files"
 CMS_READS_DURING_BUILD="false"
 NEXT_PUBLIC_GA_ID=""
 NEXT_PUBLIC_META_PIXEL_ID=""
 ```
 
-4. Dejar `BLOB_READ_WRITE_TOKEN` vacio en local si se quiere usar storage local en `public/media`.
+4. Dejar `BLOB_READ_WRITE_TOKEN` vacío en local si se quiere usar storage
+   editorial en `public/media`. Los adjuntos clínicos se guardan por separado
+   en `.data/clinical-files`, fuera de `public/`.
 
 Mas detalle: [variables de entorno](./environment-variables.md).
 
@@ -52,6 +56,36 @@ Rutas utiles:
 - Sitio publico: `http://localhost:3000`
 - Admin Payload: `http://localhost:3000/admin`
 - API leads: `http://localhost:3000/api/leads`
+- Adjuntos clínicos: dentro de la ficha del paciente, solo con un rol autorizado.
+
+## Modulos Activos
+
+SIGECO se lanza por etapas: un modulo apagado no aparece en la navegacion y sus
+paginas y acciones se rechazan en el servidor. Una base recien migrada solo trae
+el nucleo encendido, asi que en desarrollo hay que activar lo que se va a usar.
+
+```bash
+SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=true pnpm modules:set
+SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=true pnpm modules:set
+```
+
+Modulos disponibles: `core`, `administracion`, `inventario`, `compras`,
+`catalogo`, `recepcion`, `consulta`, `enfermeria`, `seguimientos`, `opiniones`,
+`reportes`.
+
+Las dependencias son duras: Compras exige Inventario, Consulta exige Recepcion y
+Enfermeria exige Consulta. Apagar exige motivo:
+
+```bash
+SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=false \
+  SIGECO_MODULE_REASON="Prueba local" pnpm modules:set
+```
+
+El script existe para preparar un ambiente. La operacion real se hace en
+`/sigeco/modulos`, con el permiso `modules_manage`; esa pantalla comparte las
+mismas reglas y el mismo historial. Direccion la ve en solo lectura con
+`modules_read`. Plan:
+[lanzamiento por etapas](../project/sigeco-lanzamiento-por-etapas/tasks.md).
 
 ## Migraciones Y Seeds
 
@@ -112,6 +146,23 @@ pnpm test:integration
 ```
 
 Mas detalle: [testing](./testing.md).
+
+## Simulacro Local De Recuperación
+
+Con PostgreSQL de Docker saludable:
+
+```bash
+pnpm backup:drill:local
+```
+
+El comando crea dos bases con nombres controlados, aplica migraciones, genera
+datos sintéticos, cifra una copia, la restaura, comprueba los archivos clínicos
+y elimina únicamente esas bases temporales. No modifica
+`salud_intercultural_dev`. La evidencia privada queda bajo
+`.data/backup-evidence/`.
+
+Procedimiento manual y política operativa:
+[Backup y restauración de SIGECO](./backup-restore.md).
 
 Si `typecheck` o `build` fallan por `DATABASE_URL`, revisa que `.env` exista y apunte a una base PostgreSQL valida.
 

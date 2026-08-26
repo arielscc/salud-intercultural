@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { persistedLead, validLeadInput } from "../../../../tests/fixtures/leads";
 import { createLeadRecord } from "@/modules/database/queries/leads";
+import { findActivePayloadCampaignByCode } from "@/modules/payload-sigeco/payload-campaigns";
 import { POST } from "@/app/api/leads/route";
 
 vi.mock("@/modules/database/queries/leads", () => ({
   createLeadRecord: vi.fn()
 }));
+vi.mock("@/modules/payload-sigeco/payload-campaigns", () => ({
+  findActivePayloadCampaignByCode: vi.fn()
+}));
 
 const createLeadRecordMock = vi.mocked(createLeadRecord);
+const findCampaignMock = vi.mocked(findActivePayloadCampaignByCode);
 
 function createJsonRequest(body: unknown, headers?: HeadersInit) {
   return new Request("http://localhost:3000/api/leads", {
@@ -26,7 +31,9 @@ async function readJson(response: Response) {
 }
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   createLeadRecordMock.mockReset();
+  findCampaignMock.mockReset();
   delete (globalThis as typeof globalThis & {
     __saludInterculturalLeadRateLimit?: unknown;
   }).__saludInterculturalLeadRateLimit;
@@ -77,6 +84,40 @@ describe("POST /api/leads", () => {
     expect(createLeadRecordMock).not.toHaveBeenCalled();
   });
 
+  it("uses a configured campaign to identify account and traffic automatically", async () => {
+    createLeadRecordMock.mockResolvedValue(persistedLead);
+    findCampaignMock.mockResolvedValue({
+      externalId: "1",
+      revision: new Date().toISOString(),
+      code: "TIKTOK-DR",
+      name: "Contenido del doctor",
+      sourceCode: "tiktok",
+      accountLabel: "TikTok del Dr. Franco",
+      accountHandle: "@clinicademedicinanatural",
+      trafficType: "organic",
+      active: true,
+      startsAt: null,
+      endsAt: null
+    });
+
+    const response = await POST(
+      createJsonRequest({
+        ...validLeadInput,
+        campaignCode: "tiktok-dr"
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(findCampaignMock).toHaveBeenCalledWith("TIKTOK-DR");
+    expect(createLeadRecordMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignCode: "TIKTOK-DR",
+        attributedAccount: "TikTok del Dr. Franco",
+        attributionTrafficType: "organic"
+      })
+    );
+  });
+
   it("blocks honeypot submissions before persistence", async () => {
     const response = await POST(
       createJsonRequest({
@@ -124,5 +165,53 @@ describe("POST /api/leads", () => {
       ok: false,
       message: "No pudimos registrar la consulta. Inténtalo nuevamente."
     });
+  });
+
+  it("keeps the lead when campaign lookup is temporarily unavailable", async () => {
+    createLeadRecordMock.mockResolvedValue(persistedLead);
+    findCampaignMock.mockRejectedValue(new Error("integration unavailable"));
+
+    const response = await POST(
+      createJsonRequest({ ...validLeadInput, campaignCode: "TIKTOK-DR" })
+    );
+
+    expect(response.status).toBe(201);
+    expect(createLeadRecordMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignCode: "TIKTOK-DR",
+        attributionTrafficType: "unidentified"
+      })
+    );
+  });
+
+  it("rejects real-looking contact data in staging", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+
+    const response = await POST(createJsonRequest(validLeadInput));
+
+    expect(response.status).toBe(422);
+    expect(await readJson(response)).toMatchObject({
+      ok: false,
+      message: "Staging acepta únicamente datos sintéticos de prueba."
+    });
+    expect(createLeadRecordMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts reserved synthetic contact data in staging", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    createLeadRecordMock.mockResolvedValue(persistedLead);
+
+    const response = await POST(
+      createJsonRequest({
+        ...validLeadInput,
+        email: "paciente@staging.invalid",
+        phone: "+59100000009"
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(createLeadRecordMock).toHaveBeenCalledOnce();
   });
 });

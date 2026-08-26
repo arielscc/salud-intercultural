@@ -1,6 +1,7 @@
 import type { CollectionConfig } from "payload";
 import { Faqs } from "./Faqs.ts";
 import { LeadSubmissions } from "./LeadSubmissions.ts";
+import { MarketingCampaigns } from "./MarketingCampaigns.ts";
 import { Media } from "./Media.ts";
 import { Pages } from "./Pages.ts";
 import { Services } from "./Services.ts";
@@ -18,5 +19,6 @@ export const collections: CollectionConfig[] = [
   Faqs,
   TeamMembers,
   Pages,
+  MarketingCampaigns,
   LeadSubmissions
 ];

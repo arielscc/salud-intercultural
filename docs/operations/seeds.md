@@ -7,6 +7,7 @@ Guia operativa para cargar datos iniciales locales, staging o produccion.
 El seed canonico del proyecto es Payload:
 
 - `scripts/seed-payload.ts`: contenido inicial para Payload CMS y panel admin.
+- `scripts/seed-staging-sigeco.ts`: cuentas, bandejas y datos sinteticos exclusivos de staging.
 
 Los scripts son idempotentes: usan `upsert` o busqueda previa para actualizar registros existentes sin duplicarlos.
 
@@ -17,6 +18,7 @@ Configurar `.env` antes de ejecutar seeds:
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require"
 PAYLOAD_SECRET="un-string-largo-seguro"
+PAYLOAD_SIGECO_INTEGRATION_SECRET="otro-secreto-exclusivo-de-32-caracteres"
 PAYLOAD_PUBLIC_SERVER_URL="http://localhost:3000"
 PAYLOAD_DB_SCHEMA="payload"
 ```
@@ -56,16 +58,17 @@ pnpm payload:seed
 Seed Payload con variables de staging locales:
 
 ```bash
-pnpm payload:seed:staging
+pnpm staging:seed
 ```
 
-Usa `.env.staging` mediante `DOTENV_CONFIG_PATH`.
+Primero valida el aislamiento, luego carga Payload y finalmente crea las cuentas y bandejas QA de SIGECO.
 
 ## Contenido Sembrado Por Defecto
 
 `pnpm seed` carga en Payload CMS:
 
 - Usuario admin opcional desde variables de entorno.
+- Campañas institucionales y su copia técnica de atribución en SIGECO.
 - Servicios.
 - Tratamientos y problemas frecuentes.
 - Equipo.
@@ -98,7 +101,9 @@ Antes de ejecutar reset, confirmar que `DATABASE_URL` apunte a una base local o 
 
 - En Vercel no conviene ejecutar seeds automaticamente durante build.
 - Para produccion, ejecutar `pnpm seed` o `pnpm payload:seed` manualmente desde un entorno seguro con `DATABASE_URL` de produccion.
-- Para staging, usar `pnpm payload:seed:staging` solo si `.env.staging` apunta al ambiente correcto.
+- Para staging, usar `pnpm staging:seed`; no ejecutar el seed interno por separado salvo diagnostico tecnico.
+- Verificar cuentas y fixtures con `pnpm staging:verify`.
+- Para volver al estado conocido, seguir [staging aislado](./staging.md).
 - Si usas Neon, revisar que la base y schema existan antes de sembrar.
 
 ## Seguridad

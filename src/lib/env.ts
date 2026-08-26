@@ -14,6 +14,10 @@ const optionalPhone = z.preprocess(
 );
 
 export const publicEnvSchema = z.object({
+  NEXT_PUBLIC_APP_ENV: z.preprocess(
+    emptyToUndefined,
+    z.enum(["local", "test", "staging", "production"]).default("local")
+  ),
   NEXT_PUBLIC_SITE_URL: z.preprocess(
     emptyToUndefined,
     z.string().url().default("http://localhost:3000")
@@ -34,6 +38,22 @@ export const publicEnvSchema = z.object({
 });
 
 export const privateEnvSchema = z.object({
+  APP_ENV: z.preprocess(
+    emptyToUndefined,
+    z.enum(["local", "test", "staging", "production"]).default("local")
+  ),
+  DATABASE_ENVIRONMENT: z.preprocess(
+    emptyToUndefined,
+    z.enum(["local", "test", "staging", "production"]).optional()
+  ),
+  STORAGE_ENVIRONMENT: z.preprocess(
+    emptyToUndefined,
+    z.enum(["local", "test", "staging", "production"]).optional()
+  ),
+  EXTERNAL_COMMUNICATIONS_MODE: z.preprocess(
+    emptyToUndefined,
+    z.enum(["blocked", "enabled"]).default("blocked")
+  ),
   DATABASE_URL: z.preprocess(
     emptyToUndefined,
     z
@@ -47,12 +67,39 @@ export const privateEnvSchema = z.object({
   ),
   PAYLOAD_PUBLIC_SERVER_URL: optionalUrl,
   PAYLOAD_DB_SCHEMA: z.preprocess(emptyToUndefined, z.string().default("payload")),
+  PAYLOAD_SIGECO_INTEGRATION_SECRET: z.preprocess(
+    emptyToUndefined,
+    z.string().min(32, "PAYLOAD_SIGECO_INTEGRATION_SECRET must contain at least 32 characters.").optional()
+  ),
   BLOB_READ_WRITE_TOKEN: optionalString,
+  STAGING_BLOB_READ_WRITE_TOKEN: optionalString,
+  CLINICAL_FILES_STORAGE_DRIVER: z.preprocess(
+    emptyToUndefined,
+    z.enum(["local", "vercel-blob"]).optional()
+  ),
+  CLINICAL_FILES_LOCAL_PATH: optionalString,
+  CLINICAL_BLOB_READ_WRITE_TOKEN: optionalString,
+  STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN: optionalString,
+  BACKUP_DATABASE_URL: optionalUrl,
+  BACKUP_CLINICAL_FILES_PATH: optionalString,
+  BACKUP_OUTPUT_PATH: optionalString,
+  BACKUP_ENCRYPTION_KEY: optionalString,
+  BACKUP_RESPONSIBLE: optionalString,
+  BACKUP_FILE: optionalString,
+  RESTORE_DATABASE_URL: optionalUrl,
+  RESTORE_CLINICAL_FILES_PATH: optionalString,
+  RESTORE_CONFIRMATION: optionalString,
   ADMIN_EMAIL: optionalEmail,
   ADMIN_PASSWORD: optionalString,
   ADMIN_RESET_PASSWORD_ON_SEED: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false")),
   ADMIN_SESSION_SECONDS: z.coerce.number().int().positive().default(28800),
   ADMIN_LOCK_MINUTES: z.coerce.number().int().positive().default(10),
+  INTERNAL_SESSION_SECONDS: z.coerce.number().int().positive().default(28800),
+  INTERNAL_LOCK_MINUTES: z.coerce.number().int().positive().default(10),
+  INTERNAL_ADMIN_EMAIL: optionalEmail,
+  INTERNAL_ADMIN_PASSWORD: optionalString,
+  STAGING_QA_EMAIL_DOMAIN: optionalString,
+  STAGING_QA_PASSWORD: optionalString,
   GOOGLE_SITE_VERIFICATION: optionalString,
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),

@@ -16,6 +16,7 @@
   --color-muted: 100 116 139;
   --color-border: 215 233 238;
   --color-success: 22 163 74;
+  --color-warning: 217 119 6;
   --color-error: 220 38 38;
   --hero-end: 238 248 250;
   --shadow-brand: 5 154 178;
@@ -45,6 +46,7 @@
   --color-muted: 151 170 178;
   --color-border: 35 68 78;
   --color-success: 34 197 94;
+  --color-warning: 245 158 11;
   --color-error: 248 113 113;
   --hero-end: 11 35 45;
   --shadow-brand: 0 0 0;
@@ -101,6 +103,14 @@ a {
     linear-gradient(rgb(var(--color-primary) / 0.065) 1px, transparent 1px),
     linear-gradient(90deg, rgb(var(--color-primary) / 0.065) 1px, transparent 1px);
   background-size: 44px 44px;
+}
+
+.payment-weave {
+  background-image:
+    linear-gradient(45deg, rgb(var(--color-primary) / 0.055) 25%, transparent 25%),
+    linear-gradient(-45deg, rgb(var(--color-primary) / 0.055) 25%, transparent 25%);
+  background-position: 0 0, 0 16px;
+  background-size: 32px 32px;
 }
 
 .glass {

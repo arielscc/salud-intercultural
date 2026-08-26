@@ -1,0 +1,19 @@
+{
+  "formatVersion": 1,
+  "approvedAt": "2026-07-29T16:20:00-04:00",
+  "approvedByRole": "direccion",
+  "scope": "task_8_incident_response_and_security_gate",
+  "decision": "approved",
+  "productionAuthorized": false,
+  "openCriticalOrHighFindings": 0,
+  "approvalReference": "Dirección solicitó expresamente completar la Tarea 8 durante la revisión del 2026-07-29.",
+  "incidentEvidenceRunId": "ms6hi8bf_ad569853",
+  "securityReviewReport": "docs/project/task-reports/2026-07-29-tarea-8-respuesta-incidentes-gate-seguridad.md",
+  "productionBlockers": [
+    "required_checks_remote",
+    "staging_role_qa",
+    "private_clinical_blob_remote",
+    "production_backup_restore",
+    "direction_production_approval"
+  ]
+}

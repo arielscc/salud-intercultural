@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { normalizeCampaignCode } from "@/features/attribution/catalog";
 import { createLeadSchema, sanitizeLeadInput } from "@/features/leads/schemas/lead.schema";
 import { env } from "@/lib/env";
+import { isStagingEnvironment } from "@/lib/deployment-environment";
 import { createLeadRecord } from "@/modules/database/queries/leads";
+import { findActivePayloadCampaignByCode } from "@/modules/payload-sigeco/payload-campaigns";
 
 type RateLimitEntry = {
   count: number;
@@ -29,6 +32,11 @@ function getClientIp(request: Request) {
 
 function normalizePhone(phone: string) {
   return phone.replace(/[^\d+]/g, "");
+}
+
+function isSyntheticStagingLead(input: { email?: string; phone: string }) {
+  const phone = input.phone.replace(/\D/g, "");
+  return phone.startsWith("591000") && (!input.email || input.email.endsWith(".invalid"));
 }
 
 function checkRateLimit(key: string) {
@@ -78,6 +86,17 @@ export async function POST(request: Request) {
   }
 
   const input = sanitizeLeadInput(parsed.data);
+
+  if (isStagingEnvironment() && !isSyntheticStagingLead(input)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Staging acepta únicamente datos sintéticos de prueba."
+      },
+      { status: 422 }
+    );
+  }
+
   const clientIp = getClientIp(request);
   const rateLimitKey = `${clientIp}:${normalizePhone(input.phone)}`;
 
@@ -92,8 +111,18 @@ export async function POST(request: Request) {
   }
 
   try {
+    const campaign = input.campaignCode
+      ? await findActivePayloadCampaignByCode(
+          normalizeCampaignCode(input.campaignCode)
+        ).catch(() => null)
+      : null;
     const lead = await createLeadRecord({
       ...input,
+      campaignCode: campaign?.code ?? input.campaignCode,
+      attributedAccount:
+        campaign?.accountLabel ?? campaign?.sourceCode,
+      attributionTrafficType:
+        campaign?.trafficType ?? "unidentified",
       status: "new"
     });
 
@@ -103,7 +132,8 @@ export async function POST(request: Request) {
         lead: {
           id: lead.id,
           status: lead.status,
-          createdAt: lead.createdAt
+          createdAt: lead.createdAt,
+          attributionCode: `WEB-${lead.id}`
         },
         message: "Consulta registrada correctamente."
       },
