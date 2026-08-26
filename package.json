@@ -39,6 +39,7 @@
     "payload:seed": "node --import tsx scripts/seed-payload.ts",
     "payload:seed:staging": "DOTENV_CONFIG_PATH=.env.staging pnpm payload:seed",
     "staging:check": "DOTENV_CONFIG_PATH=.env.staging node --import dotenv/config --import tsx scripts/validate-environment.ts --expect staging",
+    "staging:sync-vercel": "node --import tsx scripts/sync-vercel-staging-env.ts",
     "staging:migrate": "pnpm staging:check && DOTENV_CONFIG_PATH=.env.staging pnpm exec prisma migrate deploy",
     "staging:seed:sigeco": "DOTENV_CONFIG_PATH=.env.staging node --import dotenv/config --import tsx scripts/seed-staging-sigeco.ts",
     "staging:seed": "pnpm staging:check && pnpm payload:seed:staging && pnpm staging:seed:sigeco",

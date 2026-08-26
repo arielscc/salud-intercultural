@@ -158,15 +158,43 @@ Tiene que terminar sin error antes de desplegar o migrar.
 
 ### Variables De Vercel
 
-Usar [.env.staging.example](../../.env.staging.example) como lista de control. Las variables Preview con secretos de staging deben limitarse a la rama `staging`; otros previews no deben heredarlas.
+`.env.staging` es la fuente de verdad. Vercel se sincroniza desde ahí, no a mano:
 
-Activar el control de acceso del proveedor de hosting para que staging no sea un sitio publico. Solo el equipo y las personas autorizadas para QA deben poder abrirlo.
+```bash
+pnpm staging:sync-vercel --dry-run   # muestra qué empujaría
+pnpm staging:sync-vercel             # empuja y verifica
+```
 
-Validar sin imprimir secretos:
+El script valida el archivo local contra el contrato de aislamiento antes de
+escribir, empuja las catorce variables que el build lee, y despues verifica tres
+cosas: que Vercel devuelva los mismos valores, que no haya analitica de
+produccion, y que ninguna alcance a otra rama.
+
+Ese ultimo punto no es opcional. Preview cubre **todas** las ramas, y una preview
+de `develop` deduce entorno `test`: si heredara `APP_ENV=staging` chocaria con esa
+deduccion y ninguna preview de develop volveria a compilar. Por eso van acotadas
+a la rama `staging`.
+
+El script no borra variables. Si reporta analitica o una variable sin acotar, hay
+que corregirla desde el panel de Vercel.
+
+Vercel no reconstruye al cambiar variables: despues de sincronizar hay que
+redesplegar con `vercel redeploy <url>`. Un `vercel deploy` a secas no sirve,
+porque sube el arbol de trabajo local sin metadata de rama y no recibe ninguna de
+las variables acotadas.
+
+Activar el control de acceso del proveedor de hosting para que staging no sea un
+sitio publico. Solo el equipo y las personas autorizadas para QA deben poder
+abrirlo.
+
+Validar el archivo local sin imprimir secretos:
 
 ```bash
 pnpm staging:check
 ```
+
+`staging:check` valida **el archivo**, no lo que tiene Vercel. Los dos se
+comparan solo en `staging:sync-vercel`.
 
 ## Migraciones Y Datos QA
 
