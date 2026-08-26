@@ -60,8 +60,8 @@ se sigue llevando en sus propios archivos.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 9 |
-| En progreso | 12 |
+| Pendiente | 8 |
+| En progreso | 13 |
 | Bloqueada | 0 |
 | Terminada | 0 |
 | Descartada | 0 |
@@ -92,7 +92,7 @@ se sigue llevando en sus propios archivos.
 | 10 | Datos maestros reales de la Etapa 1 | P0 | En progreso | 8-9 |
 | 10B | Deuda previa al plan | P0 | En progreso | Ninguna |
 | 11 | CI remoto y protección de ramas | P0 | En progreso | Fases A y B |
-| 12 | Staging aislado y ensayo de la Etapa 1 | P0 | Pendiente | 11 |
+| 12 | Staging aislado y ensayo de la Etapa 1 | P0 | En progreso | 11 |
 | 13 | Backup y restauración probados en remoto | P0 | Pendiente | 12 |
 | 14 | Cierre del gate de seguridad | P0 | Pendiente | 13 |
 | 15 | Despliegue y activación de la Etapa 1 | P0 | Pendiente | 14 |
@@ -144,16 +144,47 @@ se sigue llevando en sus propios archivos.
 
 ## Próximo Trabajo
 
-Tarea 12: staging aislado y ensayo de la Etapa 1. La promoción `develop → staging`
-ya pasa por el candado del CI, así que el siguiente paso es preparar la base, el
-Blob y los secretos exclusivos de staging, desplegar y ensayar el lanzamiento
-completo con módulos apagados y encendidos.
+Desbloquear staging: faltan dos secretos que no se pueden inventar, el Blob
+privado para adjuntos clínicos (`STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN`) y
+`PAYLOAD_SIGECO_INTEGRATION_SECRET`. Con eso, `pnpm staging:check` pasa, se
+promueve `develop → staging`, se aplican las 54 migraciones pendientes y se corre
+`pnpm stage-one:rehearse` contra staging.
+
+Después, Tarea 13: backup y restauración probados en remoto.
 
 En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/plantillas/` y el procedimiento en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-26 — Tarea 12: Ensayo Listo, Staging Bloqueado Por Dos Secretos
+
+**Las ocho barreras de aislamiento funcionan.** Se verificaron una por una
+levantando una configuración válida de staging y rompiéndola de a un campo: base
+productiva, dominio productivo, schema compartido, comunicaciones habilitadas,
+analytics real, ambiente productivo, Blob de media productivo y falta del Blob
+clínico. Las ocho bloquean, y la configuración correcta sí pasa.
+
+**El ensayo quedó como script:** `pnpm stage-one:rehearse` recorre los once pasos
+de la Etapa 1 —encender módulos, producto con stock, abrir Caja, alta de cliente
+sin visita, venta con descuento de stock, cobro, recibo, egreso, compra con
+recepción y lote, suspender y reactivar un módulo, cerrar Caja— y **verifica cada
+uno**. Ejecutado contra PostgreSQL real: 11 pasos sin defectos, con la Caja
+cuadrando en 35 Bs y diferencia cero.
+
+Corre solo contra bases `staging`, `test` o `dev`, exige confirmar el nombre a
+mano y marca todo lo que crea con el prefijo `ENSAYO-<fecha>`.
+
+**Dos reglas del negocio que el ensayo documentó ejecutándolas:** una compra en
+efectivo se paga al confirmarla y no admite pago aparte; un cierre que cuadra no
+pasa por Dirección.
+
+**Staging no puede arrancar:** faltan `STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN` y
+`PAYLOAD_SIGECO_INTEGRATION_SECRET`. Además tiene 12 de 66 migraciones aplicadas
+y la rama está 175 commits atrás. Nada de eso es código.
+
+Detalle: [reporte de tarea](../task-reports/2026-08-26-lanzamiento-tarea-12-staging-ensayo.md).
 
 ### 2026-08-25 — Tarea 11 Implementada (CI Remoto Y Cierre Acumulado)
 

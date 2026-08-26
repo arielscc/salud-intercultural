@@ -61,7 +61,8 @@
     "ci:watch": "gh run watch",
     "ci:failed": "gh run view --log-failed",
     "stage-one:check": "node --import dotenv/config --import tsx scripts/check-stage-one-readiness.ts",
-    "stage-one:load": "node --import dotenv/config --import tsx scripts/load-stage-one-master-data.ts"
+    "stage-one:load": "node --import dotenv/config --import tsx scripts/load-stage-one-master-data.ts",
+    "stage-one:rehearse": "node --import dotenv/config --import tsx scripts/rehearse-stage-one.ts"
   },
   "dependencies": {
     "@date-fns/tz": "1.5.0",

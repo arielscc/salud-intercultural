@@ -42,6 +42,23 @@ STAGING · DATOS SINTETICOS · CONTACTOS BLOQUEADOS
 
 En el sitio publico, SIGECO y Payload se bloquean los enlaces de WhatsApp, llamada, SMS y correo. Las variables de contacto tambien deben ser sinteticas.
 
+## Ensayo De La Etapa 1
+
+Una vez que `pnpm staging:check` pase y las migraciones esten aplicadas:
+
+```bash
+REHEARSAL_CONFIRM=salud_intercultural_staging pnpm stage-one:rehearse
+```
+
+Recorre los once pasos que Administracion hace el primer dia real —encender los
+modulos de la Etapa 1, producto con stock, abrir Caja, registrar un cliente sin
+visita, vender, cobrar, emitir el recibo, registrar un egreso, comprar y recibir
+con lote, suspender y reactivar un modulo, y cerrar Caja— y verifica cada uno.
+Falla si aparece cualquier diferencia en el cierre.
+
+Solo corre contra bases cuyo nombre contenga `staging`, `test` o `dev`, y exige
+escribir el nombre a mano. Todo lo que crea lleva el prefijo `ENSAYO-<fecha>`.
+
 ## Preparacion
 
 ### PostgreSQL

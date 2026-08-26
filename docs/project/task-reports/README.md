@@ -73,6 +73,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-24 | [Lanzamiento Tarea 10: datos maestros de la Etapa 1](./2026-08-24-lanzamiento-tarea-10-datos-maestros.md) | Plantilla, cargador idempotente con el stock como movimiento auditable y verificación de que la base esté lista, sin inventar ningún dato de la clínica. |
 | 2026-08-24 | [Lanzamiento Tarea 10B: deuda previa al plan](./2026-08-24-lanzamiento-tarea-10b-deuda-previa.md) | Corrige la fuga del correo en la URL del login, reconcilia el mapa que vigila los permisos y deja la suite en verde antes del CI. |
 | 2026-08-25 | [Lanzamiento Tarea 11: CI remoto y cierre acumulado](./2026-08-25-lanzamiento-tarea-11-cierre-acumulado-ci.md) | Primer cierre acumulado completo en verde; la integración destapó una trazabilidad de compras rota y una regla sin pruebas, y se resolvieron cinco vulnerabilidades altas. |
+| 2026-08-26 | [Lanzamiento Tarea 12: staging aislado y ensayo de la Etapa 1](./2026-08-26-lanzamiento-tarea-12-staging-ensayo.md) | Verifica las ocho barreras de aislamiento y convierte el ensayo en un script reproducible que recorre los once pasos de la Etapa 1 sin defectos; staging sigue bloqueado por dos secretos. |
 
 ## Relacion Con Estado V3
 
