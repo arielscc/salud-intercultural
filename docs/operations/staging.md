@@ -95,6 +95,62 @@ Generar valores nuevos para:
 
 No usar datos o contraseñas de empleados y pacientes.
 
+### Como Generar Los Dos Secretos Que Faltan
+
+#### `STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN`
+
+Es el token de un **segundo** Blob Store, distinto del de media. Los adjuntos se
+suben con `access: "private"`, pero el store separado es lo que impide que un
+token filtrado de media alcance historia clinica.
+
+1. En Vercel: **Storage → Create Database → Blob**.
+2. Nombre sugerido: `sigeco-clinical-staging`.
+3. En **Advanced options**, poner el prefijo de variable
+   `STAGING_CLINICAL_BLOB`. Vercel crea
+   `STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN`.
+4. Conectarlo al proyecto **solo con alcance Preview**, limitado a la rama
+   `staging`. Retirar cualquier alcance Production.
+5. Copiar el token a `.env.staging` para poder correr los scripts locales.
+
+Con la CLI:
+
+```bash
+vercel blob store add sigeco-clinical-staging
+vercel env pull .env.staging.vercel --environment=preview --git-branch=staging
+```
+
+El validador rechaza el arranque si el token esta vacio o si **es igual a**
+`STAGING_BLOB_READ_WRITE_TOKEN`: tienen que ser dos stores distintos.
+
+#### `PAYLOAD_SIGECO_INTEGRATION_SECRET`
+
+Es una cadena aleatoria, no un token de servicio. Autentica el contrato entre
+Payload y SIGECO para las campanas de marketing.
+
+```bash
+openssl rand -hex 32
+```
+
+Conviene hexadecimal: el validador rechaza cualquier valor que contenga
+`development`, `local`, `example`, `changeme`, `placeholder`, `ci-only` o
+`test-only`, y un hexadecimal no puede formar esas palabras por accidente.
+
+Reglas que aplica el validador:
+
+- al menos 32 caracteres;
+- distinto de `PAYLOAD_SECRET`;
+- sin palabras de desarrollo o marcadores de posicion.
+
+Staging y produccion llevan valores **diferentes**.
+
+#### Verificar
+
+```bash
+pnpm staging:check
+```
+
+Tiene que terminar sin error antes de desplegar o migrar.
+
 ### Variables De Vercel
 
 Usar [.env.staging.example](../../.env.staging.example) como lista de control. Las variables Preview con secretos de staging deben limitarse a la rama `staging`; otros previews no deben heredarlas.
