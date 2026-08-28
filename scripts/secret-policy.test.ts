@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -37,6 +37,10 @@ function repositoryFiles(directory = process.cwd()): string[] {
 function readableSecurityFiles() {
   return (trackedFiles() ?? repositoryFiles()).filter(
     (file) =>
+      // `git ls-files` sigue nombrando lo borrado hasta que el borrado se
+      // commitea. Sin este filtro, quitar un archivo hace fallar esta prueba
+      // con un ENOENT que no dice nada sobre secretos.
+      existsSync(resolve(process.cwd(), file)) &&
       !file.includes(".test.") &&
       !file.startsWith("docs/masters/") &&
       !file.endsWith(".png") &&

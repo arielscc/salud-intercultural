@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { headers } from "next/headers";
 import { appendAuditEvent } from "@/modules/audit/service";
 import { prisma } from "@/modules/database";
@@ -21,11 +21,34 @@ import {
  * en el historial, en los logs y en el `Referer`. `redirect` queda como última
  * línea de cada caso para que TypeScript siga viendo que corta el flujo.
  */
-function loginErrorUrl(error: "invalid" | "locked" = "invalid") {
+function loginErrorUrl(error: "invalid" | "locked" | "sistema" = "invalid") {
   return `/sigeco/login?error=${error}`;
 }
 
+/**
+ * Traduce cualquier fallo de infraestructura en un aviso que se entiende.
+ *
+ * Sin esto, una base que no responde deja la acción sin volver nunca y el botón
+ * atascado en «Ingresando…». `unstable_rethrow` deja pasar `redirect` y
+ * `notFound`, que Next implementa lanzando: sin esa línea, cada salida normal
+ * de la acción se leería como un error de sistema.
+ *
+ * No se audita el intento: si la base es justamente lo que falló, escribir el
+ * evento fallaría igual. Tampoco se dice qué se rompió; a quien entra no le
+ * sirve y a quien ataca sí.
+ */
 export async function loginInternalUser(formData: FormData) {
+  try {
+    return await attemptInternalLogin(formData);
+  } catch (error) {
+    unstable_rethrow(error);
+    // La cookie no depende de la base, así que el correo escrito sobrevive.
+    await setLoginEmailHint(String(formData.get("email") ?? "").trim().toLowerCase());
+    redirect(loginErrorUrl("sistema"));
+  }
+}
+
+async function attemptInternalLogin(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
@@ -117,22 +140,38 @@ export async function loginInternalUser(formData: FormData) {
   redirect(user.mustChangePassword ? "/sigeco/cambiar-contrasena" : "/sigeco");
 }
 
+/**
+ * Cerrar sesión no puede depender de que la base conteste.
+ *
+ * Borrar la fila de sesión y auditar el cierre necesitan base; borrar la cookie
+ * del navegador, no. Si la base falla y se propaga el error, la persona queda
+ * con la sesión abierta y un botón muerto —es lo que pasó en staging el
+ * 2026-08-27—. Se hace primero lo que siempre funciona y después lo que puede
+ * fallar: quien pidió salir, sale.
+ */
 export async function logoutInternalUser() {
-  const user = await getCurrentInternalUser();
-  const token = await getInternalSessionToken();
+  try {
+    const user = await getCurrentInternalUser();
+    const token = await getInternalSessionToken();
 
-  if (token) {
-    await deleteInternalSession(token);
+    if (token) {
+      await deleteInternalSession(token);
+    }
+
+    await clearInternalSessionCookie();
+    await appendAuditEvent({
+      actor: user ? { id: user.id, role: user.role } : null,
+      action: "session.logout",
+      entityType: "session",
+      entityId: user?.id,
+      result: user ? "success" : "failure",
+      context: user ? undefined : { reason: "missing_session" }
+    });
+  } catch (error) {
+    unstable_rethrow(error);
+    // La sesión del servidor queda viva hasta que expire; la del navegador no.
+    await clearInternalSessionCookie();
   }
 
-  await clearInternalSessionCookie();
-  await appendAuditEvent({
-    actor: user ? { id: user.id, role: user.role } : null,
-    action: "session.logout",
-    entityType: "session",
-    entityId: user?.id,
-    result: user ? "success" : "failure",
-    context: user ? undefined : { reason: "missing_session" }
-  });
   redirect("/sigeco/login");
 }

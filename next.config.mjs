@@ -47,12 +47,46 @@ const nextConfig = {
    * en cada escritura, aunque el build pase.
    *
    * Detectado el 2026-08-27 en staging: no se podia guardar nada ni cerrar
-   * sesion. La ruta es plana porque `.npmrc` fija `node-linker=hoisted`, sin
-   * cuyo diseño el empaquetador de Vercel rechaza la funcion por enlaces
-   * simbolicos. Los dos archivos van juntos.
+   * sesion. La ruta es plana porque `pnpm-workspace.yaml` fija
+   * `nodeLinker: hoisted`, sin cuyo diseño el empaquetador de Vercel rechaza la
+   * funcion por enlaces simbolicos. Los dos archivos van juntos.
    */
   outputFileTracingIncludes: {
     "/**": ["./node_modules/@img/sharp-libvips-linux-x64/lib/**/*"]
+  },
+  /*
+   * Rutas que la fusion V3.7 movio dentro de Recepcion. Existen solo para no
+   * romper marcadores viejos: nada en el codigo enlaza a ellas.
+   *
+   * Vivian como tres `page.tsx` que llamaban a `redirect()` y nada mas. Eso
+   * hacia que React instrumentara el render de un componente que lanza al
+   * instante, y el navegador registraba en cada visita
+   * `Failed to execute 'measure' on 'Performance': cannot have a negative time
+   * stamp`. No rompia la navegacion; ensuciaba la consola donde se buscan
+   * errores de verdad.
+   *
+   * Aca la redireccion ocurre antes de renderizar nada. No es permanente a
+   * proposito: un 308 se queda cacheado en el navegador y estas rutas todavia
+   * pueden moverse.
+   */
+  async redirects() {
+    return [
+      {
+        source: "/sigeco/pacientes",
+        destination: "/sigeco/recepcion?vista=pacientes",
+        permanent: false
+      },
+      {
+        source: "/sigeco/pacientes/nuevo",
+        destination: "/sigeco/recepcion/nuevo",
+        permanent: false
+      },
+      {
+        source: "/sigeco/visitas",
+        destination: "/sigeco/recepcion",
+        permanent: false
+      }
+    ];
   },
   async headers() {
     return [

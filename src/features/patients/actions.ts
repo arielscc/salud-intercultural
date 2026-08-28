@@ -68,10 +68,39 @@ export type WalkInClientDuplicate = {
   internalCode: string;
 };
 
+/**
+ * Lo que la persona escribió, tal cual, para devolvérselo si el alta no
+ * prospera. React limpia el formulario cuando la acción termina, así que sin
+ * esto un teléfono mal escrito obliga a teclear los cuatro campos otra vez, y
+ * el aviso de ficha parecida deja el botón «Registrar de todos modos» apuntando
+ * a un formulario vacío.
+ */
+export type WalkInClientValues = {
+  fullName: string;
+  phone: string;
+  secondaryPhone: string;
+  generalObservations: string;
+};
+
 export type WalkInClientResult =
   | { status: "created"; patientId: string }
-  | { status: "duplicates"; matches: WalkInClientDuplicate[] }
-  | { status: "invalid"; message: string };
+  | {
+      status: "duplicates";
+      matches: WalkInClientDuplicate[];
+      values: WalkInClientValues;
+    }
+  | { status: "invalid"; message: string; values: WalkInClientValues };
+
+function submittedValues(formData: FormData): WalkInClientValues {
+  const read = (name: string) => String(formData.get(name) ?? "");
+
+  return {
+    fullName: read("fullName"),
+    phone: read("phone"),
+    secondaryPhone: read("secondaryPhone"),
+    generalObservations: read("generalObservations")
+  };
+}
 
 /**
  * Alta mínima de un cliente de mostrador, sin abrir visita.
@@ -88,12 +117,14 @@ export async function registerWalkInClientAction(
   _previous: WalkInClientResult | null,
   formData: FormData
 ): Promise<WalkInClientResult> {
+  const values = submittedValues(formData);
   const parsed = walkInClientSchema.safeParse(parseFormData(formData));
 
   if (!parsed.success) {
     return {
       status: "invalid",
-      message: parsed.error.issues[0]?.message ?? "Revisa el nombre y el teléfono."
+      message: parsed.error.issues[0]?.message ?? "Revisa el nombre y el teléfono.",
+      values
     };
   }
 
@@ -124,7 +155,7 @@ export async function registerWalkInClientAction(
         // No es un error ni un rechazo: es una decisión que le corresponde a
         // quien está atendiendo. Se audita como intento resuelto.
         return auditedResult<WalkInClientResult>(
-          { status: "duplicates", matches },
+          { status: "duplicates", matches, values },
           { context: { origin: "administracion", duplicateCandidates: matches.length } }
         );
       }

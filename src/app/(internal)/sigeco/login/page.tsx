@@ -22,12 +22,16 @@ export default async function SigecoLoginPage({
 }: LoginPageProps) {
   // El correo del intento anterior llega por cookie corta, nunca por la URL.
   const [params, emailHint] = await Promise.all([searchParams, getLoginEmailHint()]);
+  // `sistema` no habla de credenciales a propósito: el intento nunca llegó a
+  // compararse, y decir «inválidas» mandaría a revisar una contraseña correcta.
   const errorMessage =
     params.error === "locked"
       ? "La cuenta está bloqueada temporalmente. Intenta nuevamente más tarde."
-      : params.error
-        ? "Credenciales inválidas. Revisa el email y la contraseña."
-        : null;
+      : params.error === "sistema"
+        ? "No pudimos verificar tus datos ahora. Intenta de nuevo en un momento; si sigue igual, avisa a soporte."
+        : params.error
+          ? "Credenciales inválidas. Revisa el email y la contraseña."
+          : null;
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10 text-text">

@@ -1,6 +1,6 @@
 # Progress — Lanzamiento Por Etapas De SIGECO
 
-Última actualización: 2026-08-24.
+Última actualización: 2026-08-28.
 
 Plan de ejecución: [tasks.md](./tasks.md)
 
@@ -34,8 +34,10 @@ proveedores, conteo físico y personal. No puede darse por terminada hasta que
 Administración y Dirección completen la plantilla y la carga corra contra la
 base que se va a usar.
 
-Con eso la Fase B queda cerrada en implementación y el plan pasa a la Fase C: el
-camino a producción.
+Con eso la Fase B queda cerrada en implementación y el plan pasa a la Fase C.
+Desde el 2026-08-28 esa fase **termina en staging**: el QA encontró defectos que
+impiden operar y Dirección decidió resolverlos antes de mirar producción. Las
+tareas de despliegue se movieron a [tasks-produccion.md](./tasks-produccion.md).
 
 Con los once módulos activos el sistema se comporta igual que antes de este
 plan.
@@ -93,14 +95,13 @@ se sigue llevando en sus propios archivos.
 | 10B | Deuda previa al plan | P0 | En progreso | Ninguna |
 | 11 | CI remoto y protección de ramas | P0 | En progreso | Fases A y B |
 | 12 | Staging aislado y ensayo de la Etapa 1 | P0 | En progreso | 11 |
-| 13 | Backup y restauración probados en remoto | P0 | Pendiente | 12 |
-| 14 | Cierre del gate de seguridad | P0 | Pendiente | 13 |
-| 15 | Despliegue y activación de la Etapa 1 | P0 | Pendiente | 14 |
-| 16 | Documentación al día | P1 | Pendiente | 15 |
-| 17 | Lanzamiento de Recepción | P1 | Pendiente | 15 |
-| 18 | Lanzamiento de Consulta | P1 | Pendiente | 17 |
-| 19 | Lanzamiento de Enfermería | P1 | Pendiente | 18 |
-| 20 | Lanzamiento de seguimiento, opiniones y reportes | P2 | Pendiente | 19 |
+| 12B | Listas invisibles en escritorio | P0 | En progreso | 12 |
+| 12C | La base que no responde | P1 | En progreso | Ninguna |
+| 12D | Ruido de interfaz detectado en el QA | P2 | En progreso | Ninguna |
+
+Las Tareas 13 a 20 salieron de este plan el 2026-08-28 y viven congeladas en
+[tasks-produccion.md](./tasks-produccion.md). Este archivo llega hasta que la
+Etapa 1 funcione entera en staging.
 
 ## Decisiones Vigentes
 
@@ -126,12 +127,20 @@ se sigue llevando en sus propios archivos.
   lanzar Recepción antes que Administración. Durante la Etapa 1 el personal
   registrará clientes en un lugar que después deja de ser el habitual; hay que
   decirlo explícitamente en la capacitación.
-- **Dinero e inventario reales desde el primer día.** Backup probado (Tarea 13)
-  y auditoría activa son condición previa, no mejora posterior.
+- **Dinero e inventario reales desde el primer día.** Backup probado (Tarea 13,
+  hoy en `tasks-produccion.md`) y auditoría activa son condición previa, no
+  mejora posterior.
 - **Deuda documental de agosto.** Alrededor de catorce commits sin reporte ni
-  actualización de progreso; se salda en la Tarea 16.
+  actualización de progreso; se salda en la Tarea 16, hoy en
+  `tasks-produccion.md`.
 - **181 commits de diferencia entre `develop` y `main`.** La promoción de la
   Tarea 15 es grande y debe revisarse con CI verde, no fusionarse a ciegas.
+- **Lo que pasa el QA por script puede fallar en el navegador.** El 2026-08-27 el
+  ensayo daba once pasos en verde mientras el sitio desplegado no guardaba nada.
+  Un recorrido que no toca la aplicación desplegada no prueba que funcione.
+- **Una pantalla nueva puede nacer sin su mitad de escritorio.** Los planes móvil
+  y desktop cerraron en julio; `RecordList` sin `RecordTable` no lo detecta nada
+  hoy. La Tarea 12B debe dejar ese control puesto.
 - **Permiso nuevo sin módulo.** Si alguien agrega un `InternalPermission` y no lo
   mapea, quedaría fuera del gate. La prueba de cobertura de la Tarea 1 existe
   para impedirlo.
@@ -157,6 +166,170 @@ En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-28 — Tarea 12D Implementada (Ruido De Interfaz)
+
+**Las tres rutas legacy pasaron a `redirects()` en `next.config.mjs`.** Eran
+`page.tsx` cuyo cuerpo entero era un `redirect()`, y React instrumentaba el
+render de un componente que lanza al instante: el navegador registraba un
+`TypeError` de `performance.measure` en cada visita. Ahora la redirección ocurre
+antes de renderizar nada. Se comprobó primero que nada en el código enlaza a
+esas rutas. Las dos con parámetro se dejaron: son `async` y nunca dieron el
+error.
+
+**El formulario de alta de cliente ya no pierde lo escrito**, y eso era peor que
+cosmético: cuando el servidor encuentra una ficha parecida, «Registrar de todos
+modos» operaba sobre un formulario ya vacío y enviaba nada. La acción devuelve
+ahora los valores y el formulario los repone.
+
+**El cero negativo estaba en dos lugares**, no en uno: el descuento del cobro
+(`-0.00 Bs`) y los egresos del día en Caja (`-Bs 0,00`). En los dos el signo
+aparece solo cuando hay algo que restar. El panel del médico ya estaba
+protegido.
+
+**Se corrió la suite completa a propósito**, porque la tarea borra rutas y
+cambia el tipo que devuelve una acción. Encontró tres fallos:
+`security-boundaries` enumera cada página privada y había que quitar las tres
+borradas; `secret-policy` fallaba con `ENOENT` porque `git ls-files` sigue
+nombrando lo borrado hasta que el borrado se commitea, y se le agregó un filtro
+por existencia para que no vuelva a pasar.
+
+**Validación:** lint, typecheck y **482 pruebas en 94 archivos** en verde. En el
+navegador: consola limpia en las tres rutas, el error de validación conserva los
+tres campos, «Registrar de todos modos» crea la ficha, y el descuento muestra
+`0.00 Bs` en cero y `-10.00 Bs` cuando lo hay.
+
+Con esto cierran 12B, 12C y 12D.
+
+Detalle: [reporte de tarea](../task-reports/2026-08-28-lanzamiento-tarea-12d-ruido-interfaz.md).
+
+### 2026-08-28 — Tarea 12C Implementada (La Base Que No Responde)
+
+**El ingreso ya no se cuelga.** `PrismaPg` se construía sin
+`connectionTimeoutMillis`, y el valor por defecto de `pg` es cero: esperar para
+siempre. Ahora son diez segundos, que distinguen «la base tarda» de «la base no
+está». Medido con el contenedor apagado: `303` en 10,3 s a `?error=sistema`,
+aviso legible en pantalla, botón de vuelta en «Entrar» y el correo escrito
+conservado. Antes: colgado sin fin.
+
+El mensaje no habla de credenciales a propósito —el intento nunca llegó a
+compararse— ni dice qué se rompió. No se audita el intento: si la base es justo
+lo que falló, escribir el evento fallaría igual.
+
+**Cerrar sesión tampoco depende ya de la base.** Excede el alcance escrito, que
+hablaba solo del ingreso, pero es el mismo defecto en el mismo archivo: en
+staging el 2026-08-27 cerrar sesión también quedaba colgado.
+
+**Un defecto anterior, que apareció al verificar el arreglo:** la primera
+versión no funcionaba. `setInternalSessionCookie` crea la cookie con
+`path: "/sigeco"`, pero `clearInternalSessionCookie` la borraba sin path, o sea
+en `/`, que no toca la de `/sigeco`. Con la base sana quedaba tapado, porque
+borrar la fila invalida el token igual; con la base caída **la sesión sobrevivía
+al cierre**. Se agregó una constante compartida para que crear y borrar no
+puedan divergir.
+
+**Lo que no quedó comprobado:** el margen de transacción subió de 5 s a 15 s por
+el `expired transaction` de 6256 ms que mató a `pnpm seed:demo` el 2026-08-28.
+El seed ahora pasa en frío contra una base vacía nueva —30 productos, 3,9 s—,
+**pero también pasa con el límite viejo**: con el volumen caliente el fallo no
+se reproduce. Reproducirlo exige `docker compose down -v`, que borra la base
+local y no se hizo sin autorización. El margen queda como resguardo declarado,
+no como fix verificado.
+
+**Validación:** lint, typecheck y las 38 pruebas de `internal-auth` en verde.
+Con la base caída, `/sigeco` responde 500 y no una sesión abierta: el gate falla
+cerrado.
+
+Detalle: [reporte de tarea](../task-reports/2026-08-28-lanzamiento-tarea-12c-base-que-no-responde.md).
+
+### 2026-08-28 — Tarea 12B Implementada (Listas Invisibles En Escritorio)
+
+**Las dos pantallas ya muestran sus registros desde 640 px.**
+`administracion/ventas/nueva` y `administracion/clientes/[id]` usaban
+`RecordList` —que lleva `sm:hidden`— sin su par `RecordTable`. Desde 640 px no
+mostraban nada: ni los registros ni el mensaje de vacío, y sin error que lo
+delatara. Se descartó primero que fuera de datos: `getPatients` devuelve el
+paciente por nombre, teléfono y código. Era render.
+
+Las dos siguen ahora el molde de `administracion/clientes/page.tsx`. En la ficha
+del cliente, el mensaje de vacío estaba escrito dos veces en JSX suelto; se
+extrajo a una constante para que la card y la tabla no diverjan.
+
+**El control que faltaba:** `record-list-pairing.test.ts` recorre
+`src/app/(internal)` y falla nombrando cualquier archivo con `<RecordList` sin
+`<RecordTable`. Se verificó que falla de verdad, quitando el bloque de una de
+las pantallas y comprobando que la prueba la señala. Una segunda prueba exige al
+menos veinte pares completos, para que la primera no pase por vacía.
+
+**Validación:** lint, typecheck y las dos pruebas nuevas en verde. Los cuatro
+casos —buscador con y sin coincidencias, ficha con y sin ventas— medidos en 390,
+768, 1024, 1280 y 1440 px, sin desplazamiento lateral en ninguno. Y una venta
+completa desde escritorio a 1440 px: buscar, abrir el cliente desde la tabla,
+crear la venta y cobrar 50 Bs. La Caja del día estaba cerrada y el sistema pidió
+apertura excepcional con motivo, que es lo correcto. Antes de este cambio el
+recorrido no pasaba del primer paso.
+
+Detalle: [reporte de tarea](../task-reports/2026-08-28-lanzamiento-tarea-12b-listas-escritorio.md).
+
+### 2026-08-28 — Alcance Recortado A Staging Y Tres Tareas Nuevas
+
+**El despliegue de staging no podía guardar nada.** El ensayo de los once pasos
+pasaba, pero corría por script contra la base. Al probarlo por el navegador,
+toda escritura devolvía 500: suspender un módulo, cerrar sesión y el formulario
+público de contacto. El log dio la causa: `ERR_DLOPEN_FAILED: libvips-cpp.so`.
+`payload.config.ts` importa `sharp` de forma estática, así que cualquier ruta
+que toque Payload lo carga, y el rastreo de Next no incluía la librería nativa
+—ningún `require` la pide: la resuelve el enlazador dinámico desde el RPATH—.
+El build pasaba igual. **No era de staging: es de empaquetado, y producción
+habría caído igual.**
+
+Arreglado en dos archivos: `pnpm-workspace.yaml` fija `nodeLinker: hoisted`
+—sin él, el empaquetador de Vercel rechaza la función por enlaces simbólicos— y
+`next.config.mjs` agrega la librería al rastreo. Verificado en local: los 97
+rastreos de ruta la incluyen. Falta confirmarlo en staging desplegado.
+
+**El criterio del rol clínico pasa.** Con `qa.medico`, las nueve rutas apagadas
+rebotan a `/sigeco`. Tres devuelven `permiso-denegado` en vez de
+`modulo-no-disponible`, y **es correcto**: el médico no tiene `feedback_read`
+ni `reports_read`, y el rechazo por permiso ocurre antes del gate. Repetido con
+`qa.direccion`, que sí los tiene, las cinco dan `modulo-no-disponible`. Las seis
+cuentas QA se probaron en escritorio; Recepción y Enfermería ven solo lo suyo.
+Sin analítica, contactos bloqueados y sin desplazamiento lateral.
+
+**El QA local encontró cinco defectos.** Se levantó la base local —no existía:
+ni Postgres, ni Docker— y se recorrió la aplicación entera: 167 peticiones,
+40 rutas, el día completo con datos falsos —paciente, Caja en 150, venta de
+115, cobro, comprobante, compra de 180, pago a proveedor, recepción con lote,
+stock 20 → 19 → 29 y cierre conciliado en 85—. **Cero respuestas 500.** El
+ciclo de suspender y reactivar un módulo funciona en local, lo que confirma que
+el fallo de staging era solo el empaquetado.
+
+Lo que sí falló quedó como tareas nuevas:
+
+- **Tarea 12B (P0):** `RecordList` lleva `sm:hidden` y su par de escritorio es
+  `RecordTable`. Dos pantallas usan solo la primera, así que en escritorio no
+  muestran ni los registros ni el mensaje de vacío. Una de ellas es el buscador
+  de cliente de «Nueva venta»: **desde una computadora no se puede iniciar una
+  venta**. Nacieron el 2026-08-24, después de que los planes móvil y desktop
+  cerraran; ninguna iniciativa iba a volver a pasar por ellas.
+- **Tarea 12C (P1):** el adaptador de Postgres no fija `connectionTimeoutMillis`,
+  así que con la base caída el ingreso queda en «Ingresando…» indefinidamente.
+  Y `pnpm seed:demo` falla en frío por una transacción que excede 5000 ms.
+- **Tarea 12D (P2):** las tres rutas legacy lanzan un `TypeError` de
+  `performance.measure` en cada visita; el alta de cliente pierde lo escrito al
+  fallar la validación; un descuento en cero se muestra como `-0.00 Bs`.
+
+**No es defecto, pero explica la lentitud local:** una petición tardó 5,2
+minutos, de los cuales 5,2 fueron de Next. Justo antes, Turbopack escribió su
+caché de desarrollo durante 5 minutos, bloqueando el servidor. Escrito el caché,
+la misma página sirve en 357 ms.
+
+**Decisión de Dirección: el plan llega hasta staging.** Las Tareas 13 a 20
+—backup productivo, gate de seguridad, despliegue, documentación y los cuatro
+lanzamientos por etapa— se movieron a
+[tasks-produccion.md](./tasks-produccion.md), congeladas. Primero se resuelve
+todo lo que falla; desplegar un defecto conocido cuesta más caro que arreglarlo
+antes. La Tarea 12 no cierra hasta que 12B, 12C y 12D cierren.
 
 ### 2026-08-26 — Tarea 12: Ensayo Listo, Staging Bloqueado Por Dos Secretos
 
