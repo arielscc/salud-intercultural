@@ -34,6 +34,27 @@ const nextConfig = {
       bodySizeLimit: "5mb"
     }
   },
+  /*
+   * `payload.config.ts` importa `sharp` de forma estatica, asi que cualquier
+   * ruta que toque Payload lo carga: el formulario publico en `/api/leads` y
+   * todas las Server Actions de SIGECO, que comparten el chunk del servidor.
+   *
+   * El rastreo de archivos de Next sigue los `require` de JavaScript, pero la
+   * libreria nativa `libvips-cpp.so` no la pide ningun `require`: la resuelve el
+   * enlazador dinamico desde el RPATH del binario `.node`. Sin esta inclusion el
+   * `.so` no entra en la funcion y el despliegue devuelve 500 con
+   * `ERR_DLOPEN_FAILED: libvips-cpp.so: cannot open shared object file`
+   * en cada escritura, aunque el build pase.
+   *
+   * Detectado el 2026-08-27 en staging: no se podia guardar nada ni cerrar
+   * sesion. Los dos patrones cubren el diseño aislado de pnpm y el plano.
+   */
+  outputFileTracingIncludes: {
+    "/**": [
+      "./node_modules/.pnpm/@img+sharp-libvips-linux-x64*/node_modules/@img/sharp-libvips-linux-x64/lib/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/lib/**/*"
+    ]
+  },
   async headers() {
     return [
       {
