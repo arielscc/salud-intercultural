@@ -1,3 +1,22 @@
+# node_modules plano, sin enlaces simbolicos.
+#
+# `sharp` carga `libvips-cpp.so` por el RPATH de su binario nativo, que apunta a
+# `$ORIGIN/../../sharp-libvips-linux-x64/lib`. En el diseño aislado de pnpm ese
+# tramo es un enlace simbolico dentro de `.pnpm`, y el empaquetador de Vercel no
+# lo sigue: el 2026-08-27 el despliegue de staging fallo con "The framework
+# produced an invalid deployment package for a Serverless Function. Typically
+# this means that the framework produces files in symlinked directories".
+#
+# Con el diseño plano las dos rutas son directorios reales, el enlazador
+# dinamico encuentra la libreria y el paquete de la funcion queda valido. Va
+# junto con el `outputFileTracingIncludes` de next.config.mjs, que es lo que
+# mete el .so en la funcion: el rastreo de Next no lo ve porque ningun `require`
+# lo pide.
+#
+# A cambio se pierde la proteccion contra dependencias fantasma: un `import` de
+# un paquete no declarado en package.json ahora resuelve. Si aparece uno, se
+# declara.
+nodeLinker: hoisted
 allowBuilds:
   '@prisma/engines': true
   esbuild: true

@@ -47,13 +47,12 @@ const nextConfig = {
    * en cada escritura, aunque el build pase.
    *
    * Detectado el 2026-08-27 en staging: no se podia guardar nada ni cerrar
-   * sesion. Los dos patrones cubren el diseño aislado de pnpm y el plano.
+   * sesion. La ruta es plana porque `.npmrc` fija `node-linker=hoisted`, sin
+   * cuyo diseño el empaquetador de Vercel rechaza la funcion por enlaces
+   * simbolicos. Los dos archivos van juntos.
    */
   outputFileTracingIncludes: {
-    "/**": [
-      "./node_modules/.pnpm/@img+sharp-libvips-linux-x64*/node_modules/@img/sharp-libvips-linux-x64/lib/**/*",
-      "./node_modules/@img/sharp-libvips-linux-x64/lib/**/*"
-    ]
+    "/**": ["./node_modules/@img/sharp-libvips-linux-x64/lib/**/*"]
   },
   async headers() {
     return [
