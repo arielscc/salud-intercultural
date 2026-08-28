@@ -172,12 +172,16 @@ const authenticatedPages = [
   "src/app/(internal)/sigeco/(app)/mi-cuenta/page.tsx"
 ];
 
+/*
+ * Quedan las dos rutas con parametro. Las tres sin parametro
+ * —`/sigeco/pacientes`, `/sigeco/pacientes/nuevo` y `/sigeco/visitas`— pasaron
+ * a `redirects()` en `next.config.mjs` el 2026-08-28: eran componentes que
+ * lanzaban `redirect()` al instante y el navegador registraba un TypeError de
+ * `performance.measure` en cada visita.
+ */
 const legacyRedirectPages = [
   "src/app/(internal)/sigeco/(app)/pacientes/[id]/page.tsx",
-  "src/app/(internal)/sigeco/(app)/pacientes/nuevo/page.tsx",
-  "src/app/(internal)/sigeco/(app)/pacientes/page.tsx",
-  "src/app/(internal)/sigeco/(app)/visitas/[id]/page.tsx",
-  "src/app/(internal)/sigeco/(app)/visitas/page.tsx"
+  "src/app/(internal)/sigeco/(app)/visitas/[id]/page.tsx"
 ];
 
 const actionPermissions: Record<string, InternalPermission | null> = {

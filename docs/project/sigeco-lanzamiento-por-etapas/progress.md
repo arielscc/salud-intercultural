@@ -97,7 +97,7 @@ se sigue llevando en sus propios archivos.
 | 12 | Staging aislado y ensayo de la Etapa 1 | P0 | En progreso | 11 |
 | 12B | Listas invisibles en escritorio | P0 | En progreso | 12 |
 | 12C | La base que no responde | P1 | En progreso | Ninguna |
-| 12D | Ruido de interfaz detectado en el QA | P2 | Pendiente | Ninguna |
+| 12D | Ruido de interfaz detectado en el QA | P2 | En progreso | Ninguna |
 
 Las Tareas 13 a 20 salieron de este plan el 2026-08-28 y viven congeladas en
 [tasks-produccion.md](./tasks-produccion.md). Este archivo llega hasta que la
@@ -166,6 +166,42 @@ En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-28 — Tarea 12D Implementada (Ruido De Interfaz)
+
+**Las tres rutas legacy pasaron a `redirects()` en `next.config.mjs`.** Eran
+`page.tsx` cuyo cuerpo entero era un `redirect()`, y React instrumentaba el
+render de un componente que lanza al instante: el navegador registraba un
+`TypeError` de `performance.measure` en cada visita. Ahora la redirección ocurre
+antes de renderizar nada. Se comprobó primero que nada en el código enlaza a
+esas rutas. Las dos con parámetro se dejaron: son `async` y nunca dieron el
+error.
+
+**El formulario de alta de cliente ya no pierde lo escrito**, y eso era peor que
+cosmético: cuando el servidor encuentra una ficha parecida, «Registrar de todos
+modos» operaba sobre un formulario ya vacío y enviaba nada. La acción devuelve
+ahora los valores y el formulario los repone.
+
+**El cero negativo estaba en dos lugares**, no en uno: el descuento del cobro
+(`-0.00 Bs`) y los egresos del día en Caja (`-Bs 0,00`). En los dos el signo
+aparece solo cuando hay algo que restar. El panel del médico ya estaba
+protegido.
+
+**Se corrió la suite completa a propósito**, porque la tarea borra rutas y
+cambia el tipo que devuelve una acción. Encontró tres fallos:
+`security-boundaries` enumera cada página privada y había que quitar las tres
+borradas; `secret-policy` fallaba con `ENOENT` porque `git ls-files` sigue
+nombrando lo borrado hasta que el borrado se commitea, y se le agregó un filtro
+por existencia para que no vuelva a pasar.
+
+**Validación:** lint, typecheck y **482 pruebas en 94 archivos** en verde. En el
+navegador: consola limpia en las tres rutas, el error de validación conserva los
+tres campos, «Registrar de todos modos» crea la ficha, y el descuento muestra
+`0.00 Bs` en cero y `-10.00 Bs` cuando lo hay.
+
+Con esto cierran 12B, 12C y 12D.
+
+Detalle: [reporte de tarea](../task-reports/2026-08-28-lanzamiento-tarea-12d-ruido-interfaz.md).
 
 ### 2026-08-28 — Tarea 12C Implementada (La Base Que No Responde)
 

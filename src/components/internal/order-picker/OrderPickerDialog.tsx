@@ -554,7 +554,12 @@ export function OrderPickerDialog({
                       </div>
                       <div className="flex justify-between gap-4">
                         <dt className="text-muted">Descuento</dt>
-                        <dd>-{formatBs(appliedDiscount)}</dd>
+                        {/* El signo solo si hay algo que restar: «-0.00 Bs» no existe. */}
+                        <dd>
+                          {appliedDiscount > 0
+                            ? `-${formatBs(appliedDiscount)}`
+                            : formatBs(0)}
+                        </dd>
                       </div>
                       <div className="flex justify-between gap-4 border-t border-border pt-1.5 text-base font-bold text-text">
                         <dt>Total</dt>

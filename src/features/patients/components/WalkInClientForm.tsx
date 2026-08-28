@@ -40,6 +40,14 @@ export function WalkInClientForm() {
 
   const duplicates = result?.status === "duplicates" ? result.matches : [];
 
+  /*
+   * React limpia el formulario al terminar la acción. Estos `defaultValue`
+   * devuelven lo escrito: sin ellos, corregir un teléfono obliga a teclear los
+   * cuatro campos de nuevo, y «Registrar de todos modos» enviaría un formulario
+   * vacío.
+   */
+  const values = result && result.status !== "created" ? result.values : undefined;
+
   return (
     <form action={formAction} className="grid gap-4">
       {result?.status === "invalid" ? (
@@ -91,6 +99,7 @@ export function WalkInClientForm() {
       <Field label="Nombre completo *">
         <input
           name="fullName"
+          defaultValue={values?.fullName}
           required
           minLength={2}
           maxLength={160}
@@ -104,6 +113,7 @@ export function WalkInClientForm() {
       <Field label="Teléfono *">
         <input
           name="phone"
+          defaultValue={values?.phone}
           required
           inputMode="tel"
           autoComplete="tel"
@@ -116,6 +126,7 @@ export function WalkInClientForm() {
       <Field label="Teléfono alternativo">
         <input
           name="secondaryPhone"
+          defaultValue={values?.secondaryPhone}
           inputMode="tel"
           maxLength={30}
           className={internalInputClassName}
@@ -125,6 +136,7 @@ export function WalkInClientForm() {
       <Field label="Observación">
         <input
           name="generalObservations"
+          defaultValue={values?.generalObservations}
           maxLength={500}
           placeholder="Algo que convenga recordar de este cliente"
           className={internalInputClassName}

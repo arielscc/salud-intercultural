@@ -795,10 +795,12 @@ export default async function CashControlPage({
                       Egresos y devoluciones en efectivo
                     </span>
                     <span className="font-medium tabular-nums text-error">
-                      -{formatMoney(
-                        breakdown.cashExpenseCents +
-                          breakdown.cashRefundCents
-                      )}
+                      {/* Sin egresos el día muestra cero, nunca «-Bs 0,00». */}
+                      {breakdown.cashExpenseCents + breakdown.cashRefundCents > 0
+                        ? `-${formatMoney(
+                            breakdown.cashExpenseCents + breakdown.cashRefundCents
+                          )}`
+                        : formatMoney(0)}
                     </span>
                   </div>
                   {breakdown.cashReversalCents > 0 ? (
