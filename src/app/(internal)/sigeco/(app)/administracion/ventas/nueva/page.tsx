@@ -9,8 +9,10 @@ import { PageHeader } from "@/components/internal/ui/PageHeader";
 import {
   RecordItem,
   RecordList,
-  RecordListEmpty
+  RecordListEmpty,
+  RecordTable
 } from "@/components/internal/ui/RecordList";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { AdministrationChargeDialog } from "@/features/sales/components/AdministrationChargeDialog";
 import { createSaleOrderAction } from "@/features/sales/actions";
 import { canUse } from "@/features/modules/access";
@@ -112,6 +114,41 @@ export default async function NewSalePage({ searchParams }: NewSalePageProps) {
               <RecordListEmpty>{emptySearchMessage}</RecordListEmpty>
             ) : null}
           </RecordList>
+
+          <RecordTable>
+            <Table caption="Clientes que coinciden con la búsqueda">
+              <thead>
+                <tr>
+                  <Th>Cliente</Th>
+                  <Th>Teléfono</Th>
+                  <Th>Código</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {patients.map((patient) => (
+                  <Tr key={patient.id}>
+                    <Td className="font-semibold text-text">
+                      <Link
+                        href={`/sigeco/administracion/ventas/nueva?cliente=${patient.id}`}
+                        className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                      >
+                        {patient.fullName}
+                      </Link>
+                    </Td>
+                    <Td className="whitespace-nowrap tabular-nums">{patient.phone}</Td>
+                    <Td className="whitespace-nowrap tabular-nums">{patient.internalCode}</Td>
+                  </Tr>
+                ))}
+                {patients.length === 0 ? (
+                  <tr>
+                    <Td className="py-8 text-center" colSpan={3}>
+                      {emptySearchMessage}
+                    </Td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </Table>
+          </RecordTable>
         </Card>
       </div>
     );

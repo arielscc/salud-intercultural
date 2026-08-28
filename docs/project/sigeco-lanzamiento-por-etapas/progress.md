@@ -95,7 +95,7 @@ se sigue llevando en sus propios archivos.
 | 10B | Deuda previa al plan | P0 | En progreso | Ninguna |
 | 11 | CI remoto y protección de ramas | P0 | En progreso | Fases A y B |
 | 12 | Staging aislado y ensayo de la Etapa 1 | P0 | En progreso | 11 |
-| 12B | Listas invisibles en escritorio | P0 | Pendiente | 12 |
+| 12B | Listas invisibles en escritorio | P0 | En progreso | 12 |
 | 12C | La base que no responde | P1 | Pendiente | Ninguna |
 | 12D | Ruido de interfaz detectado en el QA | P2 | Pendiente | Ninguna |
 
@@ -166,6 +166,35 @@ En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-28 — Tarea 12B Implementada (Listas Invisibles En Escritorio)
+
+**Las dos pantallas ya muestran sus registros desde 640 px.**
+`administracion/ventas/nueva` y `administracion/clientes/[id]` usaban
+`RecordList` —que lleva `sm:hidden`— sin su par `RecordTable`. Desde 640 px no
+mostraban nada: ni los registros ni el mensaje de vacío, y sin error que lo
+delatara. Se descartó primero que fuera de datos: `getPatients` devuelve el
+paciente por nombre, teléfono y código. Era render.
+
+Las dos siguen ahora el molde de `administracion/clientes/page.tsx`. En la ficha
+del cliente, el mensaje de vacío estaba escrito dos veces en JSX suelto; se
+extrajo a una constante para que la card y la tabla no diverjan.
+
+**El control que faltaba:** `record-list-pairing.test.ts` recorre
+`src/app/(internal)` y falla nombrando cualquier archivo con `<RecordList` sin
+`<RecordTable`. Se verificó que falla de verdad, quitando el bloque de una de
+las pantallas y comprobando que la prueba la señala. Una segunda prueba exige al
+menos veinte pares completos, para que la primera no pase por vacía.
+
+**Validación:** lint, typecheck y las dos pruebas nuevas en verde. Los cuatro
+casos —buscador con y sin coincidencias, ficha con y sin ventas— medidos en 390,
+768, 1024, 1280 y 1440 px, sin desplazamiento lateral en ninguno. Y una venta
+completa desde escritorio a 1440 px: buscar, abrir el cliente desde la tabla,
+crear la venta y cobrar 50 Bs. La Caja del día estaba cerrada y el sistema pidió
+apertura excepcional con motivo, que es lo correcto. Antes de este cambio el
+recorrido no pasaba del primer paso.
+
+Detalle: [reporte de tarea](../task-reports/2026-08-28-lanzamiento-tarea-12b-listas-escritorio.md).
 
 ### 2026-08-28 — Alcance Recortado A Staging Y Tres Tareas Nuevas
 

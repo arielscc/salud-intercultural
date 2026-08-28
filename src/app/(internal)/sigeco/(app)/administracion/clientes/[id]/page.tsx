@@ -9,8 +9,10 @@ import { PageHeader } from "@/components/internal/ui/PageHeader";
 import {
   RecordItem,
   RecordList,
-  RecordListEmpty
+  RecordListEmpty,
+  RecordTable
 } from "@/components/internal/ui/RecordList";
+import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { canUse } from "@/features/modules/access";
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
 import { formatDateTime } from "@/lib/dates";
@@ -22,6 +24,15 @@ import { requirePermission } from "@/modules/permissions";
 type ClientPageProps = {
   params: Promise<{ id: string }>;
 };
+
+const emptySalesMessage = (
+  <>
+    <span className="block font-semibold text-text">Todavía no le vendiste nada.</span>
+    <span className="mt-1 block text-sm text-muted">
+      Las ventas de este cliente van a aparecer acá.
+    </span>
+  </>
+);
 
 export default async function AdministrationClientPage({ params }: ClientPageProps) {
   const user = await requirePermission("patients_read", { module: "administracion" });
@@ -111,14 +122,50 @@ export default async function AdministrationClientPage({ params }: ClientPagePro
             </RecordItem>
           ))}
           {sales.length === 0 ? (
-            <RecordListEmpty>
-              <span className="block font-semibold text-text">Todavía no le vendiste nada.</span>
-              <span className="mt-1 block text-sm text-muted">
-                Las ventas de este cliente van a aparecer acá.
-              </span>
-            </RecordListEmpty>
+            <RecordListEmpty>{emptySalesMessage}</RecordListEmpty>
           ) : null}
         </RecordList>
+
+        <RecordTable>
+          <Table caption="Ventas de este cliente">
+            <thead>
+              <tr>
+                <Th className="text-right">Total</Th>
+                <Th className="text-right">Pagado</Th>
+                <Th className="text-right">Saldo</Th>
+                <Th>Estado</Th>
+                <Th>Fecha</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {sales.map((sale) => (
+                <Tr key={sale.id}>
+                  <Td className="text-right font-semibold tabular-nums text-text">
+                    <Link
+                      href={`/sigeco/administracion/ventas/${sale.id}`}
+                      className="focus-ring rounded-[7px] hover:text-primary-dark hover:underline"
+                    >
+                      {formatMoney(sale.totalCents)}
+                    </Link>
+                  </Td>
+                  <Td className="text-right tabular-nums">{formatMoney(sale.paidCents)}</Td>
+                  <Td className="text-right tabular-nums">{formatMoney(sale.balanceCents)}</Td>
+                  <Td>
+                    <Chip>{saleStatusLabels[sale.status]}</Chip>
+                  </Td>
+                  <Td className="whitespace-nowrap">{formatDateTime(sale.createdAt)}</Td>
+                </Tr>
+              ))}
+              {sales.length === 0 ? (
+                <tr>
+                  <Td className="py-8 text-center" colSpan={5}>
+                    {emptySalesMessage}
+                  </Td>
+                </tr>
+              ) : null}
+            </tbody>
+          </Table>
+        </RecordTable>
       </Card>
     </div>
   );
