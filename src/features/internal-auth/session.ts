@@ -6,6 +6,13 @@ import { prisma } from "@/modules/database";
 export const internalSessionCookieName = "sigeco_session";
 
 /**
+ * El alcance de la cookie de sesión. Existe como constante porque crearla y
+ * borrarla tienen que usar el mismo valor: un `delete` sin `path` apunta a `/`
+ * y no toca una cookie guardada en `/sigeco`.
+ */
+const internalSessionCookiePath = "/sigeco";
+
+/**
  * Pista para no hacer reescribir el correo tras un intento fallido.
  *
  * Va en una cookie corta y no en la URL: un correo en el query string queda en
@@ -49,7 +56,7 @@ export async function setInternalSessionCookie(token: string, expiresAt: Date) {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: "/sigeco"
+    path: internalSessionCookiePath
   });
 }
 
@@ -83,7 +90,10 @@ export async function clearLoginEmailHint() {
 
 export async function clearInternalSessionCookie() {
   const cookieStore = await cookies();
-  cookieStore.delete(internalSessionCookieName);
+  cookieStore.delete({
+    name: internalSessionCookieName,
+    path: internalSessionCookiePath
+  });
 }
 
 export async function getInternalSessionToken() {

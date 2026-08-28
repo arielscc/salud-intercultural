@@ -96,7 +96,7 @@ se sigue llevando en sus propios archivos.
 | 11 | CI remoto y protección de ramas | P0 | En progreso | Fases A y B |
 | 12 | Staging aislado y ensayo de la Etapa 1 | P0 | En progreso | 11 |
 | 12B | Listas invisibles en escritorio | P0 | En progreso | 12 |
-| 12C | La base que no responde | P1 | Pendiente | Ninguna |
+| 12C | La base que no responde | P1 | En progreso | Ninguna |
 | 12D | Ruido de interfaz detectado en el QA | P2 | Pendiente | Ninguna |
 
 Las Tareas 13 a 20 salieron de este plan el 2026-08-28 y viven congeladas en
@@ -166,6 +166,45 @@ En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-28 — Tarea 12C Implementada (La Base Que No Responde)
+
+**El ingreso ya no se cuelga.** `PrismaPg` se construía sin
+`connectionTimeoutMillis`, y el valor por defecto de `pg` es cero: esperar para
+siempre. Ahora son diez segundos, que distinguen «la base tarda» de «la base no
+está». Medido con el contenedor apagado: `303` en 10,3 s a `?error=sistema`,
+aviso legible en pantalla, botón de vuelta en «Entrar» y el correo escrito
+conservado. Antes: colgado sin fin.
+
+El mensaje no habla de credenciales a propósito —el intento nunca llegó a
+compararse— ni dice qué se rompió. No se audita el intento: si la base es justo
+lo que falló, escribir el evento fallaría igual.
+
+**Cerrar sesión tampoco depende ya de la base.** Excede el alcance escrito, que
+hablaba solo del ingreso, pero es el mismo defecto en el mismo archivo: en
+staging el 2026-08-27 cerrar sesión también quedaba colgado.
+
+**Un defecto anterior, que apareció al verificar el arreglo:** la primera
+versión no funcionaba. `setInternalSessionCookie` crea la cookie con
+`path: "/sigeco"`, pero `clearInternalSessionCookie` la borraba sin path, o sea
+en `/`, que no toca la de `/sigeco`. Con la base sana quedaba tapado, porque
+borrar la fila invalida el token igual; con la base caída **la sesión sobrevivía
+al cierre**. Se agregó una constante compartida para que crear y borrar no
+puedan divergir.
+
+**Lo que no quedó comprobado:** el margen de transacción subió de 5 s a 15 s por
+el `expired transaction` de 6256 ms que mató a `pnpm seed:demo` el 2026-08-28.
+El seed ahora pasa en frío contra una base vacía nueva —30 productos, 3,9 s—,
+**pero también pasa con el límite viejo**: con el volumen caliente el fallo no
+se reproduce. Reproducirlo exige `docker compose down -v`, que borra la base
+local y no se hizo sin autorización. El margen queda como resguardo declarado,
+no como fix verificado.
+
+**Validación:** lint, typecheck y las 38 pruebas de `internal-auth` en verde.
+Con la base caída, `/sigeco` responde 500 y no una sesión abierta: el gate falla
+cerrado.
+
+Detalle: [reporte de tarea](../task-reports/2026-08-28-lanzamiento-tarea-12c-base-que-no-responde.md).
 
 ### 2026-08-28 — Tarea 12B Implementada (Listas Invisibles En Escritorio)
 
