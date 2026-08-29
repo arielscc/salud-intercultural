@@ -5,7 +5,7 @@ import { InternalShell } from "@/components/internal/InternalShell";
 import { ConnectivityGuard } from "@/components/internal/ConnectivityGuard";
 import { Toaster } from "@/components/ui/sonner";
 import { requireInternalUser } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { getBranchContext } from "@/features/branches/context";
 
 export const dynamic = "force-dynamic";

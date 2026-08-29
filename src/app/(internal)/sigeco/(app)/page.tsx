@@ -30,7 +30,7 @@ import { getFollowUpWorkSummary } from "@/modules/database/queries/follow-ups";
 import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getReceptionDashboardSummary } from "@/modules/database/queries/reception";
 import { requireInternalUser } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 import { cn } from "@/lib/cn";

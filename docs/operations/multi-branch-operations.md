@@ -20,6 +20,7 @@ guarda la sucursal donde ocurrió.
 
 Se separan por sucursal:
 
+- los módulos encendidos: cada sede avanza por su propia etapa;
 - colas de Recepción, Consulta, Enfermería y Administración;
 - ventas, pagos y movimientos de Caja;
 - sesiones y cierres de Caja;
@@ -38,6 +39,19 @@ Dirección asigna una o varias sucursales desde la cuenta de cada usuario. Toda
 persona debe conservar una sede activa como predeterminada. Es posible dejarle
 Cochabamba asignada durante la preparación, pero no elegirla como sede activa
 hasta su apertura.
+
+## Modulos Encendidos
+
+El estado de cada modulo es propio de la sucursal. Una sede puede tener Caja y
+Administracion lanzadas mientras la otra sigue en preparacion, y suspender un
+modulo por un incidente afecta solo a la sede donde se suspendio.
+
+`/sigeco/modulos` administra siempre la **sucursal activa**. Para cambiar otra
+sede se cambia de sucursal en la cabecera. Las dependencias duras se evaluan
+dentro de cada sede: Inventario encendido en El Alto no habilita Compras en
+Cochabamba.
+
+Detalle: [lanzamiento y suspension de modulos](./module-launch-suspension.md).
 
 ## Caja Y Operaciones Financieras
 

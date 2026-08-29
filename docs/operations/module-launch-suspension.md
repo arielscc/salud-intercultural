@@ -5,6 +5,10 @@ sus paginas y acciones se rechazan en el servidor. Este documento describe como
 se lanza un modulo, como se suspende cuando algo sale mal y que pasa con el
 trabajo que quedo abierto.
 
+**El estado es por sucursal.** Cada sede avanza por su propia etapa: apagar la
+Caja de Cochabamba por un incidente no deja sin cobrar a El Alto. Lo que se
+enciende o apaga vale solo para la sucursal activa.
+
 Plan de referencia:
 [lanzamiento por etapas](../project/sigeco-lanzamiento-por-etapas/tasks.md).
 
@@ -12,8 +16,8 @@ Plan de referencia:
 
 | Rol | Puede |
 | --- | --- |
-| Direccion | Decide cuando se lanza cada etapa. Ve el estado, el historial y los pendientes de un modulo suspendido, en solo lectura. |
-| Super administrador | Enciende y apaga modulos desde `/sigeco/modulos`. |
+| Direccion | Decide cuando se lanza cada etapa, sede por sede. Ve el estado, el historial y los pendientes de un modulo suspendido, en solo lectura. |
+| Super administrador | Enciende y apaga modulos desde `/sigeco/modulos`, siempre en la sucursal activa. |
 | Resto del personal | No ve la pantalla ni el aviso de suspension. |
 
 El super administrador no evade el bloqueo: un modulo apagado esta apagado para
@@ -41,6 +45,9 @@ Son duras y se validan en los dos sentidos:
 
 No se puede encender un modulo sin sus prerrequisitos ni apagar uno del que otro
 activo dependa. La pantalla nombra que falta encender o apagar antes.
+
+Las dependencias se evaluan **dentro de cada sede**: tener Inventario encendido
+en El Alto no habilita Compras en Cochabamba.
 
 ## Lanzar Un Modulo
 
@@ -104,8 +111,9 @@ Para una base recien migrada o un ambiente de pruebas, existe el script
 equivalente, con las mismas reglas y el mismo historial:
 
 ```bash
-SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=true pnpm modules:set
-SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=false \
+SIGECO_BRANCH=el-alto SIGECO_MODULE=administracion \
+  SIGECO_MODULE_ACTIVE=true pnpm modules:set
+SIGECO_BRANCH=el-alto SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=false \
   SIGECO_MODULE_REASON="Motivo" pnpm modules:set
 ```
 

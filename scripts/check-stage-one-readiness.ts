@@ -27,8 +27,19 @@ const demoEmailFragments = ["@example.com", ".demo", "staging.invalid", "@test."
 
 const stageOneModules = sigecoLaunchStages[0]?.modules ?? [];
 
+/**
+ * Sede que se revisa. El Alto es la que opera hoy y queda como omisión; se
+ * parametriza porque un piloto puede arrancar en otra sede y, con el código
+ * fijo, la revisión daba por buena a El Alto y nunca miraba la sucursal que se
+ * iba a lanzar de verdad.
+ */
+const stageOneBranchCode = process.env.STAGE_ONE_BRANCH?.trim() || "el-alto";
+
 async function checkModules(): Promise<Check[]> {
+  // Los módulos se encienden por sucursal: se revisa la sede que se va a lanzar,
+  // no el sistema entero. Otra sede con Consulta encendida no dice nada de esta.
   const rows = await prisma.moduleActivation.findMany({
+    where: { branchCode: stageOneBranchCode },
     select: { code: true, status: true }
   });
   const active = new Set(rows.filter((row) => row.status === "active").map((row) => row.code));
@@ -52,14 +63,6 @@ async function checkModules(): Promise<Check[]> {
     }
   ];
 }
-
-/**
- * Sede que se revisa. El Alto es la que opera hoy y queda como omisión; se
- * parametriza porque un piloto puede arrancar en otra sede y, con el código
- * fijo, la revisión daba por buena a El Alto y nunca miraba la sucursal que se
- * iba a lanzar de verdad.
- */
-const stageOneBranchCode = process.env.STAGE_ONE_BRANCH?.trim() || "el-alto";
 
 async function checkBranch(): Promise<Check> {
   const branch = await prisma.clinicBranch.findUnique({

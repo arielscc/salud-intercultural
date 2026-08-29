@@ -18,7 +18,7 @@ import { createSaleOrderAction } from "@/features/sales/actions";
 import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
 import { cn } from "@/lib/cn";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { getPatients, getWalkInClientById } from "@/modules/database/queries/patients";
 import { getInventoryItems } from "@/modules/database/queries/inventory";
 import { getActiveServiceCatalogItems } from "@/modules/database/queries/service-catalog";

@@ -24,7 +24,7 @@ import {
   getServiceCatalogItemById
 } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 
 const linkClassName =

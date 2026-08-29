@@ -858,6 +858,7 @@ model ClinicBranch {
   inventoryBalances    BranchInventoryBalance[]
   outgoingTransfers    InventoryTransfer[]      @relation("InventoryTransferSourceBranch")
   incomingTransfers    InventoryTransfer[]      @relation("InventoryTransferDestinationBranch")
+  moduleActivations    ModuleActivation[]
 
   @@index([status, name])
 }
@@ -3297,12 +3298,17 @@ enum ModuleActivationStatus {
   inactive
 }
 
-/// Estado vigente de cada módulo. El catálogo, las dependencias y el orden viven
-/// en código (`src/features/modules/catalog.ts`); aquí solo se guarda si está
-/// encendido y desde cuándo. Un módulo del catálogo sin fila se trata como
-/// apagado, nunca como activo por omisión.
+/// Estado vigente de cada módulo **en cada sucursal**. El catálogo, las
+/// dependencias y el orden viven en código (`src/features/modules/catalog.ts`);
+/// aquí solo se guarda si está encendido, dónde y desde cuándo. Un módulo del
+/// catálogo sin fila se trata como apagado, nunca como activo por omisión, así
+/// que una sede nueva nace sin nada encendido salvo el núcleo.
+///
+/// La sucursal es parte de la clave porque apagar la Caja de una sede no debe
+/// dejar sin cobrar a la otra: cada sucursal avanza por su propia etapa.
 model ModuleActivation {
-  code            String                  @id
+  code            String
+  branchCode      String
   status          ModuleActivationStatus  @default(inactive)
   activatedAt     DateTime?
   activatedById   String?
@@ -3312,11 +3318,13 @@ model ModuleActivation {
   note            String?
   createdAt       DateTime                @default(now())
   updatedAt       DateTime                @updatedAt
+  branch          ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict, onUpdate: Restrict)
   activatedBy     InternalUser?           @relation("ModuleActivationActivatedBy", fields: [activatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
   deactivatedBy   InternalUser?           @relation("ModuleActivationDeactivatedBy", fields: [deactivatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
   events          ModuleActivationEvent[]
 
-  @@index([status])
+  @@id([code, branchCode])
+  @@index([branchCode, status])
 }
 
 /// Historial append-only de encendidos y apagados. PostgreSQL bloquea update y
@@ -3324,6 +3332,11 @@ model ModuleActivation {
 model ModuleActivationEvent {
   id             String                 @id @default(cuid())
   moduleCode     String
+  /// Sucursal donde ocurrió el cambio. Es nulo solo en los eventos anteriores a
+  /// la activación por sucursal, cuando un cambio valía para todo el sistema.
+  /// Esos eventos no se reescriben: el historial es append-only y reescribirlo
+  /// para atribuirlo a una sede sería inventar dónde pasó.
+  branchCode     String?
   previousStatus ModuleActivationStatus
   status         ModuleActivationStatus
   /// Obligatorio al apagar; la validación vive en la acción (Tarea 5).
@@ -3331,10 +3344,10 @@ model ModuleActivationEvent {
   actorId        String?
   actorRole      InternalRole?
   occurredAt     DateTime               @default(now())
-  module         ModuleActivation       @relation(fields: [moduleCode], references: [code], onDelete: Restrict, onUpdate: Restrict)
+  module         ModuleActivation?      @relation(fields: [moduleCode, branchCode], references: [code, branchCode], onDelete: Restrict, onUpdate: Restrict)
   actor          InternalUser?          @relation("ModuleActivationEventActor", fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
-  @@index([moduleCode, occurredAt])
+  @@index([moduleCode, branchCode, occurredAt])
   @@index([occurredAt])
   @@index([actorId, occurredAt])
 }

@@ -22,7 +22,7 @@ import type { SaleStatus } from "@/generated/prisma/client";
 import { cn } from "@/lib/cn";
 import { dayRange, formatDateTime } from "@/lib/dates";
 import { parsePage } from "@/modules/database/pagination";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import {
   countSales,
   getSalesPage,

@@ -64,9 +64,12 @@ SIGECO se lanza por etapas: un modulo apagado no aparece en la navegacion y sus
 paginas y acciones se rechazan en el servidor. Una base recien migrada solo trae
 el nucleo encendido, asi que en desarrollo hay que activar lo que se va a usar.
 
+Los modulos se encienden **por sucursal**, asi que `SIGECO_BRANCH` es
+obligatorio: sin valor por omision, para que nadie encienda la sede equivocada.
+
 ```bash
-SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=true pnpm modules:set
-SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=true pnpm modules:set
+SIGECO_BRANCH=el-alto SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=true pnpm modules:set
+SIGECO_BRANCH=el-alto SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=true pnpm modules:set
 ```
 
 Modulos disponibles: `core`, `administracion`, `inventario`, `compras`,
@@ -77,7 +80,7 @@ Las dependencias son duras: Compras exige Inventario, Consulta exige Recepcion y
 Enfermeria exige Consulta. Apagar exige motivo:
 
 ```bash
-SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=false \
+SIGECO_BRANCH=el-alto SIGECO_MODULE=inventario SIGECO_MODULE_ACTIVE=false \
   SIGECO_MODULE_REASON="Prueba local" pnpm modules:set
 ```
 

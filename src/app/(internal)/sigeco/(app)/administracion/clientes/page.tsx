@@ -18,7 +18,7 @@ import { formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { parsePage } from "@/modules/database/pagination";
 import { countPatients, getPatients } from "@/modules/database/queries/patients";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { requirePermission } from "@/modules/permissions";
 
 type ClientsPageProps = {

@@ -34,7 +34,7 @@ import { formatDateTime } from "@/lib/dates";
 import { getSaleById } from "@/modules/database/queries/sales";
 import { getSaleReceiptDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 import { cn } from "@/lib/cn";
 

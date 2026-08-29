@@ -13,7 +13,7 @@ import {
 } from "../src/modules/database/queries/cash";
 import { createInventoryItemRecord, createSupplierRecord } from "../src/modules/database/queries/inventory";
 import {
-  getModuleAccessState,
+  getModuleAccessStateForBranch,
   setModuleActivation
 } from "../src/modules/database/queries/modules";
 import { createPatientRecord } from "../src/modules/database/queries/patients";
@@ -99,9 +99,9 @@ async function ensureBranch() {
 
 async function activateStageOne() {
   for (const code of ["inventario", "catalogo", "compras", "administracion"] as const) {
-    await setModuleActivation({ code, active: true });
+    await setModuleActivation({ code, branchCode, active: true });
   }
-  const state = await getModuleAccessState();
+  const state = await getModuleAccessStateForBranch(branchCode);
   assert(state.active.includes("administracion"), "Administración quedó apagada");
   assert(!state.active.includes("consulta"), "Consulta no debería estar encendida en la Etapa 1");
   record("Etapa 1 encendida", state.active.join(", "));
@@ -269,12 +269,13 @@ async function main() {
   // --- Suspender y reactivar un módulo ---
   await setModuleActivation({
     code: "compras",
+    branchCode,
     active: false,
     reason: "Ensayo de suspensión",
     actorId: direction.id,
     actorRole: "direccion"
   });
-  const suspended = await getModuleAccessState();
+  const suspended = await getModuleAccessStateForBranch(branchCode);
   assert(suspended.suspended.includes("compras"), "Compras debió quedar suspendida");
   assert(
     resolveModuleAccess("direccion", suspended, "purchases_read") === "read_only",
@@ -284,7 +285,12 @@ async function main() {
     resolveModuleAccess("administracion", suspended, "purchases_write") === "blocked",
     "la escritura debió quedar bloqueada"
   );
-  await setModuleActivation({ code: "compras", active: true, actorId: direction.id });
+  await setModuleActivation({
+    code: "compras",
+    branchCode,
+    active: true,
+    actorId: direction.id
+  });
   record("Módulo suspendido y reactivado", "lectura para Dirección, escritura bloqueada");
 
   // --- Cierre de Caja ---

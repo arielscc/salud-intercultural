@@ -8,6 +8,7 @@ import {
   setModuleActivation
 } from "@/modules/database/queries/modules";
 import { moduleActivationSchema } from "@/features/modules/schemas/module-activation.schema";
+import { getActiveBranchCode } from "@/features/branches/active-branch";
 
 const modulesPath = "/sigeco/modulos";
 
@@ -22,9 +23,14 @@ function redirectActivationError(error: unknown): never {
 }
 
 /**
- * Enciende o apaga un módulo. La regla vive en `setModuleActivation`, que
- * comparte con el script de línea de comandos: dependencias duras en los dos
- * sentidos, motivo obligatorio al apagar y un evento en el historial.
+ * Enciende o apaga un módulo **en la sucursal activa**. La regla vive en
+ * `setModuleActivation`, que comparte con el script de línea de comandos:
+ * dependencias duras en los dos sentidos, motivo obligatorio al apagar y un
+ * evento en el historial.
+ *
+ * La sucursal se resuelve en el servidor y no se lee del formulario. Un campo
+ * oculto lo podría reescribir cualquiera desde el navegador, y encender un
+ * módulo en la sede equivocada es exactamente lo que no debe poder pasar.
  *
  * El nombre de la acción auditada distingue encender de apagar para que
  * Dirección pueda filtrar los apagados en `/sigeco/auditoria`.
@@ -42,6 +48,11 @@ export async function setModuleActivationAction(formData: FormData) {
   }
 
   const { code, active, reason } = parsed.data;
+  const branchCode = await getActiveBranchCode();
+
+  if (!branchCode) {
+    redirect(`${modulesPath}?error=missing_branch`);
+  }
 
   try {
     await runAuditedAction(
@@ -50,11 +61,12 @@ export async function setModuleActivationAction(formData: FormData) {
         action: active ? "module.activate" : "module.deactivate",
         entityType: "module",
         entityId: code,
-        context: { module: code }
+        context: { module: code, branch: branchCode }
       },
       async (user) => {
         const activation = await setModuleActivation({
           code,
+          branchCode,
           active,
           reason,
           actorId: user.id,
@@ -63,7 +75,7 @@ export async function setModuleActivationAction(formData: FormData) {
 
         return auditedResult(activation, {
           entityId: code,
-          context: { module: code, status: activation.status }
+          context: { module: code, branch: branchCode, status: activation.status }
         });
       }
     );

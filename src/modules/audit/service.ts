@@ -9,7 +9,7 @@ import {
   moduleDisabledNotice,
   permissionDeniedNotice
 } from "@/features/modules/notices";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { getCurrentInternalUser } from "@/modules/permissions";
 import { sanitizeAuditContext } from "@/modules/audit/sanitize";
 

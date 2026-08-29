@@ -181,6 +181,38 @@ En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 
 ## Registro
 
+### 2026-08-29 — Activación De Módulos Por Sucursal
+
+Corrige un defecto de modelo que Dirección detectó al preparar el piloto: el
+estado de un módulo valía para todo el sistema, así que apagar la Caja de una
+sede por un incidente dejaba sin cobrar a la otra. `ModuleActivation` pasa a
+tener clave `(código, sucursal)`.
+
+**Corrijo una estimación que di mal.** Dije que el cambio era caro porque la
+sucursal activa se resolvía después del estado de los módulos. Es falso:
+`getBranchContext` no consulta módulos. Sin ese ciclo, las ~35 pantallas y
+guardas no se tocaron —todas llaman a `getModuleAccessState()` sin argumentos y
+la sede se resuelve por dentro—, y el trabajo quedó en el modelo de datos, la
+consulta, la escritura y la pantalla.
+
+**La migración no cambia el comportamiento el día que corre**: copia el estado
+vigente a cada sucursal. Falla en voz alta si no hay sucursales, en vez de dejar
+el sistema sin nada encendido. El historial no se reescribe: los eventos
+anteriores quedan sin sede, que significa «cuando el cambio valía para todo el
+sistema», y se muestran en todas.
+
+**La línea que importa**: la sucursal activa viene de una cookie, y ahora esa
+cookie decide además qué está encendido. Solo puede elegir entre las sedes
+asignadas y abiertas, nunca agregar una. Quedó fijado por pruebas propias, y se
+comprobó que fallan al quitar el filtro de asignación.
+
+Verificado de extremo a extremo con la misma sesión y el mismo despliegue: con
+Administración encendida en Cochabamba y apagada en El Alto, la cookie de
+Cochabamba abre el formulario de venta y la de El Alto lo bloquea con el aviso
+de suspensión.
+
+Reporte: [2026-08-29](../task-reports/2026-08-29-modulos-por-sucursal.md).
+
 ### 2026-08-29 — Entorno Piloto Local De Cochabamba
 
 Fuera del plan numerado, en preparación del lanzamiento por sede. Dirección
@@ -192,6 +224,10 @@ antes en local sin tocar el entorno de trabajo.
 sucursal. No existe "Cochabamba con Caja mientras El Alto conserva Recepción":
 apagar un módulo lo apaga para todos. Por eso el piloto es una base aparte,
 `salud_intercultural_piloto`, y no otra sucursal dentro de la misma.
+
+> Corregido el mismo día: la activación pasó a ser por sucursal, así que esa
+> limitación ya no existe. La base aparte se conserva porque aísla los datos de
+> prueba, no porque haga falta para separar los módulos.
 
 **Una sede en preparación no opera y no había forma de abrirla.**
 `getBranchContext` solo deja elegir sucursales activas y asignadas. Abrir una

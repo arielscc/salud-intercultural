@@ -18,7 +18,7 @@ vi.mock("@/features/internal-auth/session", () => ({
   getInternalSessionByToken: vi.fn()
 }));
 
-vi.mock("@/modules/database/queries/modules", () => ({
+vi.mock("@/features/modules/request-state", () => ({
   getModuleAccessState: mocks.getModuleAccessState
 }));
 

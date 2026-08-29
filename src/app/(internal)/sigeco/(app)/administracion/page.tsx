@@ -42,7 +42,7 @@ import {
 } from "@/modules/database/queries/cash";
 import { OpenCashSessionCallout } from "@/features/cash/components/OpenCashSessionCallout";
 import { requirePermission } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 import { ArrowRight, Banknote, CalendarDays, Clock } from "lucide-react";
 import Link from "next/link";

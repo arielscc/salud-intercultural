@@ -26,37 +26,47 @@ import { prisma, withDatabaseError } from "@/modules/database";
  */
 
 /**
- * Módulos encendidos. Memoizado por request con `cache` de React: el layout, el
- * gate de permisos y cada página lo piden por separado dentro del mismo render
- * y solo debe costar una consulta.
+ * Estado de los módulos de una sucursal. Memoizado por request y por sede con
+ * `cache` de React: el layout, el gate de permisos y cada página lo piden por
+ * separado dentro del mismo render y solo debe costar una consulta.
  *
  * Cuidado al usarlo dentro de una acción que acaba de cambiar el estado: en ese
  * mismo request seguirá devolviendo el valor anterior. Las acciones de la Tarea
  * 5 revalidan y redirigen, así que el siguiente render lee el estado nuevo.
  */
-export const getModuleAccessState = cache(async (): Promise<ModuleAccessState> => {
-  return withDatabaseError("getModuleAccessState", async () => {
-    const rows = await prisma.moduleActivation.findMany({
-      select: { code: true, status: true, deactivatedAt: true }
+export const getModuleAccessStateForBranch = cache(
+  async (branchCode: string): Promise<ModuleAccessState> => {
+    return withDatabaseError("getModuleAccessStateForBranch", async () => {
+      const rows = await prisma.moduleActivation.findMany({
+        where: { branchCode },
+        select: { code: true, status: true, deactivatedAt: true }
+      });
+
+      return {
+        active: normalizeActiveModules(
+          rows.filter((row) => row.status === "active").map((row) => row.code)
+        ),
+        // Suspendido es el que estuvo lanzado y se apagó. El que nunca se encendió
+        // no tiene trabajo abierto que consultar.
+        suspended: rows
+          .filter((row) => row.status === "inactive" && row.deactivatedAt !== null)
+          .map((row) => row.code)
+          .filter(isSigecoModuleCode)
+      };
     });
+  }
+);
 
-    return {
-      active: normalizeActiveModules(
-        rows.filter((row) => row.status === "active").map((row) => row.code)
-      ),
-      // Suspendido es el que estuvo lanzado y se apagó. El que nunca se encendió
-      // no tiene trabajo abierto que consultar.
-      suspended: rows
-        .filter((row) => row.status === "inactive" && row.deactivatedAt !== null)
-        .map((row) => row.code)
-        .filter(isSigecoModuleCode)
-    };
-  });
-});
-
-export async function getActiveModules(): Promise<ActiveModules> {
-  return (await getModuleAccessState()).active;
-}
+/**
+ * Estado de un sistema sin sucursal resuelta: solo el núcleo.
+ *
+ * Lo usa `@/features/modules/request-state` cuando no hay sede activa. Vive
+ * aquí para que el valor seguro se defina junto a la consulta que reemplaza.
+ */
+export const moduleAccessWithoutBranch: ModuleAccessState = {
+  active: normalizeActiveModules([]),
+  suspended: []
+};
 
 const actorSelect = { id: true, name: true, email: true, role: true } as const;
 
@@ -85,9 +95,12 @@ export type ModuleActivationState = Pick<
  * código con lo guardado en base para que la pantalla del super administrador
  * (Tarea 5) no tenga que cruzarlos por su cuenta.
  */
-export async function getModuleActivationStates(): Promise<ModuleActivationState[]> {
+export async function getModuleActivationStates(
+  branchCode: string
+): Promise<ModuleActivationState[]> {
   return withDatabaseError("getModuleActivationStates", async () => {
     const rows = await prisma.moduleActivation.findMany({
+      where: { branchCode },
       select: {
         code: true,
         status: true,
@@ -127,12 +140,12 @@ export async function getModuleActivationStates(): Promise<ModuleActivationState
  * módulo que todavía no se lanzó. Se usa para avisar en el shell que hay una
  * parte de la operación suspendida.
  */
-export async function getSuspendedModules(): Promise<
-  { code: SigecoModuleCode; note: string | null; deactivatedAt: Date }[]
-> {
+export async function getSuspendedModules(
+  branchCode: string
+): Promise<{ code: SigecoModuleCode; note: string | null; deactivatedAt: Date }[]> {
   return withDatabaseError("getSuspendedModules", async () => {
     const rows = await prisma.moduleActivation.findMany({
-      where: { status: "inactive", deactivatedAt: { not: null } },
+      where: { branchCode, status: "inactive", deactivatedAt: { not: null } },
       select: { code: true, note: true, deactivatedAt: true },
       orderBy: { deactivatedAt: "desc" }
     });
@@ -150,6 +163,8 @@ export async function getSuspendedModules(): Promise<
 export type ModuleActivationHistoryEntry = {
   id: string;
   moduleCode: string;
+  /** Nulo en los eventos anteriores a la activación por sucursal. */
+  branchCode: string | null;
   previousStatus: "active" | "inactive";
   status: "active" | "inactive";
   reason: string | null;
@@ -160,20 +175,32 @@ export type ModuleActivationHistoryEntry = {
 
 /**
  * Historial append-only, del cambio más reciente al más antiguo. Sin `code`
- * devuelve el historial completo, que es lo que revisa Dirección.
+ * devuelve el historial completo de la sucursal, que es lo que revisa
+ * Dirección.
+ *
+ * Los eventos anteriores a la activación por sucursal no tienen sede y se
+ * incluyen siempre: son el pasado común de todas, y esconderlos dejaría un
+ * hueco inexplicable en el historial de cada una.
  */
-export async function getModuleActivationHistory(options?: {
+export async function getModuleActivationHistory(options: {
+  branchCode: string;
   code?: SigecoModuleCode;
   limit?: number;
 }): Promise<ModuleActivationHistoryEntry[]> {
-  const limit = Math.min(Math.max(options?.limit ?? 50, 1), 200);
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
 
   return withDatabaseError("getModuleActivationHistory", async () => {
     const events = await prisma.moduleActivationEvent.findMany({
-      where: options?.code ? { moduleCode: options.code } : undefined,
+      where: {
+        AND: [
+          { OR: [{ branchCode: options.branchCode }, { branchCode: null }] },
+          ...(options.code ? [{ moduleCode: options.code }] : [])
+        ]
+      },
       select: {
         id: true,
         moduleCode: true,
+        branchCode: true,
         previousStatus: true,
         status: true,
         reason: true,
@@ -188,6 +215,7 @@ export async function getModuleActivationHistory(options?: {
     return events.map((event) => ({
       id: event.id,
       moduleCode: event.moduleCode,
+      branchCode: event.branchCode,
       previousStatus: event.previousStatus,
       status: event.status,
       reason: event.reason,
@@ -214,23 +242,33 @@ export type ModulePendingWork = {
  * medible: Catálogo y Reportes no acumulan pendientes.
  */
 export async function getModulePendingWork(
-  codes: readonly SigecoModuleCode[]
+  codes: readonly SigecoModuleCode[],
+  branchCode: string
 ): Promise<ModulePendingWork[]> {
   if (codes.length === 0) return [];
 
   return withDatabaseError("getModulePendingWork", async () => {
     const wanted = new Set(codes);
     const results: ModulePendingWork[] = [];
+    // Lo que quedó abierto se cuenta en la sede que suspendió el módulo: a
+    // Cochabamba no le sirve saber cuántas visitas dejó abiertas El Alto.
+    const ofBranch = { branchCode };
+    const ofBranchVisit = { visit: { branchCode } };
 
     if (wanted.has("recepcion")) {
       const [activeVisits, pendingWork] = await Promise.all([
         prisma.visit.count({
           where: {
+            ...ofBranch,
             status: { in: ["in_reception", "in_consultation", "in_nursing", "in_administration"] }
           }
         }),
         prisma.visitWorkItem.count({
-          where: { area: "recepcion", status: { in: ["pending", "acknowledged", "in_progress"] } }
+          where: {
+            ...ofBranchVisit,
+            area: "recepcion",
+            status: { in: ["pending", "acknowledged", "in_progress"] }
+          }
         })
       ]);
       results.push({
@@ -244,9 +282,13 @@ export async function getModulePendingWork(
 
     if (wanted.has("consulta")) {
       const [drafts, queue] = await Promise.all([
-        prisma.clinicalConsultation.count({ where: { status: "draft" } }),
+        prisma.clinicalConsultation.count({ where: { ...ofBranchVisit, status: "draft" } }),
         prisma.visitWorkItem.count({
-          where: { area: "medico", status: { in: ["pending", "acknowledged", "in_progress"] } }
+          where: {
+            ...ofBranchVisit,
+            area: "medico",
+            status: { in: ["pending", "acknowledged", "in_progress"] }
+          }
         })
       ]);
       results.push({
@@ -261,9 +303,15 @@ export async function getModulePendingWork(
     if (wanted.has("enfermeria")) {
       const [queue, openPackages] = await Promise.all([
         prisma.visitWorkItem.count({
-          where: { area: "enfermeria", status: { in: ["pending", "acknowledged", "in_progress"] } }
+          where: {
+            ...ofBranchVisit,
+            area: "enfermeria",
+            status: { in: ["pending", "acknowledged", "in_progress"] }
+          }
         }),
-        prisma.serviceSessionPackage.count({ where: { status: "active" } })
+        prisma.serviceSessionPackage.count({
+          where: { status: "active", originVisit: { branchCode } }
+        })
       ]);
       results.push({
         code: "enfermeria",
@@ -276,10 +324,13 @@ export async function getModulePendingWork(
 
     if (wanted.has("administracion")) {
       const [unpaid, openSessions, queue] = await Promise.all([
-        prisma.sale.count({ where: { status: { in: ["pending", "partial"] } } }),
-        prisma.cashSession.count({ where: { status: { in: ["open", "pending_approval"] } } }),
+        prisma.sale.count({ where: { ...ofBranch, status: { in: ["pending", "partial"] } } }),
+        prisma.cashSession.count({
+          where: { ...ofBranch, status: { in: ["open", "pending_approval"] } }
+        }),
         prisma.visitWorkItem.count({
           where: {
+            ...ofBranchVisit,
             area: "administracion",
             status: { in: ["pending", "acknowledged", "in_progress"] }
           }
@@ -296,6 +347,9 @@ export async function getModulePendingWork(
     }
 
     if (wanted.has("inventario")) {
+      // La alerta de stock es del producto y no de una sede: `InventoryAlert` no
+      // guarda sucursal. El número es del sistema entero y se deja así antes que
+      // atribuirlo a una sede que no le corresponde.
       const alerts = await prisma.inventoryAlert.count({ where: { status: "open" } });
       results.push({
         code: "inventario",
@@ -305,7 +359,7 @@ export async function getModulePendingWork(
 
     if (wanted.has("compras")) {
       const open = await prisma.purchase.count({
-        where: { status: { in: ["draft", "confirmed", "partially_received"] } }
+        where: { ...ofBranch, status: { in: ["draft", "confirmed", "partially_received"] } }
       });
       results.push({
         code: "compras",
@@ -316,10 +370,13 @@ export async function getModulePendingWork(
     if (wanted.has("seguimientos")) {
       const [pending, candidates] = await Promise.all([
         prisma.followUpTask.count({
-          where: { status: { in: ["pending", "awaiting_payment", "no_answer"] } }
+          where: {
+            ...ofBranchVisit,
+            status: { in: ["pending", "awaiting_payment", "no_answer"] }
+          }
         }),
         prisma.supervisedReminderCandidate.count({
-          where: { status: { in: ["pending_review", "failed"] } }
+          where: { ...ofBranchVisit, status: { in: ["pending_review", "failed"] } }
         })
       ]);
       results.push({
@@ -333,7 +390,10 @@ export async function getModulePendingWork(
 
     if (wanted.has("opiniones")) {
       const cases = await prisma.patientFeedbackCase.count({
-        where: { status: { in: ["new", "reviewing", "awaiting_patient"] } }
+        where: {
+          feedback: { visit: { branchCode } },
+          status: { in: ["new", "reviewing", "awaiting_patient"] }
+        }
       });
       results.push({
         code: "opiniones",
@@ -375,15 +435,20 @@ export function isSigecoModuleCode(value: string): value is SigecoModuleCode {
  * Es la única escritura del estado. La pantalla del super administrador
  * (Tarea 5) y el script de línea de comandos la comparten para que no existan
  * dos caminos con reglas distintas.
+ *
+ * Todo ocurre dentro de una sucursal: las dependencias se evalúan contra lo que
+ * esa sede tiene encendido, no contra el sistema. Cochabamba puede tener
+ * Compras apagado mientras El Alto lo usa.
  */
 export async function setModuleActivation(input: {
   code: SigecoModuleCode;
+  branchCode: string;
   active: boolean;
   reason?: string | null;
   actorId?: string | null;
   actorRole?: InternalRole | null;
 }) {
-  const { code, active } = input;
+  const { code, branchCode, active } = input;
   const reason = input.reason?.trim() || null;
 
   if (!isSigecoModuleCode(code)) throw new ModuleActivationError("unknown_module");
@@ -398,7 +463,7 @@ export async function setModuleActivation(input: {
   // no podría decir qué dependencia falta.
   const rows = await withDatabaseError("setModuleActivation.read", () =>
     prisma.moduleActivation.findMany({
-      where: { status: "active" },
+      where: { branchCode, status: "active" },
       select: { code: true }
     })
   );
@@ -430,9 +495,10 @@ export async function setModuleActivation(input: {
           : "active";
 
       const activation = await tx.moduleActivation.upsert({
-        where: { code },
+        where: { code_branchCode: { code, branchCode } },
         create: {
           code,
+          branchCode,
           status: active ? "active" : "inactive",
           activatedAt: active ? now : null,
           activatedById: active ? (input.actorId ?? null) : null,
@@ -452,6 +518,7 @@ export async function setModuleActivation(input: {
       await tx.moduleActivationEvent.create({
         data: {
           moduleCode: code,
+          branchCode,
           previousStatus,
           status: active ? "active" : "inactive",
           reason,

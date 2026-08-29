@@ -11,9 +11,13 @@ import { reportScriptError } from "./safe-error";
  * Enciende o apaga un módulo de SIGECO desde la línea de comandos.
  *
  * Uso:
- *   SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=true pnpm modules:set
- *   SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=false \
+ *   SIGECO_BRANCH=el-alto SIGECO_MODULE=administracion \
+ *     SIGECO_MODULE_ACTIVE=true pnpm modules:set
+ *   SIGECO_BRANCH=el-alto SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=false \
  *     SIGECO_MODULE_REASON="Incidente de Caja" pnpm modules:set
+ *
+ * La sucursal es obligatoria y no tiene valor por omisión: los módulos se
+ * encienden por sede, y una omisión silenciosa encendería la equivocada.
  *
  * Existe para preparar un ambiente antes de que la pantalla del super
  * administrador esté disponible. No reemplaza esa pantalla: comparte con ella
@@ -40,11 +44,19 @@ function explainActivationError(error: ModuleActivationError) {
 
 async function main() {
   const code = process.env.SIGECO_MODULE?.trim();
+  const branchCode = process.env.SIGECO_BRANCH?.trim();
   const activeInput = process.env.SIGECO_MODULE_ACTIVE?.trim().toLowerCase();
   const reason = process.env.SIGECO_MODULE_REASON?.trim();
 
-  if (!code || !activeInput) {
-    throw new Error("SIGECO_MODULE and SIGECO_MODULE_ACTIVE are required.");
+  if (!code || !activeInput || !branchCode) {
+    throw new Error(
+      "SIGECO_BRANCH, SIGECO_MODULE and SIGECO_MODULE_ACTIVE are required."
+    );
+  }
+
+  const branch = await prisma.clinicBranch.findUnique({ where: { code: branchCode } });
+  if (!branch) {
+    throw new Error(`Unknown branch "${branchCode}".`);
   }
 
   if (!isSigecoModuleCode(code)) {
@@ -60,7 +72,7 @@ async function main() {
   const active = activeInput === "true";
 
   try {
-    await setModuleActivation({ code, active, reason });
+    await setModuleActivation({ code, branchCode, active, reason });
   } catch (error) {
     if (error instanceof ModuleActivationError) {
       // Solo se imprimen códigos del catálogo: no hay datos personales ni
@@ -72,7 +84,9 @@ async function main() {
     throw error;
   }
 
-  console.log(`Module "${code}" is now ${active ? "active" : "inactive"}.`);
+  console.log(
+    `Module "${code}" is now ${active ? "active" : "inactive"} in "${branchCode}".`
+  );
 }
 
 main()

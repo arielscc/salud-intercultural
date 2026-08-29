@@ -25,6 +25,8 @@ import {
   getModulePendingWork
 } from "@/modules/database/queries/modules";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
+import { branchDisplayName } from "@/features/branches/policy";
 
 type ModulesPageProps = {
   searchParams: Promise<{ error?: string; faltan?: string }>;
@@ -36,6 +38,7 @@ const errorMessages: Record<string, string> = {
   always_active: "El núcleo no se apaga: sin él nadie podría entrar al sistema.",
   reason_required: "Apagar un módulo exige un motivo escrito.",
   unknown_module: "Ese módulo no existe en el catálogo.",
+  missing_branch: "No hay una sucursal activa: los módulos se encienden por sede.",
   invalid: "No se pudo cambiar el estado del módulo."
 };
 
@@ -55,10 +58,13 @@ function errorMessage(error?: string, faltan?: string) {
 
 export default async function ModulesPage({ searchParams }: ModulesPageProps) {
   const user = await requirePermission("modules_read");
+  // Los módulos se encienden por sucursal: esta pantalla siempre muestra la
+  // sede activa. Para administrar otra se cambia de sucursal en la cabecera.
+  const { activeBranch } = await getBranchContext(user);
   const [params, states, history] = await Promise.all([
     searchParams,
-    getModuleActivationStates(),
-    getModuleActivationHistory({ limit: 40 })
+    getModuleActivationStates(activeBranch.code),
+    getModuleActivationHistory({ branchCode: activeBranch.code, limit: 40 })
   ]);
 
   const canManage = roleHasPermission(user.role, "modules_manage");
@@ -68,15 +74,23 @@ export default async function ModulesPage({ searchParams }: ModulesPageProps) {
   const suspendedCodes = states
     .filter((state) => !state.active && state.deactivatedAt)
     .map((state) => state.code);
-  const pendingWork = await getModulePendingWork(suspendedCodes);
+  const pendingWork = await getModulePendingWork(suspendedCodes, activeBranch.code);
   const notice = errorMessage(params.error, params.faltan);
 
   return (
     <div className="grid gap-4">
       <PageHeader
         title="Módulos de SIGECO"
-        description="Qué está lanzado hoy y qué falta encender"
+        description={`Qué está lanzado hoy en ${branchDisplayName(activeBranch)} y qué falta encender`}
       />
+
+      <Card className="border-border bg-surface-soft/40">
+        <p className="text-sm text-muted">
+          Cada sucursal avanza por su propia etapa. Lo que enciendas o apagues
+          aquí vale solo para <span className="font-semibold text-text">{branchDisplayName(activeBranch)}</span>;
+          las demás sedes no cambian. Para administrar otra, cámbiala en la cabecera.
+        </p>
+      </Card>
 
       {notice ? (
         <Card className="border-error/30 bg-error/5">

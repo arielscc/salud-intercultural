@@ -28,7 +28,7 @@ vi.mock("@/modules/permissions", () => ({
   getCurrentInternalUser: mocks.getCurrentInternalUser
 }));
 
-vi.mock("@/modules/database/queries/modules", () => ({
+vi.mock("@/features/modules/request-state", () => ({
   getModuleAccessState: mocks.getModuleAccessState
 }));
 

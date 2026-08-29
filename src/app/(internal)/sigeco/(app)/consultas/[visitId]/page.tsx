@@ -70,7 +70,7 @@ import {
 import { getActiveStudyCatalogItems } from "@/modules/database/queries/service-catalog";
 import { getPrescriptionDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 import type { SaleItemType } from "@/generated/prisma/client";
 import { ChevronDown, HeartPulse, Paperclip } from "lucide-react";

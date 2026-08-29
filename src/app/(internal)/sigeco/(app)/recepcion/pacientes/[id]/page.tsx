@@ -55,7 +55,7 @@ import {
 } from "@/features/service-sessions/labels";
 import { getClinicalAttachmentsForPatient } from "@/modules/clinical-attachments/service";
 import { requirePermission } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 import { Chip } from "@/components/internal/ui/Chip";
 import { calculateAgeFromDate } from "@/lib/age";

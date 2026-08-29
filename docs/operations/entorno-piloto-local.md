@@ -13,15 +13,21 @@ Los dos entornos conviven. El de trabajo no se toca.
 | Compilación | `.next` | `.next-piloto` |
 | Archivos clínicos | `.data/clinical-files` | `.data/clinical-files-piloto` |
 | Sucursal activa | El Alto | Cochabamba |
-| Módulos | los once | núcleo + `administracion` |
+| Módulos de Cochabamba | los once | núcleo + `administracion` |
 
 ## Por Qué Una Base Aparte Y No Solo Otra Sucursal
 
-Los módulos se encienden **para todo el sistema**, no por sucursal:
-`ModuleActivation` tiene el código del módulo como clave y no guarda sucursal.
-Apagar Recepción para probar el piloto de Cochabamba habría apagado Recepción
-también para El Alto. Por eso el piloto es otra base, no otra sede dentro de la
-misma.
+Cuando se creó este entorno, los módulos se encendían para todo el sistema:
+apagar Recepción para probar Cochabamba la habría apagado también para El Alto.
+**Eso ya no es así**: desde el 2026-08-29 el estado de cada módulo es propio de
+cada sede, así que un piloto de Cochabamba con solo Caja se puede montar dentro
+de la base de trabajo, abriendo Cochabamba y encendiéndole solo Administración.
+
+La base aparte sigue teniendo sentido por otra razón: **aísla los datos**. El
+piloto se llena de ventas, cobros y cierres de prueba que no ensucian el entorno
+de trabajo, y se borra entero con un `DROP DATABASE`. Si lo que se quiere es
+solo ver cómo se comporta una sede con pocos módulos, alcanza con la base de
+siempre.
 
 ## Por Qué 127.0.0.1 Y No localhost
 
@@ -46,11 +52,14 @@ pnpm piloto:seed                     # super administrador en Cochabamba
 SIGECO_BRANCH=cochabamba SIGECO_BRANCH_OPEN=true  pnpm piloto:branch
 SIGECO_BRANCH=el-alto    SIGECO_BRANCH_OPEN=false pnpm piloto:branch
 
-SIGECO_MODULE=administracion SIGECO_MODULE_ACTIVE=true pnpm piloto:modules
+SIGECO_BRANCH=cochabamba SIGECO_MODULE=administracion \
+  SIGECO_MODULE_ACTIVE=true pnpm piloto:modules
 ```
 
-Una base recién migrada trae **solo el núcleo encendido** y Cochabamba en
-preparación: ese ya es el punto de partida del piloto, no hay que apagar nada.
+Una base recién migrada trae **solo el núcleo encendido en cada sucursal** y
+Cochabamba en preparación: ese ya es el punto de partida del piloto, no hay que
+apagar nada. El estado de los módulos es por sede, así que encender
+Administración en Cochabamba no toca a El Alto.
 
 ## Usarlo
 

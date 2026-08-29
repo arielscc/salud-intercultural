@@ -11,7 +11,7 @@ import {
   getInternalUserBySessionToken
 } from "@/features/internal-auth/session";
 import { appendAuditEvent } from "@/modules/audit/append";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 
 export async function getCurrentInternalUser() {
   const token = await getInternalSessionToken();

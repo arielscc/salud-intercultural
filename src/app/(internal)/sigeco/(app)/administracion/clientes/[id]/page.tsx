@@ -16,7 +16,7 @@ import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { canUse } from "@/features/modules/access";
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
 import { formatDateTime } from "@/lib/dates";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { getWalkInClientById } from "@/modules/database/queries/patients";
 import { getPatientSales } from "@/modules/database/queries/sales";
 import { requirePermission } from "@/modules/permissions";

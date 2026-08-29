@@ -51,7 +51,7 @@ import {
 } from "@/modules/database/queries/nursing";
 import { getPatientServiceSessionPackages } from "@/modules/database/queries/service-sessions";
 import { requirePermission } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 import { CheckCircle2, Stethoscope, X } from "lucide-react";
 import { notFound } from "next/navigation";

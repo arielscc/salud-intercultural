@@ -78,7 +78,8 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-28 | [Lanzamiento Tarea 12C: la base que no responde](./2026-08-28-lanzamiento-tarea-12c-base-que-no-responde.md) | Falla rápido y con un mensaje entendible cuando la base no contesta, en lugar de dejar la pantalla colgada. |
 | 2026-08-28 | [Lanzamiento Tarea 12D: ruido de interfaz detectado en el QA](./2026-08-28-lanzamiento-tarea-12d-ruido-interfaz.md) | Corrige los defectos de interfaz que reportó el QA del 28 de agosto. |
 | 2026-08-28 | [Lanzamiento Tarea 12E: el cobro que se teclea de nuevo](./2026-08-28-lanzamiento-tarea-12e-cobro-de-mostrador.md) | El monto del cobro llega escrito con el saldo, aparece el descuento de Administración y el selector de productos avisa del stock casi agotado. |
-| 2026-08-29 | [Entorno piloto local de Cochabamba](./2026-08-29-entorno-piloto-local-cochabamba.md) | Segunda base local para ensayar Cochabamba con solo Caja y Administración, sin tocar el entorno de trabajo; los módulos son globales, así que el piloto exige base aparte. |
+| 2026-08-29 | [Entorno piloto local de Cochabamba](./2026-08-29-entorno-piloto-local-cochabamba.md) | Segunda base local para ensayar Cochabamba con solo Caja y Administración, sin tocar el entorno de trabajo. |
+| 2026-08-29 | [Activación de módulos por sucursal](./2026-08-29-modulos-por-sucursal.md) | El estado de cada módulo pasa a ser propio de cada sede: apagar la Caja de una sucursal ya no deja sin cobrar a la otra. Las ~35 pantallas no cambian; la sucursal se resuelve en un solo lugar. |
 
 ## Relacion Con Estado V3
 

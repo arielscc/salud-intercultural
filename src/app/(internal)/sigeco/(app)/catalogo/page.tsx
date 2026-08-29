@@ -26,7 +26,7 @@ import {
 } from "@/modules/database/queries/service-catalog";
 import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 
 type CatalogPageProps = {

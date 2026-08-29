@@ -14,7 +14,7 @@ import { InventoryCatalogError } from "@/features/inventory/components/Inventory
 import { formatDateTime } from "@/lib/dates";
 import { getSupplierById } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
-import { getModuleAccessState } from "@/modules/database/queries/modules";
+import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 
 const linkClassName =
