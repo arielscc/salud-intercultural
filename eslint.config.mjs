@@ -5,6 +5,8 @@ const eslintConfig = [
   {
     ignores: [
       ".next/**",
+      // Carpetas de compilación de otros entornos locales, p. ej. `.next-piloto`.
+      ".next-*/**",
       "node_modules/**",
       "dist/**",
       "build/**",

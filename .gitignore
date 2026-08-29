@@ -4,6 +4,7 @@ node_modules/
 
 # Next.js
 .next/
+.next-*/
 out/
 
 # production
@@ -54,4 +55,6 @@ Thumbs.db
 docs/masters/Ideas/
 .vercel
 .env*
+# Las plantillas sí se versionan: documentan qué variables pide cada entorno.
+!.env*.example
 capturas/

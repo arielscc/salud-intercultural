@@ -74,6 +74,11 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-24 | [Lanzamiento Tarea 10B: deuda previa al plan](./2026-08-24-lanzamiento-tarea-10b-deuda-previa.md) | Corrige la fuga del correo en la URL del login, reconcilia el mapa que vigila los permisos y deja la suite en verde antes del CI. |
 | 2026-08-25 | [Lanzamiento Tarea 11: CI remoto y cierre acumulado](./2026-08-25-lanzamiento-tarea-11-cierre-acumulado-ci.md) | Primer cierre acumulado completo en verde; la integración destapó una trazabilidad de compras rota y una regla sin pruebas, y se resolvieron cinco vulnerabilidades altas. |
 | 2026-08-26 | [Lanzamiento Tarea 12: staging aislado y ensayo de la Etapa 1](./2026-08-26-lanzamiento-tarea-12-staging-ensayo.md) | Verifica las ocho barreras de aislamiento y convierte el ensayo en un script reproducible que recorre los once pasos de la Etapa 1 sin defectos; staging sigue bloqueado por dos secretos. |
+| 2026-08-28 | [Lanzamiento Tarea 12B: listas invisibles en escritorio](./2026-08-28-lanzamiento-tarea-12b-listas-escritorio.md) | Restaura las tablas de registros en ventas y clientes, que en pantalla ancha no mostraban ninguna fila. |
+| 2026-08-28 | [Lanzamiento Tarea 12C: la base que no responde](./2026-08-28-lanzamiento-tarea-12c-base-que-no-responde.md) | Falla rápido y con un mensaje entendible cuando la base no contesta, en lugar de dejar la pantalla colgada. |
+| 2026-08-28 | [Lanzamiento Tarea 12D: ruido de interfaz detectado en el QA](./2026-08-28-lanzamiento-tarea-12d-ruido-interfaz.md) | Corrige los defectos de interfaz que reportó el QA del 28 de agosto. |
+| 2026-08-28 | [Lanzamiento Tarea 12E: el cobro que se teclea de nuevo](./2026-08-28-lanzamiento-tarea-12e-cobro-de-mostrador.md) | El monto del cobro llega escrito con el saldo, aparece el descuento de Administración y el selector de productos avisa del stock casi agotado. |
+| 2026-08-29 | [Entorno piloto local de Cochabamba](./2026-08-29-entorno-piloto-local-cochabamba.md) | Segunda base local para ensayar Cochabamba con solo Caja y Administración, sin tocar el entorno de trabajo; los módulos son globales, así que el piloto exige base aparte. |
 
 ## Relacion Con Estado V3
 

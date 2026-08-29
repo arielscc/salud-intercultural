@@ -61,6 +61,7 @@ No usar este directorio para roadmap, estado historico o decisiones de producto;
 46. [Guía reproducible del piloto completo con el personal](./staff-pilot.md)
 47. [Lanzamiento y suspension de modulos](./module-launch-suspension.md)
 48. [Datos maestros de la Etapa 1](./stage-one-master-data.md)
+49. [Entorno piloto local (Cochabamba)](./entorno-piloto-local.md)
 
 ## Flujo recomendado
 

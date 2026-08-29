@@ -53,14 +53,22 @@ async function checkModules(): Promise<Check[]> {
   ];
 }
 
+/**
+ * Sede que se revisa. El Alto es la que opera hoy y queda como omisión; se
+ * parametriza porque un piloto puede arrancar en otra sede y, con el código
+ * fijo, la revisión daba por buena a El Alto y nunca miraba la sucursal que se
+ * iba a lanzar de verdad.
+ */
+const stageOneBranchCode = process.env.STAGE_ONE_BRANCH?.trim() || "el-alto";
+
 async function checkBranch(): Promise<Check> {
   const branch = await prisma.clinicBranch.findUnique({
-    where: { code: "el-alto" },
+    where: { code: stageOneBranchCode },
     select: { status: true, name: true }
   });
 
   return {
-    name: "Sucursal El Alto activa",
+    name: `Sucursal ${branch?.name ?? stageOneBranchCode} activa`,
     ok: branch?.status === "active",
     detail: branch ? `${branch.name}: ${branch.status}` : "la sucursal no existe"
   };

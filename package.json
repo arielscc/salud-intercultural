@@ -59,6 +59,7 @@
     "branches:seed:synthetic": "node --import dotenv/config --import tsx scripts/seed-multi-branch-synthetic.ts",
     "internal:set-role": "node --import dotenv/config --import tsx scripts/set-internal-user-role.ts",
     "modules:set": "node --import dotenv/config --import tsx scripts/set-module-activation.ts",
+    "branch:open": "node --import dotenv/config --import tsx scripts/open-branch.ts",
     "promote:staging": "node --import tsx scripts/promote-branch.ts staging",
     "promote:main": "node --import tsx scripts/promote-branch.ts main",
     "ci": "gh run list --branch develop --limit 5",
@@ -66,7 +67,14 @@
     "ci:failed": "gh run view --log-failed",
     "stage-one:check": "node --import dotenv/config --import tsx scripts/check-stage-one-readiness.ts",
     "stage-one:load": "node --import dotenv/config --import tsx scripts/load-stage-one-master-data.ts",
-    "stage-one:rehearse": "node --import dotenv/config --import tsx scripts/rehearse-stage-one.ts"
+    "stage-one:rehearse": "node --import dotenv/config --import tsx scripts/rehearse-stage-one.ts",
+    "piloto:migrate": "DOTENV_CONFIG_PATH=.env.piloto pnpm exec prisma migrate deploy",
+    "piloto:seed": "DOTENV_CONFIG_PATH=.env.piloto pnpm internal:seed",
+    "piloto:branch": "DOTENV_CONFIG_PATH=.env.piloto pnpm branch:open",
+    "piloto:modules": "DOTENV_CONFIG_PATH=.env.piloto pnpm modules:set",
+    "piloto:load": "DOTENV_CONFIG_PATH=.env.piloto pnpm stage-one:load",
+    "piloto:check": "STAGE_ONE_BRANCH=cochabamba DOTENV_CONFIG_PATH=.env.piloto pnpm stage-one:check",
+    "piloto:dev": "ENV_FILE=.env.piloto node --import tsx scripts/run-with-env.ts next dev -p 3001"
   },
   "dependencies": {
     "@date-fns/tz": "1.5.0",

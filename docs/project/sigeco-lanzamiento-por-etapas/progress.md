@@ -157,8 +157,10 @@ Etapa 1 funcione entera en staging.
 Los dos secretos que faltaban llegaron y staging arranca desde el 2026-08-27.
 Lo que queda para cerrar el plan, en orden:
 
-1. Commitear y empujar la Tarea 12E, y promover `develop → staging`. Staging
-   todavía no tiene 12B, 12C, 12D ni 12E.
+1. Empujar la Tarea 12E y promover `develop → staging`. Staging ya tiene 12B,
+   12C y 12D desde el PR #3; 12E está commiteada en local y `develop` remoto
+   sigue sin ella (verificado el 2026-08-29 por la API de GitHub, porque
+   `git fetch` por SSH no está disponible en este equipo).
 2. **Recorrido operativo completo por navegador contra staging desplegado**: alta
    de cliente, venta, cobro, recibo, egreso, compra, recepción con lote, stock y
    cierre de Caja cuadrado. Es el criterio que falta de la Tarea 12; hasta hoy
@@ -178,6 +180,32 @@ En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-29 — Entorno Piloto Local De Cochabamba
+
+Fuera del plan numerado, en preparación del lanzamiento por sede. Dirección
+quiere lanzar primero en Cochabamba y solo con Caja y Administración, y probarlo
+antes en local sin tocar el entorno de trabajo.
+
+**Los módulos se encienden para todo el sistema, no por sucursal.**
+`ModuleActivation` tiene el código del módulo como clave primaria y no guarda
+sucursal. No existe "Cochabamba con Caja mientras El Alto conserva Recepción":
+apagar un módulo lo apaga para todos. Por eso el piloto es una base aparte,
+`salud_intercultural_piloto`, y no otra sucursal dentro de la misma.
+
+**Una sede en preparación no opera y no había forma de abrirla.**
+`getBranchContext` solo deja elegir sucursales activas y asignadas. Abrir una
+sede no tenía pantalla, script ni acción de auditoría: era SQL a mano. Se agregó
+`scripts/open-branch.ts`, limitado a local y test justamente porque el cambio
+todavía no queda auditado.
+
+**Con solo Administración se cobra, pero no hay nada que cobrar** hasta cargar
+los datos maestros: `inventory_write`, `service_catalog_write` y `purchases_*`
+son de otros módulos. La lectura del catálogo y del stock sí la habilita
+Administración. La carga va por `pnpm piloto:load`, sin pasar por la interfaz.
+
+Guía: [entorno piloto local](../../operations/entorno-piloto-local.md).
+Reporte: [2026-08-29](../task-reports/2026-08-29-entorno-piloto-local-cochabamba.md).
 
 ### 2026-08-28 — Tarea 12E Implementada (El Cobro De Mostrador)
 

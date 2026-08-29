@@ -29,6 +29,16 @@ const privateRouteHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  /*
+   * Carpeta de compilacion. Next toma el candado del servidor de desarrollo de
+   * aqui dentro, asi que dos entornos locales a la vez —El Alto en el 3000 y el
+   * piloto de Cochabamba en el 3001— necesitan carpetas distintas; con la misma,
+   * el segundo aborta con "Another next dev server is already running".
+   *
+   * Sin la variable queda `.next`, que es lo que esperan el build, Vercel y el
+   * `.gitignore`.
+   */
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   experimental: {
     serverActions: {
       bodySizeLimit: "5mb"

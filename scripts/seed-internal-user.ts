@@ -2,9 +2,20 @@ import { prisma } from "../src/modules/database";
 import { hashPassword } from "../src/features/internal-auth/password";
 import { reportScriptError } from "./safe-error";
 
+/**
+ * Sucursal predeterminada del administrador sembrado.
+ *
+ * El Alto es la sede que opera hoy, así que sigue siendo la omisión. Se
+ * parametriza porque un entorno de piloto arranca en otra sede —Cochabamba— y
+ * sin esto el administrador nacía asignado a la sucursal equivocada, que es
+ * justo la que no se quiere tocar.
+ */
+const defaultBranchCode = "el-alto";
+
 async function main() {
   const email = process.env.INTERNAL_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.INTERNAL_ADMIN_PASSWORD;
+  const branchCode = process.env.INTERNAL_ADMIN_BRANCH?.trim() || defaultBranchCode;
 
   if (!email || !password) {
     throw new Error("INTERNAL_ADMIN_EMAIL and INTERNAL_ADMIN_PASSWORD are required.");
@@ -12,6 +23,11 @@ async function main() {
 
   if (password.length < 10) {
     throw new Error("INTERNAL_ADMIN_PASSWORD must be at least 10 characters.");
+  }
+
+  const branch = await prisma.clinicBranch.findUnique({ where: { code: branchCode } });
+  if (!branch) {
+    throw new Error(`INTERNAL_ADMIN_BRANCH "${branchCode}" is not a known branch.`);
   }
 
   const passwordHash = await hashPassword(password);
@@ -37,11 +53,11 @@ async function main() {
       data: { isDefault: false }
     });
     await prisma.internalUserBranch.upsert({
-      where: { userId_branchCode: { userId: existing.id, branchCode: "el-alto" } },
-      create: { userId: existing.id, branchCode: "el-alto", isDefault: true },
+      where: { userId_branchCode: { userId: existing.id, branchCode } },
+      create: { userId: existing.id, branchCode, isDefault: true },
       update: { isDefault: true }
     });
-    console.log("Internal super administrator updated.");
+    console.log(`Internal super administrator updated (${branchCode}).`);
     return;
   }
 
@@ -55,12 +71,12 @@ async function main() {
       passwordChangedAt: new Date(),
       name: "Super Administrador",
       branchAssignments: {
-        create: { branchCode: "el-alto", isDefault: true }
+        create: { branchCode, isDefault: true }
       }
     }
   });
 
-  console.log("Internal super administrator created.");
+  console.log(`Internal super administrator created (${branchCode}).`);
 }
 
 main()

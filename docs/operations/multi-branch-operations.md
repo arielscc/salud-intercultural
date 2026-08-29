@@ -9,6 +9,8 @@ para el mismo paciente.
 - `cochabamba`: en preparación; aparece para Dirección, pero no admite
   operación real ni se puede seleccionar todavía.
 - Staging y producción no fueron modificados por la Tarea 28.
+- Para ensayar Cochabamba abierta sin tocar el entorno de trabajo existe un
+  segundo entorno local: [entorno piloto local](./entorno-piloto-local.md).
 
 ## Qué Es Único Y Qué Se Separa
 
