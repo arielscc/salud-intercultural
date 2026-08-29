@@ -19,7 +19,35 @@ export type OrderPickerItem = {
   badge?: string;
   /** Llega marcado al abrir el modal. */
   preselected?: boolean;
+  /**
+   * Existencias en la sucursal activa. Solo lo traen los ítems de inventario:
+   * un servicio o un tratamiento no tienen stock y no muestran nada.
+   */
+  stock?: number;
 };
+
+/**
+ * Cortes de existencias que decidió Dirección para el catálogo del modal.
+ *
+ * Por debajo de `criticalStock` quedan pocas unidades y el producto va en rojo;
+ * por debajo de `lowStock` conviene reponer y va en ámbar. De ahí en adelante el
+ * stock se muestra igual, pero como dato, sin color.
+ */
+const lowStock = 15;
+const criticalStock = 5;
+
+type StockTone = "critical" | "low" | "normal";
+
+function stockTone(stock: number): StockTone {
+  if (stock < criticalStock) return "critical";
+  if (stock < lowStock) return "low";
+  return "normal";
+}
+
+function stockLabel(stock: number) {
+  if (stock === 0) return "Sin stock";
+  return stockTone(stock) === "normal" ? `Stock ${stock}` : `Stock ${stock} · casi agotado`;
+}
 
 /** Estado editable de una línea elegida, tal como viaja al servidor. */
 export type OrderPickerLine = {
@@ -191,12 +219,21 @@ export function OrderPickerDialog({
   function renderCatalogRow(item: OrderPickerItem) {
     const key = item.key;
     const enabled = Boolean(selected[key]);
+    const tone = typeof item.stock === "number" ? stockTone(item.stock) : null;
     return (
       <div
         key={key}
         className={cn(
           "rounded-[9px] border p-3 transition",
-          enabled ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border"
+          // El tinte por stock cede ante el de selección: una vez elegido, lo
+          // que importa es que se vea elegido. El aviso sigue en su etiqueta.
+          enabled
+            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+            : tone === "critical"
+              ? "border-error/40 bg-error/5"
+              : tone === "low"
+                ? "border-warning/40 bg-warning/5"
+                : "border-border"
         )}
       >
         <button
@@ -217,9 +254,25 @@ export function OrderPickerDialog({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium text-text">{item.label}</span>
-            {item.badge ? (
-              <span className="mt-0.5 inline-block rounded-[5px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-primary-dark">
-                {item.badge}
+            {item.badge || tone ? (
+              <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                {item.badge ? (
+                  <span className="inline-block rounded-[5px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-primary-dark">
+                    {item.badge}
+                  </span>
+                ) : null}
+                {tone ? (
+                  <span
+                    className={cn(
+                      "inline-block rounded-[5px] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+                      tone === "critical" && "bg-error/10 text-error",
+                      tone === "low" && "bg-warning/15 text-warning",
+                      tone === "normal" && "text-muted"
+                    )}
+                  >
+                    {stockLabel(item.stock ?? 0)}
+                  </span>
+                ) : null}
               </span>
             ) : null}
           </span>

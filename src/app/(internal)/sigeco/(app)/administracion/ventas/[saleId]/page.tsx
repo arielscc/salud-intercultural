@@ -21,7 +21,8 @@ import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { getBranchContext } from "@/features/branches/context";
 import { OpenCashSessionCallout } from "@/features/cash/components/OpenCashSessionCallout";
 import { cashErrorMessages } from "@/features/cash/labels";
-import { createPaymentAction } from "@/features/sales/actions";
+import { applySaleDiscountAction, createPaymentAction } from "@/features/sales/actions";
+import { SaleDiscountForm } from "@/features/sales/components/SaleDiscountForm";
 import { generateInternalReceiptDocumentAction } from "@/features/generated-documents/actions";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import {
@@ -68,6 +69,9 @@ export default async function SaleDetailPage({
       ? cashErrorMessages[cashError]
       : null;
   const canGenerateReceipt = canUse(user.role, moduleAccess, "sales_write");
+  // El descuento rebaja el total de una venta ya emitida, así que se ofrece solo
+  // con Administración (Caja) lanzada: suspendida, la venta se mira, no se toca.
+  const canApplyDiscount = canUse(user.role, moduleAccess, "sales_write", "administracion");
   // Los costos por producto solo los ve el médico (y super admin). En ventas del
   // pedido del médico, Administración/Enfermería ven detalle + cantidad + total.
   const canSeeLineCosts = user.role === "medico" || user.role === "super_admin";
@@ -83,6 +87,14 @@ export default async function SaleDetailPage({
       <MobileBackLink href="/sigeco/administracion" label="Volver a Caja" />
       <div className="grid gap-4 max-sm:contents">
         {query.error === "cash-session-stale-open" ? <StaleCashSessionModal /> : null}
+        {query.aviso === "descuento-aplicado" ? (
+          <div
+            className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text"
+            role="status"
+          >
+            Descuento aplicado. Revisa el nuevo total y saldo antes de cobrar.
+          </div>
+        ) : null}
         {query.aviso === "cash-session-opened" ? (
           <div
             className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-text"
@@ -377,16 +389,28 @@ export default async function SaleDetailPage({
               title="Registrar nuevo cobro"
               description="Aplica un pago al saldo pendiente de este comprobante."
             />
+            {canApplyDiscount ? (
+              <div className="mb-4 border-b border-border pb-4">
+                <SaleDiscountForm action={applySaleDiscountAction} saleId={sale.id} />
+              </div>
+            ) : null}
             <NoticeForm action={createPaymentAction} notice="Cobro registrado" className="grid gap-3">
               <input type="hidden" name="idempotencyKey" value={randomUUID()} />
               <input type="hidden" name="saleId" value={sale.id} />
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Monto Bs">
+                  {/*
+                    Lo habitual es cobrar todo lo que falta, así que el saldo
+                    viene escrito y se corrige solo para un pago parcial.
+                    La `key` lo repone tras un pago o un descuento: sin ella
+                    React conserva el valor tecleado y quedaría el saldo viejo.
+                  */}
                   <input
+                    key={sale.balanceCents}
                     className={internalInputClassName}
                     name="amount"
                     inputMode="decimal"
-                    placeholder={(sale.balanceCents / 100).toFixed(2)}
+                    defaultValue={(sale.balanceCents / 100).toFixed(2)}
                     required
                   />
                 </Field>

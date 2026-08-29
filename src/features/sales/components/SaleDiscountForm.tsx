@@ -16,14 +16,23 @@ function sanitizeMoney(value: string) {
   return v;
 }
 
+/**
+ * Descuento que aplica Administración sobre una venta ya creada.
+ *
+ * Va detrás de una casilla porque lo normal es cobrar el total: el campo solo
+ * aparece cuando alguien decide rebajarlo, y así no se toca por descuido.
+ *
+ * `workItemId` es opcional: la venta de mostrador no nace de una tarea, y sin él
+ * la acción devuelve al detalle de la venta.
+ */
 export function SaleDiscountForm({
   action,
   saleId,
-  workItemId
+  workItemId = ""
 }: {
   action: (formData: FormData) => Promise<void>;
   saleId: string;
-  workItemId: string;
+  workItemId?: string;
 }) {
   const [enabled, setEnabled] = useState(false);
   const [discount, setDiscount] = useState("0.00");

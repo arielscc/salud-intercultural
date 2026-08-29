@@ -206,7 +206,8 @@ export default async function NewSalePage({ searchParams }: NewSalePageProps) {
           inventoryItems={inventoryItems.map((item) => ({
             id: item.id,
             name: item.name,
-            salePriceCents: item.salePriceCents
+            salePriceCents: item.salePriceCents,
+            currentStock: item.currentStock
           }))}
         />
       </Card>

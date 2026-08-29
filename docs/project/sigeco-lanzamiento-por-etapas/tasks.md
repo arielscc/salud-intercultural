@@ -18,7 +18,7 @@ el QA del 2026-08-28: encontró defectos que impiden operar, y desplegar un
 defecto conocido cuesta más caro que arreglarlo antes.
 
 La numeración representa el orden recomendado de implementación: la Tarea 1 se
-realiza primero y la Tarea 12D cierra el plan. Las letras evitan renumerar:
+realiza primero y la Tarea 12E cierra el plan. Las letras evitan renumerar:
 hay reportes publicados que citan estos números.
 
 Control de avance: [progress.md](./progress.md)
@@ -183,7 +183,7 @@ Se mantiene la decisión del 2026-08-02: durante la implementación de cada tare
 solo se ejecutan `pnpm lint` y `pnpm typecheck`. QA de navegador, pruebas y
 build se ejecutan en el cierre acumulado.
 
-**Excepción de este plan:** las Tareas 11 a 12D son el cierre acumulado. Ahí sí
+**Excepción de este plan:** las Tareas 11 a 12E son el cierre acumulado. Ahí sí
 se ejecutan pruebas, integración, build, QA y los simulacros completos. Ninguna
 tarea de la Fase A o B pasa a `Terminada` antes de ese cierre.
 
@@ -684,9 +684,49 @@ error de servidor. Estos tres quedaron.
 
 ---
 
+## Tarea 12E — El Cobro Que Se Teclea De Nuevo
+
+**Prioridad:** P2. **Responsable:** Plataforma. **Dependencias:** ninguna.
+
+**Objetivo:** que cobrar en el mostrador no obligue a copiar cifras de una
+parte de la pantalla a otra, y que quien elige un producto vea si queda.
+
+**De dónde sale:** revisión de Dirección sobre la pantalla de una venta con
+saldo, el 2026-08-28. Ninguno de los tres impide operar; los tres hacen lento
+lo que se hace treinta veces al día.
+
+**Alcance:**
+
+- **Monto Bs llega vacío.** El saldo está impreso dos bloques más arriba y hay
+  que copiarlo a mano en cada cobro. Debe venir escrito, y seguir siendo
+  editable para un pago parcial.
+- **No hay descuento al cobrar.** Rebajar una venta ya emitida solo se puede
+  desde la tarea del pedido del médico; en una venta de mostrador no hay dónde.
+  La acción ya existe (`applySaleDiscountAction`): falta ofrecerla, y solo con
+  Administración (Caja) lanzada.
+- **El catálogo no dice cuánto queda.** Al elegir productos para un cobro no se
+  ve el stock, así que se arma una venta que después rebota por falta de
+  existencias. Cortes que fija Dirección: por debajo de 5, rojo suave; por
+  debajo de 15, ámbar suave con «casi agotado»; de 15 en adelante, el número
+  sin color. Los servicios y tratamientos no tienen stock y no muestran nada.
+
+**Criterios de aceptación:**
+
+- El campo Monto Bs de «Registrar nuevo cobro» llega con el saldo escrito, y
+  vuelve a reflejarlo después de un pago parcial o de un descuento.
+- El bloque ofrece aplicar descuento cuando el módulo de Administración está
+  lanzado, y no lo ofrece cuando está suspendido.
+- Cada producto del selector muestra sus existencias con el color que le
+  corresponde, y los cortes quedan fijados por una prueba que falla si alguien
+  los mueve.
+
+**Commit sugerido:** `feat(sigeco): speed up counter charging with balance, discount and stock`
+
+---
+
 ## Después De Este Plan
 
-Cuando la Tarea 12D cierre, la Etapa 1 funciona entera en staging y este
+Cuando la Tarea 12E cierre, la Etapa 1 funciona entera en staging y este
 archivo termina. Lo que sigue —backup productivo, gate de seguridad,
 despliegue, documentación y los cuatro lanzamientos por etapa— está en
 [tasks-produccion.md](./tasks-produccion.md), congelado hasta entonces.
@@ -697,7 +737,7 @@ despliegue, documentación y los cuatro lanzamientos por etapa— está en
 
 Una tarea pasa a `Terminada` cuando cumple sus criterios de aceptación, tiene
 migración y recuperación documentadas si aplica, pasa lint y tipos, pasa
-pruebas, build y QA en el cierre acumulado (Tareas 11 a 12D), prueba los casos
+pruebas, build y QA en el cierre acumulado (Tareas 11 a 12E), prueba los casos
 permitidos y denegados por rol **y por módulo apagado**, se valida en web y
 móvil, agrega su reporte en [task-reports](../task-reports/) y actualiza
 [progress.md](./progress.md).

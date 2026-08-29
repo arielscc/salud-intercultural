@@ -98,6 +98,7 @@ se sigue llevando en sus propios archivos.
 | 12B | Listas invisibles en escritorio | P0 | En progreso | 12 |
 | 12C | La base que no responde | P1 | En progreso | Ninguna |
 | 12D | Ruido de interfaz detectado en el QA | P2 | En progreso | Ninguna |
+| 12E | El cobro que se teclea de nuevo | P2 | En progreso | Ninguna |
 
 Las Tareas 13 a 20 salieron de este plan el 2026-08-28 y viven congeladas en
 [tasks-produccion.md](./tasks-produccion.md). Este archivo llega hasta que la
@@ -153,19 +154,71 @@ Etapa 1 funcione entera en staging.
 
 ## Próximo Trabajo
 
-Desbloquear staging: faltan dos secretos que no se pueden inventar, el Blob
-privado para adjuntos clínicos (`STAGING_CLINICAL_BLOB_READ_WRITE_TOKEN`) y
-`PAYLOAD_SIGECO_INTEGRATION_SECRET`. Con eso, `pnpm staging:check` pasa, se
-promueve `develop → staging`, se aplican las 54 migraciones pendientes y se corre
-`pnpm stage-one:rehearse` contra staging.
+Los dos secretos que faltaban llegaron y staging arranca desde el 2026-08-27.
+Lo que queda para cerrar el plan, en orden:
 
-Después, Tarea 13: backup y restauración probados en remoto.
+1. Commitear y empujar la Tarea 12E, y promover `develop → staging`. Staging
+   todavía no tiene 12B, 12C, 12D ni 12E.
+2. **Recorrido operativo completo por navegador contra staging desplegado**: alta
+   de cliente, venta, cobro, recibo, egreso, compra, recepción con lote, stock y
+   cierre de Caja cuadrado. Es el criterio que falta de la Tarea 12; hasta hoy
+   solo se probó el camino de escritura (lead, suspensión de módulo, cierre de
+   sesión), que era lo necesario para confirmar el arreglo de `sharp`.
+3. Rotar `STAGING_QA_PASSWORD`, que quedó expuesto en una traza el 2026-08-27.
+4. Reemplazar `2026-08-26-lanzamiento-tarea-12-staging-ensayo.md`, que sigue
+   diciendo que staging no puede arrancar y listando los dos secretos como
+   faltantes. Las dos cosas dejaron de ser ciertas.
+
+El cierre acumulado —pruebas, integración y build— lo corre CI en el PR de
+promoción. Cuando todo eso pase, las Tareas 1 a 12E pasan juntas a `Terminada`
+y se descongela [tasks-produccion.md](./tasks-produccion.md).
 
 En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/plantillas/` y el procedimiento en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-08-28 — Tarea 12E Implementada (El Cobro De Mostrador)
+
+**El campo «Monto Bs» llega con el saldo escrito.** Lo llevaba como
+`placeholder`, que no se envía: quien cobra leía el saldo dos bloques más
+arriba y lo tecleaba en cada cobro. Ahora es `defaultValue`, y sigue siendo
+editable para un pago parcial. Lleva `key={sale.balanceCents}` porque el input
+no es controlado: sin eso, después de un pago parcial o de un descuento el
+campo conservaría el saldo viejo, y ese número es el que se cobra.
+
+**El descuento ya se puede aplicar sobre una venta de mostrador.** No hizo
+falta lógica nueva: `applySaleDiscountAction` y `applyAdminDiscountToSale` ya
+existían, ya auditan y ya acotan el descuento al saldo. Faltaba ofrecerlos
+fuera de la pantalla del pedido del médico. `SaleDiscountForm` se reutilizó tal
+cual, con `workItemId` ahora opcional, y la pantalla pasó a mostrar el aviso
+`descuento-aplicado` que la acción venía poniendo en la URL sin que nadie lo
+leyera.
+
+**La condición de Dirección** —solo con Administración (Caja) lanzada— es
+`canUse(role, moduleAccess, "sales_write", "administracion")`. Con el módulo
+suspendido, `resolveModuleAccess` devuelve `blocked` para toda escritura, así
+que el descuento desaparece y la venta queda en solo lectura.
+
+**El selector de productos muestra existencias.** Antes se armaba el cobro a
+ciegas y la venta rebotaba al final con `insufficient-stock`. Cortes fijados
+por Dirección: bajo 5 rojo suave, bajo 15 ámbar suave con «casi agotado», de 15
+en adelante el número sin color. El campo es opcional a propósito: un servicio
+no tiene existencias y mostrarle `Stock 0` sería afirmar algo falso. El tinte
+de la fila cede ante el de selección; el aviso se queda en su etiqueta.
+
+- Control nuevo: `OrderPickerDialog.test.tsx` fija los cortes y los dos bordes
+  exactos (4 rojo, 5 ámbar, 15 sin color). **Se comprobó que puede fallar**
+  bajando `criticalStock` de 5 a 3; se restauró y volvió a verde.
+- Validación: lint y typecheck sin errores; 24 pruebas en 3 archivos en verde.
+  Verificado contra el servidor local con una sesión de QA y una venta de saldo
+  `Bs 150,00`, las dos borradas al terminar.
+- Se vio y no se tocó: la cantidad de una línea todavía puede superar el stock
+  disponible; el tope sigue siendo `maxQuantity`. Permitir o no vender por
+  encima del stock es una decisión de negocio, fuera del alcance de la tarea.
+- Estado: **En progreso** según el gate del plan. Detalle:
+  [reporte de tarea](../task-reports/2026-08-28-lanzamiento-tarea-12e-cobro-de-mostrador.md).
 
 ### 2026-08-28 — Tarea 12D Implementada (Ruido De Interfaz)
 

@@ -18,6 +18,8 @@ type ChargeInventoryItem = {
   id: string;
   name: string;
   salePriceCents: number;
+  /** Existencias en la sucursal activa, para avisar antes de cobrar lo que no hay. */
+  currentStock: number;
 };
 
 type LineMeta = {
@@ -55,7 +57,8 @@ export function AdministrationChargeDialog({
     key: `product:${item.id}`,
     label: item.name,
     group: "Productos",
-    unitPriceCents: item.salePriceCents
+    unitPriceCents: item.salePriceCents,
+    stock: item.currentStock
   }));
   const items: OrderPickerItem[] = [...catalogOptions, ...productOptions];
   const metaByKey = new Map<string, LineMeta>([
