@@ -40,7 +40,9 @@ export default function FeedbackRootLayout({
       data-theme="light"
       data-scroll-behavior="smooth"
     >
-      <body>
+      {/* Las extensiones del navegador escriben atributos en el `body`
+          antes de que React hidrate; ver `(internal)/sigeco/layout.tsx`. */}
+      <body suppressHydrationWarning>
         <StagingEnvironmentChrome enabled={isStagingEnvironment()} />
         {children}
       </body>

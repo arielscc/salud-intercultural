@@ -52,7 +52,9 @@ export default function PublicRouteLayout({
           }}
         />
       </head>
-      <body>
+      {/* Las extensiones del navegador escriben atributos en el `body`
+          antes de que React hidrate; ver `(internal)/sigeco/layout.tsx`. */}
+      <body suppressHydrationWarning>
         <StagingEnvironmentChrome enabled={isStagingEnvironment()} />
         <PublicLayout>{children}</PublicLayout>
       </body>

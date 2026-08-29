@@ -48,7 +48,13 @@ export default function SigecoRootLayout({
       data-theme="light"
       data-scroll-behavior="smooth"
     >
-      <body>
+      {/*
+        Las extensiones del navegador (Grammarly, por ejemplo) escriben
+        atributos en el `body` antes de que React hidrate, y esa diferencia
+        se reportaba como error de hidratación en cada pantalla. Se silencia
+        solo en este nodo: los hijos siguen avisando si de verdad no cuadran.
+      */}
+      <body suppressHydrationWarning>
         <StagingEnvironmentChrome enabled={isStagingEnvironment()} />
         {children}
       </body>
