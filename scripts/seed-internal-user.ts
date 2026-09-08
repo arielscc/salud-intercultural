@@ -12,6 +12,28 @@ import { reportScriptError } from "./safe-error";
  */
 const defaultBranchCode = "el-alto";
 
+async function assignAllBranchesToSuperAdmin(userId: string, defaultCode: string) {
+  const branches = await prisma.clinicBranch.findMany({
+    where: { status: { not: "inactive" } },
+    select: { code: true }
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.internalUserBranch.createMany({
+      data: branches.map((branch) => ({ userId, branchCode: branch.code })),
+      skipDuplicates: true
+    });
+    await tx.internalUserBranch.updateMany({
+      where: { userId },
+      data: { isDefault: false }
+    });
+    await tx.internalUserBranch.update({
+      where: { userId_branchCode: { userId, branchCode: defaultCode } },
+      data: { isDefault: true }
+    });
+  });
+}
+
 async function main() {
   const email = process.env.INTERNAL_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.INTERNAL_ADMIN_PASSWORD;
@@ -36,7 +58,7 @@ async function main() {
   });
 
   if (existing) {
-    await prisma.internalUser.update({
+    const updated = await prisma.internalUser.update({
       where: { id: existing.id },
       data: {
         passwordHash,
@@ -48,20 +70,12 @@ async function main() {
         passwordChangedAt: new Date()
       }
     });
-    await prisma.internalUserBranch.updateMany({
-      where: { userId: existing.id },
-      data: { isDefault: false }
-    });
-    await prisma.internalUserBranch.upsert({
-      where: { userId_branchCode: { userId: existing.id, branchCode } },
-      create: { userId: existing.id, branchCode, isDefault: true },
-      update: { isDefault: true }
-    });
+    await assignAllBranchesToSuperAdmin(updated.id, branchCode);
     console.log(`Internal super administrator updated (${branchCode}).`);
     return;
   }
 
-  await prisma.internalUser.create({
+  const created = await prisma.internalUser.create({
     data: {
       email,
       passwordHash,
@@ -69,12 +83,10 @@ async function main() {
       active: true,
       mustChangePassword: false,
       passwordChangedAt: new Date(),
-      name: "Super Administrador",
-      branchAssignments: {
-        create: { branchCode, isDefault: true }
-      }
+      name: "Super Administrador"
     }
   });
+  await assignAllBranchesToSuperAdmin(created.id, branchCode);
 
   console.log(`Internal super administrator created (${branchCode}).`);
 }

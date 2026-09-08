@@ -36,6 +36,29 @@ beforeEach(cleanUsers);
 afterEach(cleanUsers);
 
 describe("internal user management integration", () => {
+  it("persists every configurable branch when creating a super administrator", async () => {
+    const user = await createManagedInternalUser({
+      name: "Administrador global",
+      email: "global-admin@example.com",
+      role: "super_admin",
+      passwordHash: await hashPassword("clave-segura-para-pruebas")
+    });
+
+    const assignments = await prisma.internalUserBranch.findMany({
+      where: { userId: user.id },
+      select: { branchCode: true, isDefault: true },
+      orderBy: { branchCode: "asc" }
+    });
+
+    expect(assignments.map((assignment) => assignment.branchCode)).toEqual([
+      "cochabamba",
+      "el-alto"
+    ]);
+    expect(assignments.find((assignment) => assignment.isDefault)?.branchCode).toBe(
+      "el-alto"
+    );
+  });
+
   it("does not deactivate or demote the last active super administrator", async () => {
     const admin = await createUser("ultimo-admin@example.com");
 

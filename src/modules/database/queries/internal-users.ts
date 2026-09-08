@@ -1,4 +1,4 @@
-import type { InternalRole } from "@/generated/prisma/client";
+import type { InternalRole, Prisma } from "@/generated/prisma/client";
 import { assignableInternalRoles } from "@/features/internal-auth/permissions";
 import { prisma } from "@/modules/database";
 import { defaultBranchCode } from "@/features/branches/policy";
@@ -22,6 +22,38 @@ function assertAssignableRole(role: InternalRole) {
   if (!assignableInternalRoles.includes(role)) {
     throw new InternalUserManagementError("INVALID_ROLE");
   }
+}
+
+async function ensureSuperAdminBranchAssignments(
+  tx: Prisma.TransactionClient,
+  userId: string
+) {
+  const branches = await tx.clinicBranch.findMany({
+    where: { status: { not: "inactive" } },
+    select: { code: true, status: true }
+  });
+
+  await tx.internalUserBranch.createMany({
+    data: branches.map((branch) => ({ userId, branchCode: branch.code })),
+    skipDuplicates: true
+  });
+
+  const activeDefault = await tx.internalUserBranch.findFirst({
+    where: { userId, isDefault: true, branch: { status: "active" } },
+    select: { branchCode: true }
+  });
+  if (activeDefault) return;
+
+  const preferred =
+    branches.find((branch) => branch.code === defaultBranchCode && branch.status === "active") ??
+    branches.find((branch) => branch.status === "active");
+  if (!preferred) return;
+
+  await tx.internalUserBranch.updateMany({ where: { userId }, data: { isDefault: false } });
+  await tx.internalUserBranch.update({
+    where: { userId_branchCode: { userId, branchCode: preferred.code } },
+    data: { isDefault: true }
+  });
 }
 
 export function assertInternalUserAccessChange(input: {
@@ -92,24 +124,33 @@ export async function createManagedInternalUser(input: {
   passwordHash: string;
 }) {
   assertAssignableRole(input.role);
-  const existing = await prisma.internalUser.findUnique({
-    where: { email: input.email },
-    select: { id: true }
-  });
-  if (existing) throw new InternalUserManagementError("EMAIL_EXISTS");
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.internalUser.findUnique({
+      where: { email: input.email },
+      select: { id: true }
+    });
+    if (existing) throw new InternalUserManagementError("EMAIL_EXISTS");
 
-  return prisma.internalUser.create({
-    data: {
-      name: input.name,
-      email: input.email,
-      role: input.role,
-      passwordHash: input.passwordHash,
-      active: true,
-      mustChangePassword: true,
-      branchAssignments: {
-        create: { branchCode: defaultBranchCode, isDefault: true }
+    const user = await tx.internalUser.create({
+      data: {
+        name: input.name,
+        email: input.email,
+        role: input.role,
+        passwordHash: input.passwordHash,
+        active: true,
+        mustChangePassword: true
       }
+    });
+
+    if (input.role === "super_admin") {
+      await ensureSuperAdminBranchAssignments(tx, user.id);
+    } else {
+      await tx.internalUserBranch.create({
+        data: { userId: user.id, branchCode: defaultBranchCode, isDefault: true }
+      });
     }
+
+    return user;
   });
 }
 
@@ -150,6 +191,9 @@ export async function updateManagedInternalUserAccess(input: {
         where: { id: input.userId },
         data: { role: input.role, active: input.active }
       });
+      if (input.role === "super_admin") {
+        await ensureSuperAdminBranchAssignments(tx, input.userId);
+      }
       let revokedSessions = 0;
 
       if (accessChanged) {

@@ -18,6 +18,7 @@ import {
   assignableInternalRoles,
   internalRoleLabels
 } from "@/features/internal-auth/permissions";
+import { hasAutomaticBranchAssignment } from "@/features/branches/policy";
 import { formatDateTime } from "@/lib/dates";
 import { getManagedInternalUserById } from "@/modules/database/queries/internal-users";
 import { getConfigurableBranches } from "@/modules/database/queries/branches";
@@ -210,7 +211,11 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
         <Card>
           <CardHeader
             title="Sucursales asignadas"
-            description="La sucursal predeterminada se usa al iniciar. Una sede en preparación no permite registrar operaciones reales."
+            description={
+              user.role === "super_admin"
+                ? "El super administrador recibe automáticamente todas las sedes activas o en preparación. Solo eliges la predeterminada."
+                : "La sucursal predeterminada se usa al iniciar. Una sede en preparación no permite registrar operaciones reales."
+            }
           />
           <ConfirmForm
             action={updateManagedInternalUserBranchesAction}
@@ -226,15 +231,20 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
                 const assignment = user.branchAssignments.find(
                   (item) => item.branchCode === branch.code
                 );
+                const automatic = hasAutomaticBranchAssignment(user.role, branch.status);
                 return (
                   <label key={branch.code} className="flex min-h-11 items-center gap-3 rounded-[9px] border border-border px-3.5 text-sm text-text">
                     <input
                       type="checkbox"
                       name="branchCodes"
                       value={branch.code}
-                      defaultChecked={Boolean(assignment)}
+                      defaultChecked={automatic || Boolean(assignment)}
+                      disabled={automatic}
                       className="h-4 w-4 accent-primary"
                     />
+                    {automatic ? (
+                      <input type="hidden" name="branchCodes" value={branch.code} />
+                    ) : null}
                     <span className="flex-1">{branch.name}</span>
                     {branch.status === "preparation" ? <Chip tone="warning">En preparación</Chip> : null}
                   </label>

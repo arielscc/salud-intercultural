@@ -65,6 +65,7 @@ Administración en Cochabamba no toca a El Alto.
 
 ```bash
 pnpm piloto:dev     # http://127.0.0.1:3001/sigeco/login
+pnpm cochabamba:dev # alias explícito: Cochabamba en 127.0.0.1:3001
 ```
 
 Se puede dejar corriendo junto a `pnpm dev`. Cada uno usa su carpeta de
@@ -75,6 +76,7 @@ compilación, así que el candado de Next no los enfrenta.
 | Comando | Qué hace |
 | --- | --- |
 | `pnpm piloto:dev` | Servidor de desarrollo del piloto en el 3001 |
+| `pnpm cochabamba:dev` | Servidor de Cochabamba, fijado a `127.0.0.1:3001` |
 | `pnpm piloto:migrate` | Aplica migraciones a la base del piloto |
 | `pnpm piloto:seed` | Crea o actualiza el super administrador |
 | `pnpm piloto:branch` | Abre o cierra una sucursal |

@@ -1,5 +1,16 @@
 # Operación Multi-Sucursal
 
+## Super Administradores
+
+Una cuenta `super_admin` administra el sistema completo: recibe automáticamente
+todas las sucursales activas o en preparación. Las sedes activas aparecen en el
+selector superior; las que siguen en preparación quedan asignadas, pero no se
+pueden elegir para registrar operaciones.
+
+Al cambiar la sucursal activa, el dashboard, los módulos, Caja, ventas, compras
+y stock se vuelven a consultar con el código de esa sede. No hace falta crear un
+super administrador distinto por ciudad.
+
 Esta guía explica cómo SIGECO separa El Alto y Cochabamba sin crear dos fichas
 para el mismo paciente.
 

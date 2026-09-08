@@ -6,6 +6,30 @@ Plan de ejecución: [tasks.md](./tasks.md)
 
 ## Estado General
 
+### 2026-09-07 — Super Administradores Multi-Sucursal
+
+- Toda cuenta `super_admin` recibe automáticamente las sucursales activas o en
+  preparación; solo las activas se ofrecen en el selector operativo.
+- La regla se aplica al selector, al alta y promoción de usuarios, a los seeds,
+  al cambio de rol por script y a las listas de personal de Caja.
+- La migración de datos completa las asignaciones de todos los
+  superadministradores existentes sin cambiar su sede predeterminada.
+- En desarrollo local, `test@test.si` tiene El Alto como predeterminada y puede
+  seleccionar El Alto o Cochabamba; no queda ningún super administrador sin
+  alguna de esas dos asignaciones.
+- Detalle: [reporte de tarea](../task-reports/2026-09-07-superadmin-multisucursal.md).
+
+### 2026-09-07 — Acceso Local Explícito A Cochabamba
+
+- `pnpm cochabamba:dev` levanta el entorno aislado de Cochabamba con
+  `.env.piloto`, fija el host `127.0.0.1` y usa el puerto `3001` para evitar la
+  confusión con el entorno habitual y el cruce de cookies en `localhost`.
+- La cuenta local solicitada conserva la identidad técnica de la cuenta de
+  prueba anterior para no romper su historial de auditoría, pero reemplaza su
+  correo, contraseña y sesiones; queda como super administrador con Cochabamba
+  como sucursal predeterminada.
+- Detalle: [reporte de tarea](../task-reports/2026-09-07-acceso-local-cochabamba.md).
+
 Plan creado el 2026-08-24. Las Tareas 1 y 2 tienen implementación local: el
 catálogo de módulos, el mapa de permisos y los helpers de activación viven en
 `src/features/modules/`, y el estado de cada módulo con su historial append-only

@@ -235,7 +235,14 @@ export async function getCashPersonnel(branchCode?: string) {
       where: {
         active: true,
         role: { not: "captacion" },
-        branchAssignments: branchCode ? { some: { branchCode } } : undefined
+        ...(branchCode
+          ? {
+              OR: [
+                { role: "super_admin" as const },
+                { branchAssignments: { some: { branchCode } } }
+              ]
+            }
+          : {})
       },
       select: { id: true, name: true, email: true, role: true },
       orderBy: [{ name: "asc" }, { email: "asc" }]

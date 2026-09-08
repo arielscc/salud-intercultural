@@ -74,7 +74,8 @@
     "piloto:modules": "DOTENV_CONFIG_PATH=.env.piloto pnpm modules:set",
     "piloto:load": "DOTENV_CONFIG_PATH=.env.piloto pnpm stage-one:load",
     "piloto:check": "STAGE_ONE_BRANCH=cochabamba DOTENV_CONFIG_PATH=.env.piloto pnpm stage-one:check",
-    "piloto:dev": "ENV_FILE=.env.piloto node --import tsx scripts/run-with-env.ts next dev -p 3001"
+    "piloto:dev": "ENV_FILE=.env.piloto node --import tsx scripts/run-with-env.ts next dev -p 3001",
+    "cochabamba:dev": "ENV_FILE=.env.piloto node --import tsx scripts/run-with-env.ts next dev --hostname 127.0.0.1 -p 3001"
   },
   "dependencies": {
     "@date-fns/tz": "1.5.0",

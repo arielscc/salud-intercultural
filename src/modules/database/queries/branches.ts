@@ -1,5 +1,9 @@
 import type { InternalRole, Prisma } from "@/generated/prisma/client";
-import { canViewConsolidatedBranches, defaultBranchCode } from "@/features/branches/policy";
+import {
+  canViewConsolidatedBranches,
+  defaultBranchCode,
+  hasAutomaticBranchAssignment
+} from "@/features/branches/policy";
 import { prisma, withDatabaseError } from "@/modules/database";
 
 const branchSelect = {
@@ -33,10 +37,16 @@ export async function getBranchesForUser(userId: string, role: InternalRole) {
       orderBy: { name: "asc" }
     });
 
-    return [
+    const branches = [
       ...assigned,
       ...otherBranches.map((branch) => ({ ...branch, isDefault: false, assigned: false }))
     ];
+
+    return branches.map((branch) => ({
+      ...branch,
+      assigned:
+        branch.assigned || hasAutomaticBranchAssignment(role, branch.status)
+    }));
   });
 }
 
@@ -73,7 +83,21 @@ export async function replaceUserBranchAssignments(input: {
 }) {
   return withDatabaseError("replaceUserBranchAssignments", () =>
     prisma.$transaction(async (tx) => {
-      const branchCodes = [...new Set(input.branchCodes)];
+      const target = await tx.internalUser.findUnique({
+        where: { id: input.userId },
+        select: { role: true }
+      });
+      if (!target) throw new Error("USER_NOT_FOUND");
+
+      const branchCodes =
+        target.role === "super_admin"
+          ? (
+              await tx.clinicBranch.findMany({
+                where: { status: { not: "inactive" } },
+                select: { code: true }
+              })
+            ).map((branch) => branch.code)
+          : [...new Set(input.branchCodes)];
       if (!branchCodes.includes(input.defaultBranchCode)) {
         throw new Error("DEFAULT_BRANCH_NOT_ASSIGNED");
       }

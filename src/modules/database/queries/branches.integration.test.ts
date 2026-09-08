@@ -1,6 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/modules/database";
-import { getBranchComparisonReport } from "@/modules/database/queries/branches";
+import {
+  getBranchComparisonReport,
+  getBranchesForUser
+} from "@/modules/database/queries/branches";
 import {
   createInventoryItemRecord,
   createInventoryTransferRecord
@@ -27,6 +30,27 @@ describe("multi-branch operations", () => {
       where: { code: "cochabamba" },
       data: { status: "preparation" }
     });
+  });
+
+  it("gives a super administrator every active branch without manual assignments", async () => {
+    const user = await prisma.internalUser.create({
+      data: {
+        email: "global-super-admin@example.invalid",
+        passwordHash: "not-used-in-integration-test",
+        role: "super_admin"
+      }
+    });
+
+    const branches = await getBranchesForUser(user.id, user.role);
+
+    expect(
+      branches
+        .filter((branch) => branch.status === "active")
+        .map((branch) => [branch.code, branch.assigned])
+    ).toEqual([
+      ["cochabamba", true],
+      ["el-alto", true]
+    ]);
   });
 
   it("moves stock with linked exit and entry while preserving the total", async () => {

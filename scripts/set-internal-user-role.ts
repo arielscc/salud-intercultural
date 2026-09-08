@@ -38,9 +38,22 @@ async function main() {
     throw new Error(`No internal user found with email ${email}.`);
   }
 
-  await prisma.internalUser.update({
-    where: { id: user.id },
-    data: { role: role as InternalRole }
+  await prisma.$transaction(async (tx) => {
+    await tx.internalUser.update({
+      where: { id: user.id },
+      data: { role: role as InternalRole }
+    });
+
+    if (role === "super_admin") {
+      const branches = await tx.clinicBranch.findMany({
+        where: { status: { not: "inactive" } },
+        select: { code: true }
+      });
+      await tx.internalUserBranch.createMany({
+        data: branches.map((branch) => ({ userId: user.id, branchCode: branch.code })),
+        skipDuplicates: true
+      });
+    }
   });
 
   console.log(`Internal user role updated: ${user.role} -> ${role}.`);
