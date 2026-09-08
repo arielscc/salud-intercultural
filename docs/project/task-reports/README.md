@@ -80,6 +80,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-28 | [Lanzamiento Tarea 12E: el cobro que se teclea de nuevo](./2026-08-28-lanzamiento-tarea-12e-cobro-de-mostrador.md) | El monto del cobro llega escrito con el saldo, aparece el descuento de Administración y el selector de productos avisa del stock casi agotado. |
 | 2026-08-29 | [Entorno piloto local de Cochabamba](./2026-08-29-entorno-piloto-local-cochabamba.md) | Segunda base local para ensayar Cochabamba con solo Caja y Administración, sin tocar el entorno de trabajo. |
 | 2026-08-29 | [Activación de módulos por sucursal](./2026-08-29-modulos-por-sucursal.md) | El estado de cada módulo pasa a ser propio de cada sede: apagar la Caja de una sucursal ya no deja sin cobrar a la otra. Las ~35 pantallas no cambian; la sucursal se resuelve en un solo lugar. |
+| 2026-09-07 | [Compra múltiple y alta de productos](./2026-09-07-compra-multiple-alta-productos.md) | Permite capturar proveedores por línea, asociar varios proveedores y crear productos nuevos desde una sola compra sin perder la trazabilidad por proveedor. |
 
 ## Relacion Con Estado V3
 

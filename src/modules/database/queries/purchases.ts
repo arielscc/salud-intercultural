@@ -2,12 +2,17 @@ import { randomUUID } from "node:crypto";
 import type {
   CashChannel,
   ClinicalAttachmentStorageDriver,
+  InventoryItemUsage,
   InventoryLotAdjustmentKind,
   Prisma,
   PurchasePaymentMethod,
   PurchaseStatus
 } from "@/generated/prisma/client";
-import { applyInventoryMovement } from "@/modules/database/queries/inventory";
+import {
+  addInventoryItemSupplierLinksInTransaction,
+  applyInventoryMovement,
+  createInventoryItemInTransaction
+} from "@/modules/database/queries/inventory";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 import { todayDatabaseDate, todayDateOnly } from "@/lib/dates";
@@ -26,6 +31,8 @@ export class PurchaseWorkflowError extends Error {
       | "credit-is-not-payment"
       | "source-expense-invalid"
       | "source-expense-total-mismatch"
+      | "multiple-suppliers-document"
+      | "multiple-suppliers-expense"
       | "receipt-exceeds-pending"
       | "receipt-empty"
       | "branch-mismatch"
@@ -296,6 +303,249 @@ export async function createPurchaseDraftRecord(input: {
       }
       return purchase;
     })
+  );
+}
+
+export type PurchaseBatchLineRecordInput = {
+  supplierId: string;
+  associatedSupplierIds: string[];
+  orderedQuantity: number;
+  unitCostCents: number;
+  existingItemId?: string;
+  newProduct?: {
+    internalCode: string;
+    sku?: string;
+    name: string;
+    description?: string;
+    category: string;
+    unit: string;
+    usage: InventoryItemUsage;
+    salePriceCents: number;
+    referenceCostCents: number;
+    minimumStock: number;
+  };
+};
+
+/**
+ * Recibe una sola captura operativa y conserva una compra contable por
+ * proveedor. Así Administración no repite formularios, pero pagos, saldos,
+ * documentos y recepciones siguen conciliándose con el proveedor correcto.
+ */
+export async function createPurchaseBatchRecord(input: {
+  branchCode: string;
+  purchaseDate: Date;
+  documentNumber?: string;
+  currency: "BOB";
+  intendedPaymentMethod: PurchasePaymentMethod;
+  sourceCashExpenseId?: string;
+  notes?: string;
+  idempotencyKey: string;
+  createdById: string;
+  document?: PurchaseDocumentMetadata;
+  lines: PurchaseBatchLineRecordInput[];
+}) {
+  return withDatabaseError("createPurchaseBatchRecord", async () =>
+    prisma.$transaction(async (tx) => {
+      const idempotencyPrefix = `${input.idempotencyKey}:`;
+      const reused = await tx.purchase.findMany({
+        where: { idempotencyKey: { startsWith: idempotencyPrefix } },
+        orderBy: { createdAt: "asc" }
+      });
+      if (reused.length > 0) {
+        return { purchases: reused, createdItemIds: [] as string[] };
+      }
+      if (input.lines.length === 0 || input.lines.length > 100) {
+        throw new PurchaseWorkflowError("invalid-lines");
+      }
+      if (
+        input.lines.some(
+          (line) =>
+            !line.supplierId ||
+            line.orderedQuantity <= 0 ||
+            line.unitCostCents <= 0 ||
+            Boolean(line.existingItemId) === Boolean(line.newProduct)
+        )
+      ) {
+        throw new PurchaseWorkflowError("invalid-lines");
+      }
+
+      const allSupplierIds = [
+        ...new Set(
+          input.lines.flatMap((line) => [line.supplierId, ...line.associatedSupplierIds])
+        )
+      ];
+      const activeSupplierCount = await tx.supplier.count({
+        where: { id: { in: allSupplierIds }, active: true }
+      });
+      if (activeSupplierCount !== allSupplierIds.length) {
+        throw new PurchaseWorkflowError("inactive-supplier");
+      }
+
+      const purchaseSupplierIds = [...new Set(input.lines.map((line) => line.supplierId))];
+      if (purchaseSupplierIds.length > 1 && input.document) {
+        throw new PurchaseWorkflowError("multiple-suppliers-document");
+      }
+      if (purchaseSupplierIds.length > 1 && input.sourceCashExpenseId) {
+        throw new PurchaseWorkflowError("multiple-suppliers-expense");
+      }
+
+      const existingItemIds = [
+        ...new Set(
+          input.lines.flatMap((line) => (line.existingItemId ? [line.existingItemId] : []))
+        )
+      ];
+      const activeExistingItems = await tx.inventoryItem.count({
+        where: { id: { in: existingItemIds }, active: true }
+      });
+      if (activeExistingItems !== existingItemIds.length) {
+        throw new PurchaseWorkflowError("inactive-item");
+      }
+
+      const createdItemIds: string[] = [];
+      const resolvedLines: Array<{
+        itemId: string;
+        supplierId: string;
+        associatedSupplierIds: string[];
+        orderedQuantity: number;
+        unitCostCents: number;
+      }> = [];
+      for (const line of input.lines) {
+        const associatedSupplierIds = [
+          ...new Set([line.supplierId, ...line.associatedSupplierIds])
+        ];
+        let itemId = line.existingItemId;
+        if (line.newProduct) {
+          const created = await createInventoryItemInTransaction(tx, {
+            ...line.newProduct,
+            userId: input.createdById,
+            supplierIds: associatedSupplierIds,
+            preferredSupplierId: line.supplierId
+          });
+          itemId = created.id;
+          createdItemIds.push(created.id);
+        }
+        if (!itemId) throw new PurchaseWorkflowError("invalid-lines");
+        resolvedLines.push({
+          itemId,
+          supplierId: line.supplierId,
+          associatedSupplierIds,
+          orderedQuantity: line.orderedQuantity,
+          unitCostCents: line.unitCostCents
+        });
+      }
+
+      const linksByItem = new Map<string, Set<string>>();
+      const preferredByItem = new Map<string, string>();
+      for (const line of resolvedLines) {
+        const links = linksByItem.get(line.itemId) ?? new Set<string>();
+        line.associatedSupplierIds.forEach((supplierId) => links.add(supplierId));
+        linksByItem.set(line.itemId, links);
+        if (!preferredByItem.has(line.itemId)) {
+          preferredByItem.set(line.itemId, line.supplierId);
+        }
+      }
+      for (const [itemId, supplierIds] of linksByItem) {
+        await addInventoryItemSupplierLinksInTransaction(tx, {
+          itemId,
+          supplierIds: [...supplierIds],
+          preferredSupplierId: preferredByItem.get(itemId),
+          userId: input.createdById,
+          changeReason: "Proveedor asociado desde compra múltiple"
+        });
+      }
+
+      const itemIds = [...new Set(resolvedLines.map((line) => line.itemId))];
+      const items = await tx.inventoryItem.findMany({
+        where: { id: { in: itemIds }, active: true }
+      });
+      if (items.length !== itemIds.length) {
+        throw new PurchaseWorkflowError("inactive-item");
+      }
+      const itemById = new Map(items.map((item) => [item.id, item]));
+      const linesBySupplier = new Map<string, typeof resolvedLines>();
+      for (const line of resolvedLines) {
+        const group = linesBySupplier.get(line.supplierId) ?? [];
+        group.push(line);
+        linesBySupplier.set(line.supplierId, group);
+      }
+
+      const purchases = [];
+      for (const supplierId of [...linesBySupplier.keys()].sort()) {
+        const lines = linesBySupplier.get(supplierId)!;
+        const totalCents = lines.reduce(
+          (total, line) => total + line.orderedQuantity * line.unitCostCents,
+          0
+        );
+        if (!Number.isSafeInteger(totalCents) || totalCents <= 0) {
+          throw new PurchaseWorkflowError("invalid-lines");
+        }
+
+        if (input.sourceCashExpenseId) {
+          const expense = await tx.cashExpense.findUnique({
+            where: { id: input.sourceCashExpenseId },
+            include: { purchase: true }
+          });
+          if (
+            !expense ||
+            expense.purchase ||
+            expense.kind !== "urgent_purchase" ||
+            !expense.requiresInventoryEntry
+          ) {
+            throw new PurchaseWorkflowError("source-expense-invalid");
+          }
+          if (expense.totalCents !== totalCents) {
+            throw new PurchaseWorkflowError("source-expense-total-mismatch");
+          }
+        }
+
+        const purchase = await tx.purchase.create({
+          data: {
+            purchaseNumber: generatedNumber("OC"),
+            supplierId,
+            sourceCashExpenseId: input.sourceCashExpenseId,
+            createdById: input.createdById,
+            branchCode: input.branchCode,
+            purchaseDate: input.purchaseDate,
+            documentNumber: input.documentNumber,
+            currency: input.currency,
+            intendedPaymentMethod: input.intendedPaymentMethod,
+            totalCents,
+            notes: input.notes,
+            idempotencyKey: `${idempotencyPrefix}${supplierId}`,
+            lines: {
+              create: lines.map((line) => {
+                const item = itemById.get(line.itemId)!;
+                return {
+                  itemId: line.itemId,
+                  description: item.name,
+                  unit: item.unit,
+                  orderedQuantity: line.orderedQuantity,
+                  unitCostCents: line.unitCostCents,
+                  subtotalCents: line.orderedQuantity * line.unitCostCents
+                };
+              })
+            }
+          }
+        });
+        if (input.document) {
+          await tx.purchaseDocument.create({
+            data: {
+              purchaseId: purchase.id,
+              uploadedById: input.createdById,
+              kind: "purchase",
+              storageKey: input.document.storageKey,
+              storageDriver: input.document.storageDriver,
+              originalName: input.document.originalName,
+              mimeType: input.document.contentType,
+              sizeBytes: input.document.sizeBytes,
+              checksumSha256: input.document.checksumSha256
+            }
+          });
+        }
+        purchases.push(purchase);
+      }
+      return { purchases, createdItemIds };
+    }, { timeout: 30_000 })
   );
 }
 
@@ -850,10 +1100,20 @@ export async function getPurchaseFormItems() {
         name: true,
         internalCode: true,
         unit: true,
-        referenceCostCents: true
+        referenceCostCents: true,
+        supplierLinks: {
+          where: { active: true, supplier: { active: true } },
+          select: { supplierId: true, preferred: true }
+        }
       },
       orderBy: [{ name: "asc" }, { internalCode: "asc" }]
-    })
+    }).then((items) =>
+      items.map(({ supplierLinks, ...item }) => ({
+        ...item,
+        supplierIds: supplierLinks.map((link) => link.supplierId),
+        preferredSupplierId: supplierLinks.find((link) => link.preferred)?.supplierId
+      }))
+    )
   );
 }
 

@@ -9,6 +9,13 @@ const messages: Record<string, string> = {
   "payment-exceeds-balance": "El pago supera el saldo pendiente.",
   "source-expense-invalid": "La compra urgente ya fue vinculada o no requiere inventario.",
   "source-expense-total-mismatch": "El total de las líneas no coincide con el egreso urgente.",
+  "multiple-suppliers-document":
+    "Adjunta cada documento al recibir su compra; una captura con varios proveedores no comparte comprobante.",
+  "multiple-suppliers-expense":
+    "Una compra urgente pagada solo puede vincularse cuando todas las líneas pertenecen al mismo proveedor.",
+  "duplicate-code": "El código interno del producto nuevo ya existe.",
+  "duplicate-sku": "El SKU del producto nuevo ya existe.",
+  "invalid-preferred": "El proveedor preferido debe estar asociado al producto.",
   "receipt-exceeds-pending": "Una cantidad recibida supera lo que seguía pendiente.",
   "receipt-empty": "Indica al menos una cantidad recibida mayor que cero.",
   "branch-mismatch": "La recepción debe registrarse en la sucursal de la compra.",

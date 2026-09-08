@@ -31,11 +31,11 @@ export default async function NewPurchasePage({
     <div className="grid gap-4">
       <MobileBackLink href="/sigeco/compras" label="Volver a compras" />
       <PageHeader
-        title="Nueva compra"
-        description="Primero registra lo pedido. El stock aumentará únicamente cuando recibas los productos."
+        title="Nueva compra múltiple"
+        description="Registra productos de uno o varios proveedores en una sola captura."
       />
       <PurchaseError code={query.error} />
-      {suppliers.length > 0 && items.length > 0 ? (
+      {suppliers.length > 0 ? (
         <PurchaseDraftForm
           action={createPurchaseAction}
           suppliers={suppliers}
@@ -47,7 +47,7 @@ export default async function NewPurchasePage({
         />
       ) : (
         <div className="rounded-[9px] border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
-          Necesitas al menos un proveedor y un producto activos antes de registrar una compra.
+          Necesitas al menos un proveedor activo antes de registrar una compra.
         </div>
       )}
     </div>

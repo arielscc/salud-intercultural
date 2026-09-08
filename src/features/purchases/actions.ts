@@ -8,13 +8,14 @@ import {
   cancelPurchaseRecord,
   confirmPurchaseRecord,
   createInventoryLotAdjustmentRecord,
-  createPurchaseDraftRecord,
+  createPurchaseBatchRecord,
   createPurchaseReceiptRecord,
   findPurchaseWorkflowError,
   getPurchaseDocumentByStorageKey,
   recordPurchasePayment,
   type PurchaseDocumentMetadata
 } from "@/modules/database/queries/purchases";
+import { findInventoryCatalogError } from "@/modules/database/queries/inventory";
 import {
   createPurchaseDocumentStorageKey,
   deletePurchaseDocument,
@@ -24,8 +25,8 @@ import {
   cancelPurchaseSchema,
   confirmPurchaseSchema,
   inventoryLotAdjustmentSchema,
-  purchaseDraftSchema,
-  purchaseLineSchema,
+  purchaseBatchDraftSchema,
+  purchaseBatchLinesSchema,
   purchaseMoneyToCents,
   purchasePaymentSchema,
   purchaseReceiptLineSchema,
@@ -79,22 +80,31 @@ async function cleanupUnpersistedDocument(document?: PurchaseDocumentMetadata) {
 }
 
 export async function createPurchaseAction(formData: FormData) {
-  const parsed = purchaseDraftSchema.safeParse(parseFormData(formData));
+  const parsed = purchaseBatchDraftSchema.safeParse(parseFormData(formData));
   if (!parsed.success) redirect("/sigeco/compras/nueva?error=invalid-lines");
-  const itemIds = formData.getAll("itemId").map(String);
-  const quantities = formData.getAll("orderedQuantity").map(String);
-  const costs = formData.getAll("unitCost").map(String);
-  const lines = itemIds.flatMap((itemId, index) => {
-    if (!itemId && !quantities[index] && !costs[index]) return [];
-    const line = purchaseLineSchema.safeParse({
-      itemId,
-      orderedQuantity: quantities[index],
-      unitCost: costs[index]
-    });
-    return line.success
-      ? [{ ...line.data, unitCostCents: purchaseMoneyToCents(line.data.unitCost) }]
-      : [{ itemId: "", orderedQuantity: 0, unitCostCents: 0 }];
-  });
+  let rawLines: unknown;
+  try {
+    rawLines = JSON.parse(String(formData.get("linesJson") ?? ""));
+  } catch {
+    redirect("/sigeco/compras/nueva?error=invalid-lines");
+  }
+  const parsedLines = purchaseBatchLinesSchema.safeParse(rawLines);
+  if (!parsedLines.success) redirect("/sigeco/compras/nueva?error=invalid-lines");
+  const lines = parsedLines.data.map((line) => ({
+    supplierId: line.supplierId,
+    associatedSupplierIds: line.associatedSupplierIds,
+    orderedQuantity: line.orderedQuantity,
+    unitCostCents: purchaseMoneyToCents(line.unitCost),
+    existingItemId: line.itemMode === "existing" ? line.itemId : undefined,
+    newProduct:
+      line.itemMode === "new" && line.newProduct
+        ? {
+            ...line.newProduct,
+            salePriceCents: purchaseMoneyToCents(line.newProduct.salePrice),
+            referenceCostCents: purchaseMoneyToCents(line.newProduct.referenceCost)
+          }
+        : undefined
+  }));
   let document: PurchaseDocumentMetadata | undefined;
   try {
     document = await storeOptionalDocument(
@@ -106,13 +116,13 @@ export async function createPurchaseAction(formData: FormData) {
     redirect("/sigeco/compras/nueva?error=invalid-document");
   }
 
-  let purchase;
+  let batch;
   try {
-    purchase = await runAuditedAction(
+    batch = await runAuditedAction(
       {
         permission: "purchases_write",
-        action: "purchase.create",
-        entityType: "purchase",
+        action: "purchase.batch.create",
+        entityType: "purchase_batch",
         context: { lineCount: lines.length, hasDocument: Boolean(document) }
       },
       async (user) => {
@@ -120,7 +130,7 @@ export async function createPurchaseAction(formData: FormData) {
         if (parsed.data.branchCode !== activeBranch.code) {
           redirect("/sigeco/compras/nueva?error=invalid-lines");
         }
-        const created = await createPurchaseDraftRecord({
+        const created = await createPurchaseBatchRecord({
           ...parsed.data,
           purchaseDate: new Date(`${parsed.data.purchaseDate}T12:00:00-04:00`),
           createdById: user.id,
@@ -128,17 +138,28 @@ export async function createPurchaseAction(formData: FormData) {
           lines
         });
         return auditedResult(created, {
-          entityId: created.id,
-          context: { totalCents: created.totalCents }
+          entityId: parsed.data.idempotencyKey,
+          context: {
+            purchaseCount: created.purchases.length,
+            createdItemCount: created.createdItemIds.length
+          }
         });
       }
     );
   } catch (error) {
     await cleanupUnpersistedDocument(document);
+    const catalogError = findInventoryCatalogError(error);
+    if (catalogError) {
+      redirect(`/sigeco/compras/nueva?error=${catalogError.code}`);
+    }
     purchaseErrorRedirect(error, "/sigeco/compras/nueva");
   }
   revalidatePath("/sigeco/compras");
-  redirect(`/sigeco/compras/${purchase.id}?aviso=compra-creada`);
+  revalidatePath("/sigeco/inventario");
+  if (batch.purchases.length === 1) {
+    redirect(`/sigeco/compras/${batch.purchases[0].id}?aviso=compra-creada`);
+  }
+  redirect(`/sigeco/compras?aviso=compras-creadas&cantidad=${batch.purchases.length}`);
 }
 
 export async function confirmPurchaseAction(formData: FormData) {

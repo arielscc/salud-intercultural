@@ -1,6 +1,6 @@
 # Progress — Lanzamiento Por Etapas De SIGECO
 
-Última actualización: 2026-08-28.
+Última actualización: 2026-09-07.
 
 Plan de ejecución: [tasks.md](./tasks.md)
 
@@ -180,6 +180,24 @@ En paralelo, la Tarea 10 espera datos de la clínica: la plantilla está en
 `docs/operations/stage-one-master-data.md`.
 
 ## Registro
+
+### 2026-09-07 — Compra Múltiple Con Alta De Productos
+
+- `/sigeco/compras/nueva` permite elegir un proveedor distinto por línea y
+  asociar varios proveedores activos a cada producto.
+- Una sola captura se agrupa transaccionalmente en compras por proveedor; Caja,
+  pagos, saldos, documentos y recepciones conservan así su trazabilidad.
+- Cada línea permite usar un producto existente o crear uno nuevo con los datos
+  completos del catálogo. El alta y las compras quedan en una sola transacción.
+- El producto nuevo aparece en Inventario con stock cero y la recepción vigente
+  continúa siendo el único paso que aumenta existencias.
+- Los borradores locales anteriores se migran en el navegador al nuevo formato
+  de proveedor por línea.
+- Validación de tarea: `pnpm lint` y `pnpm typecheck` aprobados. La prueba
+  unitaria e integración agregadas quedan sin ejecutar hasta el cierre
+  acumulado, conforme a `CLAUDE.md`.
+- Estado: **En progreso** según el gate del lanzamiento. Detalle:
+  [reporte de tarea](../task-reports/2026-09-07-compra-multiple-alta-productos.md).
 
 ### 2026-08-29 — Activación De Módulos Por Sucursal
 

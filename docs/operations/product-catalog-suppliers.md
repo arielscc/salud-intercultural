@@ -74,6 +74,11 @@ Cada proveedor conserva empresa, persona de contacto, teléfono, WhatsApp,
 correo, dirección y notas. Puede asociarse a varios productos. Un producto
 puede tener varios proveedores activos y como máximo uno preferido.
 
+La asociación también puede hacerse durante una compra múltiple: cada producto
+elige el proveedor que realizó esa venta y permite marcar proveedores
+adicionales del catálogo. Si la línea da de alta un producto nuevo, todas esas
+asociaciones forman parte de su primera versión.
+
 Desactivar un proveedor no borra sus asociaciones ni versiones. Un proveedor
 inactivo no puede añadirse a una asociación nueva.
 

@@ -57,6 +57,8 @@ export default async function PurchasesPage({
     q?: string;
     estado?: PurchaseStatus | "all";
     proveedor?: string;
+    aviso?: string;
+    cantidad?: string;
   }>;
 }) {
   const user = await requirePermission("purchases_read");
@@ -97,6 +99,15 @@ export default async function PurchasesPage({
           ) : null
         }
       />
+
+      {params.aviso === "compras-creadas" ? (
+        <div
+          className="rounded-[9px] border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
+          role="status"
+        >
+          Se guardaron {Math.max(1, Number(params.cantidad) || 1)} compras agrupadas por proveedor.
+        </div>
+      ) : null}
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard icon={ClipboardList} label="Borradores" value={summary.drafts} />

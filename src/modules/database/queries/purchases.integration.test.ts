@@ -10,6 +10,7 @@ import {
 import {
   confirmPurchaseRecord,
   createInventoryLotAdjustmentRecord,
+  createPurchaseBatchRecord,
   createPurchaseDraftRecord,
   createPurchaseReceiptRecord,
   recordPurchasePayment
@@ -246,5 +247,60 @@ describe("purchase, receipt, batch and stock integration", () => {
     expect((await prisma.purchasePayment.findFirstOrThrow({
       where: { purchaseId: purchase.id }
     })).cashMovementId).toBe(expense.movementId);
+  });
+
+  it("creates products inline and groups one capture into purchases by supplier", async () => {
+    const fixture = await setup();
+    const secondSupplier = await prisma.supplier.create({
+      data: { name: "Segundo proveedor" }
+    });
+    const idempotencyKey = randomUUID();
+    const input = {
+      branchCode: "el-alto",
+      purchaseDate: new Date("2026-09-07T12:00:00-04:00"),
+      currency: "BOB" as const,
+      intendedPaymentMethod: "credit" as const,
+      idempotencyKey,
+      createdById: fixture.administrator.id,
+      lines: [
+        {
+          supplierId: fixture.supplier.id,
+          associatedSupplierIds: [fixture.supplier.id],
+          orderedQuantity: 5,
+          unitCostCents: 1_200,
+          existingItemId: fixture.item.id
+        },
+        {
+          supplierId: secondSupplier.id,
+          associatedSupplierIds: [fixture.supplier.id, secondSupplier.id],
+          orderedQuantity: 8,
+          unitCostCents: 900,
+          newProduct: {
+            internalCode: `NEW-${randomUUID().slice(0, 8)}`,
+            name: "Producto nuevo de compra múltiple",
+            category: "Medicamentos",
+            unit: "frasco",
+            usage: "sale" as const,
+            salePriceCents: 1_500,
+            referenceCostCents: 900,
+            minimumStock: 2
+          }
+        }
+      ]
+    };
+
+    const created = await createPurchaseBatchRecord(input);
+    const reused = await createPurchaseBatchRecord(input);
+
+    expect(created.purchases).toHaveLength(2);
+    expect(reused.purchases).toHaveLength(2);
+    expect(created.createdItemIds).toHaveLength(1);
+    expect(await prisma.purchase.count()).toBe(2);
+    expect(await prisma.inventoryItem.count()).toBe(2);
+    expect(
+      await prisma.inventoryItemSupplier.count({
+        where: { itemId: created.createdItemIds[0], active: true }
+      })
+    ).toBe(2);
   });
 });

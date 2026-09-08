@@ -30,6 +30,50 @@ export const purchaseLineSchema = z.object({
   unitCost: money
 });
 
+const inlineProductSchema = z.object({
+  internalCode: z.string().trim().min(2).max(80),
+  sku: optionalText,
+  name: z.string().trim().min(2).max(180),
+  description: optionalText,
+  category: z.string().trim().min(2).max(100),
+  unit: z.string().trim().min(1).max(40),
+  usage: z.enum(["sale", "internal_use", "both"]),
+  salePrice: money,
+  referenceCost: money,
+  minimumStock: z.coerce.number().int().min(0).max(1_000_000)
+});
+
+export const purchaseBatchDraftSchema = purchaseDraftSchema.omit({ supplierId: true });
+
+export const purchaseBatchLineSchema = z
+  .object({
+    itemMode: z.enum(["existing", "new"]),
+    itemId: z.string().trim().max(160).optional(),
+    supplierId: identifier,
+    associatedSupplierIds: z.array(identifier).max(30).default([]),
+    orderedQuantity: z.coerce.number().int().positive().max(1_000_000),
+    unitCost: money,
+    newProduct: inlineProductSchema.optional()
+  })
+  .superRefine((value, context) => {
+    if (value.itemMode === "existing" && !value.itemId) {
+      context.addIssue({
+        code: "custom",
+        path: ["itemId"],
+        message: "Selecciona un producto existente"
+      });
+    }
+    if (value.itemMode === "new" && !value.newProduct) {
+      context.addIssue({
+        code: "custom",
+        path: ["newProduct"],
+        message: "Completa el producto nuevo"
+      });
+    }
+  });
+
+export const purchaseBatchLinesSchema = z.array(purchaseBatchLineSchema).min(1).max(100);
+
 export const confirmPurchaseSchema = z.object({
   purchaseId: identifier,
   expectedRevision: z.coerce.number().int().positive(),

@@ -414,7 +414,7 @@ export async function applyInventoryMovement(
   return movement;
 }
 
-export async function createInventoryItemRecord(input: {
+export type NewInventoryItemInput = {
   sku?: string;
   internalCode: string;
   name: string;
@@ -428,30 +428,114 @@ export async function createInventoryItemRecord(input: {
   initialStock?: number;
   userId?: string;
   branchCode?: string;
-}) {
+  supplierIds?: string[];
+  preferredSupplierId?: string;
+};
+
+export async function createInventoryItemInTransaction(
+  tx: Prisma.TransactionClient,
+  input: NewInventoryItemInput
+) {
+  await ensureUniqueItemCodes(tx, input);
+  const supplierIds = [...new Set(input.supplierIds ?? [])];
+  if (input.preferredSupplierId && !supplierIds.includes(input.preferredSupplierId)) {
+    throw new InventoryCatalogError("invalid-preferred");
+  }
+  if (supplierIds.length > 0) {
+    const activeSuppliers = await tx.supplier.count({
+      where: { id: { in: supplierIds }, active: true }
+    });
+    if (activeSuppliers !== supplierIds.length) {
+      throw new InventoryCatalogError("inactive-supplier");
+    }
+  }
+
+  const item = await tx.inventoryItem.create({
+    data: {
+      sku: normalizeOptionalCode(input.sku),
+      internalCode: normalizeCode(input.internalCode),
+      name: input.name.trim(),
+      description: input.description,
+      category: normalizeCategory(input.category ?? "Sin categoría"),
+      unit: input.unit ?? "unidad",
+      usage: input.usage ?? "both",
+      salePriceCents: input.salePriceCents ?? 0,
+      referenceCostCents: input.referenceCostCents ?? 0,
+      minimumStock: input.minimumStock ?? 0,
+      currentStock: 0,
+      supplierLinks: {
+        create: supplierIds.map((supplierId) => ({
+          supplierId,
+          preferred: supplierId === input.preferredSupplierId
+        }))
+      }
+    }
+  });
+
+  await createItemCatalogVersion(tx, item.id, {
+    userId: input.userId,
+    changeReason: "Alta inicial del producto"
+  });
+  await syncLowStockAlert(tx, item.id);
+  return item;
+}
+
+export async function addInventoryItemSupplierLinksInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    itemId: string;
+    supplierIds: string[];
+    preferredSupplierId?: string;
+    userId?: string;
+    changeReason: string;
+  }
+) {
+  const supplierIds = [...new Set(input.supplierIds)];
+  if (supplierIds.length === 0) return;
+  const activeSuppliers = await tx.supplier.count({
+    where: { id: { in: supplierIds }, active: true }
+  });
+  if (activeSuppliers !== supplierIds.length) {
+    throw new InventoryCatalogError("inactive-supplier");
+  }
+  const item = await tx.inventoryItem.findUniqueOrThrow({
+    where: { id: input.itemId },
+    include: { supplierLinks: { where: { active: true } } }
+  });
+  const activeIds = new Set(item.supplierLinks.map((link) => link.supplierId));
+  const additions = supplierIds.filter((supplierId) => !activeIds.has(supplierId));
+  if (additions.length === 0) return;
+  const hasPreferred = item.supplierLinks.some((link) => link.preferred);
+
+  await tx.inventoryItem.update({
+    where: { id: input.itemId },
+    data: { revision: { increment: 1 } }
+  });
+  for (const supplierId of additions) {
+    await tx.inventoryItemSupplier.upsert({
+      where: { itemId_supplierId: { itemId: input.itemId, supplierId } },
+      create: {
+        itemId: input.itemId,
+        supplierId,
+        active: true,
+        preferred: !hasPreferred && supplierId === input.preferredSupplierId
+      },
+      update: {
+        active: true,
+        preferred: !hasPreferred && supplierId === input.preferredSupplierId
+      }
+    });
+  }
+  await createItemCatalogVersion(tx, input.itemId, {
+    userId: input.userId,
+    changeReason: input.changeReason
+  });
+}
+
+export async function createInventoryItemRecord(input: NewInventoryItemInput) {
   return withDatabaseError("createInventoryItemRecord", async () =>
     prisma.$transaction(async (tx) => {
-      await ensureUniqueItemCodes(tx, input);
-      const item = await tx.inventoryItem.create({
-        data: {
-          sku: normalizeOptionalCode(input.sku),
-          internalCode: normalizeCode(input.internalCode),
-          name: input.name.trim(),
-          description: input.description,
-          category: normalizeCategory(input.category ?? "Sin categoría"),
-          unit: input.unit ?? "unidad",
-          usage: input.usage ?? "both",
-          salePriceCents: input.salePriceCents ?? 0,
-          referenceCostCents: input.referenceCostCents ?? 0,
-          minimumStock: input.minimumStock ?? 0,
-          currentStock: 0
-        }
-      });
-
-      await createItemCatalogVersion(tx, item.id, {
-        userId: input.userId,
-        changeReason: "Alta inicial del producto"
-      });
+      const item = await createInventoryItemInTransaction(tx, input);
 
       if (input.initialStock && input.initialStock > 0) {
         await applyInventoryMovement(tx, {

@@ -30,9 +30,22 @@ que los números parezcan completos.
 
 ## Registrar Y Confirmar Una Compra
 
-La compra empieza como borrador con proveedor, fecha, sucursal, documento,
-forma prevista de pago y líneas de producto, cantidad y costo unitario.
-El total se calcula en servidor.
+La compra empieza desde una captura única con fecha, sucursal, forma prevista
+de pago y líneas de producto, proveedor, cantidad y costo unitario. Cada línea
+puede elegir un proveedor distinto. SIGECO agrupa las líneas y conserva por
+debajo un borrador contable por proveedor, para que Administración no repita el
+formulario sin mezclar pagos, saldos ni recepciones.
+
+Cada línea permite elegir un producto existente o dar de alta uno nuevo con su
+código, nombre, categoría, unidad, uso, precios y stock mínimo. También permite
+asociar el producto con varios proveedores activos; el proveedor de la compra
+siempre queda incluido. El producto nuevo aparece inmediatamente en Inventario
+con stock cero. La existencia aumenta únicamente al registrar la recepción.
+
+Un documento de compra o un egreso urgente puede vincularse desde esta captura
+solo cuando todas las líneas pertenecen al mismo proveedor. Con varios
+proveedores, cada documento se adjunta en la recepción que corresponda. El total
+se calcula y valida en servidor.
 
 Al confirmar:
 
@@ -96,7 +109,8 @@ y verifica SHA-256 antes de entregar el archivo.
 ## Pantallas
 
 - `/sigeco/compras`: búsqueda, estados, proveedor, saldos y pendientes.
-- `/sigeco/compras/nueva`: borrador con líneas y captura móvil.
+- `/sigeco/compras/nueva`: captura múltiple, proveedor por línea y alta de
+  productos nuevos sin abandonar la compra.
 - `/sigeco/compras/[purchaseId]`: pedido contra recibido, pagos, recepciones,
   documentos y trazabilidad.
 - `/sigeco/compras/[purchaseId]/recibir`: recepción parcial y lotes.
@@ -110,4 +124,3 @@ La migración `20260730192059_purchases_receipts_batches_stock` está aplicada
 solo en desarrollo local. No ejecutar en staging ni producción hasta completar
 integración acumulada, QA por roles, prueba en teléfonos reales y autorización
 expresa.
-

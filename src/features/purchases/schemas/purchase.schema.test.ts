@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   inventoryLotAdjustmentSchema,
+  purchaseBatchDraftSchema,
+  purchaseBatchLineSchema,
   purchaseDraftSchema,
   purchaseLineSchema,
   purchaseMoneyToCents,
@@ -27,6 +29,38 @@ describe("purchase schemas", () => {
       })
     ).toMatchObject({ orderedQuantity: 3 });
     expect(purchaseMoneyToCents("82,50")).toBe(8_250);
+  });
+
+  it("accepts a batch line with a new product and supplier associations", () => {
+    expect(
+      purchaseBatchDraftSchema.parse({
+        branchCode: "cochabamba",
+        purchaseDate: "2026-09-07",
+        currency: "BOB",
+        intendedPaymentMethod: "credit",
+        idempotencyKey: "53dcd132-d914-4be2-9e44-a4905fe42f3d"
+      })
+    ).toMatchObject({ branchCode: "cochabamba" });
+
+    expect(
+      purchaseBatchLineSchema.parse({
+        itemMode: "new",
+        supplierId: "supplier_zurich",
+        associatedSupplierIds: ["supplier_zurich", "supplier_backup"],
+        orderedQuantity: 30,
+        unitCost: "12.50",
+        newProduct: {
+          internalCode: "ABR-COMP",
+          name: "Abrilín compuesto",
+          category: "Medicamentos",
+          unit: "caja",
+          usage: "sale",
+          salePrice: "20",
+          referenceCost: "12.50",
+          minimumStock: 5
+        }
+      })
+    ).toMatchObject({ itemMode: "new", orderedQuantity: 30 });
   });
 
   it("accepts partial receipt rows and explicit return behavior", () => {
