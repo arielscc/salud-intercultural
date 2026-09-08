@@ -262,7 +262,7 @@ export async function getAdministrationWorkItemById(id: string) {
 export async function assignAdministrationWorkItem(input: {
   workItemId: string;
   userId: string;
-  branchCode?: string;
+  branchCode: string;
 }) {
   return withDatabaseError("assignAdministrationWorkItem", async () => {
     return prisma.$transaction(async (tx) => {
@@ -279,7 +279,7 @@ export async function assignAdministrationWorkItem(input: {
 
       if (
         workItem.area !== "administracion" ||
-        (input.branchCode && workItem.visit.branchCode !== input.branchCode)
+        workItem.visit.branchCode !== input.branchCode
       ) {
         throw new Error("ADMINISTRATION_WORK_ITEM_NOT_AVAILABLE");
       }
@@ -306,7 +306,7 @@ export async function createSaleRecord(input: {
   visitId?: string;
   workItemId?: string;
   createdById?: string;
-  branchCode?: string;
+  branchCode: string;
   itemType: SaleItemType;
   inventoryItemId?: string;
   description: string;
@@ -339,8 +339,8 @@ export async function createSaleRecord(input: {
             select: { branchCode: true }
           })
         : null;
-      const branchCode = visitBranch?.branchCode ?? input.branchCode ?? "el-alto";
-      if (visitBranch && input.branchCode && visitBranch.branchCode !== input.branchCode) {
+      const branchCode = input.branchCode;
+      if (visitBranch && visitBranch.branchCode !== branchCode) {
         throw new Error("BRANCH_MISMATCH");
       }
       const cashSession =
@@ -466,7 +466,7 @@ export async function createSaleOrderRecord(input: {
   visitId?: string;
   workItemId?: string;
   createdById?: string;
-  branchCode?: string;
+  branchCode: string;
   subtotalCents: number;
   discountCents?: number;
   notes?: string;
@@ -496,8 +496,8 @@ export async function createSaleOrderRecord(input: {
             select: { branchCode: true }
           })
         : null;
-      const branchCode = visitBranch?.branchCode ?? input.branchCode ?? "el-alto";
-      if (visitBranch && input.branchCode && visitBranch.branchCode !== input.branchCode) {
+      const branchCode = input.branchCode;
+      if (visitBranch && visitBranch.branchCode !== branchCode) {
         throw new Error("BRANCH_MISMATCH");
       }
 
@@ -596,7 +596,7 @@ export async function confirmDoctorOrderSale(input: {
   doctorOrderId: string;
   workItemId?: string;
   createdById?: string;
-  branchCode?: string;
+  branchCode: string;
   adminDiscountCents?: number;
   initialPaymentCents?: number;
   paymentMethodCode?: string;
@@ -620,7 +620,10 @@ export async function confirmDoctorOrderSale(input: {
       if (order.status !== "submitted") throw new DoctorOrderSaleError("not-submitted");
       if (order.lines.length === 0) throw new DoctorOrderSaleError("empty-order");
 
-      const branchCode = order.visit?.branchCode ?? input.branchCode ?? "el-alto";
+      const branchCode = input.branchCode;
+      if (order.visit && order.visit.branchCode !== branchCode) {
+        throw new Error("BRANCH_MISMATCH");
+      }
 
       let lineSumCents = 0;
       for (const line of order.lines) {

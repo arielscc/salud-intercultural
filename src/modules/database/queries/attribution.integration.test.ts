@@ -143,6 +143,7 @@ describe("capture attribution integration", () => {
       data: {
         patientId: created.patientId,
         visitId: created.visit.id,
+        branchCode: "el-alto",
         totalCents: 50000,
         paidCents: 30000,
         balanceCents: 20000

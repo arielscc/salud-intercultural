@@ -26,6 +26,7 @@ async function seedRecoveryFixture(input: {
     errorFormat: "minimal",
     log: ["error"]
   });
+  const branchCode = "el-alto";
 
   try {
     const user = await prisma.internalUser.create({
@@ -49,6 +50,7 @@ async function seedRecoveryFixture(input: {
     const visit = await prisma.visit.create({
       data: {
         patientId: patient.id,
+        branchCode,
         createdById: user.id,
         reason: "Simulacro de backup y restauración",
         originCity: "El Alto",
@@ -61,6 +63,7 @@ async function seedRecoveryFixture(input: {
       data: {
         patientId: patient.id,
         visitId: visit.id,
+        branchCode,
         userId: user.id,
         type: "income",
         amountCents: 12_500,

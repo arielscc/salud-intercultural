@@ -98,6 +98,7 @@ describe("patient journey report integration", () => {
       data: {
         patientId: patient.id,
         visitId: visit.id,
+        branchCode: "el-alto",
         status: "partial",
         subtotalCents: 10_000,
         totalCents: 10_000,
@@ -109,6 +110,7 @@ describe("patient journey report integration", () => {
       data: {
         patientId: patient.id,
         visitId: visit.id,
+        branchCode: "el-alto",
         status: "cancelled",
         subtotalCents: 99_000,
         totalCents: 99_000,

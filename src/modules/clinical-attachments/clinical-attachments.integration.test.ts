@@ -57,6 +57,7 @@ describe("secure clinical attachments integration", () => {
     const visit = await prisma.visit.create({
       data: {
         patientId: patient.id,
+        branchCode: "el-alto",
         createdById: user.id
       }
     });
@@ -203,7 +204,7 @@ describe("secure clinical attachments integration", () => {
       })
     ]);
     const otherVisit = await prisma.visit.create({
-      data: { patientId: otherPatient.id }
+      data: { patientId: otherPatient.id, branchCode: "el-alto" }
     });
 
     await expect(

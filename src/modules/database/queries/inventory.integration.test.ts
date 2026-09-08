@@ -79,6 +79,7 @@ describe("inventory integration", () => {
       unit: "frasco",
       minimumStock: 2,
       initialStock: 5,
+      branchCode: "el-alto",
       userId: user.id
     });
     await openCashSession({
@@ -94,6 +95,7 @@ describe("inventory integration", () => {
 
     await createSaleRecord({
       patientId: patient.id,
+      branchCode: "el-alto",
       createdById: user.id,
       itemType: "product",
       inventoryItemId: item.id,
@@ -133,6 +135,7 @@ describe("inventory integration", () => {
       idempotencyKey: "entry-mobile-retry",
       itemId: item.id,
       userId: user.id,
+      branchCode: "el-alto",
       quantity: 4,
       reason: "Compra"
     });
@@ -140,6 +143,7 @@ describe("inventory integration", () => {
       idempotencyKey: "entry-mobile-retry",
       itemId: item.id,
       userId: user.id,
+      branchCode: "el-alto",
       quantity: 4,
       reason: "Compra"
     });
@@ -147,6 +151,7 @@ describe("inventory integration", () => {
       idempotencyKey: "adjustment-mobile-retry",
       itemId: item.id,
       userId: user.id,
+      branchCode: "el-alto",
       quantityDelta: -1,
       reason: "Conteo físico"
     });
@@ -154,6 +159,7 @@ describe("inventory integration", () => {
       idempotencyKey: "adjustment-mobile-retry",
       itemId: item.id,
       userId: user.id,
+      branchCode: "el-alto",
       quantityDelta: -1,
       reason: "Conteo físico"
     });
@@ -191,13 +197,15 @@ describe("inventory integration", () => {
     const item = await createInventoryItemRecord({
       internalCode: "SI-SUERO-002",
       name: "Suero Escaso",
-      initialStock: 2
+      initialStock: 2,
+      branchCode: "el-alto"
     });
 
     let failure: unknown;
     try {
       await createSaleRecord({
         patientId: patient.id,
+        branchCode: "el-alto",
         itemType: "product",
         inventoryItemId: item.id,
         description: "Suero Escaso",
@@ -294,7 +302,8 @@ describe("inventory integration", () => {
       internalCode: "RESERVADO-001",
       name: "Producto reservado",
       usage: "sale",
-      initialStock: 4
+      initialStock: 4,
+      branchCode: "el-alto"
     });
 
     let staleFailure: unknown;

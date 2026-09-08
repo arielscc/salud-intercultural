@@ -1,6 +1,6 @@
 # Progress — Mejoras Integrales De SIGECO
 
-Última actualización: 2026-08-02.
+Última actualización: 2026-09-08.
 
 Plan de ejecución: [tasks.md](./tasks.md)
 
@@ -1691,3 +1691,45 @@ Responsable:
 
 - Riesgos, decisiones o trabajo posterior.
 ```
+
+## 2026-09-08 — Ajuste — Sucursal Explícita En Escrituras Operativas
+
+Estado anterior: los modelos operativos conservaban un default de PostgreSQL
+hacia `el-alto`, y ventas e inventario repetían ese fallback en aplicación.
+
+Estado nuevo: la sucursal es obligatoria y explícita en visitas, ventas, pagos,
+movimientos de Caja, pagos de compras, movimientos y ajustes de inventario.
+
+Responsable: implementación asistida; revisión y despliegue a cargo del
+desarrollador.
+
+### Resultado
+
+- Se eliminaron siete defaults de Prisma y PostgreSQL que podían atribuir una
+  escritura incompleta a El Alto.
+- Ventas y movimientos de inventario ya no sustituyen una sucursal ausente.
+- Los registros derivados usan la sucursal de la visita, compra o sesión que
+  los origina y rechazan relaciones de otra sede.
+- Scripts y fixtures declaran expresamente la sede en la que escriben.
+
+### Archivos Y Migraciones
+
+- Migración `20260908120000_require_explicit_branch_code` preparada y no
+  aplicada a staging ni producción.
+- Esquema Prisma, consultas de ventas, compras, estudios, inventario y
+  enfermería actualizados junto con sus fixtures tipados.
+- Reporte detallado en
+  `docs/project/task-reports/2026-09-08-sucursal-explicita-escrituras.md`.
+
+### Validación
+
+- `pnpm lint`: aprobado.
+- `pnpm typecheck`: aprobado.
+- Pruebas, build y QA de navegador: pendientes para el cierre acumulado según
+  la política vigente.
+
+### Pendientes
+
+- Aplicar la migración mediante el flujo controlado de cada entorno.
+- Continuar la eliminación de parámetros opcionales en consultas de lectura;
+  este ajuste cerró específicamente las escrituras con fallback a El Alto.

@@ -1197,7 +1197,7 @@ model Visit {
   id                        String                        @id @default(cuid())
   idempotencyKey            String?                       @unique
   patientId                 String
-  branchCode                String                        @default("el-alto")
+  branchCode                String
   isTestData                Boolean                       @default(false)
   status                    VisitStatus                   @default(in_reception)
   reason                    String?
@@ -1965,7 +1965,7 @@ model Sale {
   workItemId         String?
   doctorOrderId      String?                 @unique
   createdById        String?
-  branchCode         String                  @default("el-alto")
+  branchCode         String
   status             SaleStatus              @default(pending)
   subtotalCents      Int                     @default(0)
   discountCents      Int                     @default(0)
@@ -2100,7 +2100,7 @@ model Payment {
   visitId        String?
   methodId       String
   receivedById   String?
-  branchCode     String         @default("el-alto")
+  branchCode     String
   amountCents    Int
   reference      String?
   notes          String?
@@ -2153,7 +2153,7 @@ model CashMovement {
   visitId            String?
   userId             String?
   authorizedById     String?
-  branchCode         String            @default("el-alto")
+  branchCode         String
   originalMovementId String?
   idempotencyKey     String?           @unique
   type               CashMovementType  @default(income)
@@ -2820,7 +2820,7 @@ model PurchasePayment {
   cashSessionId  String?
   cashMovementId String?               @unique
   recordedById   String
-  branchCode     String                @default("el-alto")
+  branchCode     String
   method         PurchasePaymentMethod
   amountCents    Int
   reference      String?
@@ -2989,7 +2989,7 @@ model InventoryMovement {
   type             InventoryMovementType
   quantityDelta    Int
   stockAfter       Int
-  branchCode       String                  @default("el-alto")
+  branchCode       String
   locationCode     String?
   reason           String
   createdAt        DateTime                @default(now())
@@ -3023,7 +3023,7 @@ model InventoryAdjustment {
   id            String        @id @default(cuid())
   itemId        String
   userId        String?
-  branchCode    String        @default("el-alto")
+  branchCode    String
   quantityDelta Int
   reason        String
   createdAt     DateTime      @default(now())

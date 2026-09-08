@@ -572,6 +572,7 @@ export async function confirmPurchaseRecord(input: {
         await tx.purchasePayment.create({
           data: {
             purchaseId: purchase.id,
+            branchCode: purchase.branchCode,
             cashSessionId: purchase.sourceCashExpense.cashSessionId,
             cashMovementId: purchase.sourceCashExpense.movementId,
             recordedById: input.confirmedById,

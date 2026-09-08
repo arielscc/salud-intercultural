@@ -44,6 +44,7 @@ describe("patient duplicate merge integration", () => {
     const visit = await prisma.visit.create({
       data: {
         patientId: source.id,
+        branchCode: "el-alto",
         reason: "Control registrado en ficha duplicada"
       }
     });

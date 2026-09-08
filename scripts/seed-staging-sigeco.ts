@@ -18,6 +18,8 @@ import { recordDuplicateCandidatesForPatient } from "../src/modules/database/que
 import { reportScriptError } from "./safe-error";
 import { assertSafeStagingCommand } from "./staging-safety";
 
+const QA_BRANCH_CODE = "el-alto";
+
 const qaPatientFixtures = [
   {
     area: "recepcion",
@@ -93,8 +95,8 @@ async function seedQaUsers(basePassword: string, domain: string) {
       data: { isDefault: false }
     });
     await prisma.internalUserBranch.upsert({
-      where: { userId_branchCode: { userId: user.id, branchCode: "el-alto" } },
-      create: { userId: user.id, branchCode: "el-alto", isDefault: true },
+      where: { userId_branchCode: { userId: user.id, branchCode: QA_BRANCH_CODE } },
+      create: { userId: user.id, branchCode: QA_BRANCH_CODE, isDefault: true },
       update: { isDefault: true }
     });
 
@@ -161,6 +163,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
     await prisma.visit.upsert({
       where: { id: visitId },
       update: {
+        branchCode: QA_BRANCH_CODE,
         checkedInAt,
         createdById: receptionUserId,
         isTestData: true,
@@ -173,6 +176,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         status: fixture.status
       },
       create: {
+        branchCode: QA_BRANCH_CODE,
         checkedInAt,
         createdById: receptionUserId,
         id: visitId,
@@ -400,7 +404,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
   await prisma.followUpTask.upsert({
     where: { id: "qa_follow_up_pending" },
     update: {
-      branchCode: "el-alto",
+      branchCode: QA_BRANCH_CODE,
       assignedToId: receptionUserId,
       createdById: receptionUserId,
       dueAt: new Date(),
@@ -415,7 +419,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       title: "[QA] Validar bandeja de seguimiento"
     },
     create: {
-      branchCode: "el-alto",
+      branchCode: QA_BRANCH_CODE,
       assignedToId: receptionUserId,
       createdById: receptionUserId,
       dueAt: new Date(),

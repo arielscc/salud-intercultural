@@ -179,6 +179,7 @@ export async function createPaidStudyOrder(
           patientId: visit.patientId,
           visitId: visit.id,
           workItemId: workItem.id,
+          branchCode: visit.branchCode,
           status: totalCents === 0 ? "paid" : "pending",
           subtotalCents,
           discountCents,

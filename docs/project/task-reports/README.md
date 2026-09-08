@@ -81,6 +81,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-29 | [Entorno piloto local de Cochabamba](./2026-08-29-entorno-piloto-local-cochabamba.md) | Segunda base local para ensayar Cochabamba con solo Caja y Administración, sin tocar el entorno de trabajo. |
 | 2026-08-29 | [Activación de módulos por sucursal](./2026-08-29-modulos-por-sucursal.md) | El estado de cada módulo pasa a ser propio de cada sede: apagar la Caja de una sucursal ya no deja sin cobrar a la otra. Las ~35 pantallas no cambian; la sucursal se resuelve en un solo lugar. |
 | 2026-09-07 | [Compra múltiple y alta de productos](./2026-09-07-compra-multiple-alta-productos.md) | Permite capturar proveedores por línea, asociar varios proveedores y crear productos nuevos desde una sola compra sin perder la trazabilidad por proveedor. |
+| 2026-09-08 | [Sucursal explícita en escrituras operativas](./2026-09-08-sucursal-explicita-escrituras.md) | Elimina la asignación silenciosa a El Alto y exige la sucursal en visitas, ventas, pagos, Caja y movimientos de inventario. |
 
 ## Relacion Con Estado V3
 

@@ -18,6 +18,7 @@ import { reportScriptError } from "./safe-error";
 const PATIENT_NAME = "Ariel Socrates Chura Choque";
 const PATIENT_PHONE = "72514890";
 const SEED_USER_EMAIL = "test@test.si";
+const SEED_BRANCH_CODE = "el-alto";
 
 function at(daysAgo: number, hour: number, minute = 0) {
   const date = new Date();
@@ -83,6 +84,7 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
   const visit = await tx.visit.create({
     data: {
       patientId: input.patientId,
+      branchCode: SEED_BRANCH_CODE,
       createdById: input.userId,
       status: input.status,
       reason: input.reason,
@@ -480,6 +482,7 @@ async function main() {
         data: {
           patientId: patient.id,
           visitId: v1.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           workItemId: v1AdminWorkItem.id,
           createdById: userId,
           status: "paid",
@@ -530,6 +533,7 @@ async function main() {
           saleId: v1Sale.id,
           patientId: patient.id,
           visitId: v1.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           methodId: cashMethod.id,
           receivedById: userId,
           amountCents: 26500,
@@ -544,6 +548,7 @@ async function main() {
           paymentId: v1Payment.id,
           patientId: patient.id,
           visitId: v1.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           type: "income",
           amountCents: 26500,
@@ -675,6 +680,7 @@ async function main() {
         data: {
           patientId: patient.id,
           visitId: v2.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           workItemId: v2AdminWorkItem.id,
           createdById: userId,
           status: "paid",
@@ -703,6 +709,7 @@ async function main() {
           saleId: v2Sale.id,
           patientId: patient.id,
           visitId: v2.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           methodId: qrMethod.id,
           receivedById: userId,
           amountCents: 10000,
@@ -718,6 +725,7 @@ async function main() {
           paymentId: v2Payment.id,
           patientId: patient.id,
           visitId: v2.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           type: "income",
           amountCents: 10000,
@@ -953,6 +961,7 @@ async function main() {
         data: {
           patientId: patient.id,
           visitId: v4.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           workItemId: v4AdminWorkItem.id,
           createdById: userId,
           status: "partial",
@@ -993,6 +1002,7 @@ async function main() {
           saleId: v4Sale.id,
           patientId: patient.id,
           visitId: v4.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           methodId: qrMethod.id,
           receivedById: userId,
           amountCents: 25000,
@@ -1009,6 +1019,7 @@ async function main() {
           paymentId: v4Payment.id,
           patientId: patient.id,
           visitId: v4.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           type: "income",
           amountCents: 25000,
@@ -1143,6 +1154,7 @@ async function main() {
         data: {
           patientId: patient.id,
           visitId: v5.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           workItemId: v5AdminWorkItem.id,
           createdById: userId,
           status: "pending",

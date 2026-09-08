@@ -282,18 +282,15 @@ export async function createNursingApplicationRecord(input: CreateNursingApplica
 
       // Si se aplicó un producto del inventario, se descuenta del stock.
       if (inventoryItemId && quantityUnits && quantityUnits > 0) {
-        let branchCode: string | undefined;
-        if (input.visitId) {
-          const visit = await tx.visit.findUnique({
-            where: { id: input.visitId },
-            select: { branchCode: true }
-          });
-          branchCode = visit?.branchCode ?? undefined;
-        }
+        if (!input.visitId) throw new Error("inventory-branch-required");
+        const visit = await tx.visit.findUniqueOrThrow({
+          where: { id: input.visitId },
+          select: { branchCode: true }
+        });
         await applyInventoryMovement(tx, {
           itemId: inventoryItemId,
           userId: input.responsibleId,
-          branchCode,
+          branchCode: visit.branchCode,
           type: "authorized_manual_adjustment",
           quantityDelta: -quantityUnits,
           reason: `Aplicación de enfermería: ${input.medication}`

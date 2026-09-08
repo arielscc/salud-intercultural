@@ -184,6 +184,7 @@ describe("clinical care integration", () => {
       data: {
         patientId: patient.id,
         visitId: visit.id,
+        branchCode: "el-alto",
         createdById: doctor.id,
         status: "paid",
         subtotalCents: 10000,

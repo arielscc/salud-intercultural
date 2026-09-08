@@ -64,7 +64,7 @@ async function setup() {
     }
   });
   const visit = await prisma.visit.create({
-    data: { patientId: patient.id, status: "in_consultation" }
+    data: { patientId: patient.id, branchCode: "el-alto", status: "in_consultation" }
   });
   await prisma.clinicalConsultation.create({
     data: {
@@ -94,6 +94,7 @@ async function setup() {
     data: {
       patientId: patient.id,
       visitId: visit.id,
+      branchCode: "el-alto",
       createdById: administrator.id,
       subtotalCents: 2000,
       totalCents: 2000,
@@ -179,6 +180,7 @@ describe("versioned generated documents integration", () => {
           saleId: fixture.sale.id,
           patientId: fixture.patient.id,
           visitId: fixture.visit.id,
+          branchCode: "el-alto",
           methodId: method.id,
           receivedById: fixture.administrator.id,
           amountCents: 500
@@ -201,4 +203,3 @@ describe("versioned generated documents integration", () => {
     expect(second.supersedesId).toBe(first.id);
   });
 });
-

@@ -244,14 +244,14 @@ export async function applyInventoryMovement(
     receiptLineId?: string;
     lotId?: string;
     lotAdjustmentId?: string;
-    branchCode?: string;
+    branchCode: string;
     locationCode?: string;
     type: InventoryMovementType;
     quantityDelta: number;
     reason: string;
   }
 ) {
-  const branchCode = input.branchCode ?? "el-alto";
+  const branchCode = input.branchCode;
   await tx.$queryRaw`SELECT "id" FROM "InventoryItem" WHERE "id" = ${input.itemId} FOR UPDATE`;
   const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
 
@@ -538,6 +538,7 @@ export async function createInventoryItemRecord(input: NewInventoryItemInput) {
       const item = await createInventoryItemInTransaction(tx, input);
 
       if (input.initialStock && input.initialStock > 0) {
+        if (!input.branchCode) throw new Error("inventory-branch-required");
         await applyInventoryMovement(tx, {
           itemId: item.id,
           userId: input.userId,
@@ -810,7 +811,7 @@ export async function addInventoryEntryRecord(input: {
   idempotencyKey?: string;
   itemId: string;
   userId?: string;
-  branchCode?: string;
+  branchCode: string;
   quantity: number;
   reason: string;
 }) {
@@ -839,7 +840,7 @@ export async function createInventoryAdjustmentRecord(input: {
   idempotencyKey?: string;
   itemId: string;
   userId?: string;
-  branchCode?: string;
+  branchCode: string;
   quantityDelta: number;
   reason: string;
 }) {
