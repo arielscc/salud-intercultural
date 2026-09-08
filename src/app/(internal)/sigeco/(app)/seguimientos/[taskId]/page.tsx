@@ -23,6 +23,7 @@ import { getFollowUpTaskById } from "@/modules/database/queries/follow-ups";
 import { requirePermission } from "@/modules/permissions";
 import { cn } from "@/lib/cn";
 import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
+import { getBranchContext } from "@/features/branches/context";
 
 const methodOptions = Object.entries(followUpAttemptMethodLabels) as Array<[FollowUpAttemptMethod, string]>;
 type FollowUpDetailPageProps = {
@@ -35,8 +36,9 @@ export default async function FollowUpDetailPage({
   searchParams
 }: FollowUpDetailPageProps) {
   const user = await requirePermission("followups_read");
+  const { activeBranch } = await getBranchContext(user);
   const [{ taskId }, query] = await Promise.all([params, searchParams]);
-  const task = await getFollowUpTaskById(taskId, user.role);
+  const task = await getFollowUpTaskById(taskId, activeBranch.code, user.role);
 
   if (!task) notFound();
 

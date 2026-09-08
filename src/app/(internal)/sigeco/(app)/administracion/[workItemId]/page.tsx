@@ -102,7 +102,7 @@ export default async function AdministrationWorkItemPage({
 
   const patient = item.visit.patient;
   const [patientSales, areaTiming] = await Promise.all([
-    getPatientSales(patient.id),
+    getPatientSales(patient.id, activeBranch.code),
     getVisitAreaTimingState(item.visit.id)
   ]);
   const administrationAreaTiming =

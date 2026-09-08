@@ -5,6 +5,7 @@ import { appendAuditEvent } from "@/modules/audit/service";
 import { getPurchaseDocumentById } from "@/modules/database/queries/purchases";
 import { getCurrentInternalUser } from "@/modules/permissions";
 import { readPurchaseDocument } from "@/modules/purchase-documents/storage";
+import { getBranchContext } from "@/features/branches/context";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,11 @@ export async function GET(
     });
     return NextResponse.json({ error: "No tienes permiso." }, { status: 403 });
   }
-  const document = await getPurchaseDocumentById(documentId);
+  const { activeBranch } = await getBranchContext(user);
+  const document = await getPurchaseDocumentById(
+    documentId,
+    activeBranch.code
+  );
   if (!document) {
     return NextResponse.json({ error: "Documento no encontrado." }, { status: 404 });
   }

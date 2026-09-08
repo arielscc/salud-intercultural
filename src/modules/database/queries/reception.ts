@@ -21,7 +21,7 @@ import { recordDuplicateCandidatesInTransaction } from "@/modules/database/queri
 export type ReceptionIntakeRecordInput = {
   idempotencyKey?: string;
   userId?: string;
-  branchCode?: string;
+  branchCode: string;
   patientId?: string;
   patient: {
     fullName: string;
@@ -190,7 +190,7 @@ const dashboardRouteAreas: PatientRouteArea[] = [
   "cierre"
 ];
 
-export async function getReceptionDashboardSummary(date = new Date(), branchCode?: string) {
+export async function getReceptionDashboardSummary(branchCode: string, date = new Date()) {
   const day = dayRange(date);
 
   return withDatabaseError("getReceptionDashboardSummary", async () => {

@@ -75,8 +75,10 @@ export default async function SigecoDashboardPage() {
     roleHasPermission(user.role, "inventory_read");
 
   const [receptionSummary, followUpSummary, inventorySummary] = await Promise.all([
-    canSeeReception ? getReceptionDashboardSummary(new Date(), activeBranch.code) : null,
-    canSeeFollowUps ? getFollowUpWorkSummary(undefined, user.role) : null,
+    canSeeReception ? getReceptionDashboardSummary(activeBranch.code) : null,
+    canSeeFollowUps
+      ? getFollowUpWorkSummary(activeBranch.code, undefined, user.role)
+      : null,
     canSeeInventory ? getInventorySummary(activeBranch.code) : null
   ]);
 

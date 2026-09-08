@@ -58,6 +58,7 @@ describe("patients and visits integration", () => {
     });
 
     const visit = await createVisitRecord({
+      branchCode: "el-alto",
       idempotencyKey: "visit-mobile-retry",
       patientId: patient.id,
       userId: user.id,
@@ -65,6 +66,7 @@ describe("patients and visits integration", () => {
       note: "Llego sin cita"
     });
     const retriedVisit = await createVisitRecord({
+      branchCode: "el-alto",
       idempotencyKey: "visit-mobile-retry",
       patientId: patient.id,
       userId: user.id,
@@ -121,6 +123,7 @@ describe("alta mínima de cliente de mostrador", () => {
     });
 
     const visit = await createVisitRecord({
+      branchCode: "el-alto",
       patientId: client.id,
       reason: "Primera atención"
     });

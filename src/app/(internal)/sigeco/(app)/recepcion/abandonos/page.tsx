@@ -26,6 +26,7 @@ import { getVisitDiscontinuationReport } from "@/modules/database/queries/visit-
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 type VisitDiscontinuationReportPageProps = {
   searchParams: Promise<{
@@ -71,6 +72,7 @@ export default async function VisitDiscontinuationReportPage({
     module: "recepcion"
   });
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext(user);
   const canOpenFollowUps = canUse(user.role, moduleAccess, "followups_read");
   const params = await searchParams;
   const reason = visitDiscontinuationReasonOptions.some(
@@ -80,6 +82,7 @@ export default async function VisitDiscontinuationReportPage({
     : undefined;
   const range = dateOnlyRange(params.desde, params.hasta);
   const report = await getVisitDiscontinuationReport({
+    branchCode: activeBranch.code,
     reason,
     occurredFrom: range.start,
     occurredTo: range.end

@@ -25,7 +25,10 @@ async function prepareCompletedVisit() {
       email: "marlen.reminders@test.invalid",
       name: "Marlen Recepción QA",
       passwordHash: await hashPassword("clave-segura-recordatorios-123"),
-      role: "recepcion"
+      role: "recepcion",
+      branchAssignments: {
+        create: { branchCode: "el-alto", isDefault: true }
+      }
     }
   });
   const patient = await createPatientRecord({
@@ -41,6 +44,7 @@ async function prepareCompletedVisit() {
     recordedById: user.id
   });
   const visit = await createVisitRecord({
+    branchCode: "el-alto",
     patientId: patient.id,
     userId: user.id,
     reason: "Consulta de prueba de recordatorios"
@@ -51,6 +55,7 @@ async function prepareCompletedVisit() {
     data: { status: "completed", completedAt }
   });
   await saveReminderRuleVersion({
+    branchCode: "el-alto",
     createdById: user.id,
     data: {
       name: "Control después de consulta",
@@ -76,20 +81,24 @@ describe("supervised reminder integration", () => {
   it("generates once and creates one follow-up only after human approval", async () => {
     const { user } = await prepareCompletedVisit();
     const first = await generateSupervisedReminderCandidates({
+      branchCode: "el-alto",
       generatedById: user.id,
       now: new Date("2026-08-02T14:00:00.000Z")
     });
     const second = await generateSupervisedReminderCandidates({
+      branchCode: "el-alto",
       generatedById: user.id,
       now: new Date("2026-08-02T14:00:00.000Z")
     });
     const candidate = await prisma.supervisedReminderCandidate.findFirstOrThrow();
 
     const approved = await reviewSupervisedReminderCandidate({
+      branchCode: "el-alto",
       data: { candidateId: candidate.id, action: "approve" },
       reviewedById: user.id
     });
     const approvedAgain = await reviewSupervisedReminderCandidate({
+      branchCode: "el-alto",
       data: { candidateId: candidate.id, action: "approve" },
       reviewedById: user.id
     });
@@ -105,6 +114,7 @@ describe("supervised reminder integration", () => {
   it("rechecks consent on approval and keeps the blocked review visible", async () => {
     const { user, patient } = await prepareCompletedVisit();
     await generateSupervisedReminderCandidates({
+      branchCode: "el-alto",
       generatedById: user.id,
       now: new Date("2026-08-02T14:00:00.000Z")
     });
@@ -119,6 +129,7 @@ describe("supervised reminder integration", () => {
     });
 
     const reviewed = await reviewSupervisedReminderCandidate({
+      branchCode: "el-alto",
       data: { candidateId: candidate.id, action: "approve" },
       reviewedById: user.id
     });

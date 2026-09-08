@@ -1251,9 +1251,11 @@ export async function countInventoryLots(input: {
   );
 }
 
-export async function getPurchaseDocumentById(id: string) {
+export async function getPurchaseDocumentById(id: string, branchCode: string) {
   return withDatabaseError("getPurchaseDocumentById", () =>
-    prisma.purchaseDocument.findUnique({ where: { id } })
+    prisma.purchaseDocument.findFirst({
+      where: { id, purchase: { branchCode } }
+    })
   );
 }
 

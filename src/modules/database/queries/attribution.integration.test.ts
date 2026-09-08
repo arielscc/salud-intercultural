@@ -86,6 +86,7 @@ describe("capture attribution integration", () => {
       where: { code: "TIKTOK-DR" }
     });
     const created = await createReceptionIntake({
+      branchCode: "el-alto",
       patient: {
         fullName: "Paciente atribución",
         phone: "70000088",

@@ -35,6 +35,7 @@ export class SupervisedReminderError extends Error {
   constructor(
     public readonly code:
       | "INVALID_OWNER"
+      | "BRANCH_MISMATCH"
       | "CANDIDATE_NOT_REVIEWABLE"
       | "CONSENT_BLOCKED"
       | "RULE_KEY_ALREADY_EXISTS"
@@ -45,6 +46,7 @@ export class SupervisedReminderError extends Error {
 }
 
 export async function saveReminderRuleVersion(input: {
+  branchCode: string;
   data: RuleVersionInput;
   createdById: string;
 }) {
@@ -55,7 +57,8 @@ export async function saveReminderRuleVersion(input: {
           where: {
             id: input.data.ownerId,
             active: true,
-            role: "recepcion"
+            role: "recepcion",
+            branchAssignments: { some: { branchCode: input.branchCode } }
           },
           select: { id: true }
         });
@@ -63,22 +66,24 @@ export async function saveReminderRuleVersion(input: {
 
         let rule: { id: string; key: string };
         if (input.data.ruleId) {
-          rule = await tx.supervisedReminderRule.findUniqueOrThrow({
-            where: { id: input.data.ruleId },
+          rule = await tx.supervisedReminderRule.findFirstOrThrow({
+            where: { id: input.data.ruleId, branchCode: input.branchCode },
             select: { id: true, key: true }
           });
         } else {
           const key = normalizeReminderRuleKey(input.data.name);
           if (!key) throw new SupervisedReminderError("RULE_KEY_ALREADY_EXISTS");
           const existing = await tx.supervisedReminderRule.findUnique({
-            where: { key },
+            where: {
+              branchCode_key: { branchCode: input.branchCode, key }
+            },
             select: { id: true }
           });
           if (existing) {
             throw new SupervisedReminderError("RULE_KEY_ALREADY_EXISTS");
           }
           rule = await tx.supervisedReminderRule.create({
-            data: { key },
+            data: { branchCode: input.branchCode, key },
             select: { id: true, key: true }
           });
         }
@@ -117,9 +122,10 @@ export async function saveReminderRuleVersion(input: {
   );
 }
 
-export async function getSupervisedReminderRules() {
+export async function getSupervisedReminderRules(branchCode: string) {
   return withDatabaseError("getSupervisedReminderRules", async () =>
     prisma.supervisedReminderRule.findMany({
+      where: { branchCode },
       include: {
         activeVersion: {
           include: {
@@ -133,10 +139,14 @@ export async function getSupervisedReminderRules() {
   );
 }
 
-export async function getReminderRuleOwners() {
+export async function getReminderRuleOwners(branchCode: string) {
   return withDatabaseError("getReminderRuleOwners", async () =>
     prisma.internalUser.findMany({
-      where: { active: true, role: "recepcion" },
+      where: {
+        active: true,
+        role: "recepcion",
+        branchAssignments: { some: { branchCode } }
+      },
       select: { id: true, name: true, email: true },
       orderBy: [{ name: "asc" }, { email: "asc" }]
     })
@@ -164,6 +174,7 @@ async function sourcesForRule(
     followUpType: FollowUpType;
     lookbackDays: number;
   },
+  branchCode: string,
   now: Date
 ): Promise<ReminderSource[]> {
   const from = new Date(
@@ -180,6 +191,7 @@ async function sourcesForRule(
   if (version.event === "visit_completed") {
     const rows = await tx.visit.findMany({
       where: {
+        branchCode,
         isTestData: false,
         status: "completed",
         completedAt: { gte: from, lte: now },
@@ -213,6 +225,7 @@ async function sourcesForRule(
         supersededBy: null,
         decidedAt: { gte: from, lte: now },
         visit: {
+          branchCode,
           isTestData: false,
           followUpTasks: { none: { type: version.followUpType } }
         }
@@ -243,6 +256,7 @@ async function sourcesForRule(
       occurredAt: { gte: from, lte: now },
       followUpTaskId: null,
       visit: {
+        branchCode,
         isTestData: false,
         followUpTasks: { none: { type: version.followUpType } }
       }
@@ -281,6 +295,7 @@ function consentBlockReason(
 }
 
 export async function generateSupervisedReminderCandidates(input: {
+  branchCode: string;
   generatedById: string;
   now?: Date;
 }) {
@@ -289,7 +304,10 @@ export async function generateSupervisedReminderCandidates(input: {
       async (tx) => {
         const now = input.now ?? new Date();
         const rules = await tx.supervisedReminderRule.findMany({
-          where: { activeVersion: { is: { enabled: true } } },
+          where: {
+            branchCode: input.branchCode,
+            activeVersion: { is: { enabled: true } }
+          },
           include: { activeVersion: true }
         });
         let discovered = 0;
@@ -299,7 +317,12 @@ export async function generateSupervisedReminderCandidates(input: {
         for (const rule of rules) {
           const version = rule.activeVersion;
           if (!version) continue;
-          const sources = await sourcesForRule(tx, version, now);
+          const sources = await sourcesForRule(
+            tx,
+            version,
+            input.branchCode,
+            now
+          );
           discovered += sources.length;
           for (const source of sources) {
             const blockReason = consentBlockReason(source, version.channel);
@@ -371,6 +394,7 @@ export async function generateSupervisedReminderCandidates(input: {
 }
 
 export async function reviewSupervisedReminderCandidate(input: {
+  branchCode: string;
   data: CandidateReviewInput;
   reviewedById: string;
 }) {
@@ -382,9 +406,13 @@ export async function reviewSupervisedReminderCandidate(input: {
           include: {
             ruleVersion: true,
             patient: { include: { consents: currentFollowUpConsent } },
+            visit: { select: { branchCode: true } },
             task: true
           }
         });
+        if (candidate.visit?.branchCode !== input.branchCode) {
+          throw new SupervisedReminderError("BRANCH_MISMATCH");
+        }
         const now = new Date();
         if (input.data.action === "approve") {
           if (candidate.status === "approved" && candidate.task) {
@@ -440,6 +468,7 @@ export async function reviewSupervisedReminderCandidate(input: {
             candidate.task ??
             (await tx.followUpTask.create({
               data: {
+                branchCode: input.branchCode,
                 patientId: candidate.patientId,
                 visitId: candidate.visitId,
                 assignedToId: candidate.ruleVersion.ownerId,
@@ -547,12 +576,16 @@ export async function reviewSupervisedReminderCandidate(input: {
 }
 
 export async function getSupervisedReminderCandidates(input: {
+  branchCode: string;
   status?: "pending_review" | "approved" | "blocked" | "dismissed" | "failed";
   take?: number;
-} = {}) {
+}) {
   return withDatabaseError("getSupervisedReminderCandidates", async () =>
     prisma.supervisedReminderCandidate.findMany({
-      where: { status: input.status },
+      where: {
+        status: input.status,
+        visit: { branchCode: input.branchCode }
+      },
       include: {
         patient: {
           select: {
@@ -577,10 +610,11 @@ export async function getSupervisedReminderCandidates(input: {
   );
 }
 
-export async function getSupervisedReminderSummary() {
+export async function getSupervisedReminderSummary(branchCode: string) {
   return withDatabaseError("getSupervisedReminderSummary", async () => {
     const grouped = await prisma.supervisedReminderCandidate.groupBy({
       by: ["status"],
+      where: { visit: { branchCode } },
       _count: { _all: true }
     });
     return Object.fromEntries(

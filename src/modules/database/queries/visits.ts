@@ -62,7 +62,7 @@ export type CreateVisitRecordInput = {
   idempotencyKey?: string;
   patientId: string;
   userId?: string;
-  branchCode?: string;
+  branchCode: string;
   reason?: string;
   note?: string;
   intakeType?: VisitIntakeType;

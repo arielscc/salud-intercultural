@@ -98,6 +98,7 @@ describe("sales integration", () => {
       idempotencyKey: "sales-test-cash-session"
     });
     const visit = await createVisitRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       userId: admin.id,
       reason: "Administrar tratamiento"
@@ -159,7 +160,7 @@ describe("sales integration", () => {
       reference: "QR-001"
     });
 
-    const detail = await getSaleById(sale.id);
+    const detail = await getSaleById(sale.id, "el-alto");
     const summary = await getSalesSummary();
     const patientDetail = await getPatientById(patient.id);
 
@@ -270,7 +271,7 @@ describe("venta de mostrador sin visita", () => {
       receivedById: admin.id
     });
 
-    const stored = await getSaleById(sale.id);
+    const stored = await getSaleById(sale.id, "el-alto");
     expect(stored?.status).toBe("paid");
     expect(stored?.balanceCents).toBe(0);
 
@@ -379,7 +380,7 @@ describe("listado de ventas", () => {
     const { anaSale } = await salesFixture();
 
     const listed = (await getSalesPage({ search: "Ana" }))[0];
-    const detail = await getSaleById(anaSale.id);
+    const detail = await getSaleById(anaSale.id, "el-alto");
 
     expect(listed?.totalCents).toBe(detail?.totalCents);
     expect(listed?.balanceCents).toBe(detail?.balanceCents);

@@ -28,7 +28,11 @@ async function createVisitInReception() {
     phone: "70000001"
   });
 
-  return createVisitRecord({ patientId: patient.id, reason: "Dolor de cabeza" });
+  return createVisitRecord({
+    branchCode: "el-alto",
+    patientId: patient.id,
+    reason: "Dolor de cabeza"
+  });
 }
 
 async function getVisitTrace(visitId: string) {

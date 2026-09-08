@@ -4,6 +4,7 @@ import { appendAuditEvent } from "@/modules/audit/service";
 import { getSaleById } from "@/modules/database/queries/sales";
 import { createThermalReceiptPdf } from "@/modules/sales/thermal-receipt";
 import { getCurrentInternalUser } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,8 @@ export async function GET(
     return NextResponse.json({ error: "No tienes permiso." }, { status: 403 });
   }
 
-  const sale = await getSaleById(saleId);
+  const { activeBranch } = await getBranchContext(user);
+  const sale = await getSaleById(saleId, activeBranch.code);
   if (!sale) {
     return NextResponse.json({ error: "Venta no encontrada." }, { status: 404 });
   }

@@ -14,6 +14,7 @@ import {
 } from "@/components/internal/ui/RecordList";
 import { Table, Td, Th, Tr } from "@/components/internal/ui/Table";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 import { formatMoney, saleStatusLabels } from "@/features/sales/labels";
 import { formatDateTime } from "@/lib/dates";
 import { getModuleAccessState } from "@/features/modules/request-state";
@@ -37,12 +38,13 @@ const emptySalesMessage = (
 export default async function AdministrationClientPage({ params }: ClientPageProps) {
   const user = await requirePermission("patients_read", { module: "administracion" });
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext(user);
   const { id } = await params;
   const client = await getWalkInClientById(id);
 
   if (!client) notFound();
 
-  const sales = await getPatientSales(client.id);
+  const sales = await getPatientSales(client.id, activeBranch.code);
   // La ficha completa vive en Recepción: solo se ofrece cuando ese módulo está
   // lanzado y quien mira puede abrirla.
   const canCreateSale = canUse(user.role, moduleAccess, "sales_write");

@@ -41,6 +41,7 @@ import {
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 type ReminderPageProps = {
   searchParams: Promise<{
@@ -85,6 +86,7 @@ export default async function SupervisedRemindersPage({
   searchParams
 }: ReminderPageProps) {
   const user = await requirePermission("followups_read");
+  const { activeBranch } = await getBranchContext(user);
   const moduleAccess = await getModuleAccessState();
   const query = await searchParams;
   const status = statuses.includes(query.estado as SupervisedReminderCandidateStatus)
@@ -93,10 +95,13 @@ export default async function SupervisedRemindersPage({
   const canReview = canUse(user.role, moduleAccess, "reminders_review");
   const canManage = canUse(user.role, moduleAccess, "reminder_rules_manage");
   const [candidates, summary, rules, owners] = await Promise.all([
-    getSupervisedReminderCandidates({ status }),
-    getSupervisedReminderSummary(),
-    getSupervisedReminderRules(),
-    getReminderRuleOwners()
+    getSupervisedReminderCandidates({
+      branchCode: activeBranch.code,
+      status
+    }),
+    getSupervisedReminderSummary(activeBranch.code),
+    getSupervisedReminderRules(activeBranch.code),
+    getReminderRuleOwners(activeBranch.code)
   ]);
 
   return (

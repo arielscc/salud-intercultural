@@ -35,7 +35,8 @@ describe("area time events integration", () => {
       fullName: "Paciente de tiempos",
       phone: "70000009"
     });
-    const visit = await createVisitRecord({
+  const visit = await createVisitRecord({
+    branchCode: "el-alto",
       patientId: patient.id,
       userId: user.id,
       reason: "Medición de atención"

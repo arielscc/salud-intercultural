@@ -14,6 +14,7 @@ import {
 import { formatDateTime } from "@/lib/dates";
 import { getClinicalConsultationVersionHistory } from "@/modules/database/queries/clinical-records";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 type ClinicalHistoryPageProps = {
   params: Promise<{ visitId: string }>;
@@ -52,9 +53,13 @@ export default async function ClinicalHistoryPage({
   params,
   searchParams
 }: ClinicalHistoryPageProps) {
-  await requirePermission("clinical_read");
+  const user = await requirePermission("clinical_read");
+  const { activeBranch } = await getBranchContext(user);
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
-  const consultation = await getClinicalConsultationVersionHistory(visitId);
+  const consultation = await getClinicalConsultationVersionHistory(
+    visitId,
+    activeBranch.code
+  );
   if (!consultation) notFound();
 
   // Los guardados de borrador no cuentan como registro: solo se listan y comparan

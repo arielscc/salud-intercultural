@@ -41,6 +41,7 @@ function nextDecisionFollowUpAt(now = new Date()) {
 async function createTreatmentDecisionFollowUp(
   tx: Prisma.TransactionClient,
   input: {
+    branchCode: string;
     patientId: string;
     visitId: string;
     doctorId: string;
@@ -61,12 +62,14 @@ async function createTreatmentDecisionFollowUp(
     where: {
       active: true,
       role: "recepcion",
+      branchAssignments: { some: { branchCode: input.branchCode } },
       name: { contains: "Marlen", mode: "insensitive" }
     },
     orderBy: { createdAt: "asc" }
   });
   const task = await tx.followUpTask.create({
     data: {
+      branchCode: input.branchCode,
       patientId: input.patientId,
       visitId: input.visitId,
       assignedToId: marlen?.id,
@@ -161,6 +164,7 @@ export async function recordTreatmentProposalOutcome(
           administrationOrderId = order.id;
         } else if (input.status === "needs_time") {
           const followUp = await createTreatmentDecisionFollowUp(tx, {
+            branchCode: visit.branchCode,
             patientId: visit.patientId,
             visitId: visit.id,
             doctorId: input.doctorId,

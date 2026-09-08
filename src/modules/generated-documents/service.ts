@@ -410,10 +410,13 @@ export async function generateInternalReceiptDocument(input: {
   });
 }
 
-export async function getGeneratedDocument(id: string) {
+export async function getGeneratedDocument(id: string, branchCode: string) {
   return withDatabaseError("getGeneratedDocument", async () => {
-    const document = await prisma.generatedDocument.findUnique({
-      where: { id },
+    const document = await prisma.generatedDocument.findFirst({
+      where: {
+        id,
+        OR: [{ visit: { branchCode } }, { sale: { branchCode } }]
+      },
       include: {
         generatedBy: { select: { id: true, name: true, email: true } }
       }
@@ -426,10 +429,10 @@ export async function getGeneratedDocument(id: string) {
   });
 }
 
-export async function getPrescriptionDocuments(visitId: string) {
+export async function getPrescriptionDocuments(visitId: string, branchCode: string) {
   return withDatabaseError("getPrescriptionDocuments", () =>
     prisma.generatedDocument.findMany({
-      where: { kind: "prescription", visitId },
+      where: { kind: "prescription", visitId, visit: { branchCode } },
       orderBy: { version: "desc" }
     })
   );
@@ -485,10 +488,14 @@ export async function restoreGeneratedDocument(input: { documentId: string }) {
   });
 }
 
-export async function getSaleReceiptDocuments(saleId: string) {
+export async function getSaleReceiptDocuments(saleId: string, branchCode: string) {
   return withDatabaseError("getSaleReceiptDocuments", () =>
     prisma.generatedDocument.findMany({
-      where: { kind: "internal_sale_receipt", saleId },
+      where: {
+        kind: "internal_sale_receipt",
+        saleId,
+        sale: { branchCode }
+      },
       orderBy: { version: "desc" }
     })
   );

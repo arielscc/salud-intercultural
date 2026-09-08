@@ -36,6 +36,7 @@ export class FollowUpWorkflowError extends Error {
       | "TASK_ALREADY_CLOSED"
       | "RESULT_NOT_ALLOWED"
       | "ROLE_NOT_ALLOWED"
+      | "BRANCH_MISMATCH"
       | "NEXT_DUE_AT_REQUIRED"
   ) {
     super(code);
@@ -62,6 +63,7 @@ function followUpVisibilityWhere(role?: InternalRole): Prisma.FollowUpTaskWhereI
 async function resolveFollowUpAssignee(
   tx: Prisma.TransactionClient,
   input: {
+    branchCode: string;
     type: FollowUpType;
     requestedAssigneeId?: string;
     createdById?: string;
@@ -69,7 +71,11 @@ async function resolveFollowUpAssignee(
 ) {
   if (input.type === "doctor_call") {
     const doctor = await tx.internalUser.findFirst({
-      where: { active: true, role: "medico" },
+      where: {
+        active: true,
+        role: "medico",
+        branchAssignments: { some: { branchCode: input.branchCode } }
+      },
       orderBy: [{ name: "asc" }, { createdAt: "asc" }]
     });
     return doctor?.id;
@@ -80,6 +86,7 @@ async function resolveFollowUpAssignee(
       where: {
         active: true,
         role: "recepcion",
+        branchAssignments: { some: { branchCode: input.branchCode } },
         name: { contains: "Marlen", mode: "insensitive" }
       },
       orderBy: { createdAt: "asc" }
@@ -93,7 +100,8 @@ async function resolveFollowUpAssignee(
     where: {
       id: requestedId,
       active: true,
-      role: { in: ["recepcion", "administracion"] }
+      role: { in: ["recepcion", "administracion"] },
+      branchAssignments: { some: { branchCode: input.branchCode } }
     },
     select: { id: true }
   });
@@ -101,6 +109,7 @@ async function resolveFollowUpAssignee(
 }
 
 export async function createFollowUpTaskRecord(input: {
+  branchCode: string;
   leadId?: string;
   patientId?: string;
   visitId?: string;
@@ -123,6 +132,7 @@ export async function createFollowUpTaskRecord(input: {
       const type = input.type ?? "administrative";
       const initialStatus = input.status ?? "pending";
       const assignedToId = await resolveFollowUpAssignee(tx, {
+        branchCode: input.branchCode,
         type,
         requestedAssigneeId: input.assignedToId,
         createdById: input.createdById
@@ -134,6 +144,40 @@ export async function createFollowUpTaskRecord(input: {
           input.priority === "normal")
           ? "high"
           : (input.priority ?? "normal");
+      const [visitMatches, saleMatches, orderMatches, workItemMatches] =
+        await Promise.all([
+          input.visitId
+            ? tx.visit.count({
+                where: { id: input.visitId, branchCode: input.branchCode }
+              })
+            : 1,
+          input.saleId
+            ? tx.sale.count({
+                where: { id: input.saleId, branchCode: input.branchCode }
+              })
+            : 1,
+          input.clinicalOrderId
+            ? tx.clinicalOrder.count({
+                where: {
+                  id: input.clinicalOrderId,
+                  visit: { branchCode: input.branchCode }
+                }
+              })
+            : 1,
+          input.workItemId
+            ? tx.visitWorkItem.count({
+                where: {
+                  id: input.workItemId,
+                  visit: { branchCode: input.branchCode }
+                }
+              })
+            : 1
+        ]);
+      if (
+        ![visitMatches, saleMatches, orderMatches, workItemMatches].every(Boolean)
+      ) {
+        throw new FollowUpWorkflowError("BRANCH_MISMATCH");
+      }
       const task = await tx.followUpTask.create({
         data: {
           ...input,
@@ -160,6 +204,7 @@ export async function createFollowUpTaskRecord(input: {
 }
 
 export type FollowUpTaskFilters = {
+  branchCode: string;
   filter?: "overdue" | "today" | "upcoming" | "all";
   status?: FollowUpLifecycleStatus;
   assignedToId?: string;
@@ -174,6 +219,7 @@ function buildFollowUpTaskWhere(
 ): Prisma.FollowUpTaskWhereInput {
   const today = dayRange();
   return {
+    branchCode: input.branchCode,
     ...followUpVisibilityWhere(input.viewerRole),
     // Los que esperan pago no entran a la bandeja hasta activarse al cobrar.
     status:
@@ -194,7 +240,7 @@ function buildFollowUpTaskWhere(
 }
 
 export async function getFollowUpTasks(
-  input: PaginationInput & FollowUpTaskFilters = {}
+  input: PaginationInput & FollowUpTaskFilters
 ) {
   const pagination = getPagination(input);
 
@@ -225,7 +271,7 @@ export async function getFollowUpTasks(
 }
 
 export async function getFollowUpTaskCount(
-  input: FollowUpTaskFilters = {}
+  input: FollowUpTaskFilters
 ) {
   return withDatabaseError("getFollowUpTaskCount", async () => {
     return prisma.followUpTask.count({
@@ -236,11 +282,12 @@ export async function getFollowUpTaskCount(
 
 export async function getFollowUpTaskById(
   id: string,
+  branchCode: string,
   viewerRole?: InternalRole
 ) {
   return withDatabaseError("getFollowUpTaskById", async () => {
     return prisma.followUpTask.findFirst({
-      where: { id, ...followUpVisibilityWhere(viewerRole) },
+      where: { id, branchCode, ...followUpVisibilityWhere(viewerRole) },
       include: {
         lead: true,
         patient: {
@@ -279,6 +326,7 @@ export async function getFollowUpTaskById(
 
 export async function createFollowUpAttemptRecord(input: {
   taskId: string;
+  branchCode: string;
   userId?: string;
   method: FollowUpAttemptMethod;
   result: FollowUpResult;
@@ -288,8 +336,8 @@ export async function createFollowUpAttemptRecord(input: {
 }) {
   return withDatabaseError("createFollowUpAttemptRecord", async () => {
     return prisma.$transaction(async (tx) => {
-      const task = await tx.followUpTask.findUniqueOrThrow({
-        where: { id: input.taskId },
+      const task = await tx.followUpTask.findFirstOrThrow({
+        where: { id: input.taskId, branchCode: input.branchCode },
         include: {
           patient: {
             include: {
@@ -383,11 +431,13 @@ export async function createFollowUpAttemptRecord(input: {
         followUpResultCreatesDoctorCall(input.result)
       ) {
         const assignedToId = await resolveFollowUpAssignee(tx, {
+          branchCode: task.branchCode,
           type: "doctor_call",
           createdById: input.userId
         });
         escalatedTask = await tx.followUpTask.create({
           data: {
+            branchCode: task.branchCode,
             patientId: task.patientId,
             visitId: task.visitId,
             saleId: task.saleId,
@@ -422,10 +472,10 @@ export async function createFollowUpAttemptRecord(input: {
   });
 }
 
-export async function getFollowUpTimelineForPatient(patientId: string) {
+export async function getFollowUpTimelineForPatient(patientId: string, branchCode: string) {
   return withDatabaseError("getFollowUpTimelineForPatient", async () => {
     return prisma.followUpTask.findMany({
-      where: { patientId },
+      where: { patientId, branchCode },
       include: {
         assignedTo: true,
         attempts: {
@@ -440,6 +490,7 @@ export async function getFollowUpTimelineForPatient(patientId: string) {
 }
 
 export async function getFollowUpWorkSummary(
+  branchCode: string,
   userId?: string,
   viewerRole?: InternalRole
 ) {
@@ -450,6 +501,7 @@ export async function getFollowUpWorkSummary(
     const [overdue, todayCount, upcoming] = await Promise.all([
       prisma.followUpTask.count({
         where: {
+          branchCode,
           ...whereUser,
           ...visibility,
           status: "pending",
@@ -458,6 +510,7 @@ export async function getFollowUpWorkSummary(
       }),
       prisma.followUpTask.count({
         where: {
+          branchCode,
           ...whereUser,
           ...visibility,
           status: "pending",
@@ -466,6 +519,7 @@ export async function getFollowUpWorkSummary(
       }),
       prisma.followUpTask.count({
         where: {
+          branchCode,
           ...whereUser,
           ...visibility,
           status: "pending",
@@ -478,14 +532,17 @@ export async function getFollowUpWorkSummary(
   });
 }
 
-export async function getFollowUpAssignees(viewerRole?: InternalRole) {
+export async function getFollowUpAssignees(branchCode: string, viewerRole?: InternalRole) {
   return withDatabaseError("getFollowUpAssignees", async () => {
     return prisma.internalUser.findMany({
       where: {
         active: true,
-        assignedFollowUps: {
-          some: followUpVisibilityWhere(viewerRole)
-        }
+        role: viewerRole === "administracion"
+          ? "administracion"
+          : viewerRole === "medico"
+            ? "medico"
+            : { in: ["recepcion", "administracion", "medico", "super_admin"] },
+        branchAssignments: { some: { branchCode } }
       },
       select: { id: true, name: true, email: true, role: true },
       orderBy: [{ name: "asc" }, { email: "asc" }]

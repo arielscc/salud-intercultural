@@ -6,6 +6,7 @@ import {
 } from "@/modules/generated-documents/service";
 import { createGeneratedDocumentPdf } from "@/modules/generated-documents/pdf";
 import { getCurrentInternalUser } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,8 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
   }
-  const document = await getGeneratedDocument(documentId);
+  const { activeBranch } = await getBranchContext(user);
+  const document = await getGeneratedDocument(documentId, activeBranch.code);
   if (!document) {
     return NextResponse.json({ error: "Documento no encontrado." }, { status: 404 });
   }

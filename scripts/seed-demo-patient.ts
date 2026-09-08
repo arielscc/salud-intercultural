@@ -555,6 +555,7 @@ async function main() {
 
       const v1FollowUp = await tx.followUpTask.create({
         data: {
+          branchCode: "el-alto",
           patientId: patient.id,
           visitId: v1.visit.id,
           assignedToId: userId,
@@ -759,6 +760,7 @@ async function main() {
 
       const v3FollowUp = await tx.followUpTask.create({
         data: {
+          branchCode: "el-alto",
           patientId: patient.id,
           visitId: v3.visit.id,
           assignedToId: userId,
@@ -1175,6 +1177,7 @@ async function main() {
 
       await tx.followUpTask.create({
         data: {
+          branchCode: "el-alto",
           patientId: patient.id,
           visitId: v5.visit.id,
           assignedToId: userId,

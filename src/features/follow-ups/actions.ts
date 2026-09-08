@@ -21,6 +21,7 @@ import {
 } from "@/features/follow-ups/schemas/follow-up.schema";
 import { canRoleCreateFollowUpType } from "@/features/follow-ups/policy";
 import { followUpTypeLabels } from "@/features/follow-ups/labels";
+import { getBranchContext } from "@/features/branches/context";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -36,6 +37,7 @@ export async function createFollowUpTaskAction(formData: FormData) {
       context: { patientId: patientId || undefined }
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = createFollowUpTaskSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -47,6 +49,7 @@ export async function createFollowUpTaskAction(formData: FormData) {
 
       const created = await createFollowUpTaskRecord({
         ...parsed.data,
+        branchCode: activeBranch.code,
         createdById: user.id,
         assignedToId: parsed.data.assignedToId ?? user.id
       });
@@ -79,6 +82,7 @@ export async function createDoctorVisitFollowUpAction(formData: FormData) {
       context: { visitId: visitId || undefined }
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       // El seguimiento agendado por el médico es solo para el médico (super_admin
       // también). Recepción/otros usan su propio flujo.
       if (user.role !== "medico" && user.role !== "super_admin") {
@@ -100,6 +104,7 @@ export async function createDoctorVisitFollowUpAction(formData: FormData) {
       // Recepción lo verá solo cuando el paciente pague el tratamiento (la venta
       // de la visita se activa al quedar saldada).
       const created = await createFollowUpTaskRecord({
+        branchCode: activeBranch.code,
         patientId: parsed.data.patientId,
         visitId: parsed.data.visitId,
         type: parsed.data.type,
@@ -139,6 +144,7 @@ export async function createFollowUpAttemptAction(formData: FormData) {
       entityId: taskId || undefined
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = createFollowUpAttemptSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -150,6 +156,7 @@ export async function createFollowUpAttemptAction(formData: FormData) {
       try {
         result = await createFollowUpAttemptRecord({
           ...parsed.data,
+          branchCode: activeBranch.code,
           userId: user.id
         });
       } catch (error) {

@@ -70,6 +70,7 @@ describe("clinical care integration", () => {
     });
 
     const visit = await createVisitRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       userId: doctor.id,
       reason: "Dolor general"
@@ -147,6 +148,7 @@ describe("clinical care integration", () => {
       captureSource: "whatsapp"
     });
     const visit = await createVisitRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       userId: doctor.id,
       reason: "Dolor abdominal"
@@ -287,6 +289,7 @@ describe("clinical care integration", () => {
       captureSource: "whatsapp"
     });
     const visit = await createVisitRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       userId: doctor.id,
       reason: "Control"

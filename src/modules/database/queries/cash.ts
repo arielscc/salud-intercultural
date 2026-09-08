@@ -472,10 +472,13 @@ export async function getCashExpenseByIdempotencyKey(
   );
 }
 
-export async function getCashExpenseReceipt(expenseId: string) {
+export async function getCashExpenseReceipt(
+  expenseId: string,
+  branchCode: string
+) {
   return withDatabaseError("getCashExpenseReceipt", async () =>
-    prisma.cashExpense.findUnique({
-      where: { id: expenseId },
+    prisma.cashExpense.findFirst({
+      where: { id: expenseId, cashSession: { branchCode } },
       select: {
         id: true,
         receiptStorageKey: true,

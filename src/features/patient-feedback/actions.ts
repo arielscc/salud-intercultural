@@ -20,6 +20,7 @@ import {
   PatientFeedbackError,
   updatePatientFeedbackCase
 } from "@/modules/database/queries/patient-feedback";
+import { getBranchContext } from "@/features/branches/context";
 
 const feedbackPath = "/sigeco/opiniones";
 
@@ -52,9 +53,11 @@ export async function createFeedbackRequestAction(
         entityType: "patient_feedback_request"
       },
       async (user) => {
+        const { activeBranch } = await getBranchContext(user);
         const created = await createPatientFeedbackRequest({
           data: parsed.data,
           createdById: user.id,
+          branchCode: activeBranch.code,
           tokenHash: hashFeedbackAccessToken(token)
         });
         return auditedResult(created, {
@@ -103,13 +106,15 @@ export async function updateFeedbackCaseAction(formData: FormData) {
       entityId: caseId || undefined
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = updateFeedbackCaseSchema.safeParse(
         Object.fromEntries(formData.entries())
       );
       if (!parsed.success) redirect(`${feedbackPath}?error=invalid-case`);
       const updated = await updatePatientFeedbackCase({
         data: parsed.data,
-        actorId: user.id
+        actorId: user.id,
+        branchCode: activeBranch.code
       });
       return auditedResult(updated, {
         entityId: updated.id,
@@ -138,8 +143,12 @@ export async function cancelFeedbackRequestAction(formData: FormData) {
       entityType: "patient_feedback_request",
       entityId: parsed.data.requestId
     },
-    async () => {
-      const cancelled = await cancelPatientFeedbackRequest({ data: parsed.data });
+    async (user) => {
+      const { activeBranch } = await getBranchContext(user);
+      const cancelled = await cancelPatientFeedbackRequest({
+        data: parsed.data,
+        branchCode: activeBranch.code
+      });
       return auditedResult(cancelled, {
         entityId: cancelled.id,
         context: { status: cancelled.status }

@@ -859,6 +859,8 @@ model ClinicBranch {
   outgoingTransfers    InventoryTransfer[]      @relation("InventoryTransferSourceBranch")
   incomingTransfers    InventoryTransfer[]      @relation("InventoryTransferDestinationBranch")
   moduleActivations    ModuleActivation[]
+  followUpTasks        FollowUpTask[]
+  supervisedReminderRules SupervisedReminderRule[]
 
   @@index([status, name])
 }
@@ -2305,6 +2307,7 @@ model CashExpenseBeneficiary {
 
 model FollowUpTask {
   id                            String                       @id @default(cuid())
+  branchCode                    String
   leadId                        String?
   patientId                     String?
   visitId                       String?
@@ -2326,6 +2329,7 @@ model FollowUpTask {
   createdAt                     DateTime                     @default(now())
   updatedAt                     DateTime                     @updatedAt
   lead                          Lead?                        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  branch                        ClinicBranch                 @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   patient                       Patient?                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   visit                         Visit?                       @relation(fields: [visitId], references: [id], onDelete: SetNull)
   sale                          Sale?                        @relation(fields: [saleId], references: [id], onDelete: SetNull)
@@ -2343,6 +2347,7 @@ model FollowUpTask {
   supervisedReminderCandidate   SupervisedReminderCandidate? @relation(fields: [supervisedReminderCandidateId], references: [id], onDelete: SetNull)
 
   @@index([leadId])
+  @@index([branchCode, status, dueAt])
   @@index([patientId])
   @@index([visitId])
   @@index([saleId])
@@ -2406,13 +2411,17 @@ model FollowUpTemplate {
 /// una versión inmutable, por lo que editar o activar crea historia nueva.
 model SupervisedReminderRule {
   id              String                          @id @default(cuid())
-  key             String                          @unique
+  branchCode      String
+  key             String
   activeVersionId String?                         @unique
   createdAt       DateTime                        @default(now())
   updatedAt       DateTime                        @updatedAt
   activeVersion   SupervisedReminderRuleVersion?  @relation("ActiveReminderRuleVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  branch          ClinicBranch                    @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   versions        SupervisedReminderRuleVersion[] @relation("ReminderRuleVersions")
 
+  @@unique([branchCode, key])
+  @@index([branchCode, createdAt])
   @@index([createdAt])
 }
 

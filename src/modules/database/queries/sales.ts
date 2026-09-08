@@ -928,10 +928,10 @@ export async function createPaymentRecord(input: {
   });
 }
 
-export async function getSaleById(id: string) {
+export async function getSaleById(id: string, branchCode: string) {
   return withDatabaseError("getSaleById", async () => {
-    return prisma.sale.findUnique({
-      where: { id },
+    return prisma.sale.findFirst({
+      where: { id, branchCode },
       include: {
         patient: true,
         visit: true,
@@ -971,10 +971,10 @@ export async function getVisitLatestSale(visitId: string) {
   );
 }
 
-export async function getPatientSales(patientId: string) {
+export async function getPatientSales(patientId: string, branchCode: string) {
   return withDatabaseError("getPatientSales", async () => {
     return prisma.sale.findMany({
-      where: { patientId },
+      where: { patientId, branchCode },
       include: {
         items: true,
         payments: { include: { method: true } }

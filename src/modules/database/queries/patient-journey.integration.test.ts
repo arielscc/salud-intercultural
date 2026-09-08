@@ -117,6 +117,7 @@ describe("patient journey report integration", () => {
     });
     await prisma.followUpTask.create({
       data: {
+        branchCode: "el-alto",
         patientId: patient.id,
         visitId: visit.id,
         type: "return",

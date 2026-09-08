@@ -52,12 +52,13 @@ export default async function SaleDetailPage({
   const { activeBranch } = await getBranchContext(user);
   const { saleId } = await params;
   const query = await searchParams;
-  const [sale, receiptDocuments] = await Promise.all([
-    getSaleById(saleId),
-    getSaleReceiptDocuments(saleId)
-  ]);
+  const sale = await getSaleById(saleId, activeBranch.code);
 
   if (!sale) notFound();
+  const receiptDocuments = await getSaleReceiptDocuments(
+    saleId,
+    activeBranch.code
+  );
 
   const hasBalance = sale.balanceCents > 0;
   // `cash-session-required` lo explica el aviso de apertura y

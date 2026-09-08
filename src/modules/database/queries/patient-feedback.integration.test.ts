@@ -29,7 +29,10 @@ async function prepareVisit() {
       email: "direccion.feedback@test.invalid",
       name: "Dirección QA",
       passwordHash: await hashPassword("clave-direccion-feedback-123"),
-      role: "direccion"
+      role: "direccion",
+      branchAssignments: {
+        create: { branchCode: "el-alto", isDefault: true }
+      }
     }
   });
   const reception = await prisma.internalUser.create({
@@ -37,7 +40,10 @@ async function prepareVisit() {
       email: "recepcion.feedback@test.invalid",
       name: "Recepción QA",
       passwordHash: await hashPassword("clave-recepcion-feedback-123"),
-      role: "recepcion"
+      role: "recepcion",
+      branchAssignments: {
+        create: { branchCode: "el-alto", isDefault: true }
+      }
     }
   });
   const patient = await createPatientRecord({
@@ -53,6 +59,7 @@ async function prepareVisit() {
     recordedById: reception.id
   });
   const visit = await createVisitRecord({
+    branchCode: "el-alto",
     patientId: patient.id,
     userId: reception.id,
     reason: "Atención para encuesta"
@@ -76,11 +83,13 @@ describe("patient feedback integration", () => {
       expiresInDays: 7
     };
     await createPatientFeedbackRequest({
+      branchCode: "el-alto",
       data,
       createdById: direction.id,
       tokenHash: hashFeedbackAccessToken(firstToken)
     });
     const rotated = await createPatientFeedbackRequest({
+      branchCode: "el-alto",
       data,
       createdById: direction.id,
       tokenHash: hashFeedbackAccessToken(secondToken)
@@ -114,6 +123,7 @@ describe("patient feedback integration", () => {
     const { direction, visit } = await prepareVisit();
     const token = createFeedbackAccessToken();
     await createPatientFeedbackRequest({
+      branchCode: "el-alto",
       data: {
         visitId: visit.id,
         ownerId: direction.id,

@@ -67,6 +67,7 @@ describe("follow-up integration", () => {
     overdue.setDate(overdue.getDate() - 1);
 
     const task = await createFollowUpTaskRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       assignedToId: user.id,
       createdById: user.id,
@@ -76,8 +77,12 @@ describe("follow-up integration", () => {
       notes: "Verificar evolución"
     });
 
-    const summary = await getFollowUpWorkSummary(user.id);
-    const overdueTasks = await getFollowUpTasks({ filter: "overdue", assignedToId: user.id });
+    const summary = await getFollowUpWorkSummary("el-alto", user.id);
+    const overdueTasks = await getFollowUpTasks({
+      branchCode: "el-alto",
+      filter: "overdue",
+      assignedToId: user.id
+    });
 
     await appendPatientConsentRecord({
       patientId: patient.id,
@@ -89,6 +94,7 @@ describe("follow-up integration", () => {
     });
 
     await createFollowUpAttemptRecord({
+      branchCode: "el-alto",
       taskId: task.id,
       userId: user.id,
       method: "whatsapp",
@@ -96,7 +102,7 @@ describe("follow-up integration", () => {
       notes: "Quiere agendar retorno"
     });
 
-    const detail = await getFollowUpTaskById(task.id);
+    const detail = await getFollowUpTaskById(task.id, "el-alto");
     const patientDetail = await getPatientById(patient.id);
 
     expect(summary.overdue).toBe(1);
@@ -142,6 +148,7 @@ describe("follow-up integration", () => {
       recordedById: user.id
     });
     const task = await createFollowUpTaskRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       createdById: user.id,
       title: "Control",
@@ -151,6 +158,7 @@ describe("follow-up integration", () => {
     let captured: unknown;
     try {
       await createFollowUpAttemptRecord({
+        branchCode: "el-alto",
         taskId: task.id,
         userId: user.id,
         method: "call",

@@ -88,6 +88,7 @@ describe("reception intake integration", () => {
     const user = await createReceptionUser();
 
     const result = await createReceptionIntake({
+      branchCode: "el-alto",
       userId: user.id,
       patient: {
         fullName: "Maria Quispe",
@@ -174,6 +175,7 @@ describe("reception intake integration", () => {
     });
 
     const result = await createReceptionIntake({
+      branchCode: "el-alto",
       userId: user.id,
       patientId: existing.id,
       patient: {
@@ -216,6 +218,7 @@ describe("reception intake integration", () => {
     const user = await createReceptionUser();
 
     const result = await createReceptionIntake({
+      branchCode: "el-alto",
       userId: user.id,
       patient: {
         fullName: "Ana Condori",
@@ -300,6 +303,7 @@ describe("reception intake integration", () => {
   it("preserves and filters a closed visit from Cochabamba", async () => {
     const user = await createReceptionUser();
     const result = await createReceptionIntake({
+      branchCode: "cochabamba",
       userId: user.id,
       patient: {
         fullName: "Paciente viajero",
@@ -338,6 +342,7 @@ describe("reception intake integration", () => {
 
     const closedVisit = await getVisitById(result.visit.id);
     const cochabambaVisits = await getVisits({
+      branchCode: "cochabamba",
       originCity: "Cochabamba",
       originDepartment: "Cochabamba"
     });
@@ -348,15 +353,46 @@ describe("reception intake integration", () => {
     expect(cochabambaVisits.map((visit) => visit.id)).toContain(result.visit.id);
   });
 
+  it("does not count an active Cochabamba visit on the El Alto dashboard", async () => {
+    const user = await createReceptionUser();
+    await createReceptionIntake({
+      branchCode: "cochabamba",
+      userId: user.id,
+      patient: {
+        fullName: "Paciente solo Cochabamba",
+        phone: "70000019",
+        ...habitualOrigin
+      },
+      visit: {
+        reason: "Consulta activa en Cochabamba",
+        originCity: "Cochabamba",
+        originDepartment: "Cochabamba",
+        originCountry: "Bolivia",
+        originMatchesPatient: false
+      },
+      attribution: reportedAttribution
+    });
+
+    const [elAlto, cochabamba] = await Promise.all([
+      getReceptionDashboardSummary("el-alto"),
+      getReceptionDashboardSummary("cochabamba")
+    ]);
+
+    expect(elAlto.activeTotal).toBe(0);
+    expect(cochabamba.activeTotal).toBe(1);
+  });
+
   it("summarizes unique arrivals, active routes and today abandonments", async () => {
     const user = await createReceptionUser();
     const first = await createReceptionIntake({
+      branchCode: "el-alto",
       userId: user.id,
       patient: { fullName: "Paciente Uno", phone: "70000001", ...habitualOrigin },
       visit: { reason: "Primera llegada", ...visitOrigin },
       attribution: reportedAttribution
     });
     await createReceptionIntake({
+      branchCode: "el-alto",
       userId: user.id,
       patientId: first.patientId,
       patient: { fullName: "Paciente Uno", phone: "70000001", ...habitualOrigin },
@@ -364,6 +400,7 @@ describe("reception intake integration", () => {
       attribution: reportedAttribution
     });
     const second = await createReceptionIntake({
+      branchCode: "el-alto",
       userId: user.id,
       patient: { fullName: "Paciente Dos", phone: "70000002", ...habitualOrigin },
       visit: { reason: "Consulta del día", ...visitOrigin },
@@ -379,7 +416,7 @@ describe("reception intake integration", () => {
       note: "Se retiró en recepción"
     });
 
-    const summary = await getReceptionDashboardSummary();
+    const summary = await getReceptionDashboardSummary("el-alto");
 
     expect(summary.patientsToday).toBe(2);
     expect(summary.activeTotal).toBe(2);

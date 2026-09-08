@@ -5,6 +5,7 @@ import { appendAuditEvent } from "@/modules/audit/service";
 import { readCashReceipt } from "@/modules/cash-receipts/storage";
 import { getCashExpenseReceipt } from "@/modules/database/queries/cash";
 import { getCurrentInternalUser } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,8 @@ export async function GET(
     return NextResponse.json({ error: "No tienes permiso." }, { status: 403 });
   }
 
-  const receipt = await getCashExpenseReceipt(expenseId);
+  const { activeBranch } = await getBranchContext(user);
+  const receipt = await getCashExpenseReceipt(expenseId, activeBranch.code);
   if (
     !receipt?.receiptStorageKey ||
     !receipt.receiptStorageDriver ||

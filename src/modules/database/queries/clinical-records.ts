@@ -464,12 +464,15 @@ export async function correctClinicalConsultation(
   });
 }
 
-export async function getClinicalConsultationVersionHistory(visitId: string) {
+export async function getClinicalConsultationVersionHistory(
+  visitId: string,
+  branchCode: string
+) {
   return withDatabaseError(
     "getClinicalConsultationVersionHistory",
     async () => {
-      return prisma.clinicalConsultation.findUnique({
-        where: { visitId },
+      return prisma.clinicalConsultation.findFirst({
+        where: { visitId, visit: { branchCode } },
         include: {
           finalizedBy: {
             select: { id: true, name: true, email: true }

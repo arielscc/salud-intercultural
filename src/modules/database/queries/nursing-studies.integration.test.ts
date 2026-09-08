@@ -78,6 +78,7 @@ describe("nursing and studies integration", () => {
       captureSource: "whatsapp"
     });
     const visit = await createVisitRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       userId: doctor.id,
       reason: "Requiere análisis"
@@ -180,6 +181,7 @@ describe("nursing and studies integration", () => {
       captureSource: "whatsapp"
     });
     const visit = await createVisitRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       userId: doctor.id,
       reason: "Control"

@@ -45,6 +45,7 @@ import { requirePermission } from "@/modules/permissions";
 import { parsePage } from "@/modules/database/pagination";
 import { cn } from "@/lib/cn";
 import { createCallLink, createWhatsAppLink } from "@/lib/whatsapp";
+import { getBranchContext } from "@/features/branches/context";
 
 type FollowUpsPageProps = {
   searchParams: Promise<{
@@ -67,6 +68,7 @@ const emptyFollowUpsMessage = (
 
 export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps) {
   const user = await requirePermission("followups_read");
+  const { activeBranch } = await getBranchContext(user);
   const {
     filtro,
     tipo,
@@ -95,6 +97,7 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
   const page = parsePage(pageParam);
   const pageSize = 60;
   const taskFilters = {
+    branchCode: activeBranch.code,
     filter,
     status,
     type,
@@ -107,9 +110,9 @@ export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps
   } as const;
   const [tasks, summary, totalTasks, assignees] = await Promise.all([
     getFollowUpTasks({ ...taskFilters, page, pageSize }),
-    getFollowUpWorkSummary(undefined, user.role),
+    getFollowUpWorkSummary(activeBranch.code, undefined, user.role),
     getFollowUpTaskCount(taskFilters),
-    getFollowUpAssignees(user.role)
+    getFollowUpAssignees(activeBranch.code, user.role)
   ]);
   const filterHref = (nextFilter: "vencidos" | "hoy" | "proximos") => {
     const query = new URLSearchParams();

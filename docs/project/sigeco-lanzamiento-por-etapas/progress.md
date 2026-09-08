@@ -1,10 +1,34 @@
 # Progress — Lanzamiento Por Etapas De SIGECO
 
-Última actualización: 2026-09-07.
+Última actualización: 2026-09-08.
 
 Plan de ejecución: [tasks.md](./tasks.md)
 
 ## Estado General
+
+### 2026-09-08 — Aislamiento Operativo Entre Sucursales
+
+- El indicador observado en El Alto no provenía del paciente creado en
+  Cochabamba: la base contiene otra visita propia de El Alto, abierta desde el
+  28 de agosto. El resumen conserva esa visita porque sigue operativamente
+  activa; no se cerró ni modificó evidencia clínica sin autorización.
+- El resumen de Recepción ahora exige siempre una sucursal y una integración
+  reproduce el caso Cochabamba → El Alto para impedir regresiones.
+- Se cerraron consultas globales reales en seguimientos, recordatorios
+  supervisados, opiniones de pacientes y el reporte de abandonos. Las tareas y
+  reglas de recordatorio materializan su sucursal y las escrituras rechazan
+  relaciones que pertenecen a otra sede.
+- Ventas de un paciente, recibos, recetas y documentos de Caja o Compras se
+  consultan contra la sucursal activa, incluso al abrir un enlace directo.
+- Crear una visita o un ingreso de Recepción ya no puede apoyarse en la sede
+  predeterminada de la base: el código exige declarar la sucursal.
+- El selector reemplazó la confirmación nativa del navegador por un diálogo
+  responsivo con la sede de origen, la sede de destino y el alcance del cambio.
+- La ficha maestra del paciente permanece única para continuidad clínica; no se
+  duplica entre sedes. Visitas y operación asociada sí quedan separadas.
+- Migración preparada:
+  `20260908010000_follow_up_branch_scope`.
+- Detalle: [reporte de tarea](../task-reports/2026-09-08-aislamiento-operativo-sucursales.md).
 
 ### 2026-09-07 — Super Administradores Multi-Sucursal
 

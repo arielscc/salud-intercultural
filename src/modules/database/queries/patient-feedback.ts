@@ -36,6 +36,7 @@ export class PatientFeedbackError extends Error {
       | "EXPIRED"
       | "INVALID_OWNER"
       | "INVALID_TOKEN"
+      | "BRANCH_MISMATCH"
       | "NOT_OPEN"
   ) {
     super(code);
@@ -43,11 +44,12 @@ export class PatientFeedbackError extends Error {
   }
 }
 
-export async function getFeedbackEligibleVisits() {
+export async function getFeedbackEligibleVisits(branchCode: string) {
   const allowTestData = resolveDeploymentEnvironment() !== "production";
   return withDatabaseError("getFeedbackEligibleVisits", () =>
     prisma.visit.findMany({
       where: {
+        branchCode,
         isTestData: allowTestData ? undefined : false,
         status: { in: ["completed", "left_without_care"] },
         feedbackSubmission: null
@@ -76,10 +78,14 @@ export async function getFeedbackEligibleVisits() {
   );
 }
 
-export async function getFeedbackOwners() {
+export async function getFeedbackOwners(branchCode: string) {
   return withDatabaseError("getFeedbackOwners", () =>
     prisma.internalUser.findMany({
-      where: { active: true, role: { in: ["direccion", "super_admin"] } },
+      where: {
+        active: true,
+        role: { in: ["direccion", "super_admin"] },
+        branchAssignments: { some: { branchCode } }
+      },
       select: { id: true, name: true, email: true, role: true },
       orderBy: [{ role: "asc" }, { name: "asc" }, { email: "asc" }]
     })
@@ -89,6 +95,7 @@ export async function getFeedbackOwners() {
 export async function createPatientFeedbackRequest(input: {
   data: CreateRequestInput;
   createdById: string;
+  branchCode: string;
   tokenHash: string;
   now?: Date;
 }) {
@@ -101,7 +108,10 @@ export async function createPatientFeedbackRequest(input: {
             where: {
               id: input.data.ownerId,
               active: true,
-              role: { in: ["direccion", "super_admin"] }
+              role: { in: ["direccion", "super_admin"] },
+              branchAssignments: {
+                some: { branchCode: input.branchCode }
+              }
             },
             select: { id: true }
           }),
@@ -109,6 +119,7 @@ export async function createPatientFeedbackRequest(input: {
             where: { id: input.data.visitId },
             select: {
               id: true,
+              branchCode: true,
               patientId: true,
               isTestData: true,
               status: true,
@@ -120,6 +131,9 @@ export async function createPatientFeedbackRequest(input: {
           })
         ]);
         if (!owner) throw new PatientFeedbackError("INVALID_OWNER");
+        if (visit.branchCode !== input.branchCode) {
+          throw new PatientFeedbackError("BRANCH_MISMATCH");
+        }
         if (visit.feedbackSubmission) {
           throw new PatientFeedbackError("ALREADY_SUBMITTED");
         }
@@ -299,13 +313,18 @@ export async function submitPatientFeedback(input: {
 }
 
 export async function getPatientFeedbackCases(input: {
+  branchCode: string;
   status?: "new" | "reviewing" | "awaiting_patient" | "resolved" | "closed";
   severity?: "standard" | "priority" | "critical";
   take?: number;
-} = {}) {
+}) {
   return withDatabaseError("getPatientFeedbackCases", () =>
     prisma.patientFeedbackCase.findMany({
-      where: { status: input.status, severity: input.severity },
+      where: {
+        status: input.status,
+        severity: input.severity,
+        feedback: { visit: { branchCode: input.branchCode } }
+      },
       include: {
         owner: { select: { id: true, name: true, email: true } },
         feedback: {
@@ -332,15 +351,16 @@ export async function getPatientFeedbackCases(input: {
   );
 }
 
-export async function getPatientFeedbackDashboard(now = new Date()) {
+export async function getPatientFeedbackDashboard(branchCode: string, now = new Date()) {
   return withDatabaseError("getPatientFeedbackDashboard", async () => {
     const from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     const [cases, feedback] = await Promise.all([
       prisma.patientFeedbackCase.findMany({
+        where: { feedback: { visit: { branchCode } } },
         select: { status: true, severity: true, responseDueAt: true }
       }),
       prisma.patientFeedback.findMany({
-        where: { submittedAt: { gte: from, lte: now } },
+        where: { visit: { branchCode }, submittedAt: { gte: from, lte: now } },
         select: { rating: true, kind: true, area: true }
       })
     ]);
@@ -372,9 +392,10 @@ export async function getPatientFeedbackDashboard(now = new Date()) {
   });
 }
 
-export async function getRecentPatientFeedbackRequests() {
+export async function getRecentPatientFeedbackRequests(branchCode: string) {
   return withDatabaseError("getRecentPatientFeedbackRequests", () =>
     prisma.patientFeedbackRequest.findMany({
+      where: { visit: { branchCode } },
       select: {
         id: true,
         status: true,
@@ -394,24 +415,32 @@ export async function getRecentPatientFeedbackRequests() {
 export async function updatePatientFeedbackCase(input: {
   data: UpdateCaseInput;
   actorId: string;
+  branchCode: string;
 }) {
   return withDatabaseError("updatePatientFeedbackCase", () =>
     prisma.$transaction(
       async (tx) => {
         const [current, owner] = await Promise.all([
           tx.patientFeedbackCase.findUniqueOrThrow({
-            where: { id: input.data.caseId }
+            where: { id: input.data.caseId },
+            include: { feedback: { select: { visit: { select: { branchCode: true } } } } }
           }),
           tx.internalUser.findFirst({
             where: {
               id: input.data.ownerId,
               active: true,
-              role: { in: ["direccion", "super_admin"] }
+              role: { in: ["direccion", "super_admin"] },
+              branchAssignments: {
+                some: { branchCode: input.branchCode }
+              }
             },
             select: { id: true }
           })
         ]);
         if (!owner) throw new PatientFeedbackError("INVALID_OWNER");
+        if (current.feedback.visit.branchCode !== input.branchCode) {
+          throw new PatientFeedbackError("BRANCH_MISMATCH");
+        }
         const isResolved = ["resolved", "closed"].includes(input.data.status);
         const updated = await tx.patientFeedbackCase.update({
           where: { id: current.id },
@@ -481,12 +510,16 @@ export async function updatePatientFeedbackCase(input: {
 
 export async function cancelPatientFeedbackRequest(input: {
   data: CancelRequestInput;
+  branchCode: string;
 }) {
   return withDatabaseError("cancelPatientFeedbackRequest", async () => {
     const request = await prisma.patientFeedbackRequest.findUniqueOrThrow({
       where: { id: input.data.requestId },
-      select: { id: true, status: true }
+      select: { id: true, status: true, visit: { select: { branchCode: true } } }
     });
+    if (request.visit.branchCode !== input.branchCode) {
+      throw new PatientFeedbackError("BRANCH_MISMATCH");
+    }
     if (request.status !== "open") throw new PatientFeedbackError("NOT_OPEN");
     return prisma.patientFeedbackRequest.update({
       where: { id: request.id },

@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Building2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/internal/ConfirmDialog";
 import { changeActiveBranchAction } from "@/features/branches/actions";
 
 type BranchOption = {
@@ -26,24 +27,32 @@ export function BranchSelector({
     { ok: true, message: "" }
   );
   const [selected, setSelected] = useState(activeCode);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const approvedSubmit = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const activeBranches = branches.filter(
     (branch) => branch.assigned && branch.status === "active"
   );
   const preparationBranch = branches.find((branch) => branch.status === "preparation");
 
+  const selectedBranch = activeBranches.find((branch) => branch.code === selected);
+  const activeBranch = activeBranches.find((branch) => branch.code === activeCode);
+
   return (
     <div className="flex min-w-0 items-center gap-2">
       <Building2 className="h-4 w-4 shrink-0 text-primary-dark" aria-hidden="true" />
       <form
+        ref={formRef}
         action={action}
         onSubmit={(event) => {
           if (selected === activeCode) return;
-          const branch = activeBranches.find((option) => option.code === selected);
-          if (!window.confirm(`¿Cambiar la operación activa a ${branch?.name ?? "esta sucursal"}?`)) {
-            event.preventDefault();
-            setSelected(activeCode);
+          if (approvedSubmit.current) {
+            approvedSubmit.current = false;
+            return;
           }
+          event.preventDefault();
+          setConfirmOpen(true);
         }}
         className="flex min-w-0 items-center gap-2"
       >
@@ -76,6 +85,23 @@ export function BranchSelector({
         </span>
       ) : null}
       {!state.ok ? <span className="sr-only" role="alert">{state.message}</span> : null}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Cambiar a ${selectedBranch?.name ?? "otra sucursal"}`}
+        description={
+          <>
+            El panel dejará de mostrar la operación de {activeBranch?.name ?? "la sede actual"} y
+            cargará Caja, visitas, compras e inventario de {selectedBranch?.name ?? "la sede elegida"}.
+          </>
+        }
+        confirmLabel="Cambiar sucursal"
+        confirmVariant="primary"
+        onConfirm={() => {
+          approvedSubmit.current = true;
+          formRef.current?.requestSubmit();
+        }}
+      />
     </div>
   );
 }

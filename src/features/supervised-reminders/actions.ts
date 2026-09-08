@@ -13,6 +13,7 @@ import {
   saveReminderRuleVersion
 } from "@/modules/database/queries/supervised-reminders";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
+import { getBranchContext } from "@/features/branches/context";
 
 const remindersPath = "/sigeco/seguimientos/recordatorios";
 
@@ -47,12 +48,14 @@ export async function saveReminderRuleVersionAction(formData: FormData) {
       entityId: String(formData.get("ruleId") ?? "") || undefined
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = reminderRuleVersionSchema.safeParse(
         reminderRuleFormData(formData)
       );
       if (!parsed.success) redirect(`${remindersPath}?error=invalid-rule`);
 
       const saved = await saveReminderRuleVersion({
+        branchCode: activeBranch.code,
         data: parsed.data,
         createdById: user.id
       });
@@ -80,7 +83,9 @@ export async function generateReminderCandidatesAction() {
       entityType: "supervised_reminder_candidate"
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const generated = await generateSupervisedReminderCandidates({
+        branchCode: activeBranch.code,
         generatedById: user.id
       });
       return auditedResult(generated, { context: generated });
@@ -103,12 +108,14 @@ export async function reviewReminderCandidateAction(formData: FormData) {
       entityId: candidateId || undefined
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext(user);
       const parsed = reminderCandidateReviewSchema.safeParse(
         Object.fromEntries(formData.entries())
       );
       if (!parsed.success) redirect(`${remindersPath}?error=invalid-review`);
 
       const reviewed = await reviewSupervisedReminderCandidate({
+        branchCode: activeBranch.code,
         data: parsed.data,
         reviewedById: user.id
       });

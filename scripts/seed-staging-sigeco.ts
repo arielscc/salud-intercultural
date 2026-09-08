@@ -400,6 +400,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
   await prisma.followUpTask.upsert({
     where: { id: "qa_follow_up_pending" },
     update: {
+      branchCode: "el-alto",
       assignedToId: receptionUserId,
       createdById: receptionUserId,
       dueAt: new Date(),
@@ -414,6 +415,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       title: "[QA] Validar bandeja de seguimiento"
     },
     create: {
+      branchCode: "el-alto",
       assignedToId: receptionUserId,
       createdById: receptionUserId,
       dueAt: new Date(),

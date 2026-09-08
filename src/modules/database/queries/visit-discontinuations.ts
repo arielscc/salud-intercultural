@@ -174,6 +174,9 @@ export async function recordVisitDiscontinuation(
             where: {
               active: true,
               role: "recepcion",
+              branchAssignments: {
+                some: { branchCode: visit.branchCode }
+              },
               name: { contains: "Marlen", mode: "insensitive" }
             },
             orderBy: { createdAt: "asc" },
@@ -181,6 +184,7 @@ export async function recordVisitDiscontinuation(
           });
           const followUp = await tx.followUpTask.create({
             data: {
+              branchCode: visit.branchCode,
               patientId: visit.patient.id,
               visitId: visit.id,
               assignedToId: marlen?.id,
@@ -286,9 +290,9 @@ export const NURSING_MAX_WAIT_MS = 60 * 60 * 1_000;
  * `recordedById`), a diferencia del abandono manual que registra la persona.
  */
 export async function autoAbandonExpiredNursingVisits(input: {
-  branchCode?: string;
+  branchCode: string;
   now?: Date;
-} = {}) {
+}) {
   return withDatabaseError("autoAbandonExpiredNursingVisits", async () => {
     const now = input.now ?? new Date();
     const cutoff = new Date(now.getTime() - NURSING_MAX_WAIT_MS);
@@ -376,9 +380,9 @@ export async function autoAbandonExpiredNursingVisits(input: {
  * bandeja de Consultas; idempotente y tolerante a carreras. El actor es el sistema.
  */
 export async function autoAbandonUnattendedConsultationVisits(input: {
-  branchCode?: string;
+  branchCode: string;
   now?: Date;
-} = {}) {
+}) {
   return withDatabaseError("autoAbandonUnattendedConsultationVisits", async () => {
     const now = input.now ?? new Date();
     // Inicio del día boliviano actual: todo lo derivado antes de esto y aún sin
@@ -475,6 +479,7 @@ export async function autoAbandonUnattendedConsultationVisits(input: {
 }
 
 export type VisitDiscontinuationReportFilters = {
+  branchCode: string;
   reason?: VisitDiscontinuationReason;
   occurredFrom?: Date;
   occurredTo?: Date;
@@ -484,6 +489,7 @@ function reportWhere(
   input: VisitDiscontinuationReportFilters
 ): Prisma.VisitDiscontinuationWhereInput {
   return {
+    visit: { branchCode: input.branchCode },
     reason: input.reason,
     occurredAt:
       input.occurredFrom || input.occurredTo
@@ -493,7 +499,7 @@ function reportWhere(
 }
 
 export async function getVisitDiscontinuationReport(
-  input: VisitDiscontinuationReportFilters = {}
+  input: VisitDiscontinuationReportFilters
 ) {
   return withDatabaseError("getVisitDiscontinuationReport", async () => {
     const where = reportWhere(input);

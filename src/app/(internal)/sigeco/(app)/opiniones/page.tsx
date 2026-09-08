@@ -42,6 +42,7 @@ import {
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 type FeedbackPageProps = {
   searchParams: Promise<{
@@ -70,6 +71,7 @@ function severityTone(severity: FeedbackSeverity) {
 export default async function FeedbackPage({ searchParams }: FeedbackPageProps) {
   const user = await requirePermission("feedback_read");
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext(user);
   const query = await searchParams;
   const status = statuses.includes(query.estado as FeedbackCaseStatus)
     ? (query.estado as FeedbackCaseStatus)
@@ -79,11 +81,11 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
     : undefined;
   const canManage = canUse(user.role, moduleAccess, "feedback_manage");
   const [cases, dashboard, visits, owners, requests] = await Promise.all([
-    getPatientFeedbackCases({ status, severity }),
-    getPatientFeedbackDashboard(),
-    getFeedbackEligibleVisits(),
-    getFeedbackOwners(),
-    getRecentPatientFeedbackRequests()
+    getPatientFeedbackCases({ branchCode: activeBranch.code, status, severity }),
+    getPatientFeedbackDashboard(activeBranch.code),
+    getFeedbackEligibleVisits(activeBranch.code),
+    getFeedbackOwners(activeBranch.code),
+    getRecentPatientFeedbackRequests(activeBranch.code)
   ]);
 
   return (
