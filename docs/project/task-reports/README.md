@@ -82,6 +82,8 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-08-29 | [Activación de módulos por sucursal](./2026-08-29-modulos-por-sucursal.md) | El estado de cada módulo pasa a ser propio de cada sede: apagar la Caja de una sucursal ya no deja sin cobrar a la otra. Las ~35 pantallas no cambian; la sucursal se resuelve en un solo lugar. |
 | 2026-09-07 | [Compra múltiple y alta de productos](./2026-09-07-compra-multiple-alta-productos.md) | Permite capturar proveedores por línea, asociar varios proveedores y crear productos nuevos desde una sola compra sin perder la trazabilidad por proveedor. |
 | 2026-09-08 | [Sucursal explícita en escrituras operativas](./2026-09-08-sucursal-explicita-escrituras.md) | Elimina la asignación silenciosa a El Alto y exige la sucursal en visitas, ventas, pagos, Caja y movimientos de inventario. |
+| 2026-09-08 | [Plan de aislamiento estricto por sucursal](./2026-09-08-plan-aislamiento-estricto-sucursales.md) | Divide en 17 tareas la partición de todos los dominios operativos, constraints compuestos, auditoría y RLS. |
+| 2026-09-08 | [Ajuste del plan al modelo híbrido](./2026-09-08-plan-modelo-hibrido-sucursales.md) | Conserva pacientes, proveedores y productos maestros para toda la clínica; separa sus operaciones y habilita continuidad clínica solo para médicos. |
 
 ## Relacion Con Estado V3
 

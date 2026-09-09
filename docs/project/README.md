@@ -24,6 +24,7 @@ Usar este directorio para:
 11. [Mejoras futuras de Sigeco](./sigeco-mejoras-futuras/tareas-de-mejoras.md): antecedente tecnico de seguridad clinica, calidad de datos y nuevas funciones; ya no controla la ejecucion.
 12. [Mejoras integrales de SIGECO](./sigeco-mejoras-integrales/tasks.md): plan principal reorganizado en 29 tareas consecutivas, con un unico archivo de [progreso](./sigeco-mejoras-integrales/progress.md).
 13. [Lanzamiento por etapas de SIGECO](./sigeco-lanzamiento-por-etapas/tasks.md): activacion controlada de modulos desde el super administrador hasta que la Etapa 1 funcione entera en staging, con su [progreso](./sigeco-lanzamiento-por-etapas/progress.md). Las tareas que tocan produccion se separaron el 2026-08-28 en [tasks-produccion.md](./sigeco-lanzamiento-por-etapas/tasks-produccion.md) y estan congeladas.
+14. [Aislamiento operativo y continuidad clínica por sucursal](./sigeco-aislamiento-estricto-sucursales/tasks.md): plan híbrido de 17 tareas con identidad del paciente y maestros corporativos globales, operaciones locales, lectura clínica transversal para médicos y RLS, con su [progreso](./sigeco-aislamiento-estricto-sucursales/progress.md).
 
 ## Documentacion relacionada
 
