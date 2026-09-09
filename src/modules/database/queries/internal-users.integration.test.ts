@@ -23,13 +23,23 @@ async function createUser(
     | "enfermeria"
     | "seguimiento" = "super_admin"
 ) {
-  return prisma.internalUser.create({
+  const user = await prisma.internalUser.create({
     data: {
       email,
-      role,
+      platformRole: role === "super_admin" ? "super_admin" : null,
       passwordHash: await hashPassword("clave-segura-para-pruebas")
     }
   });
+  await prisma.internalUserBranch.create({
+    data: {
+      userId: user.id,
+      branchCode: "el-alto",
+      role,
+      active: true,
+      isDefault: true
+    }
+  });
+  return user;
 }
 
 beforeEach(cleanUsers);
@@ -67,7 +77,8 @@ describe("internal user management integration", () => {
       updateManagedInternalUserAccess({
         actorId: "otro-actor",
         userId: admin.id,
-        role: "super_admin",
+        platformRole: "super_admin",
+        staffRole: "direccion",
         active: false,
         defaultBranchCode: "el-alto"
       })
@@ -78,7 +89,8 @@ describe("internal user management integration", () => {
       updateManagedInternalUserAccess({
         actorId: "otro-actor",
         userId: admin.id,
-        role: "direccion",
+        platformRole: null,
+        staffRole: "direccion",
         active: true,
         defaultBranchCode: "el-alto"
       })
@@ -88,7 +100,7 @@ describe("internal user management integration", () => {
 
     expect(await prisma.internalUser.findUnique({ where: { id: admin.id } })).toMatchObject({
       active: true,
-      role: "super_admin"
+      platformRole: "super_admin"
     });
   });
 
@@ -99,7 +111,8 @@ describe("internal user management integration", () => {
       updateManagedInternalUserAccess({
         actorId: admin.id,
         userId: admin.id,
-        role: "direccion",
+        platformRole: null,
+        staffRole: "direccion",
         active: true,
         defaultBranchCode: "el-alto"
       })
@@ -108,14 +121,15 @@ describe("internal user management integration", () => {
       updateManagedInternalUserAccess({
         actorId: admin.id,
         userId: admin.id,
-        role: "super_admin",
+        platformRole: "super_admin",
+        staffRole: "direccion",
         active: false,
         defaultBranchCode: "el-alto"
       })
     ).rejects.toMatchObject({ code: "SELF_DEACTIVATE" });
   });
 
-  it("revokes active sessions as soon as access changes", async () => {
+  it("revokes active sessions as soon as global access changes", async () => {
     const actor = await createUser("admin-actor@example.com");
     const target = await createUser("empleado@example.com", "recepcion");
     const session = await createInternalSession(target.id, "Mozilla/5.0 Android Chrome/126.0");
@@ -123,8 +137,9 @@ describe("internal user management integration", () => {
     const result = await updateManagedInternalUserAccess({
       actorId: actor.id,
       userId: target.id,
-      role: "administracion",
-      active: true,
+      platformRole: null,
+      staffRole: "recepcion",
+      active: false,
       defaultBranchCode: "el-alto"
     });
 

@@ -188,9 +188,20 @@ async function checkStockBacking(): Promise<Check> {
 async function checkStaff(): Promise<Check[]> {
   const users = await prisma.internalUser.findMany({
     where: { active: true },
-    select: { role: true }
+    select: {
+      platformRole: true,
+      branchAssignments: {
+        where: { branchCode: stageOneBranchCode, active: true },
+        select: { role: true }
+      }
+    }
   });
-  const roles = new Set(users.map((user) => user.role));
+  const roles = new Set(
+    users.flatMap((user) => [
+      ...(user.platformRole ? [user.platformRole] : []),
+      ...user.branchAssignments.map((assignment) => assignment.role)
+    ])
+  );
 
   return [
     {

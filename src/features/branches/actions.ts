@@ -34,10 +34,6 @@ async function setRequestedBranch(formData: FormData): Promise<BranchActionState
   const parsed = changeBranchSchema.safeParse({
     branchCode: String(formData.get("branchCode") ?? "")
   });
-  const actor = {
-    id: selectionContext.user.id,
-    role: selectionContext.user.role
-  };
   const target = parsed.success
     ? selectionContext.selectableBranches.find(
         (branch) => branch.code === parsed.data.branchCode
@@ -46,7 +42,7 @@ async function setRequestedBranch(formData: FormData): Promise<BranchActionState
 
   if (!target) {
     await appendAuditEvent({
-      actor,
+      actor: { id: selectionContext.user.id },
       action: "branch.active.change",
       entityType: "clinic_branch",
       result: "denied",
@@ -64,7 +60,7 @@ async function setRequestedBranch(formData: FormData): Promise<BranchActionState
   });
 
   await appendAuditEvent({
-    actor,
+    actor: { id: selectionContext.user.id, role: target.role },
     action: "branch.active.change",
     entityType: "clinic_branch",
     entityId: target.code,

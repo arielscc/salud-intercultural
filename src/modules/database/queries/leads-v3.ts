@@ -90,8 +90,7 @@ export async function getInternalLeads(input: ListInternalLeadsInput = {}) {
           select: {
             id: true,
             name: true,
-            email: true,
-            role: true
+            email: true
           }
         },
         reminders: {
@@ -128,8 +127,7 @@ export async function getInternalLeadById(id: string) {
           select: {
             id: true,
             name: true,
-            email: true,
-            role: true
+            email: true
           }
         },
         contactAttempts: {
@@ -141,8 +139,7 @@ export async function getInternalLeadById(id: string) {
               select: {
                 id: true,
                 name: true,
-                email: true,
-                role: true
+                email: true
               }
             }
           }
@@ -156,8 +153,7 @@ export async function getInternalLeadById(id: string) {
               select: {
                 id: true,
                 name: true,
-                email: true,
-                role: true
+                email: true
               }
             }
           }
@@ -171,8 +167,7 @@ export async function getInternalLeadById(id: string) {
               select: {
                 id: true,
                 name: true,
-                email: true,
-                role: true
+                email: true
               }
             }
           }

@@ -40,7 +40,9 @@ async function createCashUsers() {
       email: "admin-caja@example.com",
       name: "Administración Caja",
       passwordHash,
-      role: "administracion"
+      branchAssignments: {
+        create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+      }
     }
   });
   const direction = await prisma.internalUser.create({
@@ -48,7 +50,9 @@ async function createCashUsers() {
       email: "direccion-caja@example.com",
       name: "Dirección Caja",
       passwordHash,
-      role: "direccion"
+      branchAssignments: {
+        create: { branchCode: "el-alto", role: "direccion", active: true, isDefault: true }
+      }
     }
   });
   const nurse = await prisma.internalUser.create({
@@ -56,7 +60,9 @@ async function createCashUsers() {
       email: "enfermeria-caja@example.com",
       name: "Enfermería Caja",
       passwordHash,
-      role: "enfermeria"
+      branchAssignments: {
+        create: { branchCode: "el-alto", role: "enfermeria", active: true, isDefault: true }
+      }
     }
   });
   return { admin, direction, nurse };

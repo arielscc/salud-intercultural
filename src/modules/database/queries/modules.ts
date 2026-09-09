@@ -68,13 +68,12 @@ export const moduleAccessWithoutBranch: ModuleAccessState = {
   suspended: []
 };
 
-const actorSelect = { id: true, name: true, email: true, role: true } as const;
+const actorSelect = { id: true, name: true, email: true } as const;
 
 export type ModuleActivationActor = {
   id: string;
   name: string | null;
   email: string;
-  role: InternalRole;
 };
 
 export type ModuleActivationState = Pick<

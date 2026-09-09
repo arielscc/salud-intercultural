@@ -79,17 +79,38 @@ export async function getFeedbackEligibleVisits(branchCode: string) {
 }
 
 export async function getFeedbackOwners(branchCode: string) {
-  return withDatabaseError("getFeedbackOwners", () =>
-    prisma.internalUser.findMany({
+  return withDatabaseError("getFeedbackOwners", async () => {
+    const users = await prisma.internalUser.findMany({
       where: {
         active: true,
-        role: { in: ["direccion", "super_admin"] },
-        branchAssignments: { some: { branchCode } }
+        OR: [
+          { platformRole: "super_admin" },
+          { branchAssignments: { some: { branchCode, active: true, role: "direccion" } } }
+        ]
       },
-      select: { id: true, name: true, email: true, role: true },
-      orderBy: [{ role: "asc" }, { name: "asc" }, { email: "asc" }]
-    })
-  );
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        platformRole: true,
+        branchAssignments: {
+          where: { branchCode, active: true },
+          select: { role: true },
+          take: 1
+        }
+      },
+      orderBy: [{ name: "asc" }, { email: "asc" }]
+    });
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role:
+        user.platformRole === "super_admin"
+          ? ("super_admin" as const)
+          : user.branchAssignments[0].role
+    }));
+  });
 }
 
 export async function createPatientFeedbackRequest(input: {
@@ -108,10 +129,18 @@ export async function createPatientFeedbackRequest(input: {
             where: {
               id: input.data.ownerId,
               active: true,
-              role: { in: ["direccion", "super_admin"] },
-              branchAssignments: {
-                some: { branchCode: input.branchCode }
-              }
+              OR: [
+                { platformRole: "super_admin" },
+                {
+                  branchAssignments: {
+                    some: {
+                      branchCode: input.branchCode,
+                      active: true,
+                      role: "direccion"
+                    }
+                  }
+                }
+              ]
             },
             select: { id: true }
           }),
@@ -429,10 +458,18 @@ export async function updatePatientFeedbackCase(input: {
             where: {
               id: input.data.ownerId,
               active: true,
-              role: { in: ["direccion", "super_admin"] },
-              branchAssignments: {
-                some: { branchCode: input.branchCode }
-              }
+              OR: [
+                { platformRole: "super_admin" },
+                {
+                  branchAssignments: {
+                    some: {
+                      branchCode: input.branchCode,
+                      active: true,
+                      role: "direccion"
+                    }
+                  }
+                }
+              ]
             },
             select: { id: true }
           })

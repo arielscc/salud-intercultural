@@ -25,9 +25,8 @@ async function prepareCompletedVisit() {
       email: "marlen.reminders@test.invalid",
       name: "Marlen Recepción QA",
       passwordHash: await hashPassword("clave-segura-recordatorios-123"),
-      role: "recepcion",
       branchAssignments: {
-        create: { branchCode: "el-alto", isDefault: true }
+        create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
       }
     }
   });

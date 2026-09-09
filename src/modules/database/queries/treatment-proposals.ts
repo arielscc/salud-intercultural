@@ -61,8 +61,9 @@ async function createTreatmentDecisionFollowUp(
   const marlen = await tx.internalUser.findFirst({
     where: {
       active: true,
-      role: "recepcion",
-      branchAssignments: { some: { branchCode: input.branchCode } },
+      branchAssignments: {
+        some: { branchCode: input.branchCode, active: true, role: "recepcion" }
+      },
       name: { contains: "Marlen", mode: "insensitive" }
     },
     orderBy: { createdAt: "asc" }

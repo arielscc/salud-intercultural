@@ -21,7 +21,9 @@ describe("patient journey report integration", () => {
         email: `doctor-${randomUUID()}@example.com`,
         name: "Médico de prueba",
         passwordHash,
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
     const patient = await prisma.patient.create({

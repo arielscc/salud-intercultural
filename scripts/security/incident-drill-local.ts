@@ -73,12 +73,25 @@ async function runLostDeviceScenario(databaseUrl: string, runId: string) {
   const detectedAt = new Date();
 
   try {
+    const branch = await prisma.clinicBranch.findFirst({
+      where: { status: "active" },
+      select: { code: true }
+    });
+    if (!branch) throw new Error("Incident drill requires an active branch.");
     const commander = await prisma.internalUser.create({
       data: {
         email: `commander-${runId}@example.invalid`,
         name: "Dirección Simulacro",
         passwordHash: "incident-drill-login-disabled",
-        role: "super_admin"
+        platformRole: "super_admin",
+        branchAssignments: {
+          create: {
+            branchCode: branch.code,
+            role: "super_admin",
+            active: true,
+            isDefault: true
+          }
+        }
       }
     });
     const affectedUser = await prisma.internalUser.create({
@@ -86,7 +99,14 @@ async function runLostDeviceScenario(databaseUrl: string, runId: string) {
         email: `affected-${runId}@example.invalid`,
         name: "Personal Sintético Afectado",
         passwordHash: "incident-drill-login-disabled",
-        role: "recepcion"
+        branchAssignments: {
+          create: {
+            branchCode: branch.code,
+            role: "recepcion",
+            active: true,
+            isDefault: true
+          }
+        }
       }
     });
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
@@ -103,7 +123,7 @@ async function runLostDeviceScenario(databaseUrl: string, runId: string) {
     await prisma.auditEvent.create({
       data: {
         actorId: commander.id,
-        actorRole: commander.role,
+        actorRole: "super_admin",
         action: "incident.drill.detected",
         entityType: "internal_user",
         entityId: affectedUser.id,
@@ -125,7 +145,7 @@ async function runLostDeviceScenario(databaseUrl: string, runId: string) {
       await tx.auditEvent.create({
         data: {
           actorId: commander.id,
-          actorRole: commander.role,
+          actorRole: "super_admin",
           action: "incident.drill.sessions_revoked",
           entityType: "internal_user",
           entityId: affectedUser.id,

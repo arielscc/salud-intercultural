@@ -69,7 +69,9 @@ describe("nursing and studies integration", () => {
         email: "medico-estudio-catalogo@example.com",
         name: "Médico Catálogo",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
     const patient = await createPatientRecord({
@@ -164,7 +166,9 @@ describe("nursing and studies integration", () => {
         email: "medico-v33@example.com",
         name: "Medico V33",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
     const nurse = await prisma.internalUser.create({
@@ -172,7 +176,9 @@ describe("nursing and studies integration", () => {
         email: "enfermeria-v33@example.com",
         name: "Enfermeria V33",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "enfermeria"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "enfermeria", active: true, isDefault: true }
+        }
       }
     });
     const patient = await createPatientRecord({

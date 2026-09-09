@@ -118,7 +118,9 @@ describe("flexible visit flow integration", () => {
         email: `reception-${visit.id}@test.invalid`,
         name: "Marlen QA",
         passwordHash: "integration-only",
-        role: "recepcion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+        }
       }
     });
     await recordVisitDiscontinuation({
@@ -163,7 +165,9 @@ describe("flexible visit flow integration", () => {
         email: `marlen-${visit.id}@test.invalid`,
         name: "Marlen Recepción",
         passwordHash: "integration-only",
-        role: "recepcion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+        }
       }
     });
     await prisma.patientConsent.create({
@@ -238,7 +242,9 @@ describe("flexible visit flow integration", () => {
       data: {
         email: `closed-${visit.id}@test.invalid`,
         passwordHash: "integration-only",
-        role: "recepcion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+        }
       }
     });
     await recordVisitDiscontinuation({
@@ -262,7 +268,9 @@ describe("flexible visit flow integration", () => {
       data: {
         email: `guard-${visit.id}@test.invalid`,
         passwordHash: "integration-only",
-        role: "recepcion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+        }
       }
     });
     await recordVisitDiscontinuation({

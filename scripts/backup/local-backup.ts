@@ -301,10 +301,20 @@ async function collectDomainSummaryFromClient(
      WHERE "status" = 'available'`
   );
   const roles = await client.query<{ role: string; count: string }>(
-    `SELECT "role"::text AS role, COUNT(*)::text AS count
-     FROM "InternalUser"
-     GROUP BY "role"
-     ORDER BY "role"`
+    `SELECT role, SUM(count)::text AS count
+     FROM (
+       SELECT "platformRole"::text AS role, COUNT(*)::bigint AS count
+       FROM "InternalUser"
+       WHERE "platformRole" IS NOT NULL
+       GROUP BY "platformRole"
+       UNION ALL
+       SELECT "role"::text AS role, COUNT(*)::bigint AS count
+       FROM "InternalUserBranch"
+       WHERE "active" = true
+       GROUP BY "role"
+     ) AS role_counts
+     GROUP BY role
+     ORDER BY role`
   );
 
   return {

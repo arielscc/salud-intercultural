@@ -80,7 +80,7 @@ async function attemptInternalLogin(formData: FormData) {
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id },
       action: "session.login",
       entityType: "session",
       entityId: user.id,
@@ -131,7 +131,7 @@ async function attemptInternalLogin(formData: FormData) {
   await setInternalSessionCookie(session.token, session.expiresAt);
   await clearLoginEmailHint();
   await appendAuditEvent({
-    actor: { id: user.id, role: user.role },
+    actor: { id: user.id },
     action: "session.login",
     entityType: "session",
     entityId: user.id,
@@ -160,7 +160,7 @@ export async function logoutInternalUser() {
 
     await clearInternalSessionCookie();
     await appendAuditEvent({
-      actor: user ? { id: user.id, role: user.role } : null,
+      actor: user ? { id: user.id } : null,
       action: "session.logout",
       entityType: "session",
       entityId: user?.id,

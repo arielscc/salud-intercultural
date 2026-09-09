@@ -42,7 +42,9 @@ async function setup() {
         email: `administracion-${randomUUID()}@example.com`,
         name: "Administración",
         passwordHash,
-        role: "administracion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+        }
       }
     }),
     prisma.internalUser.create({
@@ -50,7 +52,9 @@ async function setup() {
         email: `direccion-${randomUUID()}@example.com`,
         name: "Dirección",
         passwordHash,
-        role: "direccion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "direccion", active: true, isDefault: true }
+        }
       }
     }),
     prisma.internalUser.create({
@@ -58,7 +62,9 @@ async function setup() {
         email: `recepcion-${randomUUID()}@example.com`,
         name: "Recepción de mercadería",
         passwordHash,
-        role: "administracion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+        }
       }
     })
   ]);

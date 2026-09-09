@@ -1,5 +1,10 @@
-import type { InternalRole, Prisma } from "@/generated/prisma/client";
+import type {
+  InternalPlatformRole,
+  InternalRole,
+  Prisma
+} from "@/generated/prisma/client";
 import {
+  canHoldMultipleActiveBranches,
   canViewConsolidatedBranches,
   hasAutomaticBranchAssignment
 } from "@/features/branches/policy";
@@ -13,22 +18,32 @@ const branchSelect = {
   status: true
 } satisfies Prisma.ClinicBranchSelect;
 
-export async function getBranchesForUser(userId: string, role: InternalRole) {
+export async function getBranchesForUser(
+  userId: string,
+  platformRole: InternalPlatformRole | null
+) {
   return withDatabaseError("getBranchesForUser", async () => {
     const assignments = await prisma.internalUserBranch.findMany({
       where: { userId },
-      select: { isDefault: true, branch: { select: branchSelect } },
+      select: {
+        active: true,
+        isDefault: true,
+        role: true,
+        branch: { select: branchSelect }
+      },
       orderBy: [{ isDefault: "desc" }, { branch: { name: "asc" } }]
     });
 
     const assigned = assignments.map((assignment) => ({
       ...assignment.branch,
+      role: assignment.role,
+      membershipActive: assignment.active,
       isDefault: assignment.isDefault,
-      assigned: true,
+      assigned: assignment.active,
       assignmentSource: "membership" as const
     }));
 
-    if (!canViewConsolidatedBranches(role)) return assigned;
+    if (!hasAutomaticBranchAssignment(platformRole, "active")) return assigned;
 
     const assignedCodes = assigned.map((branch) => branch.code);
     const otherBranches = await prisma.clinicBranch.findMany({
@@ -41,15 +56,19 @@ export async function getBranchesForUser(userId: string, role: InternalRole) {
       ...assigned,
       ...otherBranches.map((branch) => ({
         ...branch,
+        role: "super_admin" as const,
+        membershipActive: true,
         isDefault: false,
-        assigned: false,
+        assigned: true,
         assignmentSource: "automatic-super-admin" as const
       }))
     ];
 
     return branches.map((branch) => ({
       ...branch,
-      assigned: branch.assigned || hasAutomaticBranchAssignment(role, branch.status)
+      role: "super_admin" as const,
+      membershipActive: branch.status !== "inactive",
+      assigned: hasAutomaticBranchAssignment(platformRole, branch.status)
     }));
   });
 }
@@ -72,52 +91,99 @@ export async function getConfigurableBranches() {
 
 export async function replaceUserBranchAssignments(input: {
   userId: string;
-  branchCodes: string[];
+  memberships: Array<{ branchCode: string; role: InternalRole; active: boolean }>;
   defaultBranchCode: string;
 }) {
   return withDatabaseError("replaceUserBranchAssignments", () =>
     prisma.$transaction(async (tx) => {
       const target = await tx.internalUser.findUnique({
         where: { id: input.userId },
-        select: { role: true }
+        select: { platformRole: true }
       });
       if (!target) throw new Error("USER_NOT_FOUND");
 
-      const branchCodes =
-        target.role === "super_admin"
-          ? (
-              await tx.clinicBranch.findMany({
-                where: { status: { not: "inactive" } },
-                select: { code: true }
-              })
-            ).map((branch) => branch.code)
-          : [...new Set(input.branchCodes)];
-      if (!branchCodes.includes(input.defaultBranchCode)) {
-        throw new Error("DEFAULT_BRANCH_NOT_ASSIGNED");
-      }
-      const validBranches = await tx.clinicBranch.findMany({
-        where: { code: { in: branchCodes }, status: { not: "inactive" } },
+      const configurableBranches = await tx.clinicBranch.findMany({
+        where: { status: { not: "inactive" } },
         select: { code: true, status: true }
       });
-      const defaultBranch = validBranches.find(
-        (branch) => branch.code === input.defaultBranchCode
-      );
+      const configurableCodes = new Set(configurableBranches.map((branch) => branch.code));
+      const requested =
+        target.platformRole === "super_admin"
+          ? configurableBranches.map((branch) => ({
+              branchCode: branch.code,
+              role: "super_admin" as const,
+              active: true
+            }))
+          : input.memberships;
+      const unique = new Map(requested.map((membership) => [membership.branchCode, membership]));
+      if (unique.size !== requested.length) throw new Error("INVALID_BRANCH_ASSIGNMENT");
+      if ([...unique.keys()].some((branchCode) => !configurableCodes.has(branchCode))) {
+        throw new Error("INVALID_BRANCH_ASSIGNMENT");
+      }
       if (
-        validBranches.length !== branchCodes.length ||
-        !defaultBranch ||
-        defaultBranch.status !== "active"
+        !target.platformRole &&
+        [...unique.values()].some((membership) => membership.role === "super_admin")
       ) {
         throw new Error("INVALID_BRANCH_ASSIGNMENT");
       }
+      const defaultMembership = unique.get(input.defaultBranchCode);
+      const defaultBranch = configurableBranches.find(
+        (branch) => branch.code === input.defaultBranchCode
+      );
+      if (!defaultMembership?.active || defaultBranch?.status !== "active") {
+        throw new Error("DEFAULT_BRANCH_NOT_ASSIGNED");
+      }
+      if (!target.platformRole && ![...unique.values()].some((membership) => membership.active)) {
+        throw new Error("INVALID_BRANCH_ASSIGNMENT");
+      }
+      if (
+        !target.platformRole &&
+        !canHoldMultipleActiveBranches(
+          [...unique.values()]
+            .filter((membership) => membership.active)
+            .map((membership) => membership.role)
+        )
+      ) {
+        throw new Error("MULTI_BRANCH_ROLE_REQUIRES_CLINICAL_ROTATION");
+      }
 
-      await tx.internalUserBranch.deleteMany({ where: { userId: input.userId } });
-      await tx.internalUserBranch.createMany({
-        data: branchCodes.map((branchCode) => ({
-          userId: input.userId,
-          branchCode,
-          isDefault: branchCode === input.defaultBranchCode
-        }))
+      const previous = await tx.internalUserBranch.findMany({
+        where: { userId: input.userId },
+        select: { branchCode: true, role: true, active: true, isDefault: true }
       });
+
+      await tx.internalUserBranch.updateMany({
+        where: { userId: input.userId },
+        data: { active: false, isDefault: false }
+      });
+      for (const membership of unique.values()) {
+        await tx.internalUserBranch.upsert({
+          where: {
+            userId_branchCode: {
+              userId: input.userId,
+              branchCode: membership.branchCode
+            }
+          },
+          create: {
+            userId: input.userId,
+            branchCode: membership.branchCode,
+            role: membership.role,
+            active: membership.active,
+            isDefault: membership.branchCode === input.defaultBranchCode
+          },
+          update: {
+            role: membership.role,
+            active: membership.active,
+            isDefault: membership.branchCode === input.defaultBranchCode
+          }
+        });
+      }
+
+      const current = await tx.internalUserBranch.findMany({
+        where: { userId: input.userId },
+        select: { branchCode: true, role: true, active: true, isDefault: true }
+      });
+      return { previous, current };
     })
   );
 }

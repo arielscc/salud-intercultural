@@ -11,8 +11,9 @@ Aplicar un modelo híbrido para una sola clínica con varias sucursales:
 - una identidad única del paciente y maestros corporativos reutilizables;
 - cada visita, expediente, movimiento y resultado pertenece a la sucursal donde
   ocurrió;
-- los médicos pueden consultar la historia clínica de otras sucursales en solo
-  lectura porque rotan entre sedes;
+- médicos y enfermería pueden consultar antecedentes de otras sucursales en
+  solo lectura, dentro de la información permitida a su rol, porque rotan entre
+  sedes;
 - los demás roles trabajan únicamente con la sucursal seleccionada, salvo una
   búsqueda exacta y controlada para identificar al paciente que está siendo
   atendido;
@@ -74,7 +75,7 @@ una sucursal.
 | Médico | Puede buscar pacientes de toda la clínica | Sí, solo lectura, con motivo asistencial y auditoría | Solo en la sucursal activa |
 | Recepción | Lista local; búsqueda exacta global durante una llegada | No | Identidad global y expediente de la sucursal activa |
 | Administración | Lista local; acceso al paciente vinculado a una operación local | No | Contacto global y operaciones de la sucursal activa |
-| Enfermería | Pacientes con visita/tarea de la sucursal activa | No, salvo información incluida por el médico en la orden local | Solo en la sucursal activa |
+| Enfermería | Puede buscar pacientes de toda la clínica durante una atención | Sí, solo lectura, limitada a antecedentes de enfermería y órdenes necesarias, con motivo y auditoría | Solo en la sucursal activa |
 | Dirección/superadministrador | Por defecto, contexto de una sola sucursal | No por el mero rol; requiere una función clínica o reporte explícito | Solo bajo el contexto seleccionado |
 
 Recepción y Administración no disponen de una lista global navegable. La
@@ -83,10 +84,11 @@ paciente se presenta; no expone resultados aproximados de otras sedes. Al
 vincularlo a la sede se crea `PatientBranchRecord`, que habilita el trabajo
 local.
 
-El acceso médico transversal exige un paciente seleccionado, un motivo de
-atención o una visita activa y genera un evento de auditoría. Los registros de
-otra sede muestran origen y fecha, son inmutables desde la sede actual y no se
-copian.
+El acceso transversal de médicos y enfermería exige un paciente seleccionado,
+un motivo de atención o una visita activa y genera un evento de auditoría. Cada
+rol ve únicamente la información necesaria para su trabajo: Enfermería no
+obtiene permisos de diagnóstico. Los registros de otra sede muestran origen y
+fecha, son inmutables desde la sede actual y no se copian.
 
 ## Invariantes Obligatorias
 
@@ -223,6 +225,9 @@ punto y no pueda elegir otra mediante datos del cliente.
 
 **Prioridad:** P0. **Dependencias:** Tarea 2.
 
+**Estado:** terminada el 2026-09-09. Evidencia:
+[reporte de la Tarea 3](../task-reports/2026-09-09-tarea-3-roles-permisos-sucursal.md).
+
 **Objetivo:** conservar una identidad global y permitir roles operativos
 distintos en cada sede.
 
@@ -237,10 +242,15 @@ distintos en cada sede.
   dentro de una consulta.
 - Actualizar sesiones, permisos, administración de usuarios, seeds y selector.
 - Auditar alta, baja, cambio de rol y cambio de sede predeterminada.
+- Permitir varias membresías activas únicamente a médicos y enfermería en
+  rotación; los demás roles operativos conservan una sola sede activa.
 
 **Criterios de aceptación:**
 
-- Un mismo usuario puede ser Administración en una sede y solo lectura en otra.
+- Un médico o una enfermera puede rotar entre El Alto y Cochabamba con una sola
+  cuenta y el mismo rol clínico en ambas sedes.
+- Administración, Recepción y los demás roles operativos no pueden conservar
+  dos sucursales activas simultáneamente.
 - El superadministrador cambia de sede con una sola cuenta y ve únicamente la
   sede seleccionada.
 - Desactivar una membresía revoca esa sede sin cerrar las demás asignaciones.
@@ -403,7 +413,9 @@ los médicos continuidad clínica transversal sin permitir escritura remota.
 - Un médico asignado a la sede activa puede consultar la historia previa del
   paciente en otras sedes, pero no modificarla ni reutilizar sus IDs en una
   escritura local.
-- Recepción, Administración y Enfermería no obtienen esa vista transversal.
+- Recepción y Administración no obtienen esa vista transversal. Enfermería no
+  recibe la vista médica completa; su continuidad limitada se define en la
+  Tarea 9.
 - Una orden, receta o diagnóstico no puede enlazar paciente/visita de otra sede.
 - Los perfiles profesionales mostrados en documentos corresponden a la sede.
 
@@ -414,7 +426,8 @@ los médicos continuidad clínica transversal sin permitir escritura remota.
 **Prioridad:** P0. **Dependencias:** Tareas 7-8.
 
 **Objetivo:** cerrar las rutas de acceso clínico indirecto y permitir que los
-adjuntos históricos formen parte de la vista médica transversal controlada.
+antecedentes históricos necesarios formen parte de vistas transversales
+controladas para médicos y enfermería.
 
 **Alcance:**
 
@@ -422,17 +435,19 @@ adjuntos históricos formen parte de la vista médica transversal controlada.
   de tareas, paquetes de sesiones y usos.
 - Agregar sucursal a adjuntos y permisos temporales de acceso.
 - Proteger las cuatro APIs de archivos mediante contexto activo y relación
-  compuesta. Una descarga remota solo se concede desde la vista médica
-  transversal, con grant corto y auditoría.
+  compuesta. Una descarga remota solo se concede desde la vista clínica
+  transversal autorizada para el rol, con grant corto y auditoría.
 - Incluir sucursal en storage keys, grants, checksum lookup e idempotencia.
 - Exigir visita de la misma sede cuando una aplicación descuente inventario.
 
 **Criterios de aceptación:**
 
 - Conocer `attachmentId` o `workItemId` de otra sede no permite metadatos,
-  descarga ni inferir existencia fuera del flujo médico autorizado.
-- Un permiso temporal remoto queda ligado al médico, paciente, sede activa y
-  motivo; no habilita escritura y expira al cambiar de contexto.
+  descarga ni inferir existencia fuera del flujo clínico autorizado.
+- Un permiso temporal remoto queda ligado al profesional, su rol, paciente,
+  sede activa y motivo; no habilita escritura y expira al cambiar de contexto.
+- Enfermería solo puede consultar antecedentes de enfermería y órdenes
+  necesarias; no recibe la vista diagnóstica completa del médico.
 - Enfermería solo descuenta stock de la sede de la visita.
 
 **Commit sugerido:** `feat(sigeco): isolate nursing and clinical files by branch`
@@ -643,19 +658,20 @@ la lectura clínica transversal autorizada.
 - Ejecutar cada unidad de trabajo Prisma en una transacción que establezca la
   sede con `set_config(..., true)` para evitar fugas en el pool.
 - No dar bypass al superadministrador durante uso normal: debe seleccionar una
-  sede como cualquier otra consulta. Solo un médico obtiene `SELECT` remoto
-  para el paciente y motivo autorizados; `INSERT`, `UPDATE` y `DELETE` continúan
-  ligados a la sede activa.
+  sede como cualquier otra consulta. Solo médicos y enfermería obtienen
+  `SELECT` remoto para el paciente, motivo y campos autorizados a su rol;
+  `INSERT`, `UPDATE` y `DELETE` continúan ligados a la sede activa.
 - Adaptar scripts, backups y jobs para iterar sedes explícitamente o usar el rol
   técnico auditado.
 
 **Criterios de aceptación:**
 
 - Una consulta deliberadamente sin filtro no devuelve filas de otra sede para
-  roles no médicos ni fuera de un contexto clínico autorizado.
+  roles distintos de médico o enfermería ni fuera de un contexto clínico
+  autorizado.
 - Un `INSERT` o `UPDATE` con otra sede falla por política de PostgreSQL.
-- La autorización médica remota solo devuelve expedientes del paciente
-  seleccionado, expira y no habilita escritura.
+- La autorización clínica remota solo devuelve los campos permitidos del
+  paciente seleccionado, expira y no habilita escritura.
 - Reutilizar una conexión del pool no conserva la sede de la transacción
   anterior.
 - El rol web no puede desactivar políticas ni cambiar su rol.

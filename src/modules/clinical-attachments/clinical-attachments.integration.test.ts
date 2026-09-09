@@ -44,7 +44,9 @@ describe("secure clinical attachments integration", () => {
       data: {
         email: `adjuntos-${randomUUID()}@example.com`,
         passwordHash: "integration-only",
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
     const patient = await prisma.patient.create({
@@ -76,7 +78,7 @@ describe("secure clinical attachments integration", () => {
       "laboratorio.pdf",
       { type: "application/pdf" }
     );
-    const actor = { id: user.id, role: user.role };
+    const actor = { id: user.id, role: "medico" as const };
 
     const first = await createClinicalAttachment({
       actor,
@@ -184,7 +186,9 @@ describe("secure clinical attachments integration", () => {
       data: {
         email: `adjuntos-${randomUUID()}@example.com`,
         passwordHash: "integration-only",
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
     const [patient, otherPatient] = await Promise.all([
@@ -209,7 +213,7 @@ describe("secure clinical attachments integration", () => {
 
     await expect(
       createClinicalAttachment({
-        actor: { id: user.id, role: user.role },
+        actor: { id: user.id, role: "medico" },
         patientId: patient.id,
         visitId: otherVisit.id,
         uploadRequestId: randomUUID(),

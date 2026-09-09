@@ -14,7 +14,7 @@ import { sanitizeAuditContext } from "@/modules/audit/sanitize";
 
 type AuditActor = {
   id: string;
-  role: InternalRole;
+  role?: InternalRole;
 };
 
 export type AppendAuditEventInput = {

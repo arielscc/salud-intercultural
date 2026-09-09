@@ -29,9 +29,8 @@ async function prepareVisit() {
       email: "direccion.feedback@test.invalid",
       name: "Dirección QA",
       passwordHash: await hashPassword("clave-direccion-feedback-123"),
-      role: "direccion",
       branchAssignments: {
-        create: { branchCode: "el-alto", isDefault: true }
+        create: { branchCode: "el-alto", role: "direccion", active: true, isDefault: true }
       }
     }
   });
@@ -40,9 +39,8 @@ async function prepareVisit() {
       email: "recepcion.feedback@test.invalid",
       name: "Recepción QA",
       passwordHash: await hashPassword("clave-recepcion-feedback-123"),
-      role: "recepcion",
       branchAssignments: {
-        create: { branchCode: "el-alto", isDefault: true }
+        create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
       }
     }
   });

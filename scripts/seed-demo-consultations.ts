@@ -65,7 +65,17 @@ async function main() {
   // médico, usamos cualquier usuario interno activo.
   const doctor =
     (await prisma.internalUser.findFirst({
-      where: { active: true, role: "medico" },
+      where: {
+        active: true,
+        OR: [
+          { platformRole: "super_admin" },
+          {
+            branchAssignments: {
+              some: { branchCode: branch.code, active: true, role: "medico" }
+            }
+          }
+        ]
+      },
       orderBy: { createdAt: "asc" },
       select: { id: true, name: true }
     })) ??

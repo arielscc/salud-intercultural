@@ -45,8 +45,22 @@ async function activateAwaitingPaymentFollowUps(
   visitId: string | null | undefined
 ) {
   if (!visitId) return;
+  const visit = await tx.visit.findUnique({
+    where: { id: visitId },
+    select: { branchCode: true }
+  });
+  if (!visit) return;
   const receptionAssignee = await tx.internalUser.findFirst({
-    where: { active: true, role: "recepcion" },
+    where: {
+      active: true,
+      branchAssignments: {
+        some: {
+          branchCode: visit.branchCode,
+          active: true,
+          role: "recepcion"
+        }
+      }
+    },
     orderBy: [
       { name: "asc" },
       { createdAt: "asc" }

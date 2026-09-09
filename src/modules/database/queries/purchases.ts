@@ -112,15 +112,41 @@ async function lockOpenCashSession(tx: Prisma.TransactionClient, cashSessionId?:
   return session;
 }
 
-async function assertActiveUser(tx: Prisma.TransactionClient, userId: string) {
-  const user = await tx.internalUser.findUnique({ where: { id: userId } });
+async function assertActiveUser(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  branchCode: string
+) {
+  const user = await tx.internalUser.findFirst({
+    where: {
+      id: userId,
+      active: true,
+      OR: [
+        { platformRole: "super_admin" },
+        { branchAssignments: { some: { branchCode, active: true } } }
+      ]
+    }
+  });
   if (!user?.active) throw new PurchaseWorkflowError("invalid-authorizer");
   return user;
 }
 
-async function assertDirectionAuthorizer(tx: Prisma.TransactionClient, userId: string) {
-  const user = await assertActiveUser(tx, userId);
-  if (user.role !== "direccion" && user.role !== "super_admin") {
+async function assertDirectionAuthorizer(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  branchCode: string
+) {
+  const user = await tx.internalUser.findFirst({
+    where: {
+      id: userId,
+      active: true,
+      OR: [
+        { platformRole: "super_admin" },
+        { branchAssignments: { some: { branchCode, active: true, role: "direccion" } } }
+      ]
+    }
+  });
+  if (!user) {
     throw new PurchaseWorkflowError("invalid-authorizer");
   }
   return user;
@@ -722,7 +748,7 @@ export async function createPurchaseReceiptRecord(input: {
       if (purchase.branchCode !== input.branchCode) {
         throw new PurchaseWorkflowError("branch-mismatch");
       }
-      await assertActiveUser(tx, input.receivedById);
+      await assertActiveUser(tx, input.receivedById, purchase.branchCode);
       const validLines = input.lines.filter((line) => line.quantity > 0);
       if (validLines.length === 0) throw new PurchaseWorkflowError("receipt-empty");
       const purchaseLineById = new Map(purchase.lines.map((line) => [line.id, line]));
@@ -853,13 +879,13 @@ export async function createInventoryLotAdjustmentRecord(input: {
         where: { idempotencyKey: input.idempotencyKey }
       });
       if (reused) return reused;
-      await assertDirectionAuthorizer(tx, input.authorizedById);
       await tx.$queryRaw`SELECT "id" FROM "InventoryLot" WHERE "id" = ${input.lotId} FOR UPDATE`;
       const reusedAfterLock = await tx.inventoryLotAdjustment.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
       if (reusedAfterLock) return reusedAfterLock;
       const lot = await tx.inventoryLot.findUniqueOrThrow({ where: { id: input.lotId } });
+      await assertDirectionAuthorizer(tx, input.authorizedById, lot.branchCode);
       const restocked =
         input.kind === "patient_return" || input.kind === "correction"
           ? input.restocked

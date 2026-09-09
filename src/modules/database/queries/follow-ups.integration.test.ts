@@ -55,7 +55,9 @@ describe("follow-up integration", () => {
         email: "marlen.recepcion@example.com",
         name: "Marlen Recepción Test",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "recepcion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+        }
       }
     });
     const patient = await createPatientRecord({
@@ -124,7 +126,9 @@ describe("follow-up integration", () => {
         email: "consentimiento@example.com",
         name: "Recepción Test",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "recepcion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+        }
       }
     });
     const patient = await createPatientRecord({

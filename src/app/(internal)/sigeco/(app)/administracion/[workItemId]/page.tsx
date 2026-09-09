@@ -181,7 +181,7 @@ export default async function AdministrationWorkItemPage({
   const requestedBy = requester
     ? {
         name: requester.name ?? requester.email,
-        roleLabel: internalRoleLabels[requester.role]
+        roleLabel: requester.id === order?.doctorId ? internalRoleLabels.medico : "Personal"
       }
     : doctorOrder?.doctor
       ? {

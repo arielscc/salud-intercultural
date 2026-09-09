@@ -78,7 +78,9 @@ async function createReceptionUser() {
       email: "recepcion-intake@example.com",
       name: "Recepcion Intake",
       passwordHash: await hashPassword("clave-segura-123"),
-      role: "recepcion"
+      branchAssignments: {
+        create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+      }
     }
   });
 }

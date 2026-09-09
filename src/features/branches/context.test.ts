@@ -30,7 +30,7 @@ import {
 
 const user = {
   id: "user-1",
-  role: "super_admin" as const,
+  platformRole: "super_admin" as const,
   mustChangePassword: false
 };
 
@@ -38,6 +38,8 @@ function branch(
   code: string,
   overrides: Partial<{
     status: "active" | "preparation";
+    role: "super_admin" | "administracion" | "enfermeria";
+    membershipActive: boolean;
     assigned: boolean;
     isDefault: boolean;
   }> = {}
@@ -48,6 +50,8 @@ function branch(
     city: code,
     department: code,
     status: "active" as const,
+    role: "super_admin" as const,
+    membershipActive: true,
     assigned: true,
     isDefault: false,
     assignmentSource: "membership" as const,
@@ -67,6 +71,7 @@ describe("selectActiveBranch", () => {
 
   it.each([
     ["no asignada", branch("cochabamba", { assigned: false })],
+    ["con membresía desactivada", branch("cochabamba", { membershipActive: false })],
     ["en preparación", branch("cochabamba", { status: "preparation" })]
   ])("rechaza una cookie de sede %s sin caer en otra sucursal", (_label, target) => {
     expect(
@@ -87,6 +92,18 @@ describe("selectActiveBranch", () => {
         branch("el-alto", { isDefault: true })
       ])
     ).toMatchObject({ ok: true, branch: { code: "el-alto" } });
+  });
+
+  it("conserva el rol propio de la sucursal seleccionada", () => {
+    expect(
+      selectActiveBranch(
+        [
+          branch("el-alto", { role: "administracion", isDefault: true }),
+          branch("cochabamba", { role: "enfermeria" })
+        ],
+        "cochabamba"
+      )
+    ).toMatchObject({ ok: true, branch: { role: "enfermeria" } });
   });
 
   it("no elige la primera sede cuando falta una asignación default", () => {

@@ -34,7 +34,15 @@ async function seedRecoveryFixture(input: {
         email: `backup-${input.runId}@example.invalid`,
         name: "Responsable Simulacro",
         passwordHash: "backup-drill-login-disabled",
-        role: "super_admin"
+        platformRole: "super_admin",
+        branchAssignments: {
+          create: {
+            branchCode,
+            role: "super_admin",
+            active: true,
+            isDefault: true
+          }
+        }
       }
     });
     const patient = await prisma.patient.create({
@@ -111,7 +119,7 @@ async function seedRecoveryFixture(input: {
     await prisma.auditEvent.create({
       data: {
         actorId: user.id,
-        actorRole: user.role,
+        actorRole: "super_admin",
         action: "backup.drill.fixture",
         entityType: "backup_drill",
         entityId: input.runId,

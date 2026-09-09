@@ -1,4 +1,8 @@
-import type { InternalRole, Prisma } from "@/generated/prisma/client";
+import type {
+  InternalPlatformRole,
+  InternalRole,
+  Prisma
+} from "@/generated/prisma/client";
 import { assignableInternalRoles } from "@/features/internal-auth/permissions";
 import { prisma } from "@/modules/database";
 
@@ -35,8 +39,17 @@ async function ensureSuperAdminBranchAssignments(
   });
 
   await tx.internalUserBranch.createMany({
-    data: branches.map((branch) => ({ userId, branchCode: branch.code })),
+    data: branches.map((branch) => ({
+      userId,
+      branchCode: branch.code,
+      role: "super_admin" as const,
+      active: true
+    })),
     skipDuplicates: true
+  });
+  await tx.internalUserBranch.updateMany({
+    where: { userId, branchCode: { in: branches.map((branch) => branch.code) } },
+    data: { role: "super_admin", active: true }
   });
 
   const activeDefault = await tx.internalUserBranch.findFirst({
@@ -60,14 +73,16 @@ async function ensureSuperAdminBranchAssignments(
 export function assertInternalUserAccessChange(input: {
   actorId: string;
   targetId: string;
-  currentRole: InternalRole;
+  currentPlatformRole: InternalPlatformRole | null;
   currentActive: boolean;
-  nextRole: InternalRole;
+  nextPlatformRole: InternalPlatformRole | null;
   nextActive: boolean;
   activeSuperAdmins: number;
 }) {
-  assertAssignableRole(input.nextRole);
-  if (input.actorId === input.targetId && input.nextRole !== input.currentRole) {
+  if (
+    input.actorId === input.targetId &&
+    input.nextPlatformRole !== input.currentPlatformRole
+  ) {
     throw new InternalUserManagementError("SELF_ROLE_CHANGE");
   }
   if (input.actorId === input.targetId && !input.nextActive) {
@@ -76,8 +91,8 @@ export function assertInternalUserAccessChange(input: {
 
   const removesSuperAdmin =
     input.currentActive &&
-    input.currentRole === "super_admin" &&
-    (!input.nextActive || input.nextRole !== "super_admin");
+    input.currentPlatformRole === "super_admin" &&
+    (!input.nextActive || input.nextPlatformRole !== "super_admin");
   if (removesSuperAdmin && input.activeSuperAdmins <= 1) {
     throw new InternalUserManagementError("LAST_SUPER_ADMIN");
   }
@@ -137,7 +152,7 @@ export async function createManagedInternalUser(input: {
       data: {
         name: input.name,
         email: input.email,
-        role: input.role,
+        platformRole: input.role === "super_admin" ? "super_admin" : null,
         passwordHash: input.passwordHash,
         active: true,
         mustChangePassword: true
@@ -148,7 +163,13 @@ export async function createManagedInternalUser(input: {
       await ensureSuperAdminBranchAssignments(tx, user.id, input.branchCode);
     } else {
       await tx.internalUserBranch.create({
-        data: { userId: user.id, branchCode: input.branchCode, isDefault: true }
+        data: {
+          userId: user.id,
+          branchCode: input.branchCode,
+          role: input.role,
+          active: true,
+          isDefault: true
+        }
       });
     }
 
@@ -159,11 +180,12 @@ export async function createManagedInternalUser(input: {
 export async function updateManagedInternalUserAccess(input: {
   actorId: string;
   userId: string;
-  role: InternalRole;
+  platformRole: InternalPlatformRole | null;
+  staffRole: Exclude<InternalRole, "super_admin">;
   active: boolean;
   defaultBranchCode: string;
 }) {
-  assertAssignableRole(input.role);
+  assertAssignableRole(input.staffRole);
 
   return prisma.$transaction(
     async (tx) => {
@@ -172,34 +194,61 @@ export async function updateManagedInternalUserAccess(input: {
 
       const removesSuperAdmin =
         target.active &&
-        target.role === "super_admin" &&
-        (!input.active || input.role !== "super_admin");
+        target.platformRole === "super_admin" &&
+        (!input.active || input.platformRole !== "super_admin");
       const activeSuperAdmins = removesSuperAdmin
         ? await tx.internalUser.count({
-            where: { active: true, role: "super_admin" }
+            where: { active: true, platformRole: "super_admin" }
           })
         : 0;
       assertInternalUserAccessChange({
         actorId: input.actorId,
         targetId: input.userId,
-        currentRole: target.role,
+        currentPlatformRole: target.platformRole,
         currentActive: target.active,
-        nextRole: input.role,
+        nextPlatformRole: input.platformRole,
         nextActive: input.active,
         activeSuperAdmins
       });
+      const previousMemberships = await tx.internalUserBranch.findMany({
+        where: { userId: input.userId },
+        select: { branchCode: true, role: true, active: true }
+      });
 
-      const accessChanged = target.role !== input.role || target.active !== input.active;
+      const accessChanged =
+        target.platformRole !== input.platformRole || target.active !== input.active;
       const updated = await tx.internalUser.update({
         where: { id: input.userId },
-        data: { role: input.role, active: input.active }
+        data: { platformRole: input.platformRole, active: input.active }
       });
-      if (input.role === "super_admin") {
+      if (input.platformRole === "super_admin") {
         await ensureSuperAdminBranchAssignments(
           tx,
           input.userId,
           input.defaultBranchCode
         );
+      } else if (target.platformRole === "super_admin") {
+        await tx.internalUserBranch.updateMany({
+          where: { userId: input.userId },
+          data: {
+            role: input.staffRole,
+            active: false,
+            isDefault: false
+          }
+        });
+        await tx.internalUserBranch.update({
+          where: {
+            userId_branchCode: {
+              userId: input.userId,
+              branchCode: input.defaultBranchCode
+            }
+          },
+          data: {
+            role: input.staffRole,
+            active: true,
+            isDefault: true
+          }
+        });
       }
       let revokedSessions = 0;
 
@@ -208,7 +257,39 @@ export async function updateManagedInternalUserAccess(input: {
         revokedSessions = revoked.count;
       }
 
-      return { user: updated, revokedSessions };
+      const currentMemberships = await tx.internalUserBranch.findMany({
+        where: { userId: input.userId },
+        select: { branchCode: true, role: true, active: true }
+      });
+      const previousByBranch = new Map(
+        previousMemberships.map((membership) => [membership.branchCode, membership])
+      );
+      const membershipRoleChanges = currentMemberships.flatMap((membership) => {
+        const previous = previousByBranch.get(membership.branchCode);
+        return previous && previous.role !== membership.role
+          ? [{ branchCode: membership.branchCode, from: previous.role, to: membership.role }]
+          : [];
+      });
+      const activatedMemberships = currentMemberships
+        .filter((membership) => {
+          const previous = previousByBranch.get(membership.branchCode);
+          return membership.active && !previous?.active;
+        })
+        .map((membership) => membership.branchCode);
+      const deactivatedMemberships = currentMemberships
+        .filter((membership) => {
+          const previous = previousByBranch.get(membership.branchCode);
+          return !membership.active && previous?.active;
+        })
+        .map((membership) => membership.branchCode);
+
+      return {
+        user: updated,
+        revokedSessions,
+        membershipRoleChanges,
+        activatedMemberships,
+        deactivatedMemberships
+      };
     },
     { isolationLevel: "Serializable" }
   );

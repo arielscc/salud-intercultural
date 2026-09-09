@@ -25,6 +25,8 @@ type AuditActor = {
   role: InternalRole;
 };
 
+type PlatformAuditActor = { id: string };
+
 type AuditMetadata = {
   entityId?: string | null;
   context?: unknown;
@@ -57,7 +59,7 @@ type BranchAuditedOperation<T> = (
   branchContext: BranchRequestContext
 ) => Promise<AuditOperationResult<T>>;
 type PlatformAuditedOperation<T> = (
-  actor: AuditActor,
+  actor: PlatformAuditActor,
   branchContext: null
 ) => Promise<AuditOperationResult<T>>;
 
@@ -156,11 +158,44 @@ export async function runAuditedAction<T>(
     redirect("/sigeco/login");
   }
 
-  const operationalRole = branchContext?.operationalRole ?? user.role;
+  if (input.branchless) {
+    const actor = { id: user.id };
+    let operationResult: AuditOperationResult<T>;
+    try {
+      operationResult = await (operation as PlatformAuditedOperation<T>)(actor, null);
+    } catch (error) {
+      await appendAuditEvent({
+        actor,
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        result: "failure",
+        requestId,
+        context: sanitizeAuditContext(input.context)
+      });
+      throw error;
+    }
+    await appendAuditEvent({
+      actor,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: operationResult.audit?.entityId ?? input.entityId,
+      result: "success",
+      requestId,
+      context: sanitizeAuditContext(operationResult.audit?.context ?? input.context)
+    });
+    return operationResult.value;
+  }
+
+  if (!branchContext) {
+    throw new BranchContextUnavailableError("active_branch_required");
+  }
+
+  const operationalRole = branchContext.operationalRole;
   const actor = { id: user.id, role: operationalRole };
   const auditedContext = {
     ...sanitizeAuditContext(input.context),
-    ...(branchContext ? { branchCode: branchContext.activeBranch.code } : {})
+    branchCode: branchContext.activeBranch.code
   };
 
   if (user.mustChangePassword && input.action !== "user.password.change") {
@@ -208,7 +243,7 @@ export async function runAuditedAction<T>(
       result: "denied",
       requestId,
       context: {
-        ...(branchContext ? { branchCode: branchContext.activeBranch.code } : {}),
+        branchCode: branchContext.activeBranch.code,
         reason: "module_disabled",
         attemptedAction: input.action,
         attemptedEntityType: input.entityType,
@@ -219,7 +254,7 @@ export async function runAuditedAction<T>(
     redirect(`/sigeco?aviso=${moduleDisabledNotice}`);
   }
 
-  if (branchContext && input.entityId) {
+  if (input.entityId) {
     const belongsToActiveBranch = await branchOwnedEntityExists({
       entityType: input.entityType,
       entityId: input.entityId,
@@ -243,9 +278,7 @@ export async function runAuditedAction<T>(
   let operationResult: AuditOperationResult<T>;
 
   try {
-    operationResult = branchContext
-      ? await (operation as BranchAuditedOperation<T>)(actor, branchContext)
-      : await (operation as PlatformAuditedOperation<T>)(actor, null);
+    operationResult = await (operation as BranchAuditedOperation<T>)(actor, branchContext);
   } catch (error) {
     if (error instanceof AuditAccessDeniedError || error instanceof BranchContextMismatchError) {
       await appendAuditEvent({
@@ -287,7 +320,7 @@ export async function runAuditedAction<T>(
     requestId,
     context: {
       ...sanitizeAuditContext(operationResult.audit?.context ?? input.context),
-      ...(branchContext ? { branchCode: branchContext.activeBranch.code } : {})
+      branchCode: branchContext.activeBranch.code
     }
   });
   return operationResult.value;

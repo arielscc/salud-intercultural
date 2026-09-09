@@ -43,8 +43,15 @@ export const updateInternalUserProfileSchema = z.object({
 
 export const updateInternalUserAccessSchema = z.object({
   userId: z.string().min(1),
-  role: activeInternalRoleSchema,
+  platformRole: z.enum(["none", "super_admin"]),
+  staffRole: activeInternalRoleSchema.exclude(["super_admin"]),
   active: z.enum(["true", "false"]).transform((value) => value === "true")
+});
+
+export const branchMembershipSchema = z.object({
+  branchCode: z.string().trim().regex(/^[a-z0-9-]{2,80}$/),
+  role: activeInternalRoleSchema,
+  active: z.boolean()
 });
 
 export const internalUserTargetSchema = z.object({
@@ -66,4 +73,3 @@ export const changeInternalPasswordSchema = z
     path: ["confirmPassword"],
     message: "Las contraseñas no coinciden."
   });
-

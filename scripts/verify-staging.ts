@@ -11,7 +11,16 @@ async function main() {
   const [accounts, patientCount, inventoryFixture] = await Promise.all([
     prisma.internalUser.findMany({
       where: { email: { in: expectedEmails } },
-      select: { active: true, email: true, role: true }
+      select: {
+        active: true,
+        email: true,
+        platformRole: true,
+        branchAssignments: {
+          where: { branchCode: "el-alto", active: true },
+          select: { role: true },
+          take: 1
+        }
+      }
     }),
     prisma.patient.count({
       where: { internalCode: { startsWith: "QA-" } }
@@ -25,7 +34,10 @@ async function main() {
   const validAccounts = new Set(
     accounts
       .filter((account) => account.active)
-      .map((account) => `${account.email}:${account.role}`)
+      .map(
+        (account) =>
+          `${account.email}:${account.platformRole ?? account.branchAssignments[0]?.role}`
+      )
   );
   const missingRoles = assignableInternalRoles.filter(
     (role) => !validAccounts.has(`qa.${role}@${domain}:${role}`)

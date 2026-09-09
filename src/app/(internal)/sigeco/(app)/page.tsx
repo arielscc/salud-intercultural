@@ -29,7 +29,6 @@ import { formatTime } from "@/lib/dates";
 import { getFollowUpWorkSummary } from "@/modules/database/queries/follow-ups";
 import { getInventorySummary } from "@/modules/database/queries/inventory";
 import { getReceptionDashboardSummary } from "@/modules/database/queries/reception";
-import { requireInternalUser } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
 import { getBranchContext } from "@/features/branches/context";
@@ -53,8 +52,7 @@ const operationalAreas: PatientRouteArea[] = [
 ];
 
 export default async function SigecoDashboardPage() {
-  const user = await requireInternalUser();
-  const [{ activeBranch }, moduleAccess] = await Promise.all([
+  const [{ user, activeBranch }, moduleAccess] = await Promise.all([
     getBranchContext(),
     getModuleAccessState()
   ]);

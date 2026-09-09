@@ -145,7 +145,7 @@ export default async function AdministrationPage({
     getTodayCollections(activeBranch.code),
     getCashDashboard({ branchCode: activeBranch.code }),
     getCashPersonnel(activeBranch.code),
-    getCashAuthorizers()
+    getCashAuthorizers(activeBranch.code)
   ]);
 
   const pendingBalance = summary.pendingSales._sum.balanceCents ?? 0;

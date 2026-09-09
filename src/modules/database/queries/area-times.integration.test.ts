@@ -28,7 +28,9 @@ describe("area time events integration", () => {
         email: "reception-area-times@test.invalid",
         name: "Recepción QA",
         passwordHash: await hashPassword("clave-segura-area-times-123"),
-        role: "recepcion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+        }
       }
     });
     const patient = await createPatientRecord({
@@ -52,12 +54,12 @@ describe("area time events integration", () => {
         reason: "Espera de documento"
       },
       userId: user.id,
-      userRole: user.role
+      userRole: "recepcion"
     });
     await recordAreaTimeTransition({
       data: { visitId: visit.id, action: "resume" },
       userId: user.id,
-      userRole: user.role
+      userRole: "recepcion"
     });
     await updateVisitRouteStatus({
       visitId: visit.id,

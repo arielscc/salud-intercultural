@@ -18,21 +18,28 @@ export type BranchContextBranch = {
   city: string;
   department: string;
   status: ClinicBranchStatus;
+  role: InternalRole;
+  membershipActive: boolean;
   assigned: boolean;
   isDefault: boolean;
   assignmentSource: BranchAssignmentSource;
 };
 
+export type BranchContextUser = InternalUser & { role: InternalRole };
+
 export type BranchRequestContext = {
-  user: InternalUser;
+  /** Identidad global con el rol operativo de la sede activa proyectado. */
+  user: BranchContextUser;
   activeBranch: BranchContextBranch;
   assignment: {
     userId: string;
     branchCode: string;
+    role: InternalRole;
+    active: boolean;
     isDefault: boolean;
     source: BranchAssignmentSource;
   };
-  /** Hasta la Tarea 3, el rol operativo sigue almacenado en InternalUser. */
+  /** Rol operativo resuelto exclusivamente desde la membresía de la sede activa. */
   operationalRole: InternalRole;
   branches: BranchContextBranch[];
   canSwitch: boolean;
@@ -68,7 +75,9 @@ export class BranchContextMismatchError extends Error {
 }
 
 function activeAssignedBranches(branches: readonly BranchContextBranch[]) {
-  return branches.filter((branch) => branch.assigned && branch.status === "active");
+  return branches.filter(
+    (branch) => branch.assigned && branch.membershipActive && branch.status === "active"
+  );
 }
 
 export function selectActiveBranch(
@@ -99,7 +108,7 @@ const resolveBranchAccess = cache(async () => {
   const user = await getInternalUserBySessionToken(token);
   if (!user) return { user: null, branches: [] as BranchContextBranch[] };
 
-  const branches = await getBranchesForUser(user.id, user.role);
+  const branches = await getBranchesForUser(user.id, user.platformRole);
   return { user, branches };
 });
 
@@ -121,18 +130,21 @@ export const resolveBranchContext = cache(async (): Promise<BranchContextResolut
 
   const selectable = activeAssignedBranches(branches);
   const activeBranch = selection.branch;
+  const operationalUser = { ...user, role: activeBranch.role };
   return {
     ok: true,
     context: {
-      user,
+      user: operationalUser,
       activeBranch,
       assignment: {
         userId: user.id,
         branchCode: activeBranch.code,
+        role: activeBranch.role,
+        active: activeBranch.membershipActive,
         isDefault: activeBranch.isDefault,
         source: activeBranch.assignmentSource
       },
-      operationalRole: user.role,
+      operationalRole: activeBranch.role,
       branches,
       canSwitch: selectable.length > 1
     }

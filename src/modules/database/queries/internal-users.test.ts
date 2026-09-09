@@ -7,9 +7,9 @@ describe("internal user access rules", () => {
       assertInternalUserAccessChange({
         actorId: "admin-1",
         targetId: "admin-1",
-        currentRole: "super_admin",
+        currentPlatformRole: "super_admin",
         currentActive: true,
-        nextRole: "direccion",
+        nextPlatformRole: null,
         nextActive: true,
         activeSuperAdmins: 2
       })
@@ -21,9 +21,9 @@ describe("internal user access rules", () => {
       assertInternalUserAccessChange({
         actorId: "admin-1",
         targetId: "admin-1",
-        currentRole: "super_admin",
+        currentPlatformRole: "super_admin",
         currentActive: true,
-        nextRole: "super_admin",
+        nextPlatformRole: "super_admin",
         nextActive: false,
         activeSuperAdmins: 2
       })
@@ -35,9 +35,9 @@ describe("internal user access rules", () => {
       assertInternalUserAccessChange({
         actorId: "admin-2",
         targetId: "admin-1",
-        currentRole: "super_admin",
+        currentPlatformRole: "super_admin",
         currentActive: true,
-        nextRole: "direccion",
+        nextPlatformRole: null,
         nextActive: true,
         activeSuperAdmins: 1
       })
@@ -49,9 +49,9 @@ describe("internal user access rules", () => {
       assertInternalUserAccessChange({
         actorId: "admin-2",
         targetId: "admin-1",
-        currentRole: "super_admin",
+        currentPlatformRole: "super_admin",
         currentActive: true,
-        nextRole: "direccion",
+        nextPlatformRole: null,
         nextActive: true,
         activeSuperAdmins: 2
       })

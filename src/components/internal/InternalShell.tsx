@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FileText, PauseCircle } from "lucide-react";
-import type { InternalUser } from "@/generated/prisma/client";
+import type { BranchContextUser } from "@/features/branches/context";
 import { internalRoleLabels } from "@/features/internal-auth/permissions";
 import {
   canUse,
@@ -20,7 +20,7 @@ function formatToday() {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-function UserBadge({ user }: { user: InternalUser }) {
+function UserBadge({ user }: { user: BranchContextUser }) {
   const displayName = user.name ?? user.email;
   const initials = displayName
     .split(" ")
@@ -54,7 +54,7 @@ export function InternalShell({
   moduleAccess,
   children
 }: {
-  user: InternalUser;
+  user: BranchContextUser;
   moduleAccess: ModuleAccessState;
   branchContext: {
     activeBranch: { code: string; name: string };

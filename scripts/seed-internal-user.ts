@@ -20,8 +20,17 @@ async function assignAllBranchesToSuperAdmin(userId: string, defaultCode: string
 
   await prisma.$transaction(async (tx) => {
     await tx.internalUserBranch.createMany({
-      data: branches.map((branch) => ({ userId, branchCode: branch.code })),
+      data: branches.map((branch) => ({
+        userId,
+        branchCode: branch.code,
+        role: "super_admin" as const,
+        active: true
+      })),
       skipDuplicates: true
+    });
+    await tx.internalUserBranch.updateMany({
+      where: { userId, branchCode: { in: branches.map((branch) => branch.code) } },
+      data: { role: "super_admin", active: true }
     });
     await tx.internalUserBranch.updateMany({
       where: { userId },
@@ -62,7 +71,7 @@ async function main() {
       where: { id: existing.id },
       data: {
         passwordHash,
-        role: "super_admin",
+        platformRole: "super_admin",
         active: true,
         failedAttempts: 0,
         lockedUntil: null,
@@ -79,7 +88,7 @@ async function main() {
     data: {
       email,
       passwordHash,
-      role: "super_admin",
+      platformRole: "super_admin",
       active: true,
       mustChangePassword: false,
       passwordChangedAt: new Date(),

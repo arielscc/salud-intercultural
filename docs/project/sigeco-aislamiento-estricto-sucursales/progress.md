@@ -7,9 +7,11 @@ Plan: [tasks.md](./tasks.md)
 ## Estado General
 
 Plan híbrido dividido en 17 tareas consecutivas. La frontera técnica ya cuenta
-con un contrato ejecutable, un detector automático y un contexto autenticado de
-sucursal obligatorio en páginas, acciones y APIs internas. Todavía no se inició
-la partición general de operaciones ni se aplicó RLS. La migración
+con un contrato ejecutable, un detector automático, un contexto autenticado de
+sucursal obligatorio y roles operativos resueltos desde cada membresía. La
+identidad queda global y solo conserva la capacidad de plataforma del super
+administrador. Todavía no se inició la partición general de operaciones ni se
+aplicó RLS. La migración
 `20260908120000_require_explicit_branch_code` queda vigilada por el detector:
 elimina siete defaults de El Alto y hace explícitas las principales escrituras
 operativas.
@@ -19,8 +21,9 @@ operativas.
 - Todas las sucursales pertenecen a una sola clínica y entidad.
 - El paciente conserva una identidad y contacto globales.
 - Cada visita e historia clínica pertenece a la sede donde ocurrió.
-- Solo los médicos pueden consultar historia de otras sedes, en solo lectura y
-  con auditoría, porque rotan entre sucursales.
+- Médicos y enfermería pueden consultar antecedentes de otras sedes, en solo
+  lectura, auditados y limitados a la información de su rol, porque rotan entre
+  sucursales.
 - Actualizar el contacto maestro de un paciente o proveedor se refleja para
   toda la clínica.
 - Productos y proveedores conservan identidad global; stock, precios,
@@ -30,16 +33,16 @@ operativas.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 15 |
+| Pendiente | 14 |
 | En progreso | 0 |
 | Bloqueada | 0 |
-| Terminada | 2 |
+| Terminada | 3 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
-| A. Frontera técnica | 1-4 | En curso (2/4) | Contrato, contexto, roles y backfill seguro |
+| A. Frontera técnica | 1-4 | En curso (3/4) | Contrato, contexto, roles y backfill seguro |
 | B. Partición de dominios | 5-13 | Pendiente | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
@@ -49,7 +52,7 @@ operativas.
 | --- | --- | --- | --- | --- |
 | 1 | Contrato de tenencia y detector automático | P0 | Terminada | Ninguna |
 | 2 | Contexto central de sucursal en servidor | P0 | Terminada | 1 |
-| 3 | Roles y permisos por sucursal | P0 | Pendiente | 2 |
+| 3 | Roles y permisos por sucursal | P0 | Terminada | 2 |
 | 4 | Herramientas de backfill y reconciliación | P0 | Pendiente | 1-3 |
 | 5 | Identidad global y expediente local del paciente | P0 | Pendiente | 4 |
 | 6 | Leads, campañas y entradas públicas | P0 | Pendiente | 2, 4-5 |
@@ -73,6 +76,14 @@ operativas.
   retiro: 63 excepciones de modelo y 42 hallazgos de código.
 - `BranchRequestContext` resuelve usuario, asignación, sede activa y rol
   operativo exclusivamente desde sesión y membresías activas.
+- `InternalUser` conserva la identidad y la capacidad global de plataforma;
+  `InternalUserBranch` conserva rol, estado y sede predeterminada.
+- Médicos y enfermería pueden mantener el mismo rol clínico activo en varias
+  sedes por rotación. Los demás roles operativos conservan una sola sede activa.
+- Los superadministradores usan una sola cuenta y reciben todas las sedes
+  activas o en preparación; cada request continúa limitado a la sede elegida.
+- Caja, compras, seguimiento, opiniones, recordatorios y selección de personal
+  validan pertenencia y rol en la sucursal de la operación.
 - Páginas, Server Actions, APIs, documentos y jobs tienen fronteras explícitas;
   las acciones con IDs operativos comprueban la pertenencia antes de mutar.
 - Una cookie inválida o la falta de sede conduce a selección segura y nunca a
@@ -88,5 +99,5 @@ Tarea 16.
 
 ## Próximo Paso
 
-Ejecutar la Tarea 3: almacenar y aplicar el rol operativo de cada usuario por
-sucursal, conservando una sola identidad global.
+Ejecutar la Tarea 4: preparar backfills idempotentes y reportes de
+reconciliación que no inventen la sucursal de los datos históricos.

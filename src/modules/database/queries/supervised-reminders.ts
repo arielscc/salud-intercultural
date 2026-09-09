@@ -57,8 +57,9 @@ export async function saveReminderRuleVersion(input: {
           where: {
             id: input.data.ownerId,
             active: true,
-            role: "recepcion",
-            branchAssignments: { some: { branchCode: input.branchCode } }
+            branchAssignments: {
+              some: { branchCode: input.branchCode, active: true, role: "recepcion" }
+            }
           },
           select: { id: true }
         });
@@ -144,8 +145,7 @@ export async function getReminderRuleOwners(branchCode: string) {
     prisma.internalUser.findMany({
       where: {
         active: true,
-        role: "recepcion",
-        branchAssignments: { some: { branchCode } }
+        branchAssignments: { some: { branchCode, active: true, role: "recepcion" } }
       },
       select: { id: true, name: true, email: true },
       orderBy: [{ name: "asc" }, { email: "asc" }]

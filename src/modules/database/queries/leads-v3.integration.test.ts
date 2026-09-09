@@ -26,7 +26,9 @@ describe("internal lead queries integration", () => {
         email: "captacion@example.com",
         name: "Captacion Test",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "captacion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "captacion", active: true, isDefault: true }
+        }
       }
     });
 

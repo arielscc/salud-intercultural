@@ -6,6 +6,7 @@ import { Chip } from "@/components/internal/ui/Chip";
 import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { revokeOwnInternalSessionAction } from "@/features/internal-auth/user-management-actions";
 import { internalRoleLabels } from "@/features/internal-auth/permissions";
+import { getBranchContext } from "@/features/branches/context";
 import { formatDateTime } from "@/lib/dates";
 import { getActiveSessionsForUser } from "@/modules/database/queries/internal-users";
 import { requireInternalSession } from "@/modules/permissions";
@@ -15,7 +16,11 @@ type MyAccountPageProps = {
 };
 
 export default async function MyAccountPage({ searchParams }: MyAccountPageProps) {
-  const [currentSession, query] = await Promise.all([requireInternalSession(), searchParams]);
+  const [currentSession, branchContext, query] = await Promise.all([
+    requireInternalSession(),
+    getBranchContext(),
+    searchParams
+  ]);
   const sessions = await getActiveSessionsForUser(currentSession.user.id);
 
   return (
@@ -35,7 +40,7 @@ export default async function MyAccountPage({ searchParams }: MyAccountPageProps
                 </h2>
                 <p className="mt-1 text-sm text-muted">{currentSession.user.email}</p>
               </div>
-              <Chip tone="primary">{internalRoleLabels[currentSession.user.role]}</Chip>
+              <Chip tone="primary">{internalRoleLabels[branchContext.operationalRole]}</Chip>
             </div>
           </Card>
 

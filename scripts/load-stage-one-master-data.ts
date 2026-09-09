@@ -143,7 +143,7 @@ async function resolveResponsible() {
 
   const user = await prisma.internalUser.findUnique({
     where: { email },
-    select: { id: true, active: true, role: true }
+    select: { id: true, active: true }
   });
   if (!user?.active) throw new Error(`No hay un usuario interno activo con ese correo.`);
 

@@ -69,18 +69,23 @@ function assertRehearsalDatabase() {
   return name;
 }
 
-async function ensureUser(email: string, role: "administracion" | "direccion" | "super_admin") {
+async function ensureUser(email: string, role: "administracion" | "direccion") {
   const existing = await prisma.internalUser.findUnique({ where: { email } });
-  if (existing) return existing;
-
-  return prisma.internalUser.create({
-    data: {
-      email,
-      name: `${tag} ${role}`,
-      passwordHash: await hashPassword(`ensayo-${randomUUID().slice(0, 12)}`),
-      role
-    }
+  const user =
+    existing ??
+    (await prisma.internalUser.create({
+      data: {
+        email,
+        name: `${tag} ${role}`,
+        passwordHash: await hashPassword(`ensayo-${randomUUID().slice(0, 12)}`)
+      }
+    }));
+  await prisma.internalUserBranch.upsert({
+    where: { userId_branchCode: { userId: user.id, branchCode } },
+    create: { userId: user.id, branchCode, role, active: true, isDefault: true },
+    update: { role, active: true, isDefault: true }
   });
+  return user;
 }
 
 async function ensureBranch() {
@@ -111,9 +116,9 @@ async function main() {
   const database = assertRehearsalDatabase();
   console.log(`Ensayo de la Etapa 1 contra ${database}\n`);
 
+  await ensureBranch();
   const admin = await ensureUser(`${tag.toLowerCase()}-admin@ensayo.local`, "administracion");
   const direction = await ensureUser(`${tag.toLowerCase()}-direccion@ensayo.local`, "direccion");
-  await ensureBranch();
   await activateStageOne();
 
   // --- Datos maestros mínimos ---

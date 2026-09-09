@@ -23,6 +23,7 @@ import { clearInternalSessionCookie } from "@/features/internal-auth/session";
 import { hashPassword, verifyPassword } from "@/features/internal-auth/password";
 import {
   changeInternalPasswordSchema,
+  branchMembershipSchema,
   createInternalUserSchema,
   internalSessionTargetSchema,
   internalUserTargetSchema,
@@ -31,6 +32,7 @@ import {
 } from "@/features/internal-auth/schemas/user-management.schema";
 import { requireInternalSession } from "@/modules/permissions";
 import { replaceUserBranchAssignments } from "@/modules/database/queries/branches";
+import { canHoldMultipleActiveBranches } from "@/features/branches/policy";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -70,7 +72,10 @@ export async function createManagedInternalUserAction(formData: FormData) {
         });
         return auditedResult(created, {
           entityId: created.id,
-          context: { assignedRole: created.role }
+          context: {
+            assignedRole: parsed.data.role,
+            platformRole: created.platformRole
+          }
         });
       } catch (error) {
         redirect(`/sigeco/usuarios?error=${managementErrorCode(error)}`);
@@ -99,16 +104,21 @@ export async function updateManagedInternalUserAccessAction(formData: FormData) 
         const result = await updateManagedInternalUserAccess({
           actorId: actor.id,
           userId: parsed.data.userId,
-          role: parsed.data.role,
+          platformRole:
+            parsed.data.platformRole === "super_admin" ? "super_admin" : null,
+          staffRole: parsed.data.staffRole,
           active: parsed.data.active,
           defaultBranchCode: branchContext.activeBranch.code
         });
         return auditedResult(result, {
           entityId: result.user.id,
           context: {
-            assignedRole: result.user.role,
+            platformRole: result.user.platformRole,
             active: result.user.active,
-            revokedCount: result.revokedSessions
+            revokedCount: result.revokedSessions,
+            membershipRoleChanges: result.membershipRoleChanges,
+            activatedMemberships: result.activatedMemberships,
+            deactivatedMemberships: result.deactivatedMemberships
           }
         });
       } catch (error) {
@@ -154,10 +164,29 @@ export async function updateManagedInternalUserProfileAction(formData: FormData)
 
 export async function updateManagedInternalUserBranchesAction(formData: FormData) {
   const targetId = String(formData.get("userId") ?? "");
-  const branchCodes = formData.getAll("branchCodes").map(String).filter(Boolean);
+  const branchCodes = [...new Set(formData.getAll("branchCodes").map(String).filter(Boolean))];
   const defaultBranchCode = String(formData.get("defaultBranchCode") ?? "");
   if (!targetId || !defaultBranchCode || branchCodes.length === 0) {
     redirect(`/sigeco/usuarios/${targetId}?error=invalid-branches`);
+  }
+  const parsedMemberships = branchMembershipSchema.array().safeParse(
+    branchCodes.map((branchCode) => ({
+      branchCode,
+      role: String(formData.get(`role:${branchCode}`) ?? ""),
+      active: formData.get(`active:${branchCode}`) === "true"
+    }))
+  );
+  if (!parsedMemberships.success) {
+    redirect(`/sigeco/usuarios/${targetId}?error=invalid-branches`);
+  }
+  if (
+    !canHoldMultipleActiveBranches(
+      parsedMemberships.data
+        .filter((membership) => membership.active)
+        .map((membership) => membership.role)
+    )
+  ) {
+    redirect(`/sigeco/usuarios/${targetId}?error=multi-branch-clinical-only`);
   }
 
   await runAuditedAction(
@@ -169,8 +198,39 @@ export async function updateManagedInternalUserBranchesAction(formData: FormData
       context: { branchCodes, defaultBranchCode }
     },
     async () => {
-      await replaceUserBranchAssignments({ userId: targetId, branchCodes, defaultBranchCode });
-      return auditedResult(targetId, { entityId: targetId });
+      const changes = await replaceUserBranchAssignments({
+        userId: targetId,
+        memberships: parsedMemberships.data,
+        defaultBranchCode
+      });
+      const previous = new Map(changes.previous.map((item) => [item.branchCode, item]));
+      const activated: string[] = [];
+      const deactivated: string[] = [];
+      const roleChanges: Array<{ branchCode: string; from: string; to: string }> = [];
+      for (const membership of changes.current) {
+        const before = previous.get(membership.branchCode);
+        if (membership.active && !before?.active) activated.push(membership.branchCode);
+        if (!membership.active && before?.active) deactivated.push(membership.branchCode);
+        if (before && before.role !== membership.role) {
+          roleChanges.push({
+            branchCode: membership.branchCode,
+            from: before.role,
+            to: membership.role
+          });
+        }
+      }
+      const previousDefault = changes.previous.find((item) => item.isDefault)?.branchCode;
+      return auditedResult(targetId, {
+        entityId: targetId,
+        context: {
+          activated,
+          deactivated,
+          roleChanges,
+          defaultChanged: previousDefault !== defaultBranchCode,
+          previousDefault,
+          defaultBranchCode
+        }
+      });
     }
   );
 

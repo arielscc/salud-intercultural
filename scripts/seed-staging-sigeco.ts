@@ -77,7 +77,7 @@ async function seedQaUsers(basePassword: string, domain: string) {
         passwordChangedAt: new Date(),
         name: `[QA] ${internalRoleLabels[role]}`,
         passwordHash,
-        role
+        platformRole: role === "super_admin" ? "super_admin" : null
       },
       create: {
         active: true,
@@ -86,7 +86,7 @@ async function seedQaUsers(basePassword: string, domain: string) {
         name: `[QA] ${internalRoleLabels[role]}`,
         passwordChangedAt: new Date(),
         passwordHash,
-        role
+        platformRole: role === "super_admin" ? "super_admin" : null
       }
     });
 
@@ -96,8 +96,14 @@ async function seedQaUsers(basePassword: string, domain: string) {
     });
     await prisma.internalUserBranch.upsert({
       where: { userId_branchCode: { userId: user.id, branchCode: QA_BRANCH_CODE } },
-      create: { userId: user.id, branchCode: QA_BRANCH_CODE, isDefault: true },
-      update: { isDefault: true }
+      create: {
+        userId: user.id,
+        branchCode: QA_BRANCH_CODE,
+        role,
+        active: true,
+        isDefault: true
+      },
+      update: { role, active: true, isDefault: true }
     });
 
     users.set(role, user.id);

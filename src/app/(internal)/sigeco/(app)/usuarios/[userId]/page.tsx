@@ -36,10 +36,16 @@ const errorMessages: Record<string, string> = {
   last_super_admin: "No se puede quitar el acceso al último super administrador activo.",
   invalid_role: "El rol seleccionado no está permitido.",
   "invalid-branches": "Asigna al menos una sucursal y elige una de ellas como predeterminada.",
+  "multi-branch-clinical-only":
+    "Solo médicos y enfermería pueden tener acceso activo a varias sucursales.",
   "invalid-name": "El nombre debe tener al menos 2 caracteres.",
   user_not_found: "El usuario ya no existe.",
   invalid: "No se pudo actualizar el acceso."
 };
+
+const branchAssignableRoles = assignableInternalRoles.filter(
+  (role) => role !== "super_admin"
+);
 
 export default async function UserDetailPage({ params, searchParams }: UserDetailPageProps) {
   const actor = await requirePermission("users_manage");
@@ -76,8 +82,10 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
           </div>
           <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-3">
             <div>
-              <dt className="text-xs text-muted">Rol actual</dt>
-              <dd className="font-semibold text-text">{internalRoleLabels[user.role]}</dd>
+              <dt className="text-xs text-muted">Capacidad global</dt>
+              <dd className="font-semibold text-text">
+                {user.platformRole === "super_admin" ? "Super administrador" : "Personal"}
+              </dd>
             </div>
             <div>
               <dt className="text-xs text-muted">Último acceso</dt>
@@ -154,8 +162,8 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
 
         <Card>
           <CardHeader
-            title="Rol y estado"
-            description="Al cambiar el acceso se cerrarán las sesiones actuales."
+            title="Cuenta y capacidad global"
+            description="Los roles de trabajo se configuran por sucursal más abajo."
           />
           <ConfirmForm
             action={updateManagedInternalUserAccessAction}
@@ -166,27 +174,39 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
             className="grid gap-4"
           >
             <input type="hidden" name="userId" value={user.id} />
-            <Field label="Rol">
+            <Field label="Capacidad de plataforma">
               <select
                 className={internalInputClassName}
-                name="role"
-                defaultValue={user.role}
+                name="platformRole"
+                defaultValue={user.platformRole ?? "none"}
                 disabled={actor.id === user.id}
                 required
               >
-                {!assignableInternalRoles.includes(user.role) ? (
-                  <option value={user.role} disabled>
-                    {internalRoleLabels[user.role]} · rol retirado
-                  </option>
-                ) : null}
-                {assignableInternalRoles.map((role) => (
+                <option value="none">Personal de la clínica</option>
+                <option value="super_admin">Super administrador</option>
+              </select>
+            </Field>
+            {actor.id === user.id ? (
+              <input
+                type="hidden"
+                name="platformRole"
+                value={user.platformRole ?? "none"}
+              />
+            ) : null}
+            <Field label="Rol si deja de ser super administrador">
+              <select
+                className={internalInputClassName}
+                name="staffRole"
+                defaultValue="direccion"
+                required
+              >
+                {branchAssignableRoles.map((role) => (
                   <option key={role} value={role}>
                     {internalRoleLabels[role]}
                   </option>
                 ))}
               </select>
             </Field>
-            {actor.id === user.id ? <input type="hidden" name="role" value={user.role} /> : null}
             <input type="hidden" name="active" value="false" />
             <label className="flex min-h-11 items-center gap-3 rounded-[9px] border border-border px-3.5 text-sm text-text">
               <input
@@ -212,9 +232,9 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
           <CardHeader
             title="Sucursales asignadas"
             description={
-              user.role === "super_admin"
+              user.platformRole === "super_admin"
                 ? "El super administrador recibe automáticamente todas las sedes activas o en preparación. Solo eliges la predeterminada."
-                : "La sucursal predeterminada se usa al iniciar. Una sede en preparación no permite registrar operaciones reales."
+                : "Solo médicos y enfermería pueden rotar entre varias sedes. Los demás roles deben conservar una sola sucursal activa."
             }
           />
           <ConfirmForm
@@ -231,23 +251,56 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
                 const assignment = user.branchAssignments.find(
                   (item) => item.branchCode === branch.code
                 );
-                const automatic = hasAutomaticBranchAssignment(user.role, branch.status);
+                const automatic = hasAutomaticBranchAssignment(
+                  user.platformRole,
+                  branch.status
+                );
                 return (
-                  <label key={branch.code} className="flex min-h-11 items-center gap-3 rounded-[9px] border border-border px-3.5 text-sm text-text">
+                  <div
+                    key={branch.code}
+                    className="grid gap-3 rounded-[9px] border border-border px-3.5 py-3 text-sm text-text sm:grid-cols-[1fr_180px_auto] sm:items-center"
+                  >
+                    <input type="hidden" name="branchCodes" value={branch.code} />
+                    <div>
+                      <p className="font-semibold">{branch.name}</p>
+                      {branch.status === "preparation" ? (
+                        <Chip tone="warning">En preparación</Chip>
+                      ) : null}
+                    </div>
+                    <select
+                      className={internalInputClassName}
+                      name={`role:${branch.code}`}
+                      defaultValue={automatic ? "super_admin" : assignment?.role ?? "recepcion"}
+                      disabled={automatic}
+                      aria-label={`Rol en ${branch.name}`}
+                    >
+                      {automatic ? (
+                        <option value="super_admin">Super administrador</option>
+                      ) : null}
+                      {branchAssignableRoles.map((role) => (
+                        <option key={role} value={role}>
+                          {internalRoleLabels[role]}
+                        </option>
+                      ))}
+                    </select>
+                    {automatic ? (
+                      <input type="hidden" name={`role:${branch.code}`} value="super_admin" />
+                    ) : null}
+                    <label className="flex min-h-10 items-center gap-2">
                     <input
                       type="checkbox"
-                      name="branchCodes"
-                      value={branch.code}
-                      defaultChecked={automatic || Boolean(assignment)}
+                      name={`active:${branch.code}`}
+                      value="true"
+                      defaultChecked={automatic || assignment?.active === true}
                       disabled={automatic}
                       className="h-4 w-4 accent-primary"
                     />
                     {automatic ? (
-                      <input type="hidden" name="branchCodes" value={branch.code} />
+                      <input type="hidden" name={`active:${branch.code}`} value="true" />
                     ) : null}
-                    <span className="flex-1">{branch.name}</span>
-                    {branch.status === "preparation" ? <Chip tone="warning">En preparación</Chip> : null}
-                  </label>
+                      Activa
+                    </label>
+                  </div>
                 );
               })}
             </div>

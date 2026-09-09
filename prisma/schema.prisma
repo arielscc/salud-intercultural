@@ -18,6 +18,10 @@ enum InternalRole {
   seguimiento
 }
 
+enum InternalPlatformRole {
+  super_admin
+}
+
 enum ClinicBranchStatus {
   active
   preparation
@@ -730,7 +734,7 @@ model InternalUser {
   email                          String                          @unique
   name                           String?
   passwordHash                   String
-  role                           InternalRole                    @default(captacion)
+  platformRole                   InternalPlatformRole?
   active                         Boolean                         @default(true)
   lastLoginAt                    DateTime?
   failedAttempts                 Int                             @default(0)
@@ -828,7 +832,7 @@ model InternalUser {
   deactivatedModules             ModuleActivation[]              @relation("ModuleActivationDeactivatedBy")
   moduleActivationEvents         ModuleActivationEvent[]         @relation("ModuleActivationEventActor")
 
-  @@index([role])
+  @@index([platformRole])
   @@index([active])
 }
 
@@ -870,13 +874,17 @@ model ClinicBranch {
 model InternalUserBranch {
   userId     String
   branchCode String
+  role       InternalRole
+  active     Boolean      @default(true)
   isDefault  Boolean      @default(false)
   assignedAt DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
   user       InternalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
   branch     ClinicBranch @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
   @@id([userId, branchCode])
   @@index([branchCode, userId])
+  @@index([userId, active])
   @@index([userId, isDefault])
 }
 

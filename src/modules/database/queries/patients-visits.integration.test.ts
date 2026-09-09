@@ -45,7 +45,9 @@ describe("patients and visits integration", () => {
         email: "recepcion@example.com",
         name: "Recepcion Test",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "recepcion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "recepcion", active: true, isDefault: true }
+        }
       }
     });
 

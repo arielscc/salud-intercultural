@@ -173,9 +173,8 @@ export async function recordVisitDiscontinuation(
           const marlen = await tx.internalUser.findFirst({
             where: {
               active: true,
-              role: "recepcion",
               branchAssignments: {
-                some: { branchCode: visit.branchCode }
+                some: { branchCode: visit.branchCode, active: true, role: "recepcion" }
               },
               name: { contains: "Marlen", mode: "insensitive" }
             },

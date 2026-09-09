@@ -87,7 +87,17 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                       <p className="font-semibold text-text">{user.name ?? "Sin nombre"}</p>
                       <p className="text-xs text-muted">{user.email}</p>
                     </td>
-                    <td className="px-4 py-3 text-text">{internalRoleLabels[user.role]}</td>
+                    <td className="px-4 py-3 text-text">
+                      {user.platformRole === "super_admin"
+                        ? "Super administrador"
+                        : [
+                            ...new Set(
+                              user.branchAssignments
+                                .filter((assignment) => assignment.active)
+                                .map((assignment) => internalRoleLabels[assignment.role])
+                            )
+                          ].join(", ") || "Sin sucursal activa asignada"}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
                         <Chip tone={user.active ? "success" : "error"} dot>

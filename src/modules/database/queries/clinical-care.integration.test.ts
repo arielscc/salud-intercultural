@@ -59,7 +59,9 @@ describe("clinical care integration", () => {
         email: "medico@example.com",
         name: "Medico Test",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
 
@@ -139,7 +141,9 @@ describe("clinical care integration", () => {
         email: "firma@example.com",
         name: "Médico Firma",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
     const patient = await createPatientRecord({
@@ -281,7 +285,9 @@ describe("clinical care integration", () => {
         email: "concurrencia@example.com",
         name: "Médico Concurrencia",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
     const patient = await createPatientRecord({

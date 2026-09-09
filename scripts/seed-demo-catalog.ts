@@ -253,7 +253,21 @@ async function main() {
   if (!branch) throw new Error("No hay ninguna sucursal registrada para asignar el stock.");
 
   const actor = await prisma.internalUser.findFirst({
-    where: { active: true, role: { in: ["super_admin", "administracion", "direccion"] } },
+    where: {
+      active: true,
+      OR: [
+        { platformRole: "super_admin" },
+        {
+          branchAssignments: {
+            some: {
+              branchCode: branch.code,
+              active: true,
+              role: { in: ["administracion", "direccion"] }
+            }
+          }
+        }
+      ]
+    },
     orderBy: { createdAt: "asc" },
     select: { id: true }
   });

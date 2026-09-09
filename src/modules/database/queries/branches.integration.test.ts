@@ -2,7 +2,8 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/modules/database";
 import {
   getBranchComparisonReport,
-  getBranchesForUser
+  getBranchesForUser,
+  replaceUserBranchAssignments
 } from "@/modules/database/queries/branches";
 import {
   createInventoryItemRecord,
@@ -37,11 +38,11 @@ describe("multi-branch operations", () => {
       data: {
         email: "global-super-admin@example.invalid",
         passwordHash: "not-used-in-integration-test",
-        role: "super_admin"
+        platformRole: "super_admin"
       }
     });
 
-    const branches = await getBranchesForUser(user.id, user.role);
+    const branches = await getBranchesForUser(user.id, user.platformRole);
 
     expect(
       branches
@@ -53,12 +54,101 @@ describe("multi-branch operations", () => {
     ]);
   });
 
+  it("allows a nurse rotation and revokes only the deactivated branch", async () => {
+    const user = await prisma.internalUser.create({
+      data: {
+        email: "branch-roles@example.invalid",
+        passwordHash: "not-used-in-integration-test",
+        branchAssignments: {
+          create: [
+            {
+              branchCode: "el-alto",
+              role: "enfermeria",
+              active: true,
+              isDefault: true
+            },
+            {
+              branchCode: "cochabamba",
+              role: "enfermeria",
+              active: true
+            }
+          ]
+        }
+      }
+    });
+
+    const initial = await getBranchesForUser(user.id, user.platformRole);
+    expect(initial.find((branch) => branch.code === "el-alto")).toMatchObject({
+      role: "enfermeria",
+      assigned: true
+    });
+    expect(initial.find((branch) => branch.code === "cochabamba")).toMatchObject({
+      role: "enfermeria",
+      assigned: true
+    });
+
+    await replaceUserBranchAssignments({
+      userId: user.id,
+      defaultBranchCode: "el-alto",
+      memberships: [
+        { branchCode: "el-alto", role: "enfermeria", active: true },
+        { branchCode: "cochabamba", role: "enfermeria", active: false }
+      ]
+    });
+
+    const updated = await getBranchesForUser(user.id, user.platformRole);
+    expect(updated.find((branch) => branch.code === "el-alto")).toMatchObject({
+      role: "enfermeria",
+      assigned: true,
+      membershipActive: true
+    });
+    expect(updated.find((branch) => branch.code === "cochabamba")).toMatchObject({
+      role: "enfermeria",
+      assigned: false,
+      membershipActive: false
+    });
+  });
+
+  it("rejects multiple active branches for non-rotating operational roles", async () => {
+    const user = await prisma.internalUser.create({
+      data: {
+        email: "single-branch-administration@example.invalid",
+        passwordHash: "not-used-in-integration-test",
+        branchAssignments: {
+          create: {
+            branchCode: "el-alto",
+            role: "administracion",
+            active: true,
+            isDefault: true
+          }
+        }
+      }
+    });
+
+    await expect(
+      replaceUserBranchAssignments({
+        userId: user.id,
+        defaultBranchCode: "el-alto",
+        memberships: [
+          { branchCode: "el-alto", role: "administracion", active: true },
+          { branchCode: "cochabamba", role: "administracion", active: true }
+        ]
+      })
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        message: "MULTI_BRANCH_ROLE_REQUIRES_CLINICAL_ROTATION"
+      })
+    });
+  });
+
   it("moves stock with linked exit and entry while preserving the total", async () => {
     const user = await prisma.internalUser.create({
       data: {
         email: "branch-transfer@example.invalid",
         passwordHash: "not-used-in-integration-test",
-        role: "administracion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+        }
       }
     });
     const item = await createInventoryItemRecord({
@@ -102,7 +192,9 @@ describe("multi-branch operations", () => {
       data: {
         email: "branch-lot-transfer@example.invalid",
         passwordHash: "not-used-in-integration-test",
-        role: "administracion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+        }
       }
     });
     const supplier = await prisma.supplier.create({

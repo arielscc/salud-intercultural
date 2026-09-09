@@ -268,7 +268,6 @@ export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
     "Caja y ventas eliminarán parámetros opcionales y valores de sede heredados.",
     [
       ["src/features/cash/policy.ts", "defaultCashBranch", "hardcoded-branch-literal"],
-      ["src/modules/database/queries/cash.ts", "getCashPersonnel", "optional-branch-code"],
       ["src/modules/database/queries/cash.ts", "getCashDashboard", "optional-branch-code"],
       [
         "src/modules/database/queries/cash.ts",

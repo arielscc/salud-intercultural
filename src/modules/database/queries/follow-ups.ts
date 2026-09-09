@@ -73,8 +73,9 @@ async function resolveFollowUpAssignee(
     const doctor = await tx.internalUser.findFirst({
       where: {
         active: true,
-        role: "medico",
-        branchAssignments: { some: { branchCode: input.branchCode } }
+        branchAssignments: {
+          some: { branchCode: input.branchCode, active: true, role: "medico" }
+        }
       },
       orderBy: [{ name: "asc" }, { createdAt: "asc" }]
     });
@@ -85,8 +86,9 @@ async function resolveFollowUpAssignee(
     const marlen = await tx.internalUser.findFirst({
       where: {
         active: true,
-        role: "recepcion",
-        branchAssignments: { some: { branchCode: input.branchCode } },
+        branchAssignments: {
+          some: { branchCode: input.branchCode, active: true, role: "recepcion" }
+        },
         name: { contains: "Marlen", mode: "insensitive" }
       },
       orderBy: { createdAt: "asc" }
@@ -100,8 +102,13 @@ async function resolveFollowUpAssignee(
     where: {
       id: requestedId,
       active: true,
-      role: { in: ["recepcion", "administracion"] },
-      branchAssignments: { some: { branchCode: input.branchCode } }
+      branchAssignments: {
+        some: {
+          branchCode: input.branchCode,
+          active: true,
+          role: { in: ["recepcion", "administracion"] }
+        }
+      }
     },
     select: { id: true }
   });
@@ -358,10 +365,21 @@ export async function createFollowUpAttemptRecord(input: {
       const actor = input.userId
         ? await tx.internalUser.findUnique({
             where: { id: input.userId },
-            select: { role: true }
+            select: {
+              platformRole: true,
+              branchAssignments: {
+                where: { branchCode: task.branchCode, active: true },
+                select: { role: true },
+                take: 1
+              }
+            }
           })
         : null;
-      if (!actor || !canRoleWorkFollowUpType(actor.role, task.type)) {
+      const actorRole =
+        actor?.platformRole === "super_admin"
+          ? "super_admin"
+          : actor?.branchAssignments[0]?.role;
+      if (!actorRole || !canRoleWorkFollowUpType(actorRole, task.type)) {
         throw new FollowUpWorkflowError("ROLE_NOT_ALLOWED");
       }
       if (
@@ -534,18 +552,43 @@ export async function getFollowUpWorkSummary(
 
 export async function getFollowUpAssignees(branchCode: string, viewerRole?: InternalRole) {
   return withDatabaseError("getFollowUpAssignees", async () => {
-    return prisma.internalUser.findMany({
+    const roles: InternalRole[] =
+      viewerRole === "administracion"
+        ? ["administracion"]
+        : viewerRole === "medico"
+          ? ["medico"]
+          : ["recepcion", "administracion", "medico"];
+    const users = await prisma.internalUser.findMany({
       where: {
         active: true,
-        role: viewerRole === "administracion"
-          ? "administracion"
-          : viewerRole === "medico"
-            ? "medico"
-            : { in: ["recepcion", "administracion", "medico", "super_admin"] },
-        branchAssignments: { some: { branchCode } }
+        OR: [
+          ...(viewerRole === "administracion" || viewerRole === "medico"
+            ? []
+            : [{ platformRole: "super_admin" as const }]),
+          { branchAssignments: { some: { branchCode, active: true, role: { in: roles } } } }
+        ]
       },
-      select: { id: true, name: true, email: true, role: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        platformRole: true,
+        branchAssignments: {
+          where: { branchCode, active: true },
+          select: { role: true },
+          take: 1
+        }
+      },
       orderBy: [{ name: "asc" }, { email: "asc" }]
     });
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role:
+        user.platformRole === "super_admin"
+          ? ("super_admin" as const)
+          : user.branchAssignments[0].role
+    }));
   });
 }

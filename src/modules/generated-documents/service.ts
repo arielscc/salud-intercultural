@@ -602,7 +602,17 @@ const prescribingRoles = assignableInternalRoles.filter((role) =>
 export async function getClinicalProfessionalProfiles() {
   return withDatabaseError("getClinicalProfessionalProfiles", async () => {
     return prisma.internalUser.findMany({
-      where: { role: { in: prescribingRoles }, active: true },
+      where: {
+        active: true,
+        OR: [
+          { platformRole: "super_admin" },
+          {
+            branchAssignments: {
+              some: { active: true, role: { in: prescribingRoles } }
+            }
+          }
+        ]
+      },
       select: {
         id: true,
         name: true,
@@ -626,7 +636,18 @@ export async function configureClinicalProfessionalProfile(input: {
 }) {
   return withDatabaseError("configureClinicalProfessionalProfile", async () => {
     const doctor = await prisma.internalUser.findFirst({
-      where: { id: input.userId, role: { in: prescribingRoles }, active: true },
+      where: {
+        id: input.userId,
+        active: true,
+        OR: [
+          { platformRole: "super_admin" },
+          {
+            branchAssignments: {
+              some: { active: true, role: { in: prescribingRoles } }
+            }
+          }
+        ]
+      },
       select: { id: true }
     });
     if (!doctor) {

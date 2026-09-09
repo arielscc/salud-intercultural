@@ -65,7 +65,7 @@ describe("inventory integration", () => {
         email: "inventario@example.com",
         name: "Inventario Test",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "super_admin"
+        platformRole: "super_admin"
       }
     });
     const patient = await createPatientRecord({
@@ -120,7 +120,7 @@ describe("inventory integration", () => {
       data: {
         email: "ajuste-inventario@example.com",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "super_admin"
+        platformRole: "super_admin"
       }
     });
     const item = await createInventoryItemRecord({
@@ -176,7 +176,7 @@ describe("inventory integration", () => {
       data: {
         email: "inventario-sin-stock@example.com",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "super_admin"
+        platformRole: "super_admin"
       }
     });
     await openCashSession({
@@ -234,7 +234,9 @@ describe("inventory integration", () => {
       data: {
         email: "catalogo@example.com",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "administracion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+        }
       }
     });
     const firstSupplier = await createSupplierRecord({

@@ -208,59 +208,126 @@ export async function getOpenCashSessionForOperation(
 
 async function assertActivePerson(
   tx: Prisma.TransactionClient,
-  userId: string
+  userId: string,
+  branchCode: string
 ) {
   const user = await tx.internalUser.findFirst({
-    where: { id: userId, active: true },
-    select: { id: true, role: true }
+    where: {
+      id: userId,
+      active: true,
+      OR: [
+        { platformRole: "super_admin" },
+        { branchAssignments: { some: { branchCode, active: true } } }
+      ]
+    },
+    select: {
+      id: true,
+      platformRole: true,
+      branchAssignments: {
+        where: { branchCode, active: true },
+        select: { role: true },
+        take: 1
+      }
+    }
   });
 
   if (!user) throw new CashWorkflowError("invalid_person");
-  return user;
+  return {
+    id: user.id,
+    role:
+      user.platformRole === "super_admin"
+        ? ("super_admin" as const)
+        : user.branchAssignments[0].role
+  };
 }
 
 async function assertAuthorizer(
   tx: Prisma.TransactionClient,
-  userId: string
+  userId: string,
+  branchCode: string
 ) {
-  const user = await assertActivePerson(tx, userId);
+  const user = await assertActivePerson(tx, userId, branchCode);
   if (user.role !== "direccion" && user.role !== "super_admin") {
     throw new CashWorkflowError("invalid_authorizer");
   }
 }
 
-export async function getCashPersonnel(branchCode?: string) {
-  return withDatabaseError("getCashPersonnel", async () =>
-    prisma.internalUser.findMany({
+export async function getCashPersonnel(branchCode: string) {
+  return withDatabaseError("getCashPersonnel", async () => {
+    const users = await prisma.internalUser.findMany({
       where: {
         active: true,
-        role: { not: "captacion" },
-        ...(branchCode
-          ? {
-              OR: [
-                { role: "super_admin" as const },
-                { branchAssignments: { some: { branchCode } } }
-              ]
+        OR: [
+          { platformRole: "super_admin" },
+          {
+            branchAssignments: {
+              some: { branchCode, active: true, role: { not: "captacion" } }
             }
-          : {})
+          }
+        ]
       },
-      select: { id: true, name: true, email: true, role: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        platformRole: true,
+        branchAssignments: {
+          where: { branchCode, active: true },
+          select: { role: true },
+          take: 1
+        }
+      },
       orderBy: [{ name: "asc" }, { email: "asc" }]
-    })
-  );
+    });
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role:
+        user.platformRole === "super_admin"
+          ? ("super_admin" as const)
+          : user.branchAssignments[0].role
+    }));
+  });
 }
 
-export async function getCashAuthorizers() {
-  return withDatabaseError("getCashAuthorizers", async () =>
-    prisma.internalUser.findMany({
+export async function getCashAuthorizers(branchCode: string) {
+  return withDatabaseError("getCashAuthorizers", async () => {
+    const users = await prisma.internalUser.findMany({
       where: {
         active: true,
-        role: { in: ["direccion", "super_admin"] }
+        OR: [
+          { platformRole: "super_admin" },
+          {
+            branchAssignments: {
+              some: { branchCode, active: true, role: "direccion" }
+            }
+          }
+        ]
       },
-      select: { id: true, name: true, email: true, role: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        platformRole: true,
+        branchAssignments: {
+          where: { branchCode, active: true },
+          select: { role: true },
+          take: 1
+        }
+      },
       orderBy: [{ name: "asc" }, { email: "asc" }]
-    })
-  );
+    });
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role:
+        user.platformRole === "super_admin"
+          ? ("super_admin" as const)
+          : user.branchAssignments[0].role
+    }));
+  });
 }
 
 /**
@@ -514,7 +581,7 @@ export async function openCashSession(input: {
     });
     if (existing) return existing;
 
-    await assertActivePerson(prisma, input.responsibleId);
+    await assertActivePerson(prisma, input.responsibleId, input.branchCode);
     const activeSession = await prisma.cashSession.findFirst({
       where: {
         branchCode: input.branchCode,
@@ -609,11 +676,11 @@ export async function createStaffCashExpense(input: {
       });
       if (reusedAfterLock) return reusedAfterLock;
       await Promise.all([
-        assertActivePerson(tx, input.receivedById),
-        assertActivePerson(tx, input.deliveredById),
-        assertAuthorizer(tx, input.authorizedById),
+        assertActivePerson(tx, input.receivedById, session.branchCode),
+        assertActivePerson(tx, input.deliveredById, session.branchCode),
+        assertAuthorizer(tx, input.authorizedById, session.branchCode),
         ...input.beneficiaries.map((line) =>
-          assertActivePerson(tx, line.employeeId)
+          assertActivePerson(tx, line.employeeId, session.branchCode)
         )
       ]);
 
@@ -742,10 +809,10 @@ export async function createUrgentPurchaseExpense(input: {
       });
       if (reusedAfterLock) return reusedAfterLock;
       await Promise.all([
-        assertActivePerson(tx, input.requestedById),
-        assertActivePerson(tx, input.receivedById),
-        assertActivePerson(tx, input.deliveredById),
-        assertAuthorizer(tx, input.authorizedById)
+        assertActivePerson(tx, input.requestedById, session.branchCode),
+        assertActivePerson(tx, input.receivedById, session.branchCode),
+        assertActivePerson(tx, input.deliveredById, session.branchCode),
+        assertAuthorizer(tx, input.authorizedById, session.branchCode)
       ]);
 
       const totalCents =
@@ -845,9 +912,9 @@ export async function createOtherCashExpense(input: {
       });
       if (reusedAfterLock) return reusedAfterLock;
       await Promise.all([
-        assertActivePerson(tx, input.receivedById),
-        assertActivePerson(tx, input.deliveredById),
-        assertAuthorizer(tx, input.authorizedById)
+        assertActivePerson(tx, input.receivedById, session.branchCode),
+        assertActivePerson(tx, input.deliveredById, session.branchCode),
+        assertAuthorizer(tx, input.authorizedById, session.branchCode)
       ]);
 
       const movement = await tx.cashMovement.create({
@@ -965,7 +1032,7 @@ export async function approveCashSessionClose(input: {
       if (!session || session.status !== "pending_approval") {
         throw new CashWorkflowError("session_not_pending_approval");
       }
-      await assertAuthorizer(tx, input.approvedById);
+      await assertAuthorizer(tx, input.approvedById, session.branchCode);
       const now = new Date();
       return tx.cashSession.update({
         where: { id: session.id },
@@ -999,7 +1066,6 @@ export async function reverseCashMovement(input: {
       });
       if (reused) return reused;
 
-      await assertAuthorizer(tx, input.actorId);
       const reusedAfterLock = await tx.cashMovement.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
@@ -1008,6 +1074,9 @@ export async function reverseCashMovement(input: {
         where: { id: input.originalMovementId },
         include: { corrections: true, sale: true }
       });
+      if (original) {
+        await assertAuthorizer(tx, input.actorId, original.branchCode);
+      }
       if (
         !original ||
         (original.type !== "income" && original.type !== "expense")

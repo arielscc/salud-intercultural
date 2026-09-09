@@ -26,7 +26,7 @@ describe("patient duplicate merge integration", () => {
       data: {
         email: "merge-admin@test.invalid",
         passwordHash: "integration-only",
-        role: "super_admin"
+        platformRole: "super_admin"
       }
     });
     const target = await createPatientRecord({

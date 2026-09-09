@@ -71,7 +71,9 @@ describe("sales integration", () => {
         email: "admin-ventas@example.com",
         name: "Admin Ventas",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "administracion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+        }
       }
     });
     const doctor = await prisma.internalUser.create({
@@ -79,7 +81,9 @@ describe("sales integration", () => {
         email: "medico-ventas@example.com",
         name: "Medico Ventas",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "medico"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "medico", active: true, isDefault: true }
+        }
       }
     });
     const patient = await createPatientRecord({
@@ -188,7 +192,9 @@ describe("venta de mostrador sin visita", () => {
         email: "admin-mostrador@example.com",
         name: "Admin Mostrador",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "administracion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+        }
       }
     });
     const client = await createPatientRecord({
@@ -291,7 +297,9 @@ describe("listado de ventas", () => {
         email: "admin-listado@example.com",
         name: "Admin Listado",
         passwordHash: await hashPassword("clave-segura-123"),
-        role: "administracion"
+        branchAssignments: {
+          create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
+        }
       }
     });
     const ana = await createPatientRecord({ fullName: "Ana Quispe", phone: "70000061" });
