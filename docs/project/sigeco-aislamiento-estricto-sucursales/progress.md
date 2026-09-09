@@ -6,10 +6,11 @@ Plan: [tasks.md](./tasks.md)
 
 ## Estado General
 
-Plan híbrido dividido en 17 tareas consecutivas. No se inició todavía la
-partición general de operaciones ni se aplicó RLS. Existe como preparación
-previa la migración `20260908120000_require_explicit_branch_code`, que elimina
-siete defaults de El Alto y hace explícitas las principales escrituras
+Plan híbrido dividido en 17 tareas consecutivas. La frontera técnica ya cuenta
+con un contrato ejecutable y un detector automático; todavía no se inició la
+partición general de operaciones ni se aplicó RLS. La migración
+`20260908120000_require_explicit_branch_code` queda vigilada por el detector:
+elimina siete defaults de El Alto y hace explícitas las principales escrituras
 operativas.
 
 ## Decisiones Confirmadas Por Dirección
@@ -28,16 +29,16 @@ operativas.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 17 |
+| Pendiente | 16 |
 | En progreso | 0 |
 | Bloqueada | 0 |
-| Terminada | 0 |
+| Terminada | 1 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
-| A. Frontera técnica | 1-4 | Pendiente | Contrato, contexto, roles y backfill seguro |
+| A. Frontera técnica | 1-4 | En curso (1/4) | Contrato, contexto, roles y backfill seguro |
 | B. Partición de dominios | 5-13 | Pendiente | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
@@ -45,7 +46,7 @@ operativas.
 
 | # | Tarea | Prioridad | Estado | Dependencias |
 | --- | --- | --- | --- | --- |
-| 1 | Contrato de tenencia y detector automático | P0 | Pendiente | Ninguna |
+| 1 | Contrato de tenencia y detector automático | P0 | Terminada | Ninguna |
 | 2 | Contexto central de sucursal en servidor | P0 | Pendiente | 1 |
 | 3 | Roles y permisos por sucursal | P0 | Pendiente | 2 |
 | 4 | Herramientas de backfill y reconciliación | P0 | Pendiente | 1-3 |
@@ -65,6 +66,10 @@ operativas.
 
 ## Preparación Ya Disponible
 
+- Contrato canónico para los 100 modelos Prisma y chequeo automático de
+  modelos, campos, relaciones, defaults y fallbacks de sucursal.
+- Deuda heredada registrada con coincidencia exacta, responsable y tarea de
+  retiro: 63 excepciones de modelo y 51 hallazgos de código.
 - Activación de módulos materializada por sucursal.
 - Selector de sucursal limitado a asignaciones del usuario.
 - Superadministradores asignados a las sucursales existentes.
@@ -76,5 +81,5 @@ Tarea 16.
 
 ## Próximo Paso
 
-Ejecutar la Tarea 1 y actualizar este archivo y el reporte correspondiente al
-cerrarla.
+Ejecutar la Tarea 2: centralizar en servidor el contexto autenticado de
+sucursal y retirar la selección implícita de El Alto.

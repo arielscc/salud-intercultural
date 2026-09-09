@@ -156,6 +156,9 @@ que es el cierre acumulado.
 
 **Prioridad:** P0. **Dependencias:** ninguna.
 
+**Estado:** terminada el 2026-09-08. Evidencia:
+[reporte de la Tarea 1](../task-reports/2026-09-08-tarea-1-contrato-tenencia.md).
+
 **Objetivo:** convertir las reglas anteriores en un contrato verificable y
 evitar que aparezcan modelos o defaults nuevos sin sucursal.
 
