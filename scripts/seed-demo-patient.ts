@@ -80,11 +80,24 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
   const [firstStep, ...transitions] = input.steps;
   const lastStep = input.steps[input.steps.length - 1];
   const isClosed = ["completed", "left_without_care", "cancelled"].includes(input.status);
+  const patient = await tx.patient.findUniqueOrThrow({
+    where: { id: input.patientId },
+    select: {
+      fullName: true,
+      documentNumber: true,
+      phone: true,
+      address: true
+    }
+  });
 
   const visit = await tx.visit.create({
     data: {
       patientId: input.patientId,
       branchCode: SEED_BRANCH_CODE,
+      patientNameSnapshot: patient.fullName,
+      patientDocumentSnapshot: patient.documentNumber,
+      patientPhoneSnapshot: patient.phone,
+      patientAddressSnapshot: patient.address,
       createdById: input.userId,
       status: input.status,
       reason: input.reason,
@@ -243,18 +256,29 @@ async function main() {
           captureSource: "referral",
           captureSources: ["referral", "tiktok"],
           firstVisitAt: at(18, 9, 10),
+          followUpPreference: "whatsapp",
+          createdAt: at(18, 9, 5)
+        }
+      });
+
+      await tx.patientBranchRecord.create({
+        data: {
+          patientId: patient.id,
+          branchCode: SEED_BRANCH_CODE,
+          recordNumber: `${SEED_BRANCH_CODE}-${patient.internalCode}`,
           generalObservations: "Trabaja de noche; prefiere citas por la tarde.",
           allergies: "Penicilina",
           relevantHistory: "Gastritis crónica diagnosticada en 2023. Lumbalgia recurrente.",
           currentMedication: "Omeprazol 20 mg en ayunas",
-          followUpPreference: "whatsapp",
-          createdAt: at(18, 9, 5)
+          firstAttendedAt: at(18, 9, 10),
+          lastAttendedAt: at(0, 8, 12)
         }
       });
 
       await tx.patientNote.create({
         data: {
           patientId: patient.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           note: "Referido por su hermana Marisol (paciente SI-000002). Llega puntual.",
           createdAt: at(18, 9, 20)
@@ -1208,6 +1232,7 @@ async function main() {
       await tx.patientNote.create({
         data: {
           patientId: patient.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           note: "Tiene saldo pendiente de Bs 100 de la ecografía; recordar en el próximo cobro.",
           createdAt: at(2, 16, 44)

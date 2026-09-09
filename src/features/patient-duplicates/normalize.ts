@@ -1,4 +1,5 @@
 export type DuplicateIdentity = {
+  documentNumber?: string | null;
   fullName: string;
   phone: string;
   secondaryPhone?: string | null;
@@ -6,6 +7,7 @@ export type DuplicateIdentity = {
 };
 
 export type DuplicateMatchSignals = {
+  documentMatch: boolean;
   phoneMatch: boolean;
   nameMatch: boolean;
   birthDateMatch: boolean;
@@ -21,6 +23,10 @@ export function normalizePatientPhone(value: string) {
   }
 
   return digits;
+}
+
+export function normalizePatientDocument(value: string | null | undefined) {
+  return value?.toUpperCase().replace(/[^A-Z0-9]/g, "") ?? "";
 }
 
 export function normalizePatientName(value: string) {
@@ -60,6 +66,10 @@ export function duplicateMatchSignals(
     .filter((phone) => phone.length >= 7);
   const firstName = normalizePatientName(first.fullName);
   const secondName = normalizePatientName(second.fullName);
+  const firstDocument = normalizePatientDocument(first.documentNumber);
+  const secondDocument = normalizePatientDocument(second.documentNumber);
+  const documentMatch =
+    firstDocument.length >= 4 && firstDocument === secondDocument;
   const phoneMatch = firstPhones.some((phone) => secondPhones.includes(phone));
   const nameMatch =
     firstName.length >= 4 &&
@@ -67,16 +77,18 @@ export function duplicateMatchSignals(
     firstName === secondName;
   const birthDateMatch = sameDateOnly(first.birthDate, second.birthDate);
   const score =
+    (documentMatch ? 100 : 0) +
     (phoneMatch ? 70 : 0) +
     (nameMatch ? 20 : 0) +
     (birthDateMatch ? 30 : 0);
 
   return {
+    documentMatch,
     phoneMatch,
     nameMatch,
     birthDateMatch,
     score,
-    isCandidate: phoneMatch || (nameMatch && birthDateMatch)
+    isCandidate: documentMatch || phoneMatch || (nameMatch && birthDateMatch)
   };
 }
 

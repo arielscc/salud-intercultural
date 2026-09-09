@@ -4,16 +4,22 @@ import { prisma } from "@/modules/database";
 import {
   createReceptionIntake,
   getReceptionDashboardSummary,
+  getReceptionPatientById,
   searchReceptionPatients,
   updateReceptionPatient
 } from "@/modules/database/queries/reception";
-import { createPatientRecord } from "@/modules/database/queries/patients";
 import {
+  createPatientRecord,
+  getPatientById
+} from "@/modules/database/queries/patients";
+import {
+  createVisitRecord,
   getVisitById,
   getVisits,
   updateVisitRouteStatus
 } from "@/modules/database/queries/visits";
 import { recordVisitDiscontinuation } from "@/modules/database/queries/visit-discontinuations";
+import { appendPatientConsentRecord } from "@/modules/database/queries/patient-consents";
 
 const habitualOrigin = {
   city: "El Alto",
@@ -120,7 +126,8 @@ describe("reception intake integration", () => {
     });
 
     const patient = await prisma.patient.findUniqueOrThrow({
-      where: { id: result.patientId }
+      where: { id: result.patientId },
+      include: { branchRecords: { where: { branchCode: "el-alto" } } }
     });
     const visit = await prisma.visit.findUniqueOrThrow({
       where: { id: result.visit.id },
@@ -137,7 +144,7 @@ describe("reception intake integration", () => {
     });
 
     expect(patient.internalCode).toBe("SI-000001");
-    expect(patient.currentMedication).toBe("Metformina");
+    expect(patient.branchRecords[0]?.currentMedication).toBe("Metformina");
     expect(patient.followUpPreference).toBe("whatsapp");
     expect(patient.firstVisitAt).not.toBeNull();
 
@@ -170,6 +177,7 @@ describe("reception intake integration", () => {
   it("updates an existing patient and opens a new visit without duplicating the record", async () => {
     const user = await createReceptionUser();
     const existing = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Jose Mamani",
       phone: "+591 70000001",
       city: "La Paz",
@@ -202,12 +210,15 @@ describe("reception intake integration", () => {
     });
 
     const patients = await prisma.patient.findMany();
-    const updated = await prisma.patient.findUniqueOrThrow({ where: { id: existing.id } });
+    const updated = await prisma.patient.findUniqueOrThrow({
+      where: { id: existing.id },
+      include: { branchRecords: { where: { branchCode: "el-alto" } } }
+    });
 
     expect(result.patientId).toBe(existing.id);
     expect(patients).toHaveLength(1);
     expect(updated.city).toBe("El Alto");
-    expect(updated.currentMedication).toBe("Ibuprofeno");
+    expect(updated.branchRecords[0]?.currentMedication).toBe("Ibuprofeno");
     expect(updated.followUpPreference).toBe("call");
     expect(result.visit.intakeType).toBe("treatment_control");
     expect(result.visit.originCity).toBe("Cochabamba");
@@ -247,7 +258,9 @@ describe("reception intake integration", () => {
   });
 
   it("corrects patient data in place without creating duplicates", async () => {
+    const user = await createReceptionUser();
     const existing = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Rosa Wanca",
       phone: "+591 76543211",
       city: "La Paz",
@@ -255,7 +268,7 @@ describe("reception intake integration", () => {
       allergies: "Penicilina"
     });
 
-    const updated = await updateReceptionPatient(existing.id, {
+    const updated = await updateReceptionPatient(existing.id, "el-alto", user.id, {
       fullName: "Rosa Huanca",
       phone: "76543210",
       birthDate: new Date("1986-02-20"),
@@ -263,6 +276,7 @@ describe("reception intake integration", () => {
       city: "El Alto",
       department: "La Paz",
       country: "Bolivia",
+      address: "Av. Siempre Viva 123",
       allergies: null,
       relevantHistory: "Hipertensión",
       currentMedication: null
@@ -284,22 +298,177 @@ describe("reception intake integration", () => {
 
   it("finds patients for prefill by name, phone and internal code", async () => {
     await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Lucia Fernanda Choque Mamani",
       phone: "+591 71112222",
       city: "El Alto"
     });
 
-    const byName = await searchReceptionPatients("lucia");
-    const bySeparatedNames = await searchReceptionPatients("lucia choque");
-    const byPhone = await searchReceptionPatients("7111");
-    const byCode = await searchReceptionPatients("SI-0000");
-    const noMatch = await searchReceptionPatients("inexistente");
+    const byName = await searchReceptionPatients("lucia", "el-alto");
+    const bySeparatedNames = await searchReceptionPatients("lucia choque", "el-alto");
+    const byPhone = await searchReceptionPatients("7111", "el-alto");
+    const byCode = await searchReceptionPatients("SI-0000", "el-alto");
+    const noMatch = await searchReceptionPatients("inexistente", "el-alto");
 
     expect(byName).toHaveLength(1);
     expect(bySeparatedNames).toHaveLength(1);
     expect(byPhone).toHaveLength(1);
     expect(byCode).toHaveLength(1);
     expect(noMatch).toHaveLength(0);
+  });
+
+  it("links an exact global identity without exposing it through local fuzzy search", async () => {
+    const user = await createReceptionUser();
+    const patient = await createPatientRecord({
+      branchCode: "cochabamba",
+      documentNumber: "9876543-CB",
+      fullName: "Paciente Viajera Exclusiva",
+      phone: "71234567",
+      city: "Cochabamba",
+      department: "Cochabamba",
+      country: "Bolivia"
+    });
+
+    expect(await searchReceptionPatients("Viajera", "el-alto")).toHaveLength(0);
+    expect(await getReceptionPatientById(patient.id, "el-alto")).toBeNull();
+    expect(await searchReceptionPatients("71234567", "el-alto")).toEqual([
+      expect.objectContaining({ id: patient.id, linkedToActiveBranch: false })
+    ]);
+
+    const intake = await createReceptionIntake({
+      branchCode: "el-alto",
+      userId: user.id,
+      patientId: patient.id,
+      patient: {
+        documentNumber: "9876543-CB",
+        fullName: "Paciente Viajera Exclusiva",
+        phone: "71234567",
+        city: "Cochabamba",
+        department: "Cochabamba",
+        country: "Bolivia"
+      },
+      visit: { reason: "Atención durante viaje", ...visitOrigin },
+      attribution: reportedAttribution
+    });
+
+    expect(intake.patientId).toBe(patient.id);
+    expect(await prisma.patient.count()).toBe(1);
+    expect(
+      await prisma.patientBranchRecord.findMany({
+        where: { patientId: patient.id },
+        orderBy: { branchCode: "asc" },
+        select: { branchCode: true }
+      })
+    ).toEqual([{ branchCode: "cochabamba" }, { branchCode: "el-alto" }]);
+  });
+
+  it("versions the global contact without rewriting a visit snapshot", async () => {
+    const user = await createReceptionUser();
+    const patient = await createPatientRecord({
+      branchCode: "el-alto",
+      documentNumber: "4567890-LP",
+      fullName: "Paciente Con Snapshot",
+      phone: "70000021",
+      address: "Dirección anterior",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
+      createdById: user.id
+    });
+    const visit = await createVisitRecord({
+      branchCode: "el-alto",
+      patientId: patient.id,
+      userId: user.id,
+      reason: "Control"
+    });
+
+    await updateReceptionPatient(patient.id, "el-alto", user.id, {
+      documentNumber: "4567890-LP",
+      fullName: patient.fullName,
+      phone: "70000022",
+      address: "Dirección vigente",
+      birthDate: null,
+      gender: "unknown",
+      city: "El Alto",
+      department: "La Paz",
+      country: "Bolivia",
+      allergies: null,
+      relevantHistory: null,
+      currentMedication: null
+    });
+
+    const [identity, historicVisit, versions] = await Promise.all([
+      prisma.patient.findUniqueOrThrow({ where: { id: patient.id } }),
+      prisma.visit.findUniqueOrThrow({ where: { id: visit.id } }),
+      prisma.patientIdentityVersion.count({ where: { patientId: patient.id } })
+    ]);
+    expect(identity.phone).toBe("70000022");
+    expect(identity.address).toBe("Dirección vigente");
+    expect(historicVisit.patientPhoneSnapshot).toBe("70000021");
+    expect(historicVisit.patientAddressSnapshot).toBe("Dirección anterior");
+    expect(versions).toBe(2);
+  });
+
+  it("keeps contact consent local and clinical continuity corporate", async () => {
+    const user = await createReceptionUser();
+    const patient = await createPatientRecord({
+      branchCode: "el-alto",
+      fullName: "Paciente Consentimientos",
+      phone: "70000031",
+      createdById: user.id
+    });
+    await prisma.patientBranchRecord.create({
+      data: {
+        patientId: patient.id,
+        branchCode: "cochabamba",
+        recordNumber: `cochabamba-${patient.internalCode}`
+      }
+    });
+    await appendPatientConsentRecord({
+      patientId: patient.id,
+      branchCode: "el-alto",
+      purpose: "follow_up",
+      decision: "granted",
+      contactChannels: ["whatsapp"],
+      captureMethod: "in_person_verbal",
+      recordedById: user.id
+    });
+    await appendPatientConsentRecord({
+      patientId: patient.id,
+      branchCode: "cochabamba",
+      purpose: "follow_up",
+      decision: "denied",
+      contactChannels: [],
+      captureMethod: "in_person_verbal",
+      recordedById: user.id
+    });
+    await appendPatientConsentRecord({
+      patientId: patient.id,
+      branchCode: "el-alto",
+      purpose: "clinical_continuity",
+      decision: "granted",
+      contactChannels: [],
+      captureMethod: "written_form",
+      recordedById: user.id
+    });
+
+    const [elAlto, cochabamba] = await Promise.all([
+      getPatientById(patient.id, "el-alto"),
+      getPatientById(patient.id, "cochabamba")
+    ]);
+    expect(elAlto?.consents.map((consent) => consent.purpose).sort()).toEqual([
+      "clinical_continuity",
+      "follow_up"
+    ]);
+    expect(cochabamba?.consents.map((consent) => consent.purpose).sort()).toEqual([
+      "clinical_continuity",
+      "follow_up"
+    ]);
+    expect(elAlto?.consents.find((consent) => consent.purpose === "follow_up")?.decision)
+      .toBe("granted");
+    expect(
+      cochabamba?.consents.find((consent) => consent.purpose === "follow_up")?.decision
+    ).toBe("denied");
   });
 
   it("preserves and filters a closed visit from Cochabamba", async () => {
@@ -329,7 +498,7 @@ describe("reception intake integration", () => {
       area: "cierre",
       note: "Atención terminada"
     });
-    await updateReceptionPatient(result.patientId, {
+    await updateReceptionPatient(result.patientId, "cochabamba", user.id, {
       fullName: "Paciente viajero",
       phone: "70000009",
       birthDate: null,
@@ -337,6 +506,7 @@ describe("reception intake integration", () => {
       city: "La Paz",
       department: "La Paz",
       country: "Bolivia",
+      address: null,
       allergies: null,
       relevantHistory: null,
       currentMedication: null

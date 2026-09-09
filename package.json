@@ -23,6 +23,7 @@
     "deps:check": "pnpm peers check && pnpm audit:prod && pnpm audit:high",
     "branch:tenancy:check": "node --import tsx scripts/branch-tenancy-check.ts",
     "branch:reconcile": "node --import dotenv/config --import tsx scripts/reconcile-branch-ownership.ts",
+    "branch:reconcile:patients": "node --import dotenv/config --import tsx scripts/reconcile-patient-branch-ownership.ts",
     "typecheck": "prisma generate && payload generate:types && next typegen && tsc --noEmit && pnpm branch:tenancy:check",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

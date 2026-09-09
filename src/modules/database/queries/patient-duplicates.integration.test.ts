@@ -30,12 +30,14 @@ describe("patient duplicate merge integration", () => {
       }
     });
     const target = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "María Quispe Mamani",
       phone: "+591 7654-3210",
       birthDate: new Date("1960-03-12"),
       city: "El Alto"
     });
     const source = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Mamani Maria Quispe",
       phone: "76543210",
       birthDate: new Date("1960-03-12"),
@@ -45,17 +47,20 @@ describe("patient duplicate merge integration", () => {
       data: {
         patientId: source.id,
         branchCode: "el-alto",
+        patientNameSnapshot: source.fullName,
+        patientPhoneSnapshot: source.phone,
         reason: "Control registrado en ficha duplicada"
       }
     });
     await prisma.patientNote.create({
       data: {
         patientId: source.id,
+        branchCode: "el-alto",
         note: "Registro que debe conservarse"
       }
     });
 
-    const [candidate] = await getPatientDuplicateQueue();
+    const [candidate] = await getPatientDuplicateQueue("global");
     expect(candidate).toMatchObject({
       phoneMatch: true,
       nameMatch: true,

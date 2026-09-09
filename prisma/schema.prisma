@@ -248,6 +248,7 @@ enum FollowUpContactPreference {
 }
 
 enum PatientConsentPurpose {
+  clinical_continuity
   follow_up
   reminders
   education
@@ -831,6 +832,7 @@ model InternalUser {
   activatedModules               ModuleActivation[]              @relation("ModuleActivationActivatedBy")
   deactivatedModules             ModuleActivation[]              @relation("ModuleActivationDeactivatedBy")
   moduleActivationEvents         ModuleActivationEvent[]         @relation("ModuleActivationEventActor")
+  patientIdentityVersions        PatientIdentityVersion[]        @relation("PatientIdentityVersionChangedBy")
 
   @@index([platformRole])
   @@index([active])
@@ -865,6 +867,10 @@ model ClinicBranch {
   moduleActivations    ModuleActivation[]
   followUpTasks        FollowUpTask[]
   supervisedReminderRules SupervisedReminderRule[]
+  patientRecords         PatientBranchRecord[]
+  patientConsents        PatientConsent[]
+  patientContacts        PatientContact[]
+  patientNotes           PatientNote[]
 
   @@index([status, name])
 }
@@ -1012,6 +1018,8 @@ model LeadStatusHistory {
 model Patient {
   id                       String                        @id @default(cuid())
   internalCode             String                        @unique
+  documentNumber           String?
+  normalizedDocumentNumber String                        @default("")
   fullName                 String
   phone                    String
   secondaryPhone           String?
@@ -1024,11 +1032,8 @@ model Patient {
   captureSource            PatientCaptureSource          @default(other)
   captureSources           PatientCaptureSource[]        @default([])
   firstVisitAt             DateTime?
-  generalObservations      String?
-  allergies                String?
-  relevantHistory          String?
-  currentMedication        String?
   followUpPreference       FollowUpContactPreference     @default(unknown)
+  revision                 Int                           @default(1)
   status                   PatientStatus                 @default(active)
   normalizedName           String                        @default("")
   normalizedPhone          String                        @default("")
@@ -1041,6 +1046,8 @@ model Patient {
   convertedLeads           Lead[]                        @relation("LeadConvertedPatient")
   contacts                 PatientContact[]
   notes                    PatientNote[]
+  branchRecords            PatientBranchRecord[]
+  identityVersions         PatientIdentityVersion[]
   visits                   Visit[]
   clinicalConsultations    ClinicalConsultation[]
   prescriptions            Prescription[]
@@ -1075,6 +1082,7 @@ model Patient {
   @@index([fullName])
   @@index([phone])
   @@index([normalizedPhone])
+  @@index([normalizedDocumentNumber])
   @@index([normalizedSecondaryPhone])
   @@index([normalizedName, birthDate])
   @@index([mergedIntoId])
@@ -1085,12 +1093,68 @@ model Patient {
   @@index([createdAt])
 }
 
+/// Fotografía inmutable de la identidad y el contacto corporativos.
+model PatientIdentityVersion {
+  id                       String        @id @default(cuid())
+  patientId                String
+  revision                 Int
+  internalCode             String
+  documentNumber           String?
+  normalizedDocumentNumber String
+  fullName                 String
+  phone                    String
+  secondaryPhone           String?
+  birthDate                DateTime?
+  gender                   PatientGender
+  city                     String?
+  department               String?
+  country                  String?
+  address                  String?
+  changedById              String?
+  changeReason             String
+  createdAt                DateTime      @default(now())
+  patient                  Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  changedBy                InternalUser? @relation("PatientIdentityVersionChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@unique([patientId, revision])
+  @@index([patientId, createdAt])
+  @@index([changedById, createdAt])
+}
+
+/// Expediente operativo que vincula una identidad global con una sucursal.
+model PatientBranchRecord {
+  patientId           String
+  branchCode          String
+  recordNumber        String
+  status              PatientStatus @default(active)
+  generalObservations String?
+  allergies           String?
+  relevantHistory     String?
+  currentMedication   String?
+  firstAttendedAt     DateTime?
+  lastAttendedAt      DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  patient             Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch              ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  contacts            PatientContact[]
+  notes               PatientNote[]
+  consents            PatientConsent[]
+  visits              Visit[]
+
+  @@id([patientId, branchCode])
+  @@unique([branchCode, recordNumber])
+  @@index([branchCode, status, updatedAt])
+  @@index([patientId, lastAttendedAt])
+}
+
 model PatientDuplicateCandidate {
   id             String                          @id @default(cuid())
   pairKey        String                          @unique
   patientAId     String
   patientBId     String
   phoneMatch     Boolean                         @default(false)
+  documentMatch  Boolean                         @default(false)
   nameMatch      Boolean                         @default(false)
   birthDateMatch Boolean                         @default(false)
   score          Int
@@ -1133,6 +1197,8 @@ model PatientAlias {
   patientId                String
   sourcePatientId          String    @unique
   internalCode             String    @unique
+  documentNumber           String?
+  normalizedDocumentNumber String    @default("")
   fullName                 String
   normalizedName           String
   phone                    String
@@ -1146,6 +1212,7 @@ model PatientAlias {
 
   @@index([patientId])
   @@index([normalizedPhone])
+  @@index([normalizedDocumentNumber])
   @@index([normalizedSecondaryPhone])
   @@index([normalizedName, birthDate])
 }
@@ -1153,6 +1220,7 @@ model PatientAlias {
 model PatientConsent {
   id              String                      @id @default(cuid())
   patientId       String
+  branchCode      String
   purpose         PatientConsentPurpose
   decision        PatientConsentDecision
   contactChannels PatientContactChannel[]     @default([])
@@ -1164,11 +1232,14 @@ model PatientConsent {
   supersedesId    String?                     @unique
   createdAt       DateTime                    @default(now())
   patient         Patient                     @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch          ClinicBranch                @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  branchRecord    PatientBranchRecord         @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
   recordedBy      InternalUser?               @relation("PatientConsentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
   supersedes      PatientConsent?             @relation("PatientConsentHistory", fields: [supersedesId], references: [id], onDelete: SetNull)
   supersededBy    PatientConsent?             @relation("PatientConsentHistory")
 
   @@index([patientId, purpose, decidedAt])
+  @@index([branchCode, patientId, purpose, decidedAt])
   @@index([patientId, decidedAt])
   @@index([purpose, decision, decidedAt])
   @@index([recordedById])
@@ -1176,27 +1247,35 @@ model PatientConsent {
 }
 
 model PatientContact {
-  id        String   @id @default(cuid())
-  patientId String
-  label     String?
-  phone     String
-  createdAt DateTime @default(now())
-  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  id           String              @id @default(cuid())
+  patientId    String
+  branchCode   String
+  label        String?
+  phone        String
+  createdAt    DateTime            @default(now())
+  patient      Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  branch       ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  branchRecord PatientBranchRecord @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
 
   @@index([patientId])
+  @@index([branchCode, patientId])
   @@index([phone])
 }
 
 model PatientNote {
-  id        String        @id @default(cuid())
-  patientId String
-  userId    String?
-  note      String
-  createdAt DateTime      @default(now())
-  patient   Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  user      InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id           String              @id @default(cuid())
+  patientId    String
+  branchCode   String
+  userId       String?
+  note         String
+  createdAt    DateTime            @default(now())
+  patient      Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  branch       ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  branchRecord PatientBranchRecord @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  user         InternalUser?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
+  @@index([branchCode, patientId, createdAt])
   @@index([userId])
   @@index([createdAt])
 }
@@ -1206,6 +1285,10 @@ model Visit {
   idempotencyKey            String?                       @unique
   patientId                 String
   branchCode                String
+  patientNameSnapshot       String
+  patientDocumentSnapshot   String?
+  patientPhoneSnapshot      String
+  patientAddressSnapshot    String?
   isTestData                Boolean                       @default(false)
   status                    VisitStatus                   @default(in_reception)
   reason                    String?
@@ -1228,6 +1311,7 @@ model Visit {
   updatedAt                 DateTime                      @updatedAt
   patient                   Patient                       @relation(fields: [patientId], references: [id], onDelete: Restrict)
   branch                    ClinicBranch                  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  branchRecord              PatientBranchRecord           @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
   createdBy                 InternalUser?                 @relation("VisitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   attendingUser             InternalUser?                 @relation("VisitAttendingUser", fields: [attendingUserId], references: [id], onDelete: SetNull)
   checkIn                   ReceptionCheckIn?
@@ -1262,6 +1346,7 @@ model Visit {
   feedbackSubmission        PatientFeedback?
 
   @@index([patientId])
+  @@index([patientId, branchCode])
   @@index([branchCode, checkedInAt])
   @@index([status, checkedInAt])
   @@index([originDepartment, originCity, checkedInAt])

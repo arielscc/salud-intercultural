@@ -6,6 +6,7 @@ import { toDateOnlyString } from "@/lib/dates";
 import { getReceptionPatientById } from "@/modules/database/queries/reception";
 import { getReceptionCaptureSources } from "@/modules/database/queries/attribution";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 type ReceptionIntakePageProps = {
   searchParams: Promise<{
@@ -17,9 +18,10 @@ type ReceptionIntakePageProps = {
 
 export default async function ReceptionIntakePage({ searchParams }: ReceptionIntakePageProps) {
   await requirePermission("visits_create");
+  const { activeBranch } = await getBranchContext();
   const params = await searchParams;
   const [patient, captureSourceOptions] = await Promise.all([
-    params.paciente ? getReceptionPatientById(params.paciente) : null,
+    params.paciente ? getReceptionPatientById(params.paciente, activeBranch.code) : null,
     getReceptionCaptureSources()
   ]);
   const initialPatient = patient

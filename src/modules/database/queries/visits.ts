@@ -87,12 +87,31 @@ export async function createVisitInTransaction(
     if (reused) return reused;
   }
 
+  const patient = await tx.patient.findFirst({
+    where: {
+      id: input.patientId,
+      mergedIntoId: null,
+      branchRecords: { some: { branchCode: input.branchCode } }
+    },
+    select: {
+      fullName: true,
+      documentNumber: true,
+      phone: true,
+      address: true
+    }
+  });
+  if (!patient) throw new Error("PATIENT_NOT_LINKED_TO_BRANCH");
+
   const visit = await tx.visit.create({
     data: {
       idempotencyKey: input.idempotencyKey,
       patientId: input.patientId,
       createdById: input.userId,
       branchCode: input.branchCode,
+      patientNameSnapshot: patient.fullName,
+      patientDocumentSnapshot: patient.documentNumber,
+      patientPhoneSnapshot: patient.phone,
+      patientAddressSnapshot: patient.address,
       reason: input.reason,
       status: "in_reception",
       intakeType: input.intakeType,
@@ -177,6 +196,20 @@ export async function createVisitInTransaction(
     data: {
       firstVisitAt: visit.checkedInAt
     }
+  });
+  await tx.patientBranchRecord.updateMany({
+    where: {
+      patientId: input.patientId,
+      branchCode: input.branchCode,
+      firstAttendedAt: null
+    },
+    data: { firstAttendedAt: visit.checkedInAt }
+  });
+  await tx.patientBranchRecord.update({
+    where: {
+      patientId_branchCode: { patientId: input.patientId, branchCode: input.branchCode }
+    },
+    data: { lastAttendedAt: visit.checkedInAt }
   });
 
   return visit;

@@ -23,6 +23,7 @@ import { getPatientDuplicateCandidate } from "@/modules/database/queries/patient
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 const impactLabels: Record<string, string> = {
   convertedLeads: "Contactos previos",
@@ -55,6 +56,7 @@ function shown(value: unknown) {
 }
 
 function personFields(patient: {
+  documentNumber: string | null;
   fullName: string;
   phone: string;
   birthDate: Date | null;
@@ -62,12 +64,10 @@ function personFields(patient: {
   city: string | null;
   department: string | null;
   country: string | null;
-  allergies: string | null;
-  relevantHistory: string | null;
-  currentMedication: string | null;
   status: keyof typeof patientStatusLabels;
 }) {
   return {
+    Documento: patient.documentNumber,
     "Nombre completo": patient.fullName,
     Teléfono: patient.phone,
     "Fecha de nacimiento": patient.birthDate,
@@ -75,9 +75,6 @@ function personFields(patient: {
     Ciudad: patient.city,
     Departamento: patient.department,
     País: patient.country,
-    Alergias: patient.allergies,
-    "Antecedentes relevantes": patient.relevantHistory,
-    "Medicación actual": patient.currentMedication,
     Estado: patientStatusLabels[patient.status]
   };
 }
@@ -129,8 +126,16 @@ export default async function PatientDuplicateComparisonPage({
 }) {
   const user = await requirePermission("patient_duplicates_read");
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext();
+  const branchScope =
+    user.role === "super_admin" || user.role === "direccion"
+      ? undefined
+      : activeBranch.code;
   const [{ candidateId }, query] = await Promise.all([params, searchParams]);
-  const candidate = await getPatientDuplicateCandidate(candidateId);
+  const candidate = await getPatientDuplicateCandidate(
+    candidateId,
+    branchScope ? { branchCode: branchScope } : "global"
+  );
   if (!candidate) notFound();
   if (candidate.status === "merged" && candidate.merge) {
     redirect(
@@ -175,6 +180,7 @@ export default async function PatientDuplicateComparisonPage({
           Coincidencia de {candidate.score} puntos
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
+          {candidate.documentMatch ? <Chip>Mismo documento</Chip> : null}
           {candidate.phoneMatch ? <Chip>Mismo teléfono</Chip> : null}
           {candidate.nameMatch ? <Chip>Mismo nombre</Chip> : null}
           {candidate.birthDateMatch ? (

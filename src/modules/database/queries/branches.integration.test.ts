@@ -318,7 +318,13 @@ describe("multi-branch operations", () => {
       data: {
         internalCode: "QA-BRANCH-PATIENT",
         fullName: "Paciente de prueba",
-        phone: "00000000"
+        phone: "00000000",
+        branchRecords: {
+          create: [
+            { branchCode: "el-alto", recordNumber: "el-alto-QA-BRANCH-PATIENT" },
+            { branchCode: "cochabamba", recordNumber: "cochabamba-QA-BRANCH-PATIENT" }
+          ]
+        }
       }
     });
     await prisma.visit.createMany({
@@ -326,6 +332,8 @@ describe("multi-branch operations", () => {
         {
           patientId: patient.id,
           branchCode: "el-alto",
+          patientNameSnapshot: patient.fullName,
+          patientPhoneSnapshot: patient.phone,
           isTestData: false,
           originCity: "El Alto",
           originCountry: "Bolivia"
@@ -333,6 +341,8 @@ describe("multi-branch operations", () => {
         {
           patientId: patient.id,
           branchCode: "cochabamba",
+          patientNameSnapshot: patient.fullName,
+          patientPhoneSnapshot: patient.phone,
           isTestData: true,
           originCity: "Cochabamba",
           originCountry: "Bolivia"

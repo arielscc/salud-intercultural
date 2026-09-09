@@ -105,16 +105,7 @@ export async function recordVisitDiscontinuation(
             },
             patient: {
               select: {
-                id: true,
-                consents: {
-                  where: { purpose: "follow_up" },
-                  orderBy: [
-                    { decidedAt: "desc" },
-                    { createdAt: "desc" }
-                  ],
-                  take: 1,
-                  select: { decision: true }
-                }
+                id: true
               }
             }
           }
@@ -162,8 +153,16 @@ export async function recordVisitDiscontinuation(
 
         let followUpTaskId = existingRecoveryFollowUp?.id;
         let followUpCreated = false;
-        const followUpConsentGranted =
-          visit.patient.consents[0]?.decision === "granted";
+        const followUpConsent = await tx.patientConsent.findFirst({
+          where: {
+            patientId: visit.patient.id,
+            branchCode: visit.branchCode,
+            purpose: "follow_up"
+          },
+          orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+          select: { decision: true }
+        });
+        const followUpConsentGranted = followUpConsent?.decision === "granted";
 
         if (
           input.createFollowUp &&

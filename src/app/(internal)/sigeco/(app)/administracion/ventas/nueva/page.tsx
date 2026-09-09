@@ -46,6 +46,7 @@ const emptySearchMessage = (
 export default async function NewSalePage({ searchParams }: NewSalePageProps) {
   const user = await requirePermission("sales_write");
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext();
   const params = await searchParams;
   const error = params.error ? errorMessages[params.error] : null;
   const canRegisterClient = canUse(
@@ -58,7 +59,11 @@ export default async function NewSalePage({ searchParams }: NewSalePageProps) {
   // Paso 1: elegir a quién se le vende.
   if (!params.cliente) {
     const search = params.buscar?.trim() ?? "";
-    const patients = await getPatients({ search: search || undefined, pageSize: 20 });
+    const patients = await getPatients({
+      branchCode: activeBranch.code,
+      search: search || undefined,
+      pageSize: 20
+    });
 
     return (
       <div className="grid gap-4">
@@ -155,10 +160,9 @@ export default async function NewSalePage({ searchParams }: NewSalePageProps) {
   }
 
   // Paso 2: armar la venta para ese cliente.
-  const client = await getWalkInClientById(params.cliente);
+  const client = await getWalkInClientById(params.cliente, activeBranch.code);
   if (!client) notFound();
 
-  const { activeBranch } = await getBranchContext();
   const [catalogItems, inventoryItems] = await Promise.all([
     getActiveServiceCatalogItems(),
     getInventoryItems({

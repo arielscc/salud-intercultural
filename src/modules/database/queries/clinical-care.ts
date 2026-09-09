@@ -488,15 +488,16 @@ export async function assignConsultationVisit(input: {
   });
 }
 
-export async function getClinicalVisitById(visitId: string) {
+export async function getClinicalVisitById(visitId: string, branchCode: string) {
   return withDatabaseError("getClinicalVisitById", async () => {
-    return prisma.visit.findUnique({
-      where: { id: visitId },
+    const visit = await prisma.visit.findFirst({
+      where: { id: visitId, branchCode },
       include: {
         patient: {
           include: {
+            branchRecords: { where: { branchCode }, take: 1 },
             consents: {
-              where: { purpose: "follow_up" },
+              where: { purpose: "follow_up", branchCode },
               orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
               take: 1
             }
@@ -617,6 +618,18 @@ export async function getClinicalVisitById(visitId: string) {
         }
       }
     });
+    if (!visit) return null;
+    const { branchRecords, ...patient } = visit.patient;
+    const localRecord = branchRecords[0];
+    return {
+      ...visit,
+      patient: {
+        ...patient,
+        allergies: localRecord?.allergies ?? null,
+        relevantHistory: localRecord?.relevantHistory ?? null,
+        currentMedication: localRecord?.currentMedication ?? null
+      }
+    };
   });
 }
 

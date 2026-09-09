@@ -24,6 +24,36 @@ seguimiento se incorporan en sus tareas de dominio. La Tarea 4 incluye el
 adaptador `internal-user-access`, necesario para reconciliar los bloqueos
 históricos detectados por la migración de roles de la Tarea 3.
 
+El adaptador `patient-branch-record` se agregó en la Tarea 5. Se ejecuta entre
+las migraciones estructural y de endurecimiento:
+
+```bash
+pnpm branch:reconcile:patients
+pnpm branch:reconcile:patients -- --template
+pnpm branch:reconcile:patients -- --decisions ./decisiones-pacientes.json
+pnpm branch:reconcile:patients -- --decisions ./decisiones-pacientes.json \
+  --apply --confirm=APPLY_BRANCH_RECONCILIATION
+pnpm branch:reconcile:patients -- --assert-ready
+```
+
+Sus IDs tienen los prefijos `profile:`, `consent:`, `contact:` y `note:`. El
+reporte no muestra nombres, teléfonos, documentos, notas ni datos clínicos. El
+apply crea la relación local si la decisión manual la necesita, mueve el perfil
+legado una sola vez y asigna la sucursal a cada fila hija sin replicarla.
+
+En una base con pendientes, `20260909140000_harden_patient_branch_record`
+fallará deliberadamente antes de cambiar columnas. La migración estructural
+anterior ya queda aplicada. Después del `apply` y de `--assert-ready`, se marca
+el intento de endurecimiento como revertido y se reintenta el deploy:
+
+```bash
+pnpm exec prisma migrate resolve --rolled-back 20260909140000_harden_patient_branch_record
+pnpm exec prisma migrate deploy
+```
+
+No se debe marcar como aplicada una migración que falló ni usar `resolve` antes
+de que el gate del reconciliador quede aprobado.
+
 ## Uso Seguro
 
 El comando sin argumentos es siempre de solo lectura:

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   duplicateMatchSignals,
   normalizePatientName,
+  normalizePatientDocument,
   normalizePatientPhone,
   patientPairKey
 } from "@/features/patient-duplicates/normalize";
@@ -16,6 +17,16 @@ describe("patient duplicate normalization", () => {
     expect(normalizePatientName("María Pérez Quispe")).toBe(
       normalizePatientName("Quispe, Maria Perez")
     );
+  });
+
+  it("normalizes documents and treats an exact document as global identity evidence", () => {
+    expect(normalizePatientDocument(" 12.345-6 lp ")).toBe("123456LP");
+    expect(
+      duplicateMatchSignals(
+        { documentNumber: "123456 LP", fullName: "Persona Uno", phone: "70000001" },
+        { documentNumber: "123456-LP", fullName: "Persona Dos", phone: "70000002" }
+      )
+    ).toMatchObject({ documentMatch: true, score: 100, isCandidate: true });
   });
 
   it("requires a phone match or the combination of name and birth date", () => {

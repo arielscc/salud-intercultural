@@ -89,6 +89,8 @@ export function IntakeFunnel({
 
   const [fullName, setFullName] = useState(initialPatient?.fullName ?? "");
   const [phone, setPhone] = useState(initialPatient?.phone ?? "");
+  const [documentNumber, setDocumentNumber] = useState(initialPatient?.documentNumber ?? "");
+  const [address, setAddress] = useState(initialPatient?.address ?? "");
   const [secondaryPhone, setSecondaryPhone] = useState(initialPatient?.secondaryPhone ?? "");
   const [birthDate, setBirthDate] = useState(initialPatient?.birthDate ?? "");
   const [gender, setGender] = useState(initialPatient?.gender ?? "unknown");
@@ -153,6 +155,8 @@ export function IntakeFunnel({
     setExistingPatient(patient);
     setFullName(patient.fullName);
     setPhone(patient.phone);
+    setDocumentNumber(patient.documentNumber ?? "");
+    setAddress(patient.address ?? "");
     setSecondaryPhone(patient.secondaryPhone ?? "");
     setBirthDate(patient.birthDate);
     setGender(patient.gender);
@@ -321,6 +325,8 @@ export function IntakeFunnel({
       <input type="hidden" name="patientId" value={existingPatient?.id ?? ""} />
       <input type="hidden" name="fullName" value={fullName} />
       <input type="hidden" name="phone" value={phone} />
+      <input type="hidden" name="documentNumber" value={documentNumber} />
+      <input type="hidden" name="address" value={address} />
       <input type="hidden" name="secondaryPhone" value={secondaryPhone} />
       <input type="hidden" name="birthDate" value={birthDate} />
       <input type="hidden" name="gender" value={gender} />
@@ -502,6 +508,15 @@ export function IntakeFunnel({
             placeholder="2245678"
           />
         </Field>
+        <Field label="Documento de identidad (opcional)">
+          <input
+            className={internalInputClassName}
+            value={documentNumber}
+            onChange={(event) => setDocumentNumber(event.target.value)}
+            autoComplete="off"
+            maxLength={40}
+          />
+        </Field>
         <Field label={age !== null ? `Fecha de nacimiento (${age} años)` : "Fecha de nacimiento"}>
           <DatePickerField value={birthDate} onChange={setBirthDate} />
         </Field>
@@ -513,6 +528,15 @@ export function IntakeFunnel({
           required
           className="lg:col-span-2"
         />
+        <Field label="Dirección actual (opcional)" className="lg:col-span-2">
+          <input
+            className={internalInputClassName}
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            autoComplete="street-address"
+            maxLength={300}
+          />
+        </Field>
         <div className="grid gap-1.5 text-[13px] font-medium text-text lg:col-span-2">
           <span>Género (opcional)</span>
           <div className="flex flex-wrap gap-2">

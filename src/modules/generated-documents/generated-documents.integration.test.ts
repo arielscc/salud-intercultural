@@ -66,11 +66,20 @@ async function setup() {
     data: {
       internalCode: `P-${randomUUID().slice(0, 8)}`,
       fullName: "Paciente de prueba",
-      phone: "70000000"
+      phone: "70000000",
+      branchRecords: {
+        create: { branchCode: "el-alto", recordNumber: `el-alto-${randomUUID()}` }
+      }
     }
   });
   const visit = await prisma.visit.create({
-    data: { patientId: patient.id, branchCode: "el-alto", status: "in_consultation" }
+    data: {
+      patientId: patient.id,
+      branchCode: "el-alto",
+      patientNameSnapshot: patient.fullName,
+      patientPhoneSnapshot: patient.phone,
+      status: "in_consultation"
+    }
   });
   await prisma.clinicalConsultation.create({
     data: {

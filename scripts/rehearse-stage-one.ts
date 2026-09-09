@@ -162,6 +162,7 @@ async function main() {
 
   // --- Alta de cliente de mostrador ---
   const client = await createPatientRecord({
+    branchCode,
     fullName: `${tag} Cliente`,
     phone: "70000123",
     generalObservations: "Cliente creado por el ensayo"

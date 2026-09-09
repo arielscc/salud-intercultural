@@ -7,6 +7,7 @@ import { resolveDeploymentEnvironment } from "@/lib/deployment-environment";
 export const PATIENT_CONSENT_TEXT_VERSION = "v2";
 
 export const patientConsentPurposeLabels: Record<PatientConsentPurpose, string> = {
+  clinical_continuity: "Continuidad clínica entre sucursales",
   follow_up: "Seguimiento del tratamiento",
   reminders: "Recordatorios de atención",
   education: "Información educativa",
@@ -16,6 +17,8 @@ export const patientConsentPurposeLabels: Record<PatientConsentPurpose, string> 
 };
 
 export const patientConsentTexts: Record<PatientConsentPurpose, string> = {
+  clinical_continuity:
+    "Autorizo a los profesionales clínicos habilitados de la clínica a consultar mi expediente de otras sucursales cuando sea necesario para dar continuidad a mi atención.",
   follow_up:
     "Autorizo a la clínica a contactarme para dar seguimiento a mi tratamiento y saber cómo estoy evolucionando.",
   reminders:
@@ -36,7 +39,11 @@ export const patientContactChannelLabels: Record<PatientContactChannel, string> 
 };
 
 export function isContactConsentPurpose(purpose: PatientConsentPurpose) {
-  return purpose !== "image_voice";
+  return purpose !== "image_voice" && purpose !== "clinical_continuity";
+}
+
+export function isCorporateConsentPurpose(purpose: PatientConsentPurpose) {
+  return purpose === "clinical_continuity";
 }
 
 export function assertPatientConsentTextsEnabled(

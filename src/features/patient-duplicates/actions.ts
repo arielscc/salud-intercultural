@@ -12,6 +12,7 @@ import {
   getPatientDuplicateCandidate,
   mergeDuplicatePatients
 } from "@/modules/database/queries/patient-duplicates";
+import { getBranchContext } from "@/features/branches/context";
 
 function formValues(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -27,6 +28,11 @@ export async function dismissPatientDuplicateAction(formData: FormData) {
       entityId: candidateId || undefined
     },
     async (user) => {
+      const { activeBranch } = await getBranchContext();
+      const branchScope =
+        user.role === "super_admin" || user.role === "direccion"
+          ? undefined
+          : activeBranch.code;
       const parsed = dismissPatientDuplicateSchema.safeParse(
         formValues(formData)
       );
@@ -35,7 +41,8 @@ export async function dismissPatientDuplicateAction(formData: FormData) {
       }
       const candidate = await dismissPatientDuplicateCandidate({
         candidateId: parsed.data.candidateId,
-        reviewedById: user.id
+        reviewedById: user.id,
+        scope: branchScope ? { branchCode: branchScope } : "global"
       });
       return auditedResult(candidate, {
         entityId: candidate.id,
@@ -69,7 +76,8 @@ export async function mergePatientDuplicateAction(formData: FormData) {
         );
       }
       const candidate = await getPatientDuplicateCandidate(
-        parsed.data.candidateId
+        parsed.data.candidateId,
+        "global"
       );
       const target =
         candidate?.patientA.id === parsed.data.targetPatientId

@@ -29,11 +29,13 @@ export type EditablePatient = {
   internalCode: string;
   fullName: string;
   phone: string;
+  documentNumber: string | null;
   birthDate: string;
   gender: string;
   city: string | null;
   department: string | null;
   country: string | null;
+  address: string | null;
   allergies: string | null;
   relevantHistory: string | null;
   currentMedication: string | null;
@@ -50,6 +52,8 @@ export function PatientEditForm({
 
   const [fullName, setFullName] = useState(patient.fullName);
   const [phone, setPhone] = useState(patient.phone);
+  const [documentNumber, setDocumentNumber] = useState(patient.documentNumber ?? "");
+  const [address, setAddress] = useState(patient.address ?? "");
   const [birthDate, setBirthDate] = useState(patient.birthDate);
   const [gender, setGender] = useState(patient.gender);
   const [patientOrigin, setPatientOrigin] = useState<GeographicOriginValue>({
@@ -102,6 +106,8 @@ export function PatientEditForm({
       ) : null}
       <input type="hidden" name="fullName" value={fullName} />
       <input type="hidden" name="phone" value={phone} />
+      <input type="hidden" name="documentNumber" value={documentNumber} />
+      <input type="hidden" name="address" value={address} />
       <input type="hidden" name="birthDate" value={birthDate} />
       <input type="hidden" name="gender" value={gender} />
       <input type="hidden" name="city" value={patientOrigin.city} />
@@ -155,6 +161,15 @@ export function PatientEditForm({
             <DatePickerField value={birthDate} onChange={setBirthDate} />
           </Field>
         </div>
+        <Field label="Documento de identidad (opcional)">
+          <input
+            className={internalInputClassName}
+            value={documentNumber}
+            onChange={(event) => setDocumentNumber(event.target.value)}
+            autoComplete="off"
+            maxLength={40}
+          />
+        </Field>
         <GeographicOriginFields
           idPrefix="patient-edit-origin"
           label="Dónde vive"
@@ -162,6 +177,15 @@ export function PatientEditForm({
           onChange={setPatientOrigin}
           required
         />
+        <Field label="Dirección actual (opcional)">
+          <input
+            className={internalInputClassName}
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            autoComplete="street-address"
+            maxLength={300}
+          />
+        </Field>
         <div className="grid gap-1.5 text-[13px] font-medium text-text">
           <span>Género (opcional)</span>
           <div className="flex flex-wrap gap-2">

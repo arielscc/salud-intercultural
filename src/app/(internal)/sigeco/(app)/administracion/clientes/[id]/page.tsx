@@ -40,7 +40,7 @@ export default async function AdministrationClientPage({ params }: ClientPagePro
   const moduleAccess = await getModuleAccessState();
   const { activeBranch } = await getBranchContext();
   const { id } = await params;
-  const client = await getWalkInClientById(id);
+  const client = await getWalkInClientById(id, activeBranch.code);
 
   if (!client) notFound();
 

@@ -55,10 +55,20 @@ async function seedRecoveryFixture(input: {
         country: "Bolivia"
       }
     });
+    await prisma.patientBranchRecord.create({
+      data: {
+        patientId: patient.id,
+        branchCode,
+        recordNumber: `${branchCode}-${patient.internalCode}`
+      }
+    });
     const visit = await prisma.visit.create({
       data: {
         patientId: patient.id,
         branchCode,
+        patientNameSnapshot: patient.fullName,
+        patientPhoneSnapshot: patient.phone,
+        patientAddressSnapshot: patient.address,
         createdById: user.id,
         reason: "Simulacro de backup y restauración",
         originCity: "El Alto",

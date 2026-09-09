@@ -6,6 +6,7 @@ import type {
 } from "@/generated/prisma/client";
 import {
   assertPatientConsentTextsEnabled,
+  isCorporateConsentPurpose,
   patientConsentTexts,
   PATIENT_CONSENT_TEXT_VERSION
 } from "@/features/patient-consents/texts";
@@ -13,6 +14,7 @@ import { prisma, withDatabaseError } from "@/modules/database";
 
 export async function appendPatientConsentRecord(input: {
   patientId: string;
+  branchCode: string;
   purpose: PatientConsentPurpose;
   decision: PatientConsentDecision;
   contactChannels: PatientContactChannel[];
@@ -27,7 +29,10 @@ export async function appendPatientConsentRecord(input: {
         const current = await tx.patientConsent.findFirst({
           where: {
             patientId: input.patientId,
-            purpose: input.purpose
+            purpose: input.purpose,
+            ...(isCorporateConsentPurpose(input.purpose)
+              ? {}
+              : { branchCode: input.branchCode })
           },
           orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }]
         });

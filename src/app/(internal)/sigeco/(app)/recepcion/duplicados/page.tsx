@@ -21,13 +21,16 @@ import { getPatientDuplicateQueue } from "@/modules/database/queries/patient-dup
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 function matchingReasons(candidate: {
+  documentMatch: boolean;
   phoneMatch: boolean;
   nameMatch: boolean;
   birthDateMatch: boolean;
 }) {
   return [
+    candidate.documentMatch ? "Mismo documento" : null,
     candidate.phoneMatch ? "Mismo teléfono" : null,
     candidate.nameMatch ? "Mismo nombre" : null,
     candidate.birthDateMatch ? "Misma fecha de nacimiento" : null
@@ -48,8 +51,15 @@ export default async function PatientDuplicatesPage({
 }) {
   const user = await requirePermission("patient_duplicates_read");
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext();
+  const branchScope =
+    user.role === "super_admin" || user.role === "direccion"
+      ? undefined
+      : activeBranch.code;
   const [candidates, params] = await Promise.all([
-    getPatientDuplicateQueue(),
+    getPatientDuplicateQueue(
+      branchScope ? { branchCode: branchScope } : "global"
+    ),
     searchParams
   ]);
   const canReview = canUse(user.role, moduleAccess, "patient_duplicates_review");

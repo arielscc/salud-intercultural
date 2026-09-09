@@ -15,3 +15,4 @@ No usar este directorio para procedimientos operativos, checklists de deploy o e
 
 1. [Arquitectura V2](./v2-architecture.md)
 2. [Ownership de datos](./data-ownership.md)
+3. [Identidad global y expediente local del paciente](./patient-identity-and-branch-records.md)

@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import {
   duplicateMatchSignals,
   normalizePatientName,
+  normalizePatientDocument,
   normalizePatientPhone,
   patientPairKey,
   type DuplicateIdentity
@@ -29,12 +30,15 @@ const mergeImpactCountSelect = {
   followUpTasks: true,
   clinicalAttachments: true,
   consents: true,
-  visitAttributions: true
+  visitAttributions: true,
+  branchRecords: true
 } satisfies Prisma.PatientCountOutputTypeSelect;
 
 const duplicatePatientSelect = {
   id: true,
   internalCode: true,
+  documentNumber: true,
+  normalizedDocumentNumber: true,
   fullName: true,
   phone: true,
   secondaryPhone: true,
@@ -47,10 +51,6 @@ const duplicatePatientSelect = {
   captureSource: true,
   captureSources: true,
   firstVisitAt: true,
-  generalObservations: true,
-  allergies: true,
-  relevantHistory: true,
-  currentMedication: true,
   followUpPreference: true,
   status: true,
   normalizedName: true,
@@ -74,6 +74,7 @@ function patientSnapshot(
   return {
     id: patient.id,
     internalCode: patient.internalCode,
+    documentNumber: patient.documentNumber,
     fullName: patient.fullName,
     phone: patient.phone,
     secondaryPhone: patient.secondaryPhone,
@@ -86,10 +87,6 @@ function patientSnapshot(
     captureSource: patient.captureSource,
     captureSources: patient.captureSources,
     firstVisitAt: patient.firstVisitAt?.toISOString() ?? null,
-    generalObservations: patient.generalObservations,
-    allergies: patient.allergies,
-    relevantHistory: patient.relevantHistory,
-    currentMedication: patient.currentMedication,
     followUpPreference: patient.followUpPreference,
     status: patient.status,
     createdAt: patient.createdAt.toISOString()
@@ -105,6 +102,8 @@ function chooseOlderPatient<
 }
 
 export async function findDuplicatePatientMatches(input: {
+  scope: PatientDuplicateScope;
+  documentNumber?: string | null;
   fullName: string;
   phone: string;
   secondaryPhone?: string | null;
@@ -112,7 +111,9 @@ export async function findDuplicatePatientMatches(input: {
   excludePatientId?: string;
 }) {
   return withDatabaseError("findDuplicatePatientMatches", async () => {
+    const branchCode = duplicateScopeBranch(input.scope);
     const normalizedPhone = normalizePatientPhone(input.phone);
+    const normalizedDocument = normalizePatientDocument(input.documentNumber);
     const normalizedSecondaryPhone = input.secondaryPhone
       ? normalizePatientPhone(input.secondaryPhone)
       : "";
@@ -123,10 +124,14 @@ export async function findDuplicatePatientMatches(input: {
     const normalizedName = normalizePatientName(input.fullName);
     const alternatives = await prisma.patient.findMany({
       where: {
+        branchRecords: branchCode ? { some: { branchCode } } : undefined,
         id: input.excludePatientId ? { not: input.excludePatientId } : undefined,
         mergedIntoId: null,
         status: { not: "archived" },
         OR: [
+          normalizedDocument.length >= 4
+            ? { normalizedDocumentNumber: normalizedDocument }
+            : { id: "__invalid_document__" },
           normalizedPhones.length > 0
             ? {
                 OR: [
@@ -143,6 +148,7 @@ export async function findDuplicatePatientMatches(input: {
       select: {
         id: true,
         internalCode: true,
+        documentNumber: true,
         fullName: true,
         phone: true,
         secondaryPhone: true,
@@ -177,11 +183,12 @@ async function upsertDuplicateCandidate(
   const pairKey = patientPairKey(first.id, second.id);
   const existing = await tx.patientDuplicateCandidate.findUnique({
     where: { pairKey },
-    select: { status: true, phoneMatch: true, score: true }
+    select: { status: true, documentMatch: true, phoneMatch: true, score: true }
   });
   const shouldReopen =
     existing?.status === "dismissed" &&
-    ((!existing.phoneMatch && signals.phoneMatch) ||
+    ((!existing.documentMatch && signals.documentMatch) ||
+      (!existing.phoneMatch && signals.phoneMatch) ||
       signals.score > existing.score);
 
   return tx.patientDuplicateCandidate.upsert({
@@ -190,12 +197,14 @@ async function upsertDuplicateCandidate(
       pairKey,
       patientAId,
       patientBId,
+      documentMatch: signals.documentMatch,
       phoneMatch: signals.phoneMatch,
       nameMatch: signals.nameMatch,
       birthDateMatch: signals.birthDateMatch,
       score: signals.score
     },
     update: {
+      documentMatch: signals.documentMatch,
       phoneMatch: signals.phoneMatch,
       nameMatch: signals.nameMatch,
       birthDateMatch: signals.birthDateMatch,
@@ -216,11 +225,13 @@ export async function recordDuplicateCandidatesInTransaction(
     where: { id: patientId },
     select: {
       id: true,
+      documentNumber: true,
       fullName: true,
       phone: true,
       secondaryPhone: true,
       birthDate: true,
       normalizedName: true,
+      normalizedDocumentNumber: true,
       normalizedPhone: true,
       normalizedSecondaryPhone: true,
       mergedIntoId: true
@@ -238,6 +249,9 @@ export async function recordDuplicateCandidatesInTransaction(
       mergedIntoId: null,
       status: { not: "archived" },
       OR: [
+        patient.normalizedDocumentNumber.length >= 4
+          ? { normalizedDocumentNumber: patient.normalizedDocumentNumber }
+          : { id: "__invalid_document__" },
         normalizedPhones.length > 0
           ? {
               OR: [
@@ -253,11 +267,13 @@ export async function recordDuplicateCandidatesInTransaction(
     },
     select: {
       id: true,
+      documentNumber: true,
       fullName: true,
       phone: true,
       secondaryPhone: true,
       birthDate: true,
       normalizedName: true,
+      normalizedDocumentNumber: true,
       normalizedPhone: true,
       normalizedSecondaryPhone: true
     },
@@ -280,13 +296,26 @@ export async function recordDuplicateCandidatesForPatient(patientId: string) {
   });
 }
 
-export async function getPatientDuplicateQueue() {
+export type PatientDuplicateScope = "global" | { branchCode: string };
+
+function duplicateScopeBranch(scope: PatientDuplicateScope) {
+  return scope === "global" ? null : scope.branchCode;
+}
+
+export async function getPatientDuplicateQueue(scope: PatientDuplicateScope) {
   return withDatabaseError("getPatientDuplicateQueue", async () => {
+    const branchCode = duplicateScopeBranch(scope);
     return prisma.patientDuplicateCandidate.findMany({
       where: {
         status: "open",
-        patientA: { mergedIntoId: null },
-        patientB: { mergedIntoId: null }
+        patientA: {
+          mergedIntoId: null,
+          branchRecords: branchCode ? { some: { branchCode } } : undefined
+        },
+        patientB: {
+          mergedIntoId: null,
+          branchRecords: branchCode ? { some: { branchCode } } : undefined
+        }
       },
       include: {
         patientA: { select: duplicatePatientSelect },
@@ -297,10 +326,22 @@ export async function getPatientDuplicateQueue() {
   });
 }
 
-export async function getPatientDuplicateCandidate(candidateId: string) {
+export async function getPatientDuplicateCandidate(
+  candidateId: string,
+  scope: PatientDuplicateScope
+) {
   return withDatabaseError("getPatientDuplicateCandidate", async () => {
-    return prisma.patientDuplicateCandidate.findUnique({
-      where: { id: candidateId },
+    const branchCode = duplicateScopeBranch(scope);
+    return prisma.patientDuplicateCandidate.findFirst({
+      where: {
+        id: candidateId,
+        patientA: {
+          branchRecords: branchCode ? { some: { branchCode } } : undefined
+        },
+        patientB: {
+          branchRecords: branchCode ? { some: { branchCode } } : undefined
+        }
+      },
       include: {
         patientA: {
           select: {
@@ -324,11 +365,26 @@ export async function getPatientDuplicateCandidate(candidateId: string) {
 export async function dismissPatientDuplicateCandidate(input: {
   candidateId: string;
   reviewedById: string;
+  scope: PatientDuplicateScope;
 }) {
   return withDatabaseError("dismissPatientDuplicateCandidate", async () => {
+    const branchCode = duplicateScopeBranch(input.scope);
     return prisma.$transaction(async (tx) => {
       const result = await tx.patientDuplicateCandidate.updateMany({
-        where: { id: input.candidateId, status: "open" },
+        where: {
+          id: input.candidateId,
+          status: "open",
+          patientA: {
+            branchRecords: branchCode
+              ? { some: { branchCode } }
+              : undefined
+          },
+          patientB: {
+            branchRecords: branchCode
+              ? { some: { branchCode } }
+              : undefined
+          }
+        },
         data: {
           status: "dismissed",
           reviewedAt: new Date(),
@@ -436,6 +492,58 @@ export async function mergeDuplicatePatients(input: {
           const result = await operation;
           movedRelations[name] = result.count;
         };
+
+        const [sourceBranchRecords, targetBranchRecords] = await Promise.all([
+          tx.patientBranchRecord.findMany({ where: { patientId: source.id } }),
+          tx.patientBranchRecord.findMany({ where: { patientId: target.id } })
+        ]);
+        const targetBranchByCode = new Map(
+          targetBranchRecords.map((record) => [record.branchCode, record])
+        );
+        for (const sourceRecord of sourceBranchRecords) {
+          const targetRecord = targetBranchByCode.get(sourceRecord.branchCode);
+          await tx.patientBranchRecord.upsert({
+            where: {
+              patientId_branchCode: {
+                patientId: target.id,
+                branchCode: sourceRecord.branchCode
+              }
+            },
+            create: {
+              patientId: target.id,
+              branchCode: sourceRecord.branchCode,
+              recordNumber: `${sourceRecord.branchCode}-${target.internalCode}`,
+              status: sourceRecord.status,
+              generalObservations: sourceRecord.generalObservations,
+              allergies: sourceRecord.allergies,
+              relevantHistory: sourceRecord.relevantHistory,
+              currentMedication: sourceRecord.currentMedication,
+              firstAttendedAt: sourceRecord.firstAttendedAt,
+              lastAttendedAt: sourceRecord.lastAttendedAt
+            },
+            update: {
+              generalObservations:
+                targetRecord?.generalObservations ?? sourceRecord.generalObservations,
+              allergies: targetRecord?.allergies ?? sourceRecord.allergies,
+              relevantHistory:
+                targetRecord?.relevantHistory ?? sourceRecord.relevantHistory,
+              currentMedication:
+                targetRecord?.currentMedication ?? sourceRecord.currentMedication,
+              firstAttendedAt:
+                targetRecord?.firstAttendedAt && sourceRecord.firstAttendedAt
+                  ? targetRecord.firstAttendedAt < sourceRecord.firstAttendedAt
+                    ? targetRecord.firstAttendedAt
+                    : sourceRecord.firstAttendedAt
+                  : targetRecord?.firstAttendedAt ?? sourceRecord.firstAttendedAt,
+              lastAttendedAt:
+                targetRecord?.lastAttendedAt && sourceRecord.lastAttendedAt
+                  ? targetRecord.lastAttendedAt > sourceRecord.lastAttendedAt
+                    ? targetRecord.lastAttendedAt
+                    : sourceRecord.lastAttendedAt
+                  : targetRecord?.lastAttendedAt ?? sourceRecord.lastAttendedAt
+            }
+          });
+        }
 
         await move(
           "convertedLeads",
@@ -599,9 +707,13 @@ export async function mergeDuplicatePatients(input: {
           })
         );
 
-        await tx.patient.update({
+        const mergedTarget = await tx.patient.update({
           where: { id: target.id },
           data: {
+            documentNumber: target.documentNumber ?? source.documentNumber,
+            normalizedDocumentNumber: target.documentNumber
+              ? normalizePatientDocument(target.documentNumber)
+              : normalizePatientDocument(source.documentNumber),
             secondaryPhone: target.secondaryPhone ?? source.secondaryPhone,
             normalizedSecondaryPhone: target.secondaryPhone
               ? normalizePatientPhone(target.secondaryPhone)
@@ -619,16 +731,31 @@ export async function mergeDuplicatePatients(input: {
                   ? source.firstVisitAt
                   : target.firstVisitAt
                 : source.firstVisitAt ?? target.firstVisitAt,
-            generalObservations:
-              target.generalObservations ?? source.generalObservations,
-            allergies: target.allergies ?? source.allergies,
-            relevantHistory: target.relevantHistory ?? source.relevantHistory,
-            currentMedication:
-              target.currentMedication ?? source.currentMedication,
             captureSource: oldest.captureSource,
             captureSources: Array.from(
               new Set([...target.captureSources, ...source.captureSources])
-            )
+            ),
+            revision: { increment: 1 }
+          }
+        });
+        await tx.patientIdentityVersion.create({
+          data: {
+            patientId: mergedTarget.id,
+            revision: mergedTarget.revision,
+            internalCode: mergedTarget.internalCode,
+            documentNumber: mergedTarget.documentNumber,
+            normalizedDocumentNumber: mergedTarget.normalizedDocumentNumber,
+            fullName: mergedTarget.fullName,
+            phone: mergedTarget.phone,
+            secondaryPhone: mergedTarget.secondaryPhone,
+            birthDate: mergedTarget.birthDate,
+            gender: mergedTarget.gender,
+            city: mergedTarget.city,
+            department: mergedTarget.department,
+            country: mergedTarget.country,
+            address: mergedTarget.address,
+            changedById: input.mergedById,
+            changeReason: `Fusión de identidad ${source.internalCode}`
           }
         });
 
@@ -637,6 +764,8 @@ export async function mergeDuplicatePatients(input: {
             patientId: target.id,
             sourcePatientId: source.id,
             internalCode: source.internalCode,
+            documentNumber: source.documentNumber,
+            normalizedDocumentNumber: source.normalizedDocumentNumber,
             fullName: source.fullName,
             normalizedName: source.normalizedName,
             phone: source.phone,
@@ -659,6 +788,10 @@ export async function mergeDuplicatePatients(input: {
               recordIds: movedRecordIds
             }
           }
+        });
+
+        await tx.patientBranchRecord.deleteMany({
+          where: { patientId: source.id }
         });
 
         await tx.patient.update({

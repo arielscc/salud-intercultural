@@ -232,10 +232,11 @@ export default async function ReceptionPage({
     vista === "pacientes"
       ? await Promise.all([
           getPatients({
+            branchCode: activeBranch.code,
             page,
             pageSize
           }),
-          countPatients(),
+          countPatients({ branchCode: activeBranch.code }),
         ])
       : null;
   const patients = patientPage?.[0] ?? [];

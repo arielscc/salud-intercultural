@@ -44,11 +44,13 @@ export class FollowUpWorkflowError extends Error {
   }
 }
 
-const currentFollowUpConsent = {
-  where: { purpose: "follow_up" as const },
-  orderBy: [{ decidedAt: "desc" as const }, { createdAt: "desc" as const }],
-  take: 1
-};
+function currentFollowUpConsent(branchCode: string) {
+  return {
+    where: { purpose: "follow_up" as const, branchCode },
+    orderBy: [{ decidedAt: "desc" as const }, { createdAt: "desc" as const }],
+    take: 1
+  };
+}
 
 function followUpVisibilityWhere(role?: InternalRole): Prisma.FollowUpTaskWhereInput {
   if (!role || role === "super_admin" || role === "direccion") return {};
@@ -258,7 +260,7 @@ export async function getFollowUpTasks(
         lead: true,
         patient: {
           include: {
-            consents: currentFollowUpConsent
+            consents: currentFollowUpConsent(input.branchCode)
           }
         },
         visit: true,
@@ -299,7 +301,7 @@ export async function getFollowUpTaskById(
         lead: true,
         patient: {
           include: {
-            consents: currentFollowUpConsent
+            consents: currentFollowUpConsent(branchCode)
           }
         },
         visit: true,
@@ -348,7 +350,7 @@ export async function createFollowUpAttemptRecord(input: {
         include: {
           patient: {
             include: {
-              consents: currentFollowUpConsent
+              consents: currentFollowUpConsent(input.branchCode)
             }
           },
           assignedTo: true

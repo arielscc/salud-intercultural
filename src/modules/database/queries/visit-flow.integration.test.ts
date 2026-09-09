@@ -24,6 +24,7 @@ afterEach(cleanVisitFlowData);
 
 async function createVisitInReception() {
   const patient = await createPatientRecord({
+    branchCode: "el-alto",
     fullName: "Paciente Flujo Flexible",
     phone: "70000001"
   });
@@ -173,6 +174,7 @@ describe("flexible visit flow integration", () => {
     await prisma.patientConsent.create({
       data: {
         patientId: visit.patientId,
+        branchCode: "el-alto",
         purpose: "follow_up",
         decision: "granted",
         contactChannels: ["whatsapp"],

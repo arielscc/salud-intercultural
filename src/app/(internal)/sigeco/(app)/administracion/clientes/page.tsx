@@ -20,6 +20,7 @@ import { parsePage } from "@/modules/database/pagination";
 import { countPatients, getPatients } from "@/modules/database/queries/patients";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 type ClientsPageProps = {
   searchParams: Promise<{ buscar?: string; page?: string }>;
@@ -37,14 +38,15 @@ const emptyMessage = (
 export default async function AdministrationClientsPage({ searchParams }: ClientsPageProps) {
   const user = await requirePermission("patients_read", { module: "administracion" });
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext();
   const params = await searchParams;
   const search = params.buscar?.trim() ?? "";
   const page = parsePage(params.page);
   const pageSize = 30;
 
   const [patients, total] = await Promise.all([
-    getPatients({ search: search || undefined, page, pageSize }),
-    countPatients({ search: search || undefined })
+    getPatients({ branchCode: activeBranch.code, search: search || undefined, page, pageSize }),
+    countPatients({ branchCode: activeBranch.code, search: search || undefined })
   ]);
   const canRegister = canUse(user.role, moduleAccess, "patients_create", "administracion");
 

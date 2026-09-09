@@ -30,6 +30,17 @@ async function main() {
     },
     update: {}
   });
+  await prisma.patientBranchRecord.upsert({
+    where: {
+      patientId_branchCode: { patientId: patient.id, branchCode: branch.code }
+    },
+    create: {
+      patientId: patient.id,
+      branchCode: branch.code,
+      recordNumber: `${branch.code}-${patient.internalCode}`
+    },
+    update: {}
+  });
 
   await prisma.visit.upsert({
     where: { idempotencyKey: syntheticVisitKey },
@@ -37,6 +48,10 @@ async function main() {
       idempotencyKey: syntheticVisitKey,
       patientId: patient.id,
       branchCode: branch.code,
+      patientNameSnapshot: patient.fullName,
+      patientDocumentSnapshot: patient.documentNumber,
+      patientPhoneSnapshot: patient.phone,
+      patientAddressSnapshot: patient.address,
       isTestData: true,
       reason: "Validación sintética de separación entre sucursales",
       originCity: "Cochabamba",

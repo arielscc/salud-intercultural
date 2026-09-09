@@ -32,7 +32,8 @@ export async function searchReceptionPatientsAction(query: string) {
     return [];
   }
 
-  const patients = await searchReceptionPatients(search);
+  const { activeBranch } = await getBranchContext();
+  const patients = await searchReceptionPatients(search, activeBranch.code);
 
   return patients.map((patient) => ({
     ...patient,
@@ -89,6 +90,8 @@ export async function submitReceptionIntakeAction(formData: FormData) {
 
       if (!record.patientId) {
         const duplicates = await findPossibleDuplicatePatients({
+          scope: "global",
+          documentNumber: record.patient.documentNumber,
           fullName: record.patient.fullName,
           phone: record.patient.phone,
           birthDate: record.patient.birthDate
@@ -167,7 +170,7 @@ export async function updateReceptionPatientAction(formData: FormData) {
       entityType: "patient",
       entityId: patientId || undefined
     },
-    async () => {
+    async (actor, branchContext) => {
       const parsed = patientEditSchema.safeParse(Object.fromEntries(formData.entries()));
 
       if (!parsed.success) {
@@ -178,6 +181,8 @@ export async function updateReceptionPatientAction(formData: FormData) {
 
       const record = toPatientEditRecord(parsed.data);
       const duplicates = await findPossibleDuplicatePatients({
+        scope: "global",
+        documentNumber: record.data.documentNumber,
         fullName: record.data.fullName,
         phone: record.data.phone,
         birthDate: record.data.birthDate,
@@ -191,7 +196,12 @@ export async function updateReceptionPatientAction(formData: FormData) {
           `/sigeco/recepcion/pacientes/${encodeURIComponent(record.patientId)}/editar?duplicate=true`
         );
       }
-      const patient = await updateReceptionPatient(record.patientId, record.data);
+      const patient = await updateReceptionPatient(
+        record.patientId,
+        branchContext.activeBranch.code,
+        actor.id,
+        record.data
+      );
       return auditedResult(patient, { entityId: record.patientId });
     }
   );

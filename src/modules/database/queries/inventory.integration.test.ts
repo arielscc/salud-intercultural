@@ -69,6 +69,7 @@ describe("inventory integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Inventario",
       phone: "+591 70000066",
       captureSource: "whatsapp"
@@ -190,6 +191,7 @@ describe("inventory integration", () => {
       idempotencyKey: "inventory-no-stock-session"
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Sin Stock",
       phone: "+591 70000067",
       captureSource: "whatsapp"

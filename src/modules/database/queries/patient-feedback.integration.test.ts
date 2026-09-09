@@ -45,11 +45,13 @@ async function prepareVisit() {
     }
   });
   const patient = await createPatientRecord({
+    branchCode: "el-alto",
     fullName: "Paciente Opinión",
     phone: "70000041"
   });
   await appendPatientConsentRecord({
     patientId: patient.id,
+    branchCode: "el-alto",
     purpose: "feedback",
     decision: "granted",
     contactChannels: ["whatsapp"],

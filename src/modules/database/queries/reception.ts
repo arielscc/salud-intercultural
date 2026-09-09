@@ -3,6 +3,7 @@ import type {
   PatientCaptureSource,
   PatientGender,
   PatientRouteArea,
+  Prisma,
   SymptomDurationUnit,
   VisitIntakeType
 } from "@/generated/prisma/client";
@@ -17,6 +18,10 @@ import {
   normalizePatientPhone
 } from "@/features/patient-duplicates/normalize";
 import { recordDuplicateCandidatesInTransaction } from "@/modules/database/queries/patient-duplicates";
+import {
+  appendPatientIdentityVersionInTransaction,
+  normalizePatientDocument
+} from "@/modules/database/queries/patients";
 
 export type ReceptionIntakeRecordInput = {
   idempotencyKey?: string;
@@ -26,12 +31,14 @@ export type ReceptionIntakeRecordInput = {
   patient: {
     fullName: string;
     phone: string;
+    documentNumber?: string;
     secondaryPhone?: string;
     birthDate?: Date;
     gender?: PatientGender;
     city?: string;
     department?: string | null;
     country?: string;
+    address?: string;
     captureSource?: PatientCaptureSource;
     captureSources?: PatientCaptureSource[];
     allergies?: string;
@@ -92,16 +99,55 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
       } = input.patient;
 
       if (patientId) {
-        await tx.patient.update({
+        const existing = await tx.patient.findUnique({
+          where: { id: patientId },
+          include: { branchRecords: { where: { branchCode: input.branchCode }, take: 1 } }
+        });
+        if (!existing || (!existing.branchRecords[0] && existing.normalizedPhone !== normalizePatientPhone(patientProfile.phone))) {
+          throw new Error("PATIENT_EXACT_MATCH_REQUIRED");
+        }
+        const patient = await tx.patient.update({
           where: { id: patientId },
           // La fuente original del paciente no cambia en visitas posteriores.
           data: {
-            ...patientProfile,
+            fullName: patientProfile.fullName,
+            phone: patientProfile.phone,
+            documentNumber: patientProfile.documentNumber,
+            normalizedDocumentNumber: normalizePatientDocument(patientProfile.documentNumber),
+            secondaryPhone: patientProfile.secondaryPhone,
+            birthDate: patientProfile.birthDate,
+            city: patientProfile.city,
+            department: patientProfile.department,
+            country: patientProfile.country,
+            address: patientProfile.address,
             normalizedName: normalizePatientName(patientProfile.fullName),
             normalizedPhone: normalizePatientPhone(patientProfile.phone),
             normalizedSecondaryPhone: patientProfile.secondaryPhone
               ? normalizePatientPhone(patientProfile.secondaryPhone)
-              : ""
+              : "",
+            revision: { increment: 1 }
+          }
+        });
+        await appendPatientIdentityVersionInTransaction(
+          tx,
+          patient,
+          input.userId,
+          "Actualización durante recepción"
+        );
+        await tx.patientBranchRecord.upsert({
+          where: { patientId_branchCode: { patientId, branchCode: input.branchCode } },
+          create: {
+            patientId,
+            branchCode: input.branchCode,
+            recordNumber: `${input.branchCode}-${patient.internalCode}`,
+            allergies: patientProfile.allergies,
+            relevantHistory: patientProfile.relevantHistory,
+            currentMedication: patientProfile.currentMedication
+          },
+          update: {
+            allergies: patientProfile.allergies,
+            relevantHistory: patientProfile.relevantHistory,
+            currentMedication: patientProfile.currentMedication
           }
         });
       } else {
@@ -109,13 +155,22 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
         const patient = await tx.patient.create({
           data: {
             internalCode: `SI-${String(patientCount + 1).padStart(6, "0")}`,
-            ...patientProfile,
+            fullName: patientProfile.fullName,
+            phone: patientProfile.phone,
+            documentNumber: patientProfile.documentNumber,
+            normalizedDocumentNumber: normalizePatientDocument(patientProfile.documentNumber),
+            secondaryPhone: patientProfile.secondaryPhone,
+            birthDate: patientProfile.birthDate,
+            city: patientProfile.city,
+            department: patientProfile.department,
+            country: patientProfile.country,
+            address: patientProfile.address,
             normalizedName: normalizePatientName(patientProfile.fullName),
             normalizedPhone: normalizePatientPhone(patientProfile.phone),
             normalizedSecondaryPhone: patientProfile.secondaryPhone
               ? normalizePatientPhone(patientProfile.secondaryPhone)
               : "",
-            gender: input.patient.gender ?? "unknown",
+            gender: patientProfile.gender,
             captureSource: captureSource ?? "other",
             captureSources:
               captureSources && captureSources.length > 0
@@ -125,6 +180,22 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
           }
         });
         patientId = patient.id;
+        await tx.patientBranchRecord.create({
+          data: {
+            patientId,
+            branchCode: input.branchCode,
+            recordNumber: `${input.branchCode}-${patient.internalCode}`,
+            allergies: patientProfile.allergies,
+            relevantHistory: patientProfile.relevantHistory,
+            currentMedication: patientProfile.currentMedication
+          }
+        });
+        await appendPatientIdentityVersionInTransaction(
+          tx,
+          patient,
+          input.userId,
+          "Creación durante recepción"
+        );
       }
 
       const visit = await createVisitInTransaction(tx, {
@@ -153,17 +224,16 @@ const receptionPatientSelect = {
   internalCode: true,
   fullName: true,
   phone: true,
+  documentNumber: true,
   secondaryPhone: true,
   birthDate: true,
   gender: true,
   city: true,
   department: true,
   country: true,
+  address: true,
   captureSource: true,
   captureSources: true,
-  allergies: true,
-  relevantHistory: true,
-  currentMedication: true,
   followUpPreference: true,
   mergedIntoId: true
 } as const;
@@ -171,11 +241,13 @@ const receptionPatientSelect = {
 export type ReceptionPatientEditData = {
   fullName: string;
   phone: string;
+  documentNumber?: string | null;
   birthDate: Date | null;
   gender: PatientGender;
   city: string;
   department: string | null;
   country: string;
+  address: string | null;
   allergies: string | null;
   relevantHistory: string | null;
   currentMedication: string | null;
@@ -239,43 +311,139 @@ export async function getReceptionDashboardSummary(branchCode: string, date = ne
   });
 }
 
-export async function updateReceptionPatient(id: string, data: ReceptionPatientEditData) {
+export async function updateReceptionPatient(
+  id: string,
+  branchCode: string,
+  changedById: string,
+  data: ReceptionPatientEditData
+) {
   return withDatabaseError("updateReceptionPatient", async () => {
     return prisma.$transaction(async (tx) => {
+      const localRecord = await tx.patientBranchRecord.findUnique({
+        where: { patientId_branchCode: { patientId: id, branchCode } }
+      });
+      if (!localRecord) throw new Error("PATIENT_NOT_IN_ACTIVE_BRANCH");
+      const { allergies, relevantHistory, currentMedication, ...identity } = data;
       const patient = await tx.patient.update({
         where: { id },
         data: {
-          ...data,
+          ...identity,
+          normalizedDocumentNumber: normalizePatientDocument(data.documentNumber),
           normalizedName: normalizePatientName(data.fullName),
-          normalizedPhone: normalizePatientPhone(data.phone)
+          normalizedPhone: normalizePatientPhone(data.phone),
+          revision: { increment: 1 }
         },
         select: receptionPatientSelect
       });
+      await tx.patientBranchRecord.update({
+        where: { patientId_branchCode: { patientId: id, branchCode } },
+        data: { allergies, relevantHistory, currentMedication }
+      });
+      const fullPatient = await tx.patient.findUniqueOrThrow({ where: { id } });
+      await appendPatientIdentityVersionInTransaction(
+        tx,
+        fullPatient,
+        changedById,
+        "Actualización de identidad y contacto"
+      );
       await recordDuplicateCandidatesInTransaction(tx, id);
-      return patient;
+      return { ...patient, allergies, relevantHistory, currentMedication };
     });
   });
 }
 
-export async function getReceptionPatientById(id: string) {
+export async function getReceptionPatientById(id: string, branchCode: string) {
   return withDatabaseError("getReceptionPatientById", async () => {
-    return prisma.patient.findUnique({
-      where: { id },
-      select: receptionPatientSelect
+    const patient = await prisma.patient.findFirst({
+      where: { id, branchRecords: { some: { branchCode } } },
+      select: {
+        ...receptionPatientSelect,
+        branchRecords: { where: { branchCode }, take: 1 }
+      }
     });
+    if (!patient) return null;
+    const { branchRecords, ...identity } = patient;
+    return {
+      ...identity,
+      allergies: branchRecords[0]?.allergies ?? null,
+      relevantHistory: branchRecords[0]?.relevantHistory ?? null,
+      currentMedication: branchRecords[0]?.currentMedication ?? null,
+      linkedToActiveBranch: true
+    };
   });
 }
 
-export async function searchReceptionPatients(search: string) {
+export async function searchReceptionPatients(search: string, branchCode: string) {
   return withDatabaseError("searchReceptionPatients", async () => {
-    return prisma.patient.findMany({
+    const normalizedPhone = normalizePatientPhone(search);
+    const normalizedDocument = normalizePatientDocument(search);
+    const exactDocument =
+      normalizedDocument.length >= 4 && /\d/.test(normalizedDocument);
+    const exactCode = /^SI-\d+$/i.test(search.trim());
+    const exactConditions: Prisma.PatientWhereInput[] = [];
+    if (normalizedPhone.length >= 7) {
+      exactConditions.push(
+        { normalizedPhone },
+        { normalizedSecondaryPhone: normalizedPhone },
+        {
+          aliases: {
+            some: {
+              OR: [
+                { normalizedPhone },
+                { normalizedSecondaryPhone: normalizedPhone }
+              ]
+            }
+          }
+        }
+      );
+    }
+    if (exactDocument) {
+      exactConditions.push(
+        { normalizedDocumentNumber: normalizedDocument },
+        { aliases: { some: { normalizedDocumentNumber: normalizedDocument } } }
+      );
+    }
+    if (exactCode) {
+      exactConditions.push({
+        internalCode: { equals: search.trim(), mode: "insensitive" }
+      });
+      exactConditions.push({
+        aliases: {
+          some: {
+            internalCode: { equals: search.trim(), mode: "insensitive" }
+          }
+        }
+      });
+    }
+    const exactIdentity =
+      normalizedPhone.length >= 7 || exactDocument || exactCode
+        ? {
+            OR: exactConditions
+          }
+        : undefined;
+    const localWhere = {
+      ...patientSearchWhere(search),
+      branchRecords: { some: { branchCode } },
+      mergedIntoId: null
+    };
+    const patients = await prisma.patient.findMany({
       where: {
-        ...patientSearchWhere(search),
-        mergedIntoId: null
+        mergedIntoId: null,
+        OR: [localWhere, ...(exactIdentity ? [exactIdentity] : [])]
       },
-      select: receptionPatientSelect,
+      select: {
+        ...receptionPatientSelect,
+        branchRecords: { where: { branchCode }, take: 1 }
+      },
       orderBy: { updatedAt: "desc" },
       take: 5
     });
+    return patients.map(({ branchRecords, ...patient }) => ({
+      ...patient,
+      allergies: branchRecords[0]?.allergies ?? null,
+      relevantHistory: branchRecords[0]?.relevantHistory ?? null,
+      currentMedication: branchRecords[0]?.currentMedication ?? null,
+      linkedToActiveBranch: branchRecords.length > 0
+    }));
   });
 }

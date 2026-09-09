@@ -66,6 +66,7 @@ describe("clinical care integration", () => {
     });
 
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Clinico",
       phone: "+591 70000006",
       captureSource: "whatsapp"
@@ -116,7 +117,7 @@ describe("clinical care integration", () => {
     });
 
     const consultationVisits = await getConsultationVisits();
-    const detail = await getClinicalVisitById(visit.id);
+    const detail = await getClinicalVisitById(visit.id, "el-alto");
 
     expect(consultationVisits).toHaveLength(1);
     expect(detail?.clinicalConsultation?.diagnoses).toHaveLength(2);
@@ -147,6 +148,7 @@ describe("clinical care integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Versionado",
       phone: "+591 70000016",
       captureSource: "whatsapp"
@@ -291,6 +293,7 @@ describe("clinical care integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Concurrente",
       phone: "+591 70000026",
       captureSource: "whatsapp"

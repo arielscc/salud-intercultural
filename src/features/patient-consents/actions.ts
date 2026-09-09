@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import { appendPatientConsentRecord } from "@/modules/database/queries/patient-consents";
 import { recordPatientConsentSchema } from "@/features/patient-consents/schemas/patient-consent.schema";
+import { getBranchContext } from "@/features/branches/context";
 
 export async function recordPatientConsentAction(formData: FormData) {
   const patientId = String(formData.get("patientId") ?? "");
@@ -20,6 +21,7 @@ export async function recordPatientConsentAction(formData: FormData) {
       entityId: patientId || undefined
     },
     async (actor) => {
+      const { activeBranch } = await getBranchContext();
       const parsed = recordPatientConsentSchema.safeParse({
         patientId,
         purpose: formData.get("purpose"),
@@ -37,6 +39,7 @@ export async function recordPatientConsentAction(formData: FormData) {
 
       const consent = await appendPatientConsentRecord({
         ...parsed.data,
+        branchCode: activeBranch.code,
         recordedById: actor.id
       });
 

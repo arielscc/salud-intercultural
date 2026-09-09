@@ -34,6 +34,7 @@ describe("area time events integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente de tiempos",
       phone: "70000009"
     });

@@ -25,11 +25,13 @@ import { prisma, withDatabaseError } from "@/modules/database";
 type RuleVersionInput = z.infer<typeof reminderRuleVersionSchema>;
 type CandidateReviewInput = z.infer<typeof reminderCandidateReviewSchema>;
 
-const currentFollowUpConsent = {
-  where: { purpose: "follow_up" as const },
-  orderBy: [{ decidedAt: "desc" as const }, { createdAt: "desc" as const }],
-  take: 1
-};
+function currentFollowUpConsent(branchCode: string) {
+  return {
+    where: { purpose: "follow_up" as const, branchCode },
+    orderBy: [{ decidedAt: "desc" as const }, { createdAt: "desc" as const }],
+    take: 1
+  };
+}
 
 export class SupervisedReminderError extends Error {
   constructor(
@@ -185,7 +187,7 @@ async function sourcesForRule(
     fullName: true,
     phone: true,
     followUpPreference: true,
-    consents: currentFollowUpConsent
+    consents: currentFollowUpConsent(branchCode)
   } satisfies Prisma.PatientSelect;
 
   if (version.event === "visit_completed") {
@@ -405,7 +407,9 @@ export async function reviewSupervisedReminderCandidate(input: {
           where: { id: input.data.candidateId },
           include: {
             ruleVersion: true,
-            patient: { include: { consents: currentFollowUpConsent } },
+            patient: {
+              include: { consents: currentFollowUpConsent(input.branchCode) }
+            },
             visit: { select: { branchCode: true } },
             task: true
           }
@@ -593,7 +597,7 @@ export async function getSupervisedReminderCandidates(input: {
             fullName: true,
             phone: true,
             followUpPreference: true,
-            consents: currentFollowUpConsent
+            consents: currentFollowUpConsent(input.branchCode)
           }
         },
         ruleVersion: {

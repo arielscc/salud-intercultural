@@ -75,6 +75,7 @@ describe("nursing and studies integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Estudio Administrable",
       phone: "+591 70000108",
       captureSource: "whatsapp"
@@ -182,6 +183,7 @@ describe("nursing and studies integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente V33",
       phone: "+591 70000033",
       captureSource: "whatsapp"
@@ -247,7 +249,7 @@ describe("nursing and studies integration", () => {
 
     const detail = await getNursingWorkItemById(workItem.id);
     const studies = await getStudiesForVisit(visit.id);
-    const patientDetail = await getPatientById(patient.id);
+    const patientDetail = await getPatientById(patient.id, "el-alto");
 
     expect(detail?.status).toBe("completed");
     expect(detail?.nursingApplications[0]).toMatchObject({

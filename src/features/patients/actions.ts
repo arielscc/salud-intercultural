@@ -29,7 +29,7 @@ export async function createPatientAction(formData: FormData) {
       action: "patient.create",
       entityType: "patient"
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createPatientSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -38,6 +38,8 @@ export async function createPatientAction(formData: FormData) {
 
       const input = sanitizePatientInput(parsed.data);
       const duplicates = await findPossibleDuplicatePatients({
+        scope: "global",
+        documentNumber: input.documentNumber,
         fullName: input.fullName,
         phone: input.phone,
         secondaryPhone: input.secondaryPhone,
@@ -50,6 +52,7 @@ export async function createPatientAction(formData: FormData) {
 
       const created = await createPatientRecord({
         ...input,
+        branchCode: branchContext.activeBranch.code,
         createdById: user.id
       });
       return auditedResult(created, { entityId: created.id });
@@ -137,8 +140,9 @@ export async function registerWalkInClientAction(
       entityType: "patient",
       context: { origin: "administracion" }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const duplicates = await findPossibleDuplicatePatients({
+        scope: { branchCode: branchContext.activeBranch.code },
         fullName: input.fullName,
         phone: input.phone,
         secondaryPhone: input.secondaryPhone
@@ -162,6 +166,7 @@ export async function registerWalkInClientAction(
 
       const created = await createPatientRecord({
         ...input,
+        branchCode: branchContext.activeBranch.code,
         createdById: user.id
       });
 

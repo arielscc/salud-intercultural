@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { toDateOnlyString } from "@/lib/dates";
 import { getReceptionPatientById } from "@/modules/database/queries/reception";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 type PatientEditPageProps = {
   params: Promise<{ id: string }>;
@@ -12,11 +13,12 @@ type PatientEditPageProps = {
 
 export default async function PatientEditPage({ params, searchParams }: PatientEditPageProps) {
   await requirePermission("patients_update", { module: "recepcion" });
+  const { activeBranch } = await getBranchContext();
   const [{ id }, { error, duplicate }] = await Promise.all([
     params,
     searchParams
   ]);
-  const patient = await getReceptionPatientById(id);
+  const patient = await getReceptionPatientById(id, activeBranch.code);
 
   if (!patient) notFound();
   if (patient.mergedIntoId) {

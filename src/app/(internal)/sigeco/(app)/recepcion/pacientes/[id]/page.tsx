@@ -60,6 +60,7 @@ import { canUse } from "@/features/modules/access";
 import { Chip } from "@/components/internal/ui/Chip";
 import { calculateAgeFromDate } from "@/lib/age";
 import { cn } from "@/lib/cn";
+import { getBranchContext } from "@/features/branches/context";
 
 type PatientDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -101,13 +102,14 @@ export default async function PatientDetailPage({
 }: PatientDetailPageProps) {
   const user = await requirePermission("patients_read", { module: "recepcion" });
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext();
   // La ficha resume ventas y seguimientos aunque esos módulos no estén
   // lanzados; lo que se oculta es el enlace, no el dato ya visible.
   const canOpenSales = canUse(user.role, moduleAccess, "sales_read");
   const canOpenFollowUps = canUse(user.role, moduleAccess, "followups_read");
   const { id } = await params;
   const filters = await searchParams;
-  const patient = await getPatientById(id);
+  const patient = await getPatientById(id, activeBranch.code);
 
   if (!patient) notFound();
   if (patient.mergedInto) {
@@ -267,7 +269,7 @@ export default async function PatientDetailPage({
           <Card className="max-sm:order-2">
             <CardHeader
               title="Datos de fichas anteriores"
-              description="Información conservada después de una fusión. No reemplaza los datos vigentes."
+              description="Identidad conservada después de una fusión. No reemplaza los datos vigentes."
             />
             <div className="grid gap-3">
               {patient.aliases.map((alias) => (
@@ -289,25 +291,6 @@ export default async function PatientDetailPage({
                         .filter(Boolean)
                         .join(" · ")}
                     />
-                    <InfoRow
-                      label="Alergias registradas"
-                      value={alias.sourcePatient.allergies}
-                    />
-                    <InfoRow
-                      label="Antecedentes"
-                      value={alias.sourcePatient.relevantHistory}
-                    />
-                    <InfoRow
-                      label="Medicación"
-                      value={alias.sourcePatient.currentMedication}
-                    />
-                    {alias.sourcePatient.generalObservations ? (
-                      <InfoRow
-                        label="Observaciones"
-                        value={alias.sourcePatient.generalObservations}
-                        wide
-                      />
-                    ) : null}
                   </dl>
                 </section>
               ))}

@@ -104,6 +104,7 @@ async function main() {
       reused += 1;
     } else {
       patient = await createPatientRecord({
+        branchCode: branch.code,
         fullName: spec.fullName,
         phone: spec.phone,
         gender: spec.gender,
@@ -119,9 +120,30 @@ async function main() {
       created += 1;
     }
 
+    await prisma.patientBranchRecord.upsert({
+      where: {
+        patientId_branchCode: {
+          patientId: patient.id,
+          branchCode: branch.code
+        }
+      },
+      create: {
+        patientId: patient.id,
+        branchCode: branch.code,
+        recordNumber: `${branch.code}-${patient.internalCode}`,
+        allergies: spec.allergies,
+        relevantHistory: spec.relevantHistory
+      },
+      update: {}
+    });
+
     // ¿Ya tiene una visita en consulta? Si no, la creamos y la derivamos.
     const activeConsultation = await prisma.visit.findFirst({
-      where: { patientId: patient.id, status: "in_consultation" },
+      where: {
+        patientId: patient.id,
+        branchCode: branch.code,
+        status: "in_consultation"
+      },
       select: { id: true }
     });
     if (activeConsultation) continue;

@@ -10,8 +10,9 @@ Plan híbrido dividido en 17 tareas consecutivas. La frontera técnica ya cuenta
 con un contrato ejecutable, un detector automático, un contexto autenticado de
 sucursal obligatorio y roles operativos resueltos desde cada membresía. La
 identidad queda global y solo conserva la capacidad de plataforma del super
-administrador. Todavía no se inició la partición general de operaciones ni se
-aplicó RLS. La migración
+administrador. Todavía no se completó la partición general de operaciones ni se
+aplicó RLS. La identidad global del paciente y su expediente por sucursal ya
+están separados. La migración
 `20260908120000_require_explicit_branch_code` queda vigilada por el detector:
 elimina siete defaults de El Alto y hace explícitas las principales escrituras
 operativas.
@@ -33,17 +34,17 @@ operativas.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 13 |
+| Pendiente | 12 |
 | En progreso | 0 |
 | Bloqueada | 0 |
-| Terminada | 4 |
+| Terminada | 5 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
-| B. Partición de dominios | 5-13 | Pendiente | Maestros únicos y operaciones pertenecientes a una sede |
+| B. Partición de dominios | 5-13 | En progreso (1/9) | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
@@ -54,7 +55,7 @@ operativas.
 | 2 | Contexto central de sucursal en servidor | P0 | Terminada | 1 |
 | 3 | Roles y permisos por sucursal | P0 | Terminada | 2 |
 | 4 | Herramientas de backfill y reconciliación | P0 | Terminada | 1-3 |
-| 5 | Identidad global y expediente local del paciente | P0 | Pendiente | 4 |
+| 5 | Identidad global y expediente local del paciente | P0 | Terminada | 4 |
 | 6 | Leads, campañas y entradas públicas | P0 | Pendiente | 2, 4-5 |
 | 7 | Visitas, recepción, rutas y tiempos | P0 | Pendiente | 5 |
 | 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Pendiente | 7 |
@@ -70,10 +71,10 @@ operativas.
 
 ## Preparación Ya Disponible
 
-- Contrato canónico para los 100 modelos Prisma y chequeo automático de
+- Contrato canónico para los 102 modelos Prisma y chequeo automático de
   modelos, campos, relaciones, defaults y fallbacks de sucursal.
 - Deuda heredada registrada con coincidencia exacta, responsable y tarea de
-  retiro: 63 excepciones de modelo y 42 hallazgos de código.
+  retiro: 60 excepciones de modelo y 41 hallazgos de código.
 - `BranchRequestContext` resuelve usuario, asignación, sede activa y rol
   operativo exclusivamente desde sesión y membresías activas.
 - `InternalUser` conserva la identidad y la capacidad global de plataforma;
@@ -100,11 +101,20 @@ operativas.
   checksums antes/después y bloqueo explícito de `SET NOT NULL` ante pendientes.
 - Primer adaptador para los accesos históricos de usuarios, compatible con el
   esquema anterior y posterior a la migración de roles por sucursal.
+- `Patient` conserva una identidad corporativa única y versionada;
+  `PatientBranchRecord` contiene estado, ficha y datos clínicos locales.
+- Recepción dispone de coincidencia global exacta y crea la relación local sin
+  duplicar; listas, fichas aproximadas y acceso de Administración quedan
+  limitados a la sede activa.
+- Visitas conservan una fotografía inmutable del nombre, documento, teléfono y
+  dirección; los consentimientos de contacto y las notas tienen sucursal.
+- El reconciliador de pacientes separa la migración estructural del
+  endurecimiento para que ninguna ambigüedad clínica se resuelva por defecto.
 
 Estos avances no equivalen a aislamiento completo y no permiten adelantar la
 Tarea 16.
 
 ## Próximo Paso
 
-Ejecutar la Tarea 5: separar la identidad global del paciente de su expediente
-operativo local, reutilizando el reconciliador antes de endurecer el esquema.
+Ejecutar la Tarea 6: asignar leads, campañas y entradas públicas a una sucursal
+verificable antes de almacenar información de contacto.

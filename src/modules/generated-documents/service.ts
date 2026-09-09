@@ -75,12 +75,13 @@ function patientSnapshot(patient: {
   internalCode: string;
   fullName: string;
   birthDate: Date | null;
+  documentNumber?: string | null;
 }) {
   return {
     id: patient.id,
     internalCode: patient.internalCode,
     fullName: patient.fullName,
-    identityDocument: null,
+    identityDocument: patient.documentNumber ?? null,
     birthDate: patient.birthDate?.toISOString() ?? null
   };
 }
@@ -158,7 +159,11 @@ export async function generatePrescriptionDocument(input: {
 
       const seriesKey = `prescription:${visit.id}`;
       const source = {
-        patient: patientSnapshot(visit.patient),
+        patient: patientSnapshot({
+          ...visit.patient,
+          fullName: visit.patientNameSnapshot,
+          documentNumber: visit.patientDocumentSnapshot
+        }),
         visitId: visit.id,
         prescriptionId: prescription.id,
         clinicalVersion: prescription.version,

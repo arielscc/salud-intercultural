@@ -28,6 +28,7 @@ export const createPatientSchema = z.object({
     .min(6, "Ingresa un telefono valido.")
     .max(30)
     .regex(/^[+()\d\s-]+$/, "Ingresa un telefono valido."),
+  documentNumber: z.preprocess(emptyToUndefined, z.string().trim().max(40).optional()),
   secondaryPhone: z.preprocess(emptyToUndefined, z.string().trim().max(30).optional()),
   birthDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
   gender: patientGenderSchema.default("unknown"),
@@ -48,6 +49,7 @@ export function sanitizePatientInput(input: CreatePatientInput) {
     ...input,
     fullName: cleanText(input.fullName),
     phone: cleanText(input.phone),
+    documentNumber: input.documentNumber ? cleanText(input.documentNumber) : undefined,
     secondaryPhone: input.secondaryPhone ? cleanText(input.secondaryPhone) : undefined,
     city: input.city ? cleanText(input.city) : undefined,
     department: input.department ? cleanText(input.department) : undefined,

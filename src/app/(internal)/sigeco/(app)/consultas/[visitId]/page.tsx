@@ -242,7 +242,7 @@ export default async function ConsultationDetailPage({
     clinicalNoteCatalogs
   ] =
     await Promise.all([
-      getClinicalVisitById(visitId),
+      getClinicalVisitById(visitId, activeBranch.code),
       getPrescriptionDocuments(visitId, activeBranch.code),
       getVisitAreaTimingState(visitId),
       getDoctorOrderByVisit(visitId),

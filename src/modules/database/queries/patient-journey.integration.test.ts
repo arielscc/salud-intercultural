@@ -30,7 +30,10 @@ describe("patient journey report integration", () => {
       data: {
         internalCode: `P-${randomUUID().slice(0, 8)}`,
         fullName: "Paciente de recorrido",
-        phone: "70000000"
+        phone: "70000000",
+        branchRecords: {
+          create: { branchCode: "el-alto", recordNumber: `el-alto-${randomUUID()}` }
+        }
       }
     });
     const source = await prisma.captureSource.create({
@@ -45,6 +48,8 @@ describe("patient journey report integration", () => {
       data: {
         patientId: patient.id,
         branchCode: "el-alto",
+        patientNameSnapshot: patient.fullName,
+        patientPhoneSnapshot: patient.phone,
         originCity: "El Alto",
         originDepartment: "La Paz",
         checkedInAt: new Date("2026-07-30T14:00:00.000Z"),

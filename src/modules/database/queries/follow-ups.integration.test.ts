@@ -61,6 +61,7 @@ describe("follow-up integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Seguimiento",
       phone: "+591 70000055",
       captureSource: "whatsapp"
@@ -88,6 +89,7 @@ describe("follow-up integration", () => {
 
     await appendPatientConsentRecord({
       patientId: patient.id,
+      branchCode: "el-alto",
       purpose: "follow_up",
       decision: "granted",
       contactChannels: ["whatsapp"],
@@ -105,7 +107,7 @@ describe("follow-up integration", () => {
     });
 
     const detail = await getFollowUpTaskById(task.id, "el-alto");
-    const patientDetail = await getPatientById(patient.id);
+    const patientDetail = await getPatientById(patient.id, "el-alto");
 
     expect(summary.overdue).toBe(1);
     expect(overdueTasks[0]?.id).toBe(task.id);
@@ -132,11 +134,13 @@ describe("follow-up integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Retiro",
       phone: "+591 70000056"
     });
     const granted = await appendPatientConsentRecord({
       patientId: patient.id,
+      branchCode: "el-alto",
       purpose: "follow_up",
       decision: "granted",
       contactChannels: ["call"],
@@ -145,6 +149,7 @@ describe("follow-up integration", () => {
     });
     const withdrawn = await appendPatientConsentRecord({
       patientId: patient.id,
+      branchCode: "el-alto",
       purpose: "follow_up",
       decision: "withdrawn",
       contactChannels: [],

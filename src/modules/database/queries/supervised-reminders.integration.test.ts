@@ -31,11 +31,13 @@ async function prepareCompletedVisit() {
     }
   });
   const patient = await createPatientRecord({
+    branchCode: "el-alto",
     fullName: "Paciente Recordatorio",
     phone: "70000031"
   });
   await appendPatientConsentRecord({
     patientId: patient.id,
+    branchCode: "el-alto",
     purpose: "follow_up",
     decision: "granted",
     contactChannels: ["whatsapp"],
@@ -120,6 +122,7 @@ describe("supervised reminder integration", () => {
     const candidate = await prisma.supervisedReminderCandidate.findFirstOrThrow();
     await appendPatientConsentRecord({
       patientId: patient.id,
+      branchCode: "el-alto",
       purpose: "follow_up",
       decision: "withdrawn",
       contactChannels: [],

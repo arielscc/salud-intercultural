@@ -51,7 +51,8 @@ async function createTreatmentDecisionFollowUp(
   const consent = await tx.patientConsent.findFirst({
     where: {
       patientId: input.patientId,
-      purpose: "follow_up"
+      purpose: "follow_up",
+      branchCode: input.branchCode
     },
     orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }]
   });

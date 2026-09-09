@@ -87,6 +87,7 @@ describe("sales integration", () => {
       }
     });
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Ventas",
       phone: "+591 70000044",
       captureSource: "whatsapp"
@@ -168,7 +169,7 @@ describe("sales integration", () => {
 
     const detail = await getSaleById(sale.id, "el-alto");
     const summary = await getSalesSummary();
-    const patientDetail = await getPatientById(patient.id);
+    const patientDetail = await getPatientById(patient.id, "el-alto");
 
     expect(detail).toMatchObject({
       subtotalCents: 20000,
@@ -198,6 +199,7 @@ describe("venta de mostrador sin visita", () => {
       }
     });
     const client = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Cliente Mostrador",
       phone: "70000055"
     });
@@ -302,8 +304,16 @@ describe("listado de ventas", () => {
         }
       }
     });
-    const ana = await createPatientRecord({ fullName: "Ana Quispe", phone: "70000061" });
-    const luis = await createPatientRecord({ fullName: "Luis Torrez", phone: "70000062" });
+    const ana = await createPatientRecord({
+      branchCode: "el-alto",
+      fullName: "Ana Quispe",
+      phone: "70000061"
+    });
+    const luis = await createPatientRecord({
+      branchCode: "el-alto",
+      fullName: "Luis Torrez",
+      phone: "70000062"
+    });
     await openCashSession({
       branchCode: "el-alto",
       registerName: "Caja principal",

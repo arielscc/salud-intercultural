@@ -140,7 +140,6 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         followUpPreference: "no_contact",
         fullName: fixture.name,
         normalizedName: normalizePatientName(fixture.name),
-        generalObservations: "REGISTRO SINTÉTICO DE STAGING. NO CORRESPONDE A UNA PERSONA REAL.",
         phone: `+5910000000${index + 1}`,
         normalizedPhone: normalizePatientPhone(`+5910000000${index + 1}`),
         status: "active"
@@ -154,11 +153,24 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         followUpPreference: "no_contact",
         fullName: fixture.name,
         normalizedName: normalizePatientName(fixture.name),
-        generalObservations: "REGISTRO SINTÉTICO DE STAGING. NO CORRESPONDE A UNA PERSONA REAL.",
         internalCode: fixture.code,
         phone: `+5910000000${index + 1}`,
         normalizedPhone: normalizePatientPhone(`+5910000000${index + 1}`),
         status: "active"
+      }
+    });
+    await prisma.patientBranchRecord.upsert({
+      where: {
+        patientId_branchCode: { patientId: patient.id, branchCode: QA_BRANCH_CODE }
+      },
+      create: {
+        patientId: patient.id,
+        branchCode: QA_BRANCH_CODE,
+        recordNumber: `${QA_BRANCH_CODE}-${patient.internalCode}`,
+        generalObservations: "REGISTRO SINTÉTICO DE STAGING. NO CORRESPONDE A UNA PERSONA REAL."
+      },
+      update: {
+        generalObservations: "REGISTRO SINTÉTICO DE STAGING. NO CORRESPONDE A UNA PERSONA REAL."
       }
     });
 
@@ -178,6 +190,10 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         originCountry: "Bolivia",
         originMatchesPatient: visitOrigin.matchesPatient,
         patientId: patient.id,
+        patientNameSnapshot: patient.fullName,
+        patientDocumentSnapshot: patient.documentNumber,
+        patientPhoneSnapshot: patient.phone,
+        patientAddressSnapshot: patient.address,
         reason: fixture.reason,
         status: fixture.status
       },
@@ -192,6 +208,10 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         originCountry: "Bolivia",
         originMatchesPatient: visitOrigin.matchesPatient,
         patientId: patient.id,
+        patientNameSnapshot: patient.fullName,
+        patientDocumentSnapshot: patient.documentNumber,
+        patientPhoneSnapshot: patient.phone,
+        patientAddressSnapshot: patient.address,
         reason: fixture.reason,
         status: fixture.status
       }
@@ -368,11 +388,25 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       followUpPreference: "no_contact",
       fullName: "[QA] Paciente de seguimiento",
       normalizedName: normalizePatientName("[QA] Paciente de seguimiento"),
-      generalObservations: "REGISTRO SINTÉTICO. NO CONTACTAR.",
       internalCode: "QA-000005",
       phone: "+59100000005",
       normalizedPhone: normalizePatientPhone("+59100000005")
     }
+  });
+  await prisma.patientBranchRecord.upsert({
+    where: {
+      patientId_branchCode: {
+        patientId: followUpPatient.id,
+        branchCode: QA_BRANCH_CODE
+      }
+    },
+    create: {
+      patientId: followUpPatient.id,
+      branchCode: QA_BRANCH_CODE,
+      recordNumber: `${QA_BRANCH_CODE}-${followUpPatient.internalCode}`,
+      generalObservations: "REGISTRO SINTÉTICO. NO CONTACTAR."
+    },
+    update: { generalObservations: "REGISTRO SINTÉTICO. NO CONTACTAR." }
   });
 
   const duplicateQaName = "[QA] Posible ficha duplicada";
@@ -399,10 +433,26 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       followUpPreference: "no_contact",
       fullName: duplicateQaName,
       normalizedName: normalizePatientName(duplicateQaName),
-      generalObservations: "REGISTRO SINTÉTICO PARA VALIDAR DUPLICADOS. NO CONTACTAR.",
       internalCode: "QA-000006",
       phone: duplicateQaPhone,
       normalizedPhone: normalizePatientPhone(duplicateQaPhone)
+    }
+  });
+  await prisma.patientBranchRecord.upsert({
+    where: {
+      patientId_branchCode: {
+        patientId: duplicateQaPatient.id,
+        branchCode: QA_BRANCH_CODE
+      }
+    },
+    create: {
+      patientId: duplicateQaPatient.id,
+      branchCode: QA_BRANCH_CODE,
+      recordNumber: `${QA_BRANCH_CODE}-${duplicateQaPatient.internalCode}`,
+      generalObservations: "REGISTRO SINTÉTICO PARA VALIDAR DUPLICADOS. NO CONTACTAR."
+    },
+    update: {
+      generalObservations: "REGISTRO SINTÉTICO PARA VALIDAR DUPLICADOS. NO CONTACTAR."
     }
   });
   await recordDuplicateCandidatesForPatient(duplicateQaPatient.id);

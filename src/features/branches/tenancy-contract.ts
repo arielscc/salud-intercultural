@@ -58,6 +58,7 @@ export const globalMasterModels = [
   "InternalUserBranch",
   "InternalSession",
   "Patient",
+  "PatientIdentityVersion",
   "PatientDuplicateCandidate",
   "PatientMerge",
   "PatientAlias",
@@ -84,6 +85,7 @@ const globalMasterTaskByModel: Record<
   InternalUserBranch: 3,
   InternalSession: 2,
   Patient: 5,
+  PatientIdentityVersion: 5,
   PatientDuplicateCandidate: 5,
   PatientMerge: 5,
   PatientAlias: 5,
@@ -110,7 +112,7 @@ export const controlledCrossBranchReadModels = [
 export const branchModelGroups = [
   {
     remediationTask: 5,
-    models: ["PatientConsent", "PatientContact", "PatientNote"]
+    models: ["PatientBranchRecord", "PatientConsent", "PatientContact", "PatientNote"]
   },
   {
     remediationTask: 6,
@@ -227,10 +229,6 @@ export const branchModelGroups = [
 }>;
 
 const legacyMissingBranchModelsByTask = [
-  {
-    remediationTask: 5,
-    models: ["PatientConsent", "PatientContact", "PatientNote"]
-  },
   {
     remediationTask: 6,
     models: ["Lead", "LeadContactAttempt", "LeadReminder", "LeadStatusHistory"]

@@ -22,11 +22,13 @@ type SubmitFeedbackInput = z.infer<typeof submitPatientFeedbackSchema>;
 type UpdateCaseInput = z.infer<typeof updateFeedbackCaseSchema>;
 type CancelRequestInput = z.infer<typeof cancelFeedbackRequestSchema>;
 
-const currentFeedbackConsent = {
-  where: { purpose: "feedback" as const },
-  orderBy: [{ decidedAt: "desc" as const }, { createdAt: "desc" as const }],
-  take: 1
-};
+function currentFeedbackConsent(branchCode: string) {
+  return {
+    where: { purpose: "feedback" as const, branchCode },
+    orderBy: [{ decidedAt: "desc" as const }, { createdAt: "desc" as const }],
+    take: 1
+  };
+}
 
 export class PatientFeedbackError extends Error {
   constructor(
@@ -63,7 +65,7 @@ export async function getFeedbackEligibleVisits(branchCode: string) {
             id: true,
             internalCode: true,
             fullName: true,
-            consents: currentFeedbackConsent
+            consents: currentFeedbackConsent(branchCode)
           }
         },
         feedbackRequests: {
@@ -154,7 +156,7 @@ export async function createPatientFeedbackRequest(input: {
               status: true,
               feedbackSubmission: { select: { id: true } },
               patient: {
-                select: { consents: currentFeedbackConsent }
+                select: { consents: currentFeedbackConsent(input.branchCode) }
               }
             }
           })

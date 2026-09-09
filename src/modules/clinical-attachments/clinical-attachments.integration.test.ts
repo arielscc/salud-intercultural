@@ -53,13 +53,18 @@ describe("secure clinical attachments integration", () => {
       data: {
         internalCode: `ATT-${randomUUID()}`,
         fullName: "Paciente Adjuntos",
-        phone: "70000006"
+        phone: "70000006",
+        branchRecords: {
+          create: { branchCode: "el-alto", recordNumber: `el-alto-${randomUUID()}` }
+        }
       }
     });
     const visit = await prisma.visit.create({
       data: {
         patientId: patient.id,
         branchCode: "el-alto",
+        patientNameSnapshot: patient.fullName,
+        patientPhoneSnapshot: patient.phone,
         createdById: user.id
       }
     });
@@ -196,19 +201,30 @@ describe("secure clinical attachments integration", () => {
         data: {
           internalCode: `ATT-${randomUUID()}`,
           fullName: "Paciente Uno",
-          phone: "70000007"
+          phone: "70000007",
+          branchRecords: {
+            create: { branchCode: "el-alto", recordNumber: `el-alto-${randomUUID()}` }
+          }
         }
       }),
       prisma.patient.create({
         data: {
           internalCode: `ATT-${randomUUID()}`,
           fullName: "Paciente Dos",
-          phone: "70000008"
+          phone: "70000008",
+          branchRecords: {
+            create: { branchCode: "el-alto", recordNumber: `el-alto-${randomUUID()}` }
+          }
         }
       })
     ]);
     const otherVisit = await prisma.visit.create({
-      data: { patientId: otherPatient.id, branchCode: "el-alto" }
+      data: {
+        patientId: otherPatient.id,
+        branchCode: "el-alto",
+        patientNameSnapshot: otherPatient.fullName,
+        patientPhoneSnapshot: otherPatient.phone
+      }
     });
 
     await expect(

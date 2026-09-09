@@ -52,6 +52,7 @@ describe("patients and visits integration", () => {
     });
 
     const patient = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Paciente Recepcion",
       phone: "+591 70000005",
       city: "El Alto",
@@ -84,9 +85,9 @@ describe("patients and visits integration", () => {
       note: "Derivado al médico"
     });
 
-    const patients = await getPatients({ search: "Recepcion" });
+    const patients = await getPatients({ branchCode: "el-alto", search: "Recepcion" });
     const visits = await getVisits({ activeOnly: true });
-    const detail = await getPatientById(patient.id);
+    const detail = await getPatientById(patient.id, "el-alto");
     const visitDetail = await getVisitById(visit.id);
 
     expect(patients).toHaveLength(1);
@@ -103,6 +104,7 @@ describe("patients and visits integration", () => {
 describe("alta mínima de cliente de mostrador", () => {
   it("crea la ficha sin visita, sin ruta y sin tarea", async () => {
     const client = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Juana Mamani",
       phone: "70000001",
       generalObservations: "Cliente de mostrador"
@@ -120,6 +122,7 @@ describe("alta mínima de cliente de mostrador", () => {
 
   it("deja la ficha lista para recibir una visita normal después", async () => {
     const client = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Juana Mamani",
       phone: "70000001"
     });
@@ -137,14 +140,18 @@ describe("alta mínima de cliente de mostrador", () => {
 
   it("no guarda datos clínicos que Administración no pide", async () => {
     const client = await createPatientRecord({
+      branchCode: "el-alto",
       fullName: "Juana Mamani",
       phone: "70000001"
     });
 
-    const stored = await prisma.patient.findUniqueOrThrow({ where: { id: client.id } });
+    const stored = await prisma.patient.findUniqueOrThrow({
+      where: { id: client.id },
+      include: { branchRecords: { where: { branchCode: "el-alto" } } }
+    });
 
-    expect(stored.allergies).toBeNull();
-    expect(stored.relevantHistory).toBeNull();
+    expect(stored.branchRecords[0]?.allergies).toBeNull();
+    expect(stored.branchRecords[0]?.relevantHistory).toBeNull();
     expect(stored.birthDate).toBeNull();
   });
 });

@@ -67,12 +67,17 @@ export const receptionIntakeSchema = z
     patientId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     fullName: z.string().trim().min(2, "Ingresa el nombre completo.").max(160),
     phone: bolivianMobilePhoneSchema,
+    documentNumber: z.preprocess(
+      emptyToUndefined,
+      z.string().trim().max(40).optional()
+    ),
     secondaryPhone: optionalFixedPhoneSchema,
     birthDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
     gender: patientGenderSchema.default("unknown"),
     city: requiredPlaceText,
     department: optionalPlaceText,
     country: requiredPlaceText,
+    address: z.preprocess(emptyToUndefined, z.string().trim().max(300).optional()),
     visitOriginMode: visitOriginModeSchema.default("same"),
     visitOriginCity: optionalPlaceText,
     visitOriginDepartment: optionalPlaceText,
@@ -141,11 +146,16 @@ export const patientEditSchema = z.object({
     .min(6, "Ingresa un telefono valido.")
     .max(30)
     .regex(/^[+()\d\s-]+$/, "Ingresa un telefono valido."),
+  documentNumber: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().max(40).optional()
+  ),
   birthDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
   gender: patientGenderSchema.default("unknown"),
   city: requiredPlaceText,
   department: optionalPlaceText,
   country: requiredPlaceText,
+  address: z.preprocess(emptyToUndefined, z.string().trim().max(300).optional()),
   allergies: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
   relevantHistory: z.preprocess(emptyToUndefined, z.string().trim().max(1000).optional()),
   currentMedication: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
@@ -176,11 +186,13 @@ export function toPatientEditRecord(input: PatientEditInput) {
     data: {
       fullName: cleanText(input.fullName),
       phone: cleanText(input.phone),
+      documentNumber: input.documentNumber ? cleanText(input.documentNumber) : null,
       birthDate: input.birthDate ?? null,
       gender: input.gender,
       city: origin.city,
       department: origin.department || null,
       country: origin.country,
+      address: input.address ? cleanText(input.address) : null,
       allergies: input.allergies ? cleanText(input.allergies) : null,
       relevantHistory: input.relevantHistory ? cleanText(input.relevantHistory) : null,
       currentMedication: input.currentMedication ? cleanText(input.currentMedication) : null
@@ -222,12 +234,16 @@ export function toReceptionIntakeRecord(input: ReceptionIntakeInput) {
     patient: {
       fullName: cleanText(input.fullName),
       phone: cleanText(input.phone),
+      documentNumber: input.documentNumber
+        ? cleanText(input.documentNumber)
+        : undefined,
       secondaryPhone: input.secondaryPhone ? cleanText(input.secondaryPhone) : undefined,
       birthDate: input.birthDate,
       gender: input.gender,
       city: patientOrigin.city,
       department: patientOrigin.department || null,
       country: patientOrigin.country,
+      address: input.address ? cleanText(input.address) : undefined,
       captureSource: toCompatiblePatientCaptureSource(
         input.capturePrimarySource
       ),
