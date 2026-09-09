@@ -87,6 +87,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-09-08 | [Aislamiento Tarea 1: contrato de tenencia](./2026-09-08-tarea-1-contrato-tenencia.md) | Clasifica los 100 modelos Prisma y bloquea modelos, defaults y fallbacks de sucursal nuevos mediante un detector automático. |
 | 2026-09-09 | [Aislamiento Tarea 2: contexto central de sucursal](./2026-09-09-tarea-2-contexto-central-sucursal.md) | Obliga a resolver la sede autenticada en servidor, rechaza cookies e IDs ajenos y elimina la elección implícita de El Alto. |
 | 2026-09-09 | [Aislamiento Tarea 3: roles y permisos por sucursal](./2026-09-09-tarea-3-roles-permisos-sucursal.md) | Traslada el rol operativo a cada membresía, conserva una sola identidad global y limita personal, autorizadores y permisos a la sede activa. |
+| 2026-09-09 | [Aislamiento Tarea 4: backfill y reconciliación](./2026-09-09-tarea-4-backfill-reconciliacion-sucursales.md) | Agrega dry-run determinista, decisiones manuales validadas y un gate que impide endurecer filas sin sucursal resuelta. |
 
 ## Relacion Con Estado V3
 

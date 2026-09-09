@@ -33,16 +33,16 @@ operativas.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 14 |
+| Pendiente | 13 |
 | En progreso | 0 |
 | Bloqueada | 0 |
-| Terminada | 3 |
+| Terminada | 4 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
-| A. Frontera técnica | 1-4 | En curso (3/4) | Contrato, contexto, roles y backfill seguro |
+| A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
 | B. Partición de dominios | 5-13 | Pendiente | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
@@ -53,7 +53,7 @@ operativas.
 | 1 | Contrato de tenencia y detector automático | P0 | Terminada | Ninguna |
 | 2 | Contexto central de sucursal en servidor | P0 | Terminada | 1 |
 | 3 | Roles y permisos por sucursal | P0 | Terminada | 2 |
-| 4 | Herramientas de backfill y reconciliación | P0 | Pendiente | 1-3 |
+| 4 | Herramientas de backfill y reconciliación | P0 | Terminada | 1-3 |
 | 5 | Identidad global y expediente local del paciente | P0 | Pendiente | 4 |
 | 6 | Leads, campañas y entradas públicas | P0 | Pendiente | 2, 4-5 |
 | 7 | Visitas, recepción, rutas y tiempos | P0 | Pendiente | 5 |
@@ -96,11 +96,15 @@ operativas.
 - Superadministradores asignados a las sucursales existentes.
 - Dashboard y varios flujos operativos ya filtran la sede activa.
 - Migración preparada para retirar defaults de El Alto en siete tablas.
+- Reconciliador determinista con `dry-run`, decisiones manuales por ID técnico,
+  checksums antes/después y bloqueo explícito de `SET NOT NULL` ante pendientes.
+- Primer adaptador para los accesos históricos de usuarios, compatible con el
+  esquema anterior y posterior a la migración de roles por sucursal.
 
 Estos avances no equivalen a aislamiento completo y no permiten adelantar la
 Tarea 16.
 
 ## Próximo Paso
 
-Ejecutar la Tarea 4: preparar backfills idempotentes y reportes de
-reconciliación que no inventen la sucursal de los datos históricos.
+Ejecutar la Tarea 5: separar la identidad global del paciente de su expediente
+operativo local, reutilizando el reconciliador antes de endurecer el esquema.
