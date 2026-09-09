@@ -42,6 +42,14 @@ describe("canUse", () => {
     expect(canUse("super_admin", access([]), "internal_access")).toBe(true);
     expect(canUse("super_admin", access([]), "users_manage")).toBe(true);
   });
+
+  it("en modo consulta muestra lecturas y oculta cualquier escritura", () => {
+    const consult = { ...access(["consulta", "enfermeria"]), readOnly: true };
+    expect(resolveModuleAccess("medico", consult, "clinical_read")).toBe("read_only");
+    expect(canUse("medico", consult, "clinical_write")).toBe(false);
+    expect(canUse("enfermeria", consult, "nursing_read")).toBe(true);
+    expect(canUse("enfermeria", consult, "nursing_write")).toBe(false);
+  });
 });
 
 describe("módulo suspendido", () => {

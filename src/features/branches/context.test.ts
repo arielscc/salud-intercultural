@@ -23,6 +23,7 @@ vi.mock("@/modules/database/queries/branches", () => ({
 import {
   assertBranchMatchesContext,
   BranchContextMismatchError,
+  resolveBranchAccessMode,
   resolveBranchContext,
   selectActiveBranch,
   type BranchRequestContext
@@ -114,6 +115,19 @@ describe("selectActiveBranch", () => {
   });
 });
 
+describe("resolveBranchAccessMode", () => {
+  it("deja trabajar solo en la sede clínica predeterminada", () => {
+    expect(resolveBranchAccessMode({ role: "medico", isDefault: true })).toBe("work");
+    expect(resolveBranchAccessMode({ role: "medico", isDefault: false })).toBe("consult");
+    expect(resolveBranchAccessMode({ role: "enfermeria", isDefault: false })).toBe(
+      "consult"
+    );
+    expect(resolveBranchAccessMode({ role: "super_admin", isDefault: false })).toBe(
+      "work"
+    );
+  });
+});
+
 describe("resolveBranchContext", () => {
   beforeEach(() => {
     mocks.cookie.mockReset();
@@ -141,7 +155,8 @@ describe("resolveBranchContext", () => {
           branchCode: "cochabamba",
           source: "membership"
         },
-        operationalRole: "super_admin"
+        operationalRole: "super_admin",
+        accessMode: "work"
       }
     });
   });

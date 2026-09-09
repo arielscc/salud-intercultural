@@ -54,10 +54,12 @@ function branchContext(user: {
   id: string;
   role: "super_admin" | "medico" | "enfermeria";
   mustChangePassword?: boolean;
+  accessMode?: "work" | "consult";
 }) {
   return {
     user: { ...user, mustChangePassword: user.mustChangePassword ?? false },
     operationalRole: user.role,
+    accessMode: user.accessMode ?? "work",
     activeBranch: { code: "el-alto", name: "El Alto" },
     assignment: {
       userId: user.id,
@@ -108,6 +110,31 @@ describe("runAuditedAction", () => {
         entityId: "patient-1",
         result: "success",
         requestId: "request-test"
+      })
+    });
+  });
+
+  it("bloquea acciones de escritura mientras el médico solo consulta otra sede", async () => {
+    const operation = vi.fn();
+    mocks.getBranchContext.mockResolvedValue(
+      branchContext({ id: "doctor-rotante", role: "medico", accessMode: "consult" })
+    );
+
+    await expect(
+      runAuditedAction(
+        {
+          permission: "clinical_write",
+          action: "consultation.update",
+          entityType: "consultation"
+        },
+        operation
+      )
+    ).rejects.toThrow("REDIRECT:/sigeco?aviso=permiso-denegado");
+    expect(operation).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        result: "denied",
+        context: expect.objectContaining({ reason: "branch_consult_only" })
       })
     });
   });

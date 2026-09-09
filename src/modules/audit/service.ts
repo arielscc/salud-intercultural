@@ -4,6 +4,7 @@ import { appendAuditEvent, getRequestId } from "@/modules/audit/append";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { modulesEnablingPermission } from "@/features/modules/activation";
 import { resolveModuleAccess } from "@/features/modules/access";
+import { isReadPermission } from "@/features/modules/permission-access";
 import type { SigecoModuleCode } from "@/features/modules/catalog";
 import {
   moduleDisabledNotice,
@@ -220,6 +221,19 @@ export async function runAuditedAction<T>(
       result: "denied",
       requestId,
       context: { ...auditedContext, reason: "missing_permission" }
+    });
+    redirect(`/sigeco?aviso=${permissionDeniedNotice}`);
+  }
+
+  if (branchContext.accessMode === "consult" && !isReadPermission(input.permission)) {
+    await appendAuditEvent({
+      actor,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      result: "denied",
+      requestId,
+      context: { ...auditedContext, reason: "branch_consult_only" }
     });
     redirect(`/sigeco?aviso=${permissionDeniedNotice}`);
   }

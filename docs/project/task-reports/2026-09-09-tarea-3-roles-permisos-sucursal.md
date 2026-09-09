@@ -21,6 +21,13 @@ enfermería sin abrir acceso multisucursal a los demás roles.
 - Varias sucursales activas se permiten únicamente cuando todas las membresías
   tienen el mismo rol `medico` o `enfermeria`. Administración, Recepción y los
   demás roles operativos quedan limitados a una sede activa.
+- Para médicos y Enfermería, la sucursal predeterminada representa la única
+  sede de trabajo. El selector abre un modal con `Trabajar en esta sucursal` y
+  `Solo consultar`; trasladar el trabajo no desactiva ni borra las demás
+  asignaciones.
+- El modo consulta mantiene pantallas y permisos de lectura, oculta acciones de
+  escritura y vuelve a rechazarlas en páginas, Server Actions y APIs aunque se
+  intente evadir la interfaz. Cada intento denegado queda auditado.
 - El contexto central proyecta sobre el usuario el rol de la sucursal elegida.
   La navegación, los permisos, los módulos y las Server Actions continúan
   usando una interfaz común, pero ya no dependen de un rol global.
@@ -71,6 +78,8 @@ la Tarea 4 antes de aplicar la migración.
 
 - Una enfermera o un médico puede usar la misma cuenta y el mismo rol en El
   Alto y Cochabamba durante una rotación.
+- Solo una de esas sedes permite trabajar. Las demás aparecen como `solo
+  consulta` hasta que el profesional traslade expresamente su sede de trabajo.
 - Administración y Recepción no pueden mantener dos sucursales activas.
 - Un superadministrador usa una sola cuenta para cambiar entre sedes y las
   consultas operativas conservan el `branchCode` autenticado de esa selección.
@@ -82,12 +91,16 @@ la Tarea 4 antes de aplicar la migración.
 - `prisma/schema.prisma`
 - `prisma/migrations/20260909120000_scope_operational_roles_by_branch/migration.sql`
 - `src/features/branches/context.ts`
+- `src/features/branches/actions.ts`
 - `src/features/branches/policy.ts`
+- `src/features/modules/access.ts`
 - `src/features/internal-auth/permissions.ts`
 - `src/features/internal-auth/user-management-actions.ts`
 - `src/modules/database/queries/branches.ts`
 - `src/modules/database/queries/internal-users.ts`
 - `src/modules/audit/service.ts`
+- `src/components/internal/BranchSelector.tsx`
+- `src/components/internal/ConfirmDialog.tsx`
 - `src/app/(internal)/sigeco/(app)/usuarios/[userId]/page.tsx`
 
 ## Validación

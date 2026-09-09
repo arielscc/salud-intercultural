@@ -35,7 +35,9 @@ export function ConfirmDialog({
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
   confirmVariant = "danger",
-  onConfirm
+  onConfirm,
+  secondaryLabel,
+  onSecondary
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,6 +47,8 @@ export function ConfirmDialog({
   cancelLabel?: string;
   confirmVariant?: React.ComponentProps<typeof Button>["variant"];
   onConfirm: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
 }) {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -60,6 +64,11 @@ export function ConfirmDialog({
     onConfirm();
   }
 
+  function handleSecondary() {
+    onOpenChange(false);
+    onSecondary?.();
+  }
+
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
@@ -72,6 +81,11 @@ export function ConfirmDialog({
             <Button type="button" variant={confirmVariant} onClick={handleConfirm}>
               {confirmLabel}
             </Button>
+            {secondaryLabel && onSecondary ? (
+              <Button type="button" variant="outline" onClick={handleSecondary}>
+                {secondaryLabel}
+              </Button>
+            ) : null}
             <DrawerClose asChild>
               <Button type="button" variant="outline">
                 {cancelLabel}
@@ -98,6 +112,11 @@ export function ConfirmDialog({
               {cancelLabel}
             </Button>
           </AlertDialogCancel>
+          {secondaryLabel && onSecondary ? (
+            <Button type="button" variant="outline" onClick={handleSecondary}>
+              {secondaryLabel}
+            </Button>
+          ) : null}
           <AlertDialogAction asChild>
             <Button type="button" variant={confirmVariant} onClick={handleConfirm}>
               {confirmLabel}

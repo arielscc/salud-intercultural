@@ -89,6 +89,55 @@ export async function getConfigurableBranches() {
   );
 }
 
+/**
+ * Traslada la única sede de trabajo de un médico o enfermera. Las demás
+ * asignaciones permanecen activas para consulta y no pierden información.
+ */
+export async function setClinicalWorkingBranch(input: {
+  userId: string;
+  branchCode: string;
+}) {
+  return withDatabaseError("setClinicalWorkingBranch", () =>
+    prisma.$transaction(async (tx) => {
+      const target = await tx.internalUserBranch.findFirst({
+        where: {
+          userId: input.userId,
+          branchCode: input.branchCode,
+          active: true,
+          role: { in: ["medico", "enfermeria"] },
+          branch: { status: "active" }
+        },
+        select: { branchCode: true, role: true }
+      });
+      if (!target) throw new Error("CLINICAL_WORK_BRANCH_NOT_ALLOWED");
+
+      const previous = await tx.internalUserBranch.findFirst({
+        where: { userId: input.userId, isDefault: true },
+        select: { branchCode: true }
+      });
+      await tx.internalUserBranch.updateMany({
+        where: { userId: input.userId },
+        data: { isDefault: false }
+      });
+      await tx.internalUserBranch.update({
+        where: {
+          userId_branchCode: {
+            userId: input.userId,
+            branchCode: target.branchCode
+          }
+        },
+        data: { isDefault: true }
+      });
+
+      return {
+        previousBranchCode: previous ? previous.branchCode : null,
+        branchCode: target.branchCode,
+        role: target.role
+      };
+    })
+  );
+}
+
 export async function replaceUserBranchAssignments(input: {
   userId: string;
   memberships: Array<{ branchCode: string; role: InternalRole; active: boolean }>;

@@ -304,7 +304,7 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
                 );
               })}
             </div>
-            <Field label="Sucursal predeterminada">
+            <Field label="Sucursal de trabajo / predeterminada">
               <select
                 className={internalInputClassName}
                 name="defaultBranchCode"

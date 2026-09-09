@@ -63,6 +63,8 @@ export function InternalShell({
       name: string;
       status: "active" | "preparation" | "inactive";
       assigned: boolean;
+      isDefault: boolean;
+      role: BranchContextUser["role"];
     }>;
   };
   children: React.ReactNode;

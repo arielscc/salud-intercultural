@@ -80,6 +80,9 @@ operativas.
   `InternalUserBranch` conserva rol, estado y sede predeterminada.
 - Médicos y enfermería pueden mantener el mismo rol clínico activo en varias
   sedes por rotación. Los demás roles operativos conservan una sola sede activa.
+- El selector clínico distingue `Trabajar en esta sucursal` de `Solo consultar`:
+  la sede predeterminada es la única que admite escrituras y cambiarla no borra
+  ninguna asignación ni dato histórico.
 - Los superadministradores usan una sola cuenta y reciben todas las sedes
   activas o en preparación; cada request continúa limitado a la sede elegida.
 - Caja, compras, seguimiento, opiniones, recordatorios y selección de personal

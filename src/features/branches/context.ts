@@ -11,6 +11,7 @@ import {
 import { getBranchesForUser } from "@/modules/database/queries/branches";
 
 export type BranchAssignmentSource = "membership" | "automatic-super-admin";
+export type BranchAccessMode = "work" | "consult";
 
 export type BranchContextBranch = {
   code: string;
@@ -41,6 +42,8 @@ export type BranchRequestContext = {
   };
   /** Rol operativo resuelto exclusivamente desde la membresía de la sede activa. */
   operationalRole: InternalRole;
+  /** En consulta se permiten lecturas, pero ninguna escritura operativa. */
+  accessMode: BranchAccessMode;
   branches: BranchContextBranch[];
   canSwitch: boolean;
 };
@@ -78,6 +81,15 @@ function activeAssignedBranches(branches: readonly BranchContextBranch[]) {
   return branches.filter(
     (branch) => branch.assigned && branch.membershipActive && branch.status === "active"
   );
+}
+
+export function resolveBranchAccessMode(
+  branch: Pick<BranchContextBranch, "role" | "isDefault">
+): BranchAccessMode {
+  return (branch.role === "medico" || branch.role === "enfermeria") &&
+    !branch.isDefault
+    ? "consult"
+    : "work";
 }
 
 export function selectActiveBranch(
@@ -130,6 +142,7 @@ export const resolveBranchContext = cache(async (): Promise<BranchContextResolut
 
   const selectable = activeAssignedBranches(branches);
   const activeBranch = selection.branch;
+  const accessMode = resolveBranchAccessMode(activeBranch);
   const operationalUser = { ...user, role: activeBranch.role };
   return {
     ok: true,
@@ -145,6 +158,7 @@ export const resolveBranchContext = cache(async (): Promise<BranchContextResolut
         source: activeBranch.assignmentSource
       },
       operationalRole: activeBranch.role,
+      accessMode,
       branches,
       canSwitch: selectable.length > 1
     }

@@ -5,6 +5,7 @@ import { modulesEnablingPermission } from "@/features/modules/activation";
 import { resolveModuleAccess } from "@/features/modules/access";
 import type { SigecoModuleCode } from "@/features/modules/catalog";
 import { moduleDisabledNotice, permissionDeniedNotice } from "@/features/modules/notices";
+import { isReadPermission } from "@/features/modules/permission-access";
 import {
   getInternalSessionByToken,
   getInternalSessionToken,
@@ -76,6 +77,17 @@ export async function requirePermission(
   const branchContext = await requireBranchPageContext();
   const { user, operationalRole } = branchContext;
   const actor = { id: user.id, role: operationalRole };
+
+  if (branchContext.accessMode === "consult" && !isReadPermission(permission)) {
+    await appendAuditEvent({
+      actor,
+      action: "page.denied",
+      entityType: "page",
+      result: "denied",
+      context: { permission, reason: "branch_consult_only" }
+    });
+    redirect(`/sigeco?aviso=${permissionDeniedNotice}`);
+  }
 
   if (!roleHasPermission(operationalRole, permission)) {
     // Entrar por URL a una pantalla que el rol no tiene deja rastro: el menú

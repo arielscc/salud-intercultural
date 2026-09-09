@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getActiveBranchCode } from "@/features/branches/active-branch";
+import { resolveBranchContext } from "@/features/branches/context";
 import type { ActiveModules } from "@/features/modules/activation";
 import type { ModuleAccessState } from "@/features/modules/access";
 import {
@@ -25,9 +25,15 @@ import {
  * pantallas que quizá esa sede todavía no tiene.
  */
 export async function getModuleAccessState(): Promise<ModuleAccessState> {
-  const branchCode = await getActiveBranchCode();
-  if (!branchCode) return moduleAccessWithoutBranch;
-  return getModuleAccessStateForBranch(branchCode);
+  const resolution = await resolveBranchContext();
+  if (!resolution.ok) return moduleAccessWithoutBranch;
+  const state = await getModuleAccessStateForBranch(
+    resolution.context.activeBranch.code
+  );
+  return {
+    ...state,
+    readOnly: resolution.context.accessMode === "consult"
+  };
 }
 
 export async function getActiveModules(): Promise<ActiveModules> {

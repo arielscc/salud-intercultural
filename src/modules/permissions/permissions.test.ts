@@ -28,6 +28,7 @@ vi.mock("@/features/branches/boundaries", () => ({
     return {
       user,
       operationalRole: user.role,
+      accessMode: user.accessMode ?? "work",
       activeBranch: { code: "el-alto", name: "El Alto" },
       assignment: {
         userId: user.id,
@@ -67,6 +68,32 @@ describe("requirePermission", () => {
   it("deja pasar cuando el rol tiene el permiso y el módulo está lanzado", async () => {
     await expect(requirePermission("sales_read")).resolves.toMatchObject({ id: "user-1" });
     expect(mocks.append).not.toHaveBeenCalled();
+  });
+
+  it("en una sede de consulta permite leer pero bloquea escribir", async () => {
+    mocks.getUser.mockResolvedValue({
+      id: "doctor-rotante",
+      role: "medico",
+      accessMode: "consult",
+      mustChangePassword: false
+    });
+    mocks.getModuleAccessState.mockResolvedValue({
+      active: ["core", "consulta"],
+      suspended: [],
+      readOnly: true
+    });
+
+    await expect(requirePermission("clinical_read")).resolves.toMatchObject({
+      id: "doctor-rotante"
+    });
+    await expect(requirePermission("clinical_write")).rejects.toThrow(
+      "REDIRECT:/sigeco?aviso=permiso-denegado"
+    );
+    expect(mocks.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: { permission: "clinical_write", reason: "branch_consult_only" }
+      })
+    );
   });
 
   it("rechaza y audita el acceso de un rol sin el permiso", async () => {

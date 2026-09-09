@@ -244,6 +244,8 @@ distintos en cada sede.
 - Auditar alta, baja, cambio de rol y cambio de sede predeterminada.
 - Permitir varias membresías activas únicamente a médicos y enfermería en
   rotación; los demás roles operativos conservan una sola sede activa.
+- Al cambiar de sede, ofrecer al personal clínico `Trabajar en esta sucursal`
+  o `Solo consultar`; únicamente una sede conserva capacidad de escritura.
 
 **Criterios de aceptación:**
 
@@ -251,6 +253,9 @@ distintos en cada sede.
   cuenta y el mismo rol clínico en ambas sedes.
 - Administración, Recepción y los demás roles operativos no pueden conservar
   dos sucursales activas simultáneamente.
+- Al elegir `Trabajar`, la sede anterior permanece asignada y conserva sus
+  datos, pero pasa a consulta; al elegir `Solo consultar`, ninguna escritura se
+  habilita en la sede visitada.
 - El superadministrador cambia de sede con una sola cuenta y ve únicamente la
   sede seleccionada.
 - Desactivar una membresía revoca esa sede sin cerrar las demás asignaciones.

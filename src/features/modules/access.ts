@@ -19,6 +19,8 @@ import { isReadPermission } from "@/features/modules/permission-access";
 export type ModuleAccessState = {
   active: ActiveModules;
   suspended: readonly SigecoModuleCode[];
+  /** Fuerza solo lectura al explorar una sede clínica que no es la de trabajo. */
+  readOnly?: boolean;
 };
 
 /**
@@ -57,6 +59,9 @@ export function resolveModuleAccess(
     ? moduleIsActive(access.active, module)
     : permissionIsEnabled(access.active, permission);
 
+  if (access.readOnly) {
+    return enabled && isReadPermission(permission) ? "read_only" : "blocked";
+  }
   if (enabled) return "allowed";
   if (!isReadPermission(permission) || !roleKeepsSuspendedAccess(role)) return "blocked";
 

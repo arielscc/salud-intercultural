@@ -869,8 +869,8 @@ model ClinicBranch {
   @@index([status, name])
 }
 
-/// Una persona puede trabajar en varias sedes, pero solo una se marca como
-/// predeterminada para evitar registrar por accidente en la sucursal equivocada.
+/// Una persona puede estar asignada a varias sedes. Para médicos y enfermería,
+/// isDefault identifica la única sede de trabajo; las demás son de consulta.
 model InternalUserBranch {
   userId     String
   branchCode String

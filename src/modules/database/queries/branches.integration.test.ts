@@ -3,7 +3,8 @@ import { prisma } from "@/modules/database";
 import {
   getBranchComparisonReport,
   getBranchesForUser,
-  replaceUserBranchAssignments
+  replaceUserBranchAssignments,
+  setClinicalWorkingBranch
 } from "@/modules/database/queries/branches";
 import {
   createInventoryItemRecord,
@@ -86,6 +87,21 @@ describe("multi-branch operations", () => {
       role: "enfermeria",
       assigned: true
     });
+
+    await setClinicalWorkingBranch({
+      userId: user.id,
+      branchCode: "cochabamba"
+    });
+    expect(
+      await prisma.internalUserBranch.findMany({
+        where: { userId: user.id },
+        select: { branchCode: true, active: true, isDefault: true },
+        orderBy: { branchCode: "asc" }
+      })
+    ).toEqual([
+      { branchCode: "cochabamba", active: true, isDefault: true },
+      { branchCode: "el-alto", active: true, isDefault: false }
+    ]);
 
     await replaceUserBranchAssignments({
       userId: user.id,

@@ -2,6 +2,7 @@ import type { InternalPermission } from "@/generated/prisma/client";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { appendAuditEvent } from "@/modules/audit/service";
 import { getBranchApiContext } from "@/features/branches/boundaries";
+import { isReadPermission } from "@/features/modules/permission-access";
 
 export class ClinicalAttachmentApiAccessError extends Error {
   constructor(public readonly status: 401 | 403 | 409) {
@@ -48,6 +49,9 @@ export async function requireClinicalAttachmentApiAccess(input: {
       ? "cross_origin_request"
     : !roleHasPermission(operationalRole, input.permission)
         ? "missing_permission"
+        : branchAccess.context.accessMode === "consult" &&
+            !isReadPermission(input.permission)
+          ? "branch_consult_only"
         : null;
 
   if (denialReason) {
