@@ -94,7 +94,7 @@ export default async function CashControlPage({
 }: CashPageProps) {
   const user = await requirePermission("cash_sessions_read");
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const query = await searchParams;
   const selectedType = movementTypes.includes(query.type as CashMovementType)
     ? (query.type as CashMovementType)

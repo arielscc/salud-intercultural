@@ -47,6 +47,7 @@ import {
   getPatientJourneyReport
 } from "@/modules/database/queries/patient-journey";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 const PAGE_SIZE = 25;
 const periodOptions = [
@@ -65,7 +66,6 @@ type JourneySearchParams = {
   fuente?: string;
   ciudad?: string;
   medico?: string;
-  sucursal?: string;
   page?: string;
 };
 
@@ -108,18 +108,13 @@ function positivePage(value?: string) {
   return Number.isSafeInteger(page) && page > 0 ? page : 1;
 }
 
-function branchLabel(value: string) {
-  if (value === "el-alto") return "El Alto";
-  if (value === "cochabamba") return "Cochabamba";
-  return value.replaceAll("-", " ");
-}
-
 export default async function PatientJourneyReportPage({
   searchParams
 }: {
   searchParams: Promise<JourneySearchParams>;
 }) {
   await requirePermission("reports_read");
+  const { activeBranch } = await getBranchContext();
   const params = await searchParams;
   const period = resolvedPeriod(params);
   const filters = {
@@ -128,11 +123,11 @@ export default async function PatientJourneyReportPage({
     sourceCode: params.fuente || undefined,
     city: params.ciudad || undefined,
     doctorId: params.medico || undefined,
-    branchCode: params.sucursal || undefined
+    branchCode: activeBranch.code
   };
   const [report, options] = await Promise.all([
     getPatientJourneyReport(filters),
-    getPatientJourneyFilterOptions()
+    getPatientJourneyFilterOptions(activeBranch.code)
   ]);
   const page = positivePage(params.page);
   const start = (page - 1) * PAGE_SIZE;
@@ -143,8 +138,7 @@ export default async function PatientJourneyReportPage({
     hasta: period.period === "custom" ? period.toValue : undefined,
     fuente: params.fuente,
     ciudad: params.ciudad,
-    medico: params.medico,
-    sucursal: params.sucursal
+    medico: params.medico
   };
 
   return (
@@ -155,7 +149,7 @@ export default async function PatientJourneyReportPage({
       />
 
       <Card>
-        <form method="get" className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+        <form method="get" className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <Field label="Período">
             <select
               className={internalInputClassName}
@@ -219,20 +213,6 @@ export default async function PatientJourneyReportPage({
                 <option key={doctor.id} value={doctor.id}>
                   {doctor.label}
                   {doctor.active ? "" : " (inactivo)"}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Sucursal de llegada">
-            <select
-              className={internalInputClassName}
-              name="sucursal"
-              defaultValue={params.sucursal ?? ""}
-            >
-              <option value="">Todas</option>
-              {options.branches.map((branch) => (
-                <option key={branch.value} value={branch.value}>
-                  {branchLabel(branch.value)} ({branch.count})
                 </option>
               ))}
             </select>
@@ -479,7 +459,7 @@ export default async function PatientJourneyReportPage({
                     {row.city}
                     <span className="block text-xs">
                       {row.department ?? "Sin departamento"} ·{" "}
-                      {branchLabel(row.branchCode)}
+                      {activeBranch.name}
                     </span>
                   </Td>
                   <Td>{row.source?.label ?? "Sin fuente registrada"}</Td>

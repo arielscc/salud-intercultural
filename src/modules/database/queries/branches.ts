@@ -1,7 +1,6 @@
 import type { InternalRole, Prisma } from "@/generated/prisma/client";
 import {
   canViewConsolidatedBranches,
-  defaultBranchCode,
   hasAutomaticBranchAssignment
 } from "@/features/branches/policy";
 import { prisma, withDatabaseError } from "@/modules/database";
@@ -25,7 +24,8 @@ export async function getBranchesForUser(userId: string, role: InternalRole) {
     const assigned = assignments.map((assignment) => ({
       ...assignment.branch,
       isDefault: assignment.isDefault,
-      assigned: true
+      assigned: true,
+      assignmentSource: "membership" as const
     }));
 
     if (!canViewConsolidatedBranches(role)) return assigned;
@@ -39,13 +39,17 @@ export async function getBranchesForUser(userId: string, role: InternalRole) {
 
     const branches = [
       ...assigned,
-      ...otherBranches.map((branch) => ({ ...branch, isDefault: false, assigned: false }))
+      ...otherBranches.map((branch) => ({
+        ...branch,
+        isDefault: false,
+        assigned: false,
+        assignmentSource: "automatic-super-admin" as const
+      }))
     ];
 
     return branches.map((branch) => ({
       ...branch,
-      assigned:
-        branch.assigned || hasAutomaticBranchAssignment(role, branch.status)
+      assigned: branch.assigned || hasAutomaticBranchAssignment(role, branch.status)
     }));
   });
 }
@@ -62,16 +66,6 @@ export async function getConfigurableBranches() {
       where: { status: { not: "inactive" } },
       select: branchSelect,
       orderBy: { name: "asc" }
-    })
-  );
-}
-
-export async function ensureDefaultBranchAssignment(userId: string) {
-  return withDatabaseError("ensureDefaultBranchAssignment", () =>
-    prisma.internalUserBranch.upsert({
-      where: { userId_branchCode: { userId, branchCode: defaultBranchCode } },
-      create: { userId, branchCode: defaultBranchCode, isDefault: true },
-      update: {}
     })
   );
 }

@@ -18,7 +18,7 @@ export default async function ReceivePurchasePage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requirePermission("purchase_receipts_write");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { purchaseId } = await params;
   const query = await searchParams;
   const [purchase, people] = await Promise.all([

@@ -56,7 +56,7 @@ export async function attendAdministrationWorkItemAction(formData: FormData) {
     },
     async (user) => {
       if (!workItemId) redirect("/sigeco/administracion?error=invalid-work-item");
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const updated = await assignAdministrationWorkItem({
         workItemId,
         userId: user.id,
@@ -96,7 +96,7 @@ export async function createSaleAction(formData: FormData) {
       }
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const rawInput = parseFormData(formData);
       const parsed = createSaleSchema.safeParse(rawInput);
 
@@ -192,7 +192,7 @@ export async function createSaleOrderAction(formData: FormData) {
       }
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = createSaleOrderSchema.safeParse(parseSaleOrderForm(formData));
       // Sin tarea administrativa la venta es de mostrador: el error vuelve a la
       // pantalla donde se estaba armando, con el cliente ya elegido.
@@ -264,7 +264,7 @@ export async function confirmDoctorOrderSaleAction(formData: FormData) {
       context: { workItemId: workItemId || undefined }
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = confirmDoctorOrderSchema.safeParse(parseFormData(formData));
       if (!parsed.success) redirect(`${target}?error=invalid-sale`);
 
@@ -365,7 +365,7 @@ export async function createPaymentAction(formData: FormData) {
       context: { workItemId: workItemId || undefined }
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = createPaymentSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {

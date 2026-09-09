@@ -68,7 +68,7 @@ const emptyFollowUpsMessage = (
 
 export default async function FollowUpsPage({ searchParams }: FollowUpsPageProps) {
   const user = await requirePermission("followups_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const {
     filtro,
     tipo,

@@ -30,7 +30,14 @@ export async function POST(
     const status =
       error instanceof ClinicalAttachmentApiAccessError ? error.status : 500;
     return NextResponse.json(
-      { error: status === 401 ? "Debes iniciar sesión." : "No tienes permiso." },
+      {
+        error:
+          status === 401
+            ? "Debes iniciar sesión."
+            : status === 409
+              ? "Selecciona una sucursal activa."
+              : "No tienes permiso."
+      },
       { status }
     );
   }

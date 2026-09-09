@@ -52,7 +52,7 @@ export default async function InventoryItemPage({
 }) {
   const user = await requirePermission("inventory_read", { module: "inventario" });
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { itemId } = await params;
   const query = await searchParams;
   const item = await getInventoryItemById(itemId, activeBranch.code);

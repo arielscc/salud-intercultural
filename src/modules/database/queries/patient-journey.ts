@@ -9,12 +9,12 @@ import { dayRange } from "@/lib/dates";
 import { prisma, withDatabaseError } from "@/modules/database";
 
 export type PatientJourneyFilters = {
+  branchCode: string;
   from?: Date;
   to?: Date;
   sourceCode?: string;
   city?: string;
   doctorId?: string;
-  branchCode?: string;
 };
 
 function visitWhere(input: PatientJourneyFilters): Prisma.VisitWhereInput {
@@ -24,7 +24,7 @@ function visitWhere(input: PatientJourneyFilters): Prisma.VisitWhereInput {
       input.from || input.to
         ? { gte: input.from, lt: input.to }
         : undefined,
-    branchCode: input.branchCode || undefined,
+    branchCode: input.branchCode,
     originCity: input.city
       ? { equals: input.city, mode: "insensitive" }
       : undefined,
@@ -58,7 +58,7 @@ function visitWhere(input: PatientJourneyFilters): Prisma.VisitWhereInput {
 }
 
 export async function getPatientJourneyReport(
-  input: PatientJourneyFilters = {}
+  input: PatientJourneyFilters
 ) {
   return withDatabaseError("getPatientJourneyReport", async () => {
     const visits = await prisma.visit.findMany({
@@ -173,34 +173,30 @@ export async function getPatientJourneyReport(
   });
 }
 
-export async function getPatientJourneyFilterOptions() {
+export async function getPatientJourneyFilterOptions(branchCode: string) {
   return withDatabaseError("getPatientJourneyFilterOptions", async () => {
-    const [sources, doctors, cities, branches] = await Promise.all([
+    const [sources, doctors, cities] = await Promise.all([
       prisma.captureSource.findMany({
         where: {
-          attributionTouches: { some: { role: "primary" } }
+          attributionTouches: {
+            some: { role: "primary", attribution: { visit: { branchCode } } }
+          }
         },
         select: { code: true, internalLabel: true },
         orderBy: [{ sortOrder: "asc" }, { internalLabel: "asc" }]
       }),
       prisma.internalUser.findMany({
         where: {
-          clinicalConsultations: { some: {} }
+          clinicalConsultations: { some: { visit: { branchCode } } }
         },
         select: { id: true, name: true, email: true, active: true },
         orderBy: [{ name: "asc" }, { email: "asc" }]
       }),
       prisma.visit.groupBy({
         by: ["originCity"],
-        where: { isTestData: false },
+        where: { branchCode, isTestData: false },
         _count: { _all: true },
         orderBy: { originCity: "asc" }
-      }),
-      prisma.visit.groupBy({
-        by: ["branchCode"],
-        where: { isTestData: false },
-        _count: { _all: true },
-        orderBy: { branchCode: "asc" }
       })
     ]);
     return {
@@ -213,10 +209,6 @@ export async function getPatientJourneyFilterOptions() {
       cities: cities.map((city) => ({
         value: city.originCity,
         count: city._count._all
-      })),
-      branches: branches.map((branch) => ({
-        value: branch.branchCode,
-        count: branch._count._all
       }))
     };
   });

@@ -31,7 +31,7 @@ import {
   storeCashReceipt
 } from "@/modules/cash-receipts/storage";
 import { validateClinicalFile } from "@/modules/clinical-attachments/validation";
-import { getBranchContext } from "@/features/branches/context";
+import { assertBranchMatchesContext } from "@/features/branches/context";
 
 function fields(formData: FormData) {
   return Object.fromEntries(
@@ -101,13 +101,10 @@ export async function openCashSessionAction(formData: FormData) {
           exceptional: parsed.data.exceptional
         }
       },
-      async (user) => {
-        const { activeBranch } = await getBranchContext(user);
-        if (parsed.data.branchCode !== activeBranch.code) {
-          redirect(`${fallback}?error=cash-invalid-session`);
-        }
+      async (user, branchContext) => {
+        assertBranchMatchesContext(branchContext, parsed.data.branchCode);
         const session = await openCashSession({
-          branchCode: parsed.data.branchCode,
+          branchCode: branchContext.activeBranch.code,
           registerName: parsed.data.registerName,
           businessDate: new Date(`${parsed.data.businessDate}T00:00:00.000Z`),
           shift: parsed.data.shift,

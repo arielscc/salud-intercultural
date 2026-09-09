@@ -32,7 +32,7 @@ import {
   purchaseReceiptLineSchema,
   purchaseReceiptSchema
 } from "@/features/purchases/schemas/purchase.schema";
-import { getBranchContext } from "@/features/branches/context";
+import { assertBranchMatchesContext } from "@/features/branches/context";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -125,13 +125,11 @@ export async function createPurchaseAction(formData: FormData) {
         entityType: "purchase_batch",
         context: { lineCount: lines.length, hasDocument: Boolean(document) }
       },
-      async (user) => {
-        const { activeBranch } = await getBranchContext(user);
-        if (parsed.data.branchCode !== activeBranch.code) {
-          redirect("/sigeco/compras/nueva?error=invalid-lines");
-        }
+      async (user, branchContext) => {
+        assertBranchMatchesContext(branchContext, parsed.data.branchCode);
         const created = await createPurchaseBatchRecord({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           purchaseDate: new Date(`${parsed.data.purchaseDate}T12:00:00-04:00`),
           createdById: user.id,
           document,
@@ -308,13 +306,11 @@ export async function createPurchaseReceiptAction(formData: FormData) {
         entityId: purchaseId,
         context: { hasDocument: Boolean(document) }
       },
-      async (user) => {
-        const { activeBranch } = await getBranchContext(user);
-        if (parsed.data.branchCode !== activeBranch.code) {
-          redirect(`/sigeco/compras/${purchaseId}/recibir?error=branch-mismatch`);
-        }
+      async (user, branchContext) => {
+        assertBranchMatchesContext(branchContext, parsed.data.branchCode);
         const receipt = await createPurchaseReceiptRecord({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           receivedAt: new Date(`${parsed.data.receivedAt}:00-04:00`),
           recordedById: user.id,
           document,

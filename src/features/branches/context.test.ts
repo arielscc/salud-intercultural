@@ -2,24 +2,45 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   cookie: vi.fn(),
-  getBranchesForUser: vi.fn()
+  getBranchesForUser: vi.fn(),
+  getInternalSessionToken: vi.fn(),
+  getInternalUserBySessionToken: vi.fn()
 }));
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({ get: mocks.cookie }))
 }));
 
+vi.mock("@/features/internal-auth/session", () => ({
+  getInternalSessionToken: mocks.getInternalSessionToken,
+  getInternalUserBySessionToken: mocks.getInternalUserBySessionToken
+}));
+
 vi.mock("@/modules/database/queries/branches", () => ({
   getBranchesForUser: mocks.getBranchesForUser
 }));
 
-import { resolveBranchContext } from "@/features/branches/context";
+import {
+  assertBranchMatchesContext,
+  BranchContextMismatchError,
+  resolveBranchContext,
+  selectActiveBranch,
+  type BranchRequestContext
+} from "@/features/branches/context";
 
-const user = { id: "user-1", role: "super_admin" as const };
+const user = {
+  id: "user-1",
+  role: "super_admin" as const,
+  mustChangePassword: false
+};
 
 function branch(
   code: string,
-  overrides: Partial<{ status: "active" | "preparation"; assigned: boolean; isDefault: boolean }> = {}
+  overrides: Partial<{
+    status: "active" | "preparation";
+    assigned: boolean;
+    isDefault: boolean;
+  }> = {}
 ) {
   return {
     code,
@@ -29,72 +50,95 @@ function branch(
     status: "active" as const,
     assigned: true,
     isDefault: false,
+    assignmentSource: "membership" as const,
     ...overrides
   };
 }
 
-/** La cookie elige la sede activa, y desde la activación por módulo por sucursal
- *  esa elección decide además qué está encendido. Solo puede elegir entre las
- *  sedes asignadas y abiertas: nunca agregar una. */
+describe("selectActiveBranch", () => {
+  it("acepta solamente una cookie que nombra una sede asignada y activa", () => {
+    expect(
+      selectActiveBranch(
+        [branch("el-alto", { isDefault: true }), branch("cochabamba")],
+        "cochabamba"
+      )
+    ).toMatchObject({ ok: true, branch: { code: "cochabamba" } });
+  });
+
+  it.each([
+    ["no asignada", branch("cochabamba", { assigned: false })],
+    ["en preparación", branch("cochabamba", { status: "preparation" })]
+  ])("rechaza una cookie de sede %s sin caer en otra sucursal", (_label, target) => {
+    expect(
+      selectActiveBranch([branch("el-alto", { isDefault: true }), target], "cochabamba")
+    ).toEqual({ ok: false, reason: "invalid_active_branch" });
+  });
+
+  it("rechaza un código inventado aunque exista una sede predeterminada", () => {
+    expect(
+      selectActiveBranch([branch("el-alto", { isDefault: true })], "sede-inventada")
+    ).toEqual({ ok: false, reason: "invalid_active_branch" });
+  });
+
+  it("sin cookie usa únicamente una asignación marcada explícitamente como default", () => {
+    expect(
+      selectActiveBranch([
+        branch("cochabamba"),
+        branch("el-alto", { isDefault: true })
+      ])
+    ).toMatchObject({ ok: true, branch: { code: "el-alto" } });
+  });
+
+  it("no elige la primera sede cuando falta una asignación default", () => {
+    expect(selectActiveBranch([branch("cochabamba")])).toEqual({
+      ok: false,
+      reason: "active_branch_required"
+    });
+  });
+});
+
 describe("resolveBranchContext", () => {
   beforeEach(() => {
     mocks.cookie.mockReset();
     mocks.getBranchesForUser.mockReset();
+    mocks.getInternalSessionToken.mockResolvedValue("token");
+    mocks.getInternalUserBySessionToken.mockResolvedValue(user);
   });
 
-  it("respeta la sucursal pedida por la cookie cuando está asignada y abierta", async () => {
+  it("construye usuario, asignación y rol operativo desde la sesión", async () => {
     mocks.cookie.mockReturnValue({ value: "cochabamba" });
     mocks.getBranchesForUser.mockResolvedValue([
       branch("el-alto", { isDefault: true }),
       branch("cochabamba")
     ]);
 
-    const { activeBranch } = await resolveBranchContext(user);
+    const resolution = await resolveBranchContext();
 
-    expect(activeBranch?.code).toBe("cochabamba");
+    expect(resolution).toMatchObject({
+      ok: true,
+      context: {
+        user: { id: "user-1" },
+        activeBranch: { code: "cochabamba" },
+        assignment: {
+          userId: "user-1",
+          branchCode: "cochabamba",
+          source: "membership"
+        },
+        operationalRole: "super_admin"
+      }
+    });
   });
+});
 
-  it("ignora una cookie que nombra una sede no asignada", async () => {
-    mocks.cookie.mockReturnValue({ value: "cochabamba" });
-    mocks.getBranchesForUser.mockResolvedValue([
-      branch("el-alto", { isDefault: true }),
-      branch("cochabamba", { assigned: false })
-    ]);
+describe("assertBranchMatchesContext", () => {
+  it("rechaza un branchCode informativo de otra sede sin revelar recursos", () => {
+    const context = {
+      activeBranch: { code: "el-alto" }
+    } as BranchRequestContext;
 
-    const { activeBranch } = await resolveBranchContext(user);
-
-    expect(activeBranch?.code).toBe("el-alto");
-  });
-
-  it("ignora una cookie que nombra una sede todavía en preparación", async () => {
-    mocks.cookie.mockReturnValue({ value: "cochabamba" });
-    mocks.getBranchesForUser.mockResolvedValue([
-      branch("el-alto", { isDefault: true }),
-      branch("cochabamba", { status: "preparation" })
-    ]);
-
-    const { activeBranch } = await resolveBranchContext(user);
-
-    expect(activeBranch?.code).toBe("el-alto");
-  });
-
-  it("ignora una cookie con un código inventado", async () => {
-    mocks.cookie.mockReturnValue({ value: "sede-que-no-existe" });
-    mocks.getBranchesForUser.mockResolvedValue([branch("el-alto", { isDefault: true })]);
-
-    const { activeBranch } = await resolveBranchContext(user);
-
-    expect(activeBranch?.code).toBe("el-alto");
-  });
-
-  it("no devuelve sucursal cuando ninguna está asignada y abierta", async () => {
-    mocks.cookie.mockReturnValue(undefined);
-    mocks.getBranchesForUser.mockResolvedValue([
-      branch("cochabamba", { status: "preparation" })
-    ]);
-
-    const { activeBranch } = await resolveBranchContext(user);
-
-    expect(activeBranch).toBeUndefined();
+    expect(() => assertBranchMatchesContext(context, "cochabamba")).toThrow(
+      BranchContextMismatchError
+    );
+    expect(() => assertBranchMatchesContext(context, "el-alto")).not.toThrow();
   });
 });

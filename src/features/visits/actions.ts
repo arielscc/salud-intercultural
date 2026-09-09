@@ -40,7 +40,7 @@ export async function createVisitAction(formData: FormData) {
       context: { patientId: patientId || undefined }
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = createVisitSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {

@@ -72,7 +72,7 @@ export default async function VisitDiscontinuationReportPage({
     module: "recepcion"
   });
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const canOpenFollowUps = canUse(user.role, moduleAccess, "followups_read");
   const params = await searchParams;
   const reason = visitDiscontinuationReasonOptions.some(

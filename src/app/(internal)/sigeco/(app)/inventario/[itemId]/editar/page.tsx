@@ -16,7 +16,7 @@ export default async function EditInventoryItemPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requirePermission("inventory_write");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { itemId } = await params;
   const query = await searchParams;
   const item = await getInventoryItemById(itemId, activeBranch.code);

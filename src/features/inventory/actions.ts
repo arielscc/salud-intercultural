@@ -51,7 +51,7 @@ export async function createInventoryItemAction(formData: FormData) {
         entityType: "inventory_item"
       },
       async (user) => {
-        const { activeBranch } = await getBranchContext(user);
+        const { activeBranch } = await getBranchContext();
         const parsed = createInventoryItemSchema.safeParse(parseFormData(formData));
 
         if (!parsed.success) {
@@ -274,7 +274,7 @@ export async function addInventoryEntryAction(formData: FormData) {
       entityId: itemId || undefined
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = inventoryEntrySchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -308,7 +308,7 @@ export async function createInventoryAdjustmentAction(formData: FormData) {
       entityId: itemId || undefined
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = inventoryAdjustmentSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {

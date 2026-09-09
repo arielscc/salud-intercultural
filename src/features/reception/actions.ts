@@ -58,7 +58,7 @@ export async function submitReceptionIntakeAction(formData: FormData) {
       entityType: "visit"
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       if (formData.get("funnelCompleted") !== "true") {
         redirect("/sigeco/recepcion/nuevo?error=incomplete-funnel");
       }

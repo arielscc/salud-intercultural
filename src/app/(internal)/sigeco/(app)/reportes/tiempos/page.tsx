@@ -22,11 +22,9 @@ import {
 } from "@/features/area-times/report";
 import { routeAreaLabels } from "@/features/patients/labels";
 import { dateOnlyRange, formatDateTime, todayDateOnly } from "@/lib/dates";
-import {
-  getAreaTimeReport,
-  getAreaTimeReportBranches
-} from "@/modules/database/queries/area-times";
+import { getAreaTimeReport } from "@/modules/database/queries/area-times";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 const periodOptions = [
   { value: "7", label: "Últimos 7 días" },
@@ -42,7 +40,6 @@ type SearchParams = {
   desde?: string;
   hasta?: string;
   area?: string;
-  sucursal?: string;
 };
 
 function resolvePeriod(params: SearchParams) {
@@ -81,12 +78,6 @@ function resolvePeriod(params: SearchParams) {
   };
 }
 
-function branchLabel(value: string) {
-  if (value === "el-alto") return "El Alto";
-  if (value === "cochabamba") return "Cochabamba";
-  return value.replaceAll("-", " ");
-}
-
 function currentPhaseElapsedMs(
   session: { currentPhaseStartedAt: Date | null },
   asOf: Date
@@ -102,6 +93,7 @@ export default async function AreaTimeReportPage({
   searchParams: Promise<SearchParams>;
 }) {
   await requirePermission("reports_read");
+  const { activeBranch } = await getBranchContext();
   const params = await searchParams;
   const period = resolvePeriod(params);
   const area = measuredRouteAreas.includes(
@@ -110,18 +102,15 @@ export default async function AreaTimeReportPage({
     ? (params.area as (typeof measuredRouteAreas)[number])
     : undefined;
   const asOf = new Date();
-  const [report, branches] = await Promise.all([
-    getAreaTimeReport(
-      {
-        from: period.range.start,
-        to: period.range.end,
-        area,
-        branchCode: params.sucursal || undefined
-      },
-      asOf
-    ),
-    getAreaTimeReportBranches()
-  ]);
+  const report = await getAreaTimeReport(
+    {
+      from: period.range.start,
+      to: period.range.end,
+      area,
+      branchCode: activeBranch.code
+    },
+    asOf
+  );
   const waitingAlerts = report.active.filter(
     (session) =>
       session.currentPhase === "waiting" &&
@@ -137,7 +126,7 @@ export default async function AreaTimeReportPage({
       />
 
       <Card>
-        <form method="get" className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <form method="get" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Field label="Período">
             <select
               className={internalInputClassName}
@@ -169,20 +158,6 @@ export default async function AreaTimeReportPage({
               {measuredRouteAreas.map((value) => (
                 <option key={value} value={value}>
                   {routeAreaLabels[value]}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Sucursal">
-            <select
-              className={internalInputClassName}
-              name="sucursal"
-              defaultValue={params.sucursal ?? ""}
-            >
-              <option value="">Todas</option>
-              {branches.map((branch) => (
-                <option key={branch.value} value={branch.value}>
-                  {branchLabel(branch.value)} ({branch.count})
                 </option>
               ))}
             </select>

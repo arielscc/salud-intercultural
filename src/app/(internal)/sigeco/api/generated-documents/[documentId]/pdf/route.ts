@@ -5,8 +5,7 @@ import {
   getGeneratedDocument
 } from "@/modules/generated-documents/service";
 import { createGeneratedDocumentPdf } from "@/modules/generated-documents/pdf";
-import { getCurrentInternalUser } from "@/modules/permissions";
-import { getBranchContext } from "@/features/branches/context";
+import { getBranchExportContext } from "@/features/branches/boundaries";
 
 export const runtime = "nodejs";
 
@@ -19,11 +18,9 @@ export async function GET(
   { params }: { params: Promise<{ documentId: string }> }
 ) {
   const { documentId } = await params;
-  const user = await getCurrentInternalUser();
-  if (!user) {
-    return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
-  }
-  const { activeBranch } = await getBranchContext(user);
+  const branchAccess = await getBranchExportContext();
+  if (!branchAccess.ok) return branchAccess.response;
+  const { user, activeBranch, operationalRole } = branchAccess.context;
   const document = await getGeneratedDocument(documentId, activeBranch.code);
   if (!document) {
     return NextResponse.json({ error: "Documento no encontrado." }, { status: 404 });
@@ -36,11 +33,11 @@ export async function GET(
   }
   const canReadDocument =
     document.kind === "prescription"
-      ? roleHasPermission(user.role, "clinical_read")
-      : roleHasPermission(user.role, "sales_read");
+      ? roleHasPermission(operationalRole, "clinical_read")
+      : roleHasPermission(operationalRole, "sales_read");
   if (!canReadDocument) {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "document.pdf.access",
       entityType: "generated_document",
       entityId: document.id,
@@ -57,7 +54,7 @@ export async function GET(
     const bytes = await createGeneratedDocumentPdf(document.parsedSnapshot);
     if (controlledPurpose !== "preview") {
       await appendAuditEvent({
-        actor: { id: user.id, role: user.role },
+        actor: { id: user.id, role: operationalRole },
         action:
           controlledPurpose === "download"
             ? "document.pdf.download"
@@ -90,7 +87,7 @@ export async function GET(
   } catch {
     if (controlledPurpose !== "preview") {
       await appendAuditEvent({
-        actor: { id: user.id, role: user.role },
+        actor: { id: user.id, role: operationalRole },
         action:
           controlledPurpose === "download"
             ? "document.pdf.download"

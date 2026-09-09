@@ -88,7 +88,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
   const user = await requirePermission("visits_read");
   const moduleAccess = await getModuleAccessState();
   const canOpenFollowUps = canUse(user.role, moduleAccess, "followups_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const [visit, studyCatalogItems] = await Promise.all([
     getVisitById(id),

@@ -189,6 +189,9 @@ evitar que aparezcan modelos o defaults nuevos sin sucursal.
 
 **Prioridad:** P0. **Dependencias:** Tarea 1.
 
+**Estado:** terminada el 2026-09-09. Evidencia:
+[reporte de la Tarea 2](../task-reports/2026-09-09-tarea-2-contexto-central-sucursal.md).
+
 **Objetivo:** que toda operación reciba una sucursal autenticada desde un único
 punto y no pueda elegir otra mediante datos del cliente.
 

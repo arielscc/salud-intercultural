@@ -2,15 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   branchDisplayName,
   canViewConsolidatedBranches,
-  defaultBranchCode,
   hasAutomaticBranchAssignment
 } from "@/features/branches/policy";
 
 describe("multi-branch policy", () => {
-  it("keeps El Alto as the safe default branch", () => {
-    expect(defaultBranchCode).toBe("el-alto");
-  });
-
   it("limits consolidated reporting to Direction and super administrators", () => {
     expect(canViewConsolidatedBranches("direccion")).toBe(true);
     expect(canViewConsolidatedBranches("super_admin")).toBe(true);

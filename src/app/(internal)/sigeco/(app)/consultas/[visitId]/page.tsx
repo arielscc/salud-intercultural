@@ -226,7 +226,7 @@ export default async function ConsultationDetailPage({
 }: ConsultationDetailPageProps) {
   const user = await requirePermission("clinical_read");
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
   const [
     visit,

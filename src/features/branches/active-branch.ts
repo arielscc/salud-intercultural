@@ -2,10 +2,6 @@ import "server-only";
 
 import { cache } from "react";
 import { resolveBranchContext } from "@/features/branches/context";
-import {
-  getInternalSessionToken,
-  getInternalUserBySessionToken
-} from "@/features/internal-auth/session";
 
 /**
  * Código de la sucursal activa del request, o `null` si no hay ninguna.
@@ -25,12 +21,6 @@ import {
  * módulo depende de las consultas de módulos, y usarlo aquí cerraría el ciclo.
  */
 export const getActiveBranchCode = cache(async (): Promise<string | null> => {
-  const token = await getInternalSessionToken();
-  if (!token) return null;
-
-  const user = await getInternalUserBySessionToken(token);
-  if (!user) return null;
-
-  const { activeBranch } = await resolveBranchContext(user);
-  return activeBranch?.code ?? null;
+  const resolution = await resolveBranchContext();
+  return resolution.ok ? resolution.context.activeBranch.code : null;
 });

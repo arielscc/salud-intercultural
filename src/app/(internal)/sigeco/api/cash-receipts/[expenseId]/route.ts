@@ -4,8 +4,7 @@ import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { appendAuditEvent } from "@/modules/audit/service";
 import { readCashReceipt } from "@/modules/cash-receipts/storage";
 import { getCashExpenseReceipt } from "@/modules/database/queries/cash";
-import { getCurrentInternalUser } from "@/modules/permissions";
-import { getBranchContext } from "@/features/branches/context";
+import { getBranchExportContext } from "@/features/branches/boundaries";
 
 export const runtime = "nodejs";
 
@@ -23,14 +22,12 @@ export async function GET(
   { params }: { params: Promise<{ expenseId: string }> }
 ) {
   const { expenseId } = await params;
-  const user = await getCurrentInternalUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
-  }
-  if (!roleHasPermission(user.role, "cash_sessions_read")) {
+  const branchAccess = await getBranchExportContext();
+  if (!branchAccess.ok) return branchAccess.response;
+  const { user, activeBranch, operationalRole } = branchAccess.context;
+  if (!roleHasPermission(operationalRole, "cash_sessions_read")) {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "cash.receipt.read",
       entityType: "cash_expense",
       entityId: expenseId,
@@ -40,7 +37,6 @@ export async function GET(
     return NextResponse.json({ error: "No tienes permiso." }, { status: 403 });
   }
 
-  const { activeBranch } = await getBranchContext(user);
   const receipt = await getCashExpenseReceipt(expenseId, activeBranch.code);
   if (
     !receipt?.receiptStorageKey ||
@@ -64,7 +60,7 @@ export async function GET(
       throw new Error("CASH_RECEIPT_INTEGRITY_FAILURE");
     }
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "cash.receipt.read",
       entityType: "cash_expense",
       entityId: expenseId,
@@ -85,7 +81,7 @@ export async function GET(
     });
   } catch {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "cash.receipt.read",
       entityType: "cash_expense",
       entityId: expenseId,

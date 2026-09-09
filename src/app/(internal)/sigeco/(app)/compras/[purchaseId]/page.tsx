@@ -56,7 +56,7 @@ export default async function PurchaseDetailPage({
 }) {
   const user = await requirePermission("purchases_read");
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { purchaseId } = await params;
   const query = await searchParams;
   const [purchase, openSessions] = await Promise.all([

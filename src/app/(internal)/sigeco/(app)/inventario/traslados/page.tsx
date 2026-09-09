@@ -26,7 +26,7 @@ export default async function InventoryTransfersPage({
 }) {
   const user = await requirePermission("inventory_read", { module: "inventario" });
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch, branches } = await getBranchContext(user);
+  const { activeBranch, branches } = await getBranchContext();
   const query = await searchParams;
   const canWrite = canUse(user.role, moduleAccess, "inventory_write");
   const activeDestinations = branches.filter(

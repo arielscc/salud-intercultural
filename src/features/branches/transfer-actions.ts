@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getBranchContext } from "@/features/branches/context";
+import { assertBranchMatchesContext } from "@/features/branches/context";
 import { inventoryTransferSchema } from "@/features/branches/schemas/transfer.schema";
 import { auditedResult, runAuditedAction } from "@/modules/audit/service";
 import { createInventoryTransferRecord } from "@/modules/database/queries/inventory";
@@ -23,12 +23,9 @@ export async function createInventoryTransferAction(formData: FormData) {
         quantity: parsed.data.quantity
       }
     },
-    async (user) => {
-      const { activeBranch, branches } = await getBranchContext(user);
-      if (parsed.data.sourceBranchCode !== activeBranch.code) {
-        redirect("/sigeco/inventario/traslados?error=branch-mismatch");
-      }
-      const destinationAllowed = branches.some(
+    async (user, branchContext) => {
+      assertBranchMatchesContext(branchContext, parsed.data.sourceBranchCode);
+      const destinationAllowed = branchContext.branches.some(
         (branch) =>
           branch.code === parsed.data.destinationBranchCode &&
           branch.assigned &&
@@ -39,6 +36,7 @@ export async function createInventoryTransferAction(formData: FormData) {
       }
       const transfer = await createInventoryTransferRecord({
         ...parsed.data,
+        sourceBranchCode: branchContext.activeBranch.code,
         createdById: user.id
       });
       return auditedResult(transfer, { entityId: transfer.id });

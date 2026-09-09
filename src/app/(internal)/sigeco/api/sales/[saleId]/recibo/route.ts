@@ -3,8 +3,7 @@ import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { appendAuditEvent } from "@/modules/audit/service";
 import { getSaleById } from "@/modules/database/queries/sales";
 import { createThermalReceiptPdf } from "@/modules/sales/thermal-receipt";
-import { getCurrentInternalUser } from "@/modules/permissions";
-import { getBranchContext } from "@/features/branches/context";
+import { getBranchExportContext } from "@/features/branches/boundaries";
 
 export const runtime = "nodejs";
 
@@ -13,13 +12,12 @@ export async function GET(
   { params }: { params: Promise<{ saleId: string }> }
 ) {
   const { saleId } = await params;
-  const user = await getCurrentInternalUser();
-  if (!user) {
-    return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
-  }
-  if (!roleHasPermission(user.role, "sales_read")) {
+  const branchAccess = await getBranchExportContext();
+  if (!branchAccess.ok) return branchAccess.response;
+  const { user, activeBranch, operationalRole } = branchAccess.context;
+  if (!roleHasPermission(operationalRole, "sales_read")) {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "sale.receipt.thermal",
       entityType: "sale",
       entityId: saleId,
@@ -29,7 +27,6 @@ export async function GET(
     return NextResponse.json({ error: "No tienes permiso." }, { status: 403 });
   }
 
-  const { activeBranch } = await getBranchContext(user);
   const sale = await getSaleById(saleId, activeBranch.code);
   if (!sale) {
     return NextResponse.json({ error: "Venta no encontrada." }, { status: 404 });
@@ -55,7 +52,7 @@ export async function GET(
       balanceCents: sale.balanceCents
     });
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "sale.receipt.thermal",
       entityType: "sale",
       entityId: sale.id,
@@ -74,7 +71,7 @@ export async function GET(
     });
   } catch {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "sale.receipt.thermal",
       entityType: "sale",
       entityId: sale.id,

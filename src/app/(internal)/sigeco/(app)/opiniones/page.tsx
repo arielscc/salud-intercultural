@@ -71,7 +71,7 @@ function severityTone(severity: FeedbackSeverity) {
 export default async function FeedbackPage({ searchParams }: FeedbackPageProps) {
   const user = await requirePermission("feedback_read");
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const query = await searchParams;
   const status = statuses.includes(query.estado as FeedbackCaseStatus)
     ? (query.estado as FeedbackCaseStatus)

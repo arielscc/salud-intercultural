@@ -54,7 +54,7 @@ export default async function ClinicalHistoryPage({
   searchParams
 }: ClinicalHistoryPageProps) {
   const user = await requirePermission("clinical_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const [{ visitId }, query] = await Promise.all([params, searchParams]);
   const consultation = await getClinicalConsultationVersionHistory(
     visitId,

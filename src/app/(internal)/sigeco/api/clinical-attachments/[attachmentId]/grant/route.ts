@@ -45,7 +45,14 @@ export async function POST(
   } catch (error) {
     if (error instanceof ClinicalAttachmentApiAccessError) {
       return NextResponse.json(
-        { error: error.status === 401 ? "Debes iniciar sesión." : "No tienes permiso." },
+        {
+          error:
+            error.status === 401
+              ? "Debes iniciar sesión."
+              : error.status === 409
+                ? "Selecciona una sucursal activa."
+                : "No tienes permiso."
+        },
         { status: error.status }
       );
     }

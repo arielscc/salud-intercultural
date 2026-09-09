@@ -22,6 +22,25 @@ vi.mock("@/features/modules/request-state", () => ({
   getModuleAccessState: mocks.getModuleAccessState
 }));
 
+vi.mock("@/features/branches/boundaries", () => ({
+  requireBranchPageContext: vi.fn(async () => {
+    const user = await mocks.getUser();
+    return {
+      user,
+      operationalRole: user.role,
+      activeBranch: { code: "el-alto", name: "El Alto" },
+      assignment: {
+        userId: user.id,
+        branchCode: "el-alto",
+        isDefault: true,
+        source: "membership"
+      },
+      branches: [],
+      canSwitch: false
+    };
+  })
+}));
+
 vi.mock("@/modules/audit/append", () => ({
   appendAuditEvent: mocks.append
 }));

@@ -60,7 +60,7 @@ export default async function ModulesPage({ searchParams }: ModulesPageProps) {
   const user = await requirePermission("modules_read");
   // Los módulos se encienden por sucursal: esta pantalla siempre muestra la
   // sede activa. Para administrar otra se cambia de sucursal en la cabecera.
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const [params, states, history] = await Promise.all([
     searchParams,
     getModuleActivationStates(activeBranch.code),

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   auditCreate: vi.fn(),
-  getCurrentInternalUser: vi.fn(),
+  branchOwnedEntityExists: vi.fn(),
+  getBranchContext: vi.fn(),
   getModuleAccessState: vi.fn()
 }));
 
@@ -24,12 +25,22 @@ vi.mock("@/modules/database", () => ({
   }
 }));
 
-vi.mock("@/modules/permissions", () => ({
-  getCurrentInternalUser: mocks.getCurrentInternalUser
-}));
+vi.mock("@/features/branches/context", () => {
+  class BranchContextMismatchError extends Error {}
+  class BranchContextUnavailableError extends Error {}
+  return {
+    BranchContextMismatchError,
+    BranchContextUnavailableError,
+    getBranchContext: mocks.getBranchContext
+  };
+});
 
 vi.mock("@/features/modules/request-state", () => ({
   getModuleAccessState: mocks.getModuleAccessState
+}));
+
+vi.mock("@/modules/database/queries/branch-ownership", () => ({
+  branchOwnedEntityExists: mocks.branchOwnedEntityExists
 }));
 
 import { sigecoModuleCodes } from "@/features/modules/catalog";
@@ -39,10 +50,31 @@ import {
   runAuditedAction
 } from "@/modules/audit/service";
 
+function branchContext(user: {
+  id: string;
+  role: "super_admin" | "medico" | "enfermeria";
+  mustChangePassword?: boolean;
+}) {
+  return {
+    user: { ...user, mustChangePassword: user.mustChangePassword ?? false },
+    operationalRole: user.role,
+    activeBranch: { code: "el-alto", name: "El Alto" },
+    assignment: {
+      userId: user.id,
+      branchCode: "el-alto",
+      isDefault: true,
+      source: "membership"
+    },
+    branches: [],
+    canSwitch: false
+  };
+}
+
 describe("runAuditedAction", () => {
   beforeEach(() => {
     mocks.auditCreate.mockReset();
-    mocks.getCurrentInternalUser.mockReset();
+    mocks.branchOwnedEntityExists.mockReset();
+    mocks.getBranchContext.mockReset();
     mocks.getModuleAccessState.mockReset();
     // Por defecto, todo lanzado: las pruebas existentes describen el sistema
     // completo y no deben cambiar de resultado por el gate de módulos.
@@ -51,10 +83,10 @@ describe("runAuditedAction", () => {
       suspended: []
     });
     mocks.auditCreate.mockResolvedValue({ id: "audit-1" });
-    mocks.getCurrentInternalUser.mockResolvedValue({
-      id: "user-1",
-      role: "super_admin"
-    });
+    mocks.branchOwnedEntityExists.mockResolvedValue(null);
+    mocks.getBranchContext.mockResolvedValue(
+      branchContext({ id: "user-1", role: "super_admin" })
+    );
   });
 
   it("writes exactly one success event", async () => {
@@ -101,10 +133,9 @@ describe("runAuditedAction", () => {
   });
 
   it("writes exactly one denied event when the role lacks permission", async () => {
-    mocks.getCurrentInternalUser.mockResolvedValue({
-      id: "user-2",
-      role: "medico"
-    });
+    mocks.getBranchContext.mockResolvedValue(
+      branchContext({ id: "user-2", role: "medico" })
+    );
 
     await expect(
       runAuditedAction(
@@ -161,12 +192,44 @@ describe("runAuditedAction", () => {
     });
   });
 
-  it("blocks critical actions until a required password change is completed", async () => {
-    mocks.getCurrentInternalUser.mockResolvedValue({
-      id: "user-3",
-      role: "super_admin",
-      mustChangePassword: true
+  it("denies an operational ID outside the active branch without running the action", async () => {
+    mocks.branchOwnedEntityExists.mockResolvedValue(false);
+    const operation = vi.fn(async () => auditedResult(undefined));
+
+    await expect(
+      runAuditedAction(
+        {
+          permission: "visits_update",
+          action: "visit.update",
+          entityType: "visit",
+          entityId: "visit-from-other-branch"
+        },
+        operation
+      )
+    ).rejects.toThrow("REDIRECT:/sigeco");
+
+    expect(operation).not.toHaveBeenCalled();
+    expect(mocks.branchOwnedEntityExists).toHaveBeenCalledWith({
+      entityType: "visit",
+      entityId: "visit-from-other-branch",
+      branchCode: "el-alto"
     });
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        result: "denied",
+        context: expect.objectContaining({ reason: "entity_not_found" })
+      })
+    });
+  });
+
+  it("blocks critical actions until a required password change is completed", async () => {
+    mocks.getBranchContext.mockResolvedValue(
+      branchContext({
+        id: "user-3",
+        role: "super_admin",
+        mustChangePassword: true
+      })
+    );
     const operation = vi.fn(async () => auditedResult(undefined));
 
     await expect(
@@ -191,13 +254,14 @@ describe("runAuditedAction", () => {
 describe("gate de módulos en acciones auditadas", () => {
   beforeEach(() => {
     mocks.auditCreate.mockReset();
-    mocks.getCurrentInternalUser.mockReset();
+    mocks.branchOwnedEntityExists.mockReset();
+    mocks.getBranchContext.mockReset();
     mocks.getModuleAccessState.mockReset();
     mocks.auditCreate.mockResolvedValue({ id: "audit-module" });
-    mocks.getCurrentInternalUser.mockResolvedValue({
-      id: "user-1",
-      role: "super_admin"
-    });
+    mocks.branchOwnedEntityExists.mockResolvedValue(null);
+    mocks.getBranchContext.mockResolvedValue(
+      branchContext({ id: "user-1", role: "super_admin" })
+    );
   });
 
   it("rechaza la acción de un módulo apagado sin ejecutarla", async () => {
@@ -253,10 +317,9 @@ describe("gate de módulos en acciones auditadas", () => {
       active: [...sigecoModuleCodes],
       suspended: []
     });
-    mocks.getCurrentInternalUser.mockResolvedValue({
-      id: "user-2",
-      role: "enfermeria"
-    });
+    mocks.getBranchContext.mockResolvedValue(
+      branchContext({ id: "user-2", role: "enfermeria" })
+    );
 
     await expect(
       runAuditedAction(

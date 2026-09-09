@@ -10,8 +10,15 @@ import {
   permissionDeniedNotice
 } from "@/features/modules/notices";
 import { getModuleAccessState } from "@/features/modules/request-state";
-import { getCurrentInternalUser } from "@/modules/permissions";
 import { sanitizeAuditContext } from "@/modules/audit/sanitize";
+import {
+  BranchContextMismatchError,
+  BranchContextUnavailableError,
+  getBranchContext,
+  type BranchRequestContext
+} from "@/features/branches/context";
+import { getCurrentInternalUser } from "@/modules/permissions";
+import { branchOwnedEntityExists } from "@/modules/database/queries/branch-ownership";
 
 type AuditActor = {
   id: string;
@@ -43,6 +50,17 @@ type AuditedOperationInput = {
   context?: unknown;
 };
 
+type BranchAuditedOperationInput = AuditedOperationInput & { branchless?: false };
+type PlatformAuditedOperationInput = AuditedOperationInput & { branchless: true };
+type BranchAuditedOperation<T> = (
+  actor: AuditActor,
+  branchContext: BranchRequestContext
+) => Promise<AuditOperationResult<T>>;
+type PlatformAuditedOperation<T> = (
+  actor: AuditActor,
+  branchContext: null
+) => Promise<AuditOperationResult<T>>;
+
 class AuditAccessDeniedError extends Error {
   constructor(public readonly reason: string) {
     super("AUDIT_ACCESS_DENIED");
@@ -72,12 +90,59 @@ export function denyAuditedAction(reason = "policy_denied"): never {
  * `operation` se consideran fallos. Los redirect posteriores deben ejecutarse
  * después de que esta función haya terminado.
  */
+export function runAuditedAction<T>(
+  input: BranchAuditedOperationInput,
+  operation: BranchAuditedOperation<T>
+): Promise<T>;
+export function runAuditedAction<T>(
+  input: PlatformAuditedOperationInput,
+  operation: PlatformAuditedOperation<T>
+): Promise<T>;
 export async function runAuditedAction<T>(
-  input: AuditedOperationInput,
-  operation: (actor: AuditActor) => Promise<AuditOperationResult<T>>
+  input: BranchAuditedOperationInput | PlatformAuditedOperationInput,
+  operation: BranchAuditedOperation<T> | PlatformAuditedOperation<T>
 ) {
   const requestId = await getRequestId();
-  const user = await getCurrentInternalUser();
+  let branchContext: BranchRequestContext | null = null;
+  let user;
+
+  if (input.branchless) {
+    if (input.action !== "user.password.change") {
+      throw new Error("BRANCHLESS_AUDITED_ACTION_NOT_ALLOWED");
+    }
+    user = await getCurrentInternalUser();
+    if (!user) {
+      await appendAuditEvent({
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        result: "denied",
+        requestId,
+        context: { ...sanitizeAuditContext(input.context), reason: "unauthenticated" }
+      });
+      redirect("/sigeco/login");
+    }
+  } else {
+    try {
+      branchContext = await getBranchContext();
+      user = branchContext.user;
+    } catch (error) {
+      if (!(error instanceof BranchContextUnavailableError)) throw error;
+      await appendAuditEvent({
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        result: "denied",
+        requestId,
+        context: { ...sanitizeAuditContext(input.context), reason: error.reason }
+      });
+      if (error.reason === "unauthenticated") redirect("/sigeco/login");
+      if (error.reason === "password_change_required") {
+        redirect("/sigeco/cambiar-contrasena");
+      }
+      redirect("/sigeco/seleccionar-sucursal");
+    }
+  }
 
   if (!user) {
     await appendAuditEvent({
@@ -91,7 +156,12 @@ export async function runAuditedAction<T>(
     redirect("/sigeco/login");
   }
 
-  const actor = { id: user.id, role: user.role };
+  const operationalRole = branchContext?.operationalRole ?? user.role;
+  const actor = { id: user.id, role: operationalRole };
+  const auditedContext = {
+    ...sanitizeAuditContext(input.context),
+    ...(branchContext ? { branchCode: branchContext.activeBranch.code } : {})
+  };
 
   if (user.mustChangePassword && input.action !== "user.password.change") {
     await appendAuditEvent({
@@ -101,12 +171,12 @@ export async function runAuditedAction<T>(
       entityId: input.entityId,
       result: "denied",
       requestId,
-      context: { reason: "password_change_required" }
+      context: { ...auditedContext, reason: "password_change_required" }
     });
     redirect("/sigeco/cambiar-contrasena");
   }
 
-  if (!roleHasPermission(user.role, input.permission)) {
+  if (!roleHasPermission(operationalRole, input.permission)) {
     await appendAuditEvent({
       actor,
       action: input.action,
@@ -114,7 +184,7 @@ export async function runAuditedAction<T>(
       entityId: input.entityId,
       result: "denied",
       requestId,
-      context: { ...sanitizeAuditContext(input.context), reason: "missing_permission" }
+      context: { ...auditedContext, reason: "missing_permission" }
     });
     redirect(`/sigeco?aviso=${permissionDeniedNotice}`);
   }
@@ -123,7 +193,7 @@ export async function runAuditedAction<T>(
   // filtrar `module.disabled` en la auditoría y ver qué se intentó usar antes de
   // que esa etapa estuviera lanzada, sin confundirlo con una falta de permiso.
   const moduleAccess = resolveModuleAccess(
-    user.role,
+    operationalRole,
     await getModuleAccessState(),
     input.permission,
     input.module
@@ -138,6 +208,7 @@ export async function runAuditedAction<T>(
       result: "denied",
       requestId,
       context: {
+        ...(branchContext ? { branchCode: branchContext.activeBranch.code } : {}),
         reason: "module_disabled",
         attemptedAction: input.action,
         attemptedEntityType: input.entityType,
@@ -148,12 +219,14 @@ export async function runAuditedAction<T>(
     redirect(`/sigeco?aviso=${moduleDisabledNotice}`);
   }
 
-  let operationResult: AuditOperationResult<T>;
+  if (branchContext && input.entityId) {
+    const belongsToActiveBranch = await branchOwnedEntityExists({
+      entityType: input.entityType,
+      entityId: input.entityId,
+      branchCode: branchContext.activeBranch.code
+    });
 
-  try {
-    operationResult = await operation(actor);
-  } catch (error) {
-    if (error instanceof AuditAccessDeniedError) {
+    if (belongsToActiveBranch === false) {
       await appendAuditEvent({
         actor,
         action: input.action,
@@ -161,7 +234,34 @@ export async function runAuditedAction<T>(
         entityId: input.entityId,
         result: "denied",
         requestId,
-        context: { ...sanitizeAuditContext(input.context), reason: error.reason }
+        context: { ...auditedContext, reason: "entity_not_found" }
+      });
+      redirect("/sigeco");
+    }
+  }
+
+  let operationResult: AuditOperationResult<T>;
+
+  try {
+    operationResult = branchContext
+      ? await (operation as BranchAuditedOperation<T>)(actor, branchContext)
+      : await (operation as PlatformAuditedOperation<T>)(actor, null);
+  } catch (error) {
+    if (error instanceof AuditAccessDeniedError || error instanceof BranchContextMismatchError) {
+      await appendAuditEvent({
+        actor,
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        result: "denied",
+        requestId,
+        context: {
+          ...auditedContext,
+          reason:
+            error instanceof BranchContextMismatchError
+              ? "branch_context_mismatch"
+              : error.reason
+        }
       });
       redirect("/sigeco");
     }
@@ -173,7 +273,7 @@ export async function runAuditedAction<T>(
       entityId: input.entityId,
       result: "failure",
       requestId,
-      context: input.context
+      context: auditedContext
     });
     throw error;
   }
@@ -185,7 +285,10 @@ export async function runAuditedAction<T>(
     entityId: operationResult.audit?.entityId ?? input.entityId,
     result: "success",
     requestId,
-    context: operationResult.audit?.context ?? input.context
+    context: {
+      ...sanitizeAuditContext(operationResult.audit?.context ?? input.context),
+      ...(branchContext ? { branchCode: branchContext.activeBranch.code } : {})
+    }
   });
   return operationResult.value;
 }

@@ -10,7 +10,7 @@ export default async function InternalReceiptDocumentPage({
   params: Promise<{ saleId: string; documentId: string }>;
 }) {
   const user = await requirePermission("sales_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { saleId, documentId } = await params;
   const document = await getGeneratedDocument(documentId, activeBranch.code);
   if (

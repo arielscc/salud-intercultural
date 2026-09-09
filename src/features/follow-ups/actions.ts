@@ -37,7 +37,7 @@ export async function createFollowUpTaskAction(formData: FormData) {
       context: { patientId: patientId || undefined }
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = createFollowUpTaskSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -82,7 +82,7 @@ export async function createDoctorVisitFollowUpAction(formData: FormData) {
       context: { visitId: visitId || undefined }
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       // El seguimiento agendado por el médico es solo para el médico (super_admin
       // también). Recepción/otros usan su propio flujo.
       if (user.role !== "medico" && user.role !== "super_admin") {
@@ -144,7 +144,7 @@ export async function createFollowUpAttemptAction(formData: FormData) {
       entityId: taskId || undefined
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = createFollowUpAttemptSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {

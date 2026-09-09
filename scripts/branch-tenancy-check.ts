@@ -100,27 +100,6 @@ function temporaryDebt(
 // una excepción que deja de coincidir también hace fallar el chequeo.
 export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
   ...temporaryDebt(
-    2,
-    "Plataforma SIGECO",
-    "El contexto central eliminará la selección implícita de sucursal.",
-    [
-      ["src/features/branches/context.ts", "activeBranch", "branch-fallback"],
-      ["src/features/branches/policy.ts", "defaultBranchCode", "hardcoded-branch-literal"]
-    ]
-  ),
-  ...temporaryDebt(
-    3,
-    "Identidad y accesos",
-    "La edición de membresías dejará de proponer El Alto como sede implícita.",
-    [
-      [
-        "src/app/(internal)/sigeco/(app)/usuarios/[userId]/page.tsx",
-        "UserDetailPage",
-        "hardcoded-branch-literal"
-      ]
-    ]
-  ),
-  ...temporaryDebt(
     7,
     "Operación clínica",
     "Las consultas de visitas exigirán el contexto de sede autenticado.",
@@ -310,35 +289,6 @@ export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
       ["src/modules/database/queries/sales.ts", "getTodayCollections", "optional-branch-code"],
       ["src/modules/database/queries/sales.ts", "SaleListInput", "optional-branch-code"],
       ["src/modules/database/queries/sales.ts", "getSalesSummary", "optional-branch-code"]
-    ]
-  ),
-  ...temporaryDebt(
-    13,
-    "Seguimiento y reportes",
-    "Los reportes y recorridos se limitarán a la sede seleccionada.",
-    [
-      [
-        "src/app/(internal)/sigeco/(app)/reportes/recorrido/page.tsx",
-        "branchLabel",
-        "hardcoded-branch-literal"
-      ],
-      [
-        "src/app/(internal)/sigeco/(app)/reportes/tiempos/page.tsx",
-        "branchLabel",
-        "hardcoded-branch-literal"
-      ],
-      [
-        "src/modules/database/queries/area-times.ts",
-        "AreaTimeReportFilters",
-        "optional-branch-code"
-      ],
-      ["src/modules/database/queries/area-times.ts", "steps", "branch-fallback"],
-      [
-        "src/modules/database/queries/patient-journey.ts",
-        "PatientJourneyFilters",
-        "optional-branch-code"
-      ],
-      ["src/modules/database/queries/patient-journey.ts", "where", "branch-fallback"]
     ]
   )
 ];

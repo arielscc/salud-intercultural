@@ -48,7 +48,7 @@ export async function saveReminderRuleVersionAction(formData: FormData) {
       entityId: String(formData.get("ruleId") ?? "") || undefined
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = reminderRuleVersionSchema.safeParse(
         reminderRuleFormData(formData)
       );
@@ -83,7 +83,7 @@ export async function generateReminderCandidatesAction() {
       entityType: "supervised_reminder_candidate"
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const generated = await generateSupervisedReminderCandidates({
         branchCode: activeBranch.code,
         generatedById: user.id
@@ -108,7 +108,7 @@ export async function reviewReminderCandidateAction(formData: FormData) {
       entityId: candidateId || undefined
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = reminderCandidateReviewSchema.safeParse(
         Object.fromEntries(formData.entries())
       );

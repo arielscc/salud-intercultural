@@ -69,7 +69,7 @@ function dailyVisitHref(visit: {
 
 export default async function ConsultationsPage() {
   const user = await requirePermission("clinical_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   // Barrido perezoso: cierra por abandono ("no atendido") a quienes fueron
   // derivados al médico pero no entraron a la consulta dentro de su día, antes de
   // leer la bandeja para que no aparezcan en la lista del día de hoy.

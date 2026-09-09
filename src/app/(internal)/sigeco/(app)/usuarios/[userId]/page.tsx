@@ -256,7 +256,7 @@ export default async function UserDetailPage({ params, searchParams }: UserDetai
                 className={internalInputClassName}
                 name="defaultBranchCode"
                 defaultValue={
-                  user.branchAssignments.find((assignment) => assignment.isDefault)?.branchCode ?? "el-alto"
+                  user.branchAssignments.find((assignment) => assignment.isDefault)?.branchCode ?? ""
                 }
                 required
               >

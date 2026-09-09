@@ -1,7 +1,6 @@
 import type { InternalRole, Prisma } from "@/generated/prisma/client";
 import { assignableInternalRoles } from "@/features/internal-auth/permissions";
 import { prisma } from "@/modules/database";
-import { defaultBranchCode } from "@/features/branches/policy";
 
 export type InternalUserManagementErrorCode =
   | "EMAIL_EXISTS"
@@ -9,7 +8,8 @@ export type InternalUserManagementErrorCode =
   | "USER_NOT_FOUND"
   | "SELF_ROLE_CHANGE"
   | "SELF_DEACTIVATE"
-  | "LAST_SUPER_ADMIN";
+  | "LAST_SUPER_ADMIN"
+  | "INVALID_BRANCH_ASSIGNMENT";
 
 export class InternalUserManagementError extends Error {
   constructor(public readonly code: InternalUserManagementErrorCode) {
@@ -26,7 +26,8 @@ function assertAssignableRole(role: InternalRole) {
 
 async function ensureSuperAdminBranchAssignments(
   tx: Prisma.TransactionClient,
-  userId: string
+  userId: string,
+  preferredBranchCode: string
 ) {
   const branches = await tx.clinicBranch.findMany({
     where: { status: { not: "inactive" } },
@@ -44,10 +45,10 @@ async function ensureSuperAdminBranchAssignments(
   });
   if (activeDefault) return;
 
-  const preferred =
-    branches.find((branch) => branch.code === defaultBranchCode && branch.status === "active") ??
-    branches.find((branch) => branch.status === "active");
-  if (!preferred) return;
+  const preferred = branches.find(
+    (branch) => branch.code === preferredBranchCode && branch.status === "active"
+  );
+  if (!preferred) throw new InternalUserManagementError("INVALID_BRANCH_ASSIGNMENT");
 
   await tx.internalUserBranch.updateMany({ where: { userId }, data: { isDefault: false } });
   await tx.internalUserBranch.update({
@@ -122,6 +123,7 @@ export async function createManagedInternalUser(input: {
   email: string;
   role: InternalRole;
   passwordHash: string;
+  branchCode: string;
 }) {
   assertAssignableRole(input.role);
   return prisma.$transaction(async (tx) => {
@@ -143,10 +145,10 @@ export async function createManagedInternalUser(input: {
     });
 
     if (input.role === "super_admin") {
-      await ensureSuperAdminBranchAssignments(tx, user.id);
+      await ensureSuperAdminBranchAssignments(tx, user.id, input.branchCode);
     } else {
       await tx.internalUserBranch.create({
-        data: { userId: user.id, branchCode: defaultBranchCode, isDefault: true }
+        data: { userId: user.id, branchCode: input.branchCode, isDefault: true }
       });
     }
 
@@ -159,6 +161,7 @@ export async function updateManagedInternalUserAccess(input: {
   userId: string;
   role: InternalRole;
   active: boolean;
+  defaultBranchCode: string;
 }) {
   assertAssignableRole(input.role);
 
@@ -192,7 +195,11 @@ export async function updateManagedInternalUserAccess(input: {
         data: { role: input.role, active: input.active }
       });
       if (input.role === "super_admin") {
-        await ensureSuperAdminBranchAssignments(tx, input.userId);
+        await ensureSuperAdminBranchAssignments(
+          tx,
+          input.userId,
+          input.defaultBranchCode
+        );
       }
       let revokedSessions = 0;
 

@@ -127,7 +127,7 @@ export default async function AdministrationPage({
   // La venta de mostrador no espera la derivación del médico: Administración
   // la inicia por su cuenta.
   const canCreateSale = canUse(user.role, moduleAccess, "sales_write");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const isPersonalAdministrationAccount = user.role === "administracion";
   const isSuperAdmin = user.role === "super_admin";
   const [

@@ -268,14 +268,14 @@ export async function getVisitAreaTimingState(visitId: string) {
 }
 
 export type AreaTimeReportFilters = {
+  branchCode: string;
   from?: Date;
   to?: Date;
   area?: (typeof measuredRouteAreas)[number];
-  branchCode?: string;
 };
 
 export async function getAreaTimeReport(
-  input: AreaTimeReportFilters = {},
+  input: AreaTimeReportFilters,
   asOf = new Date()
 ) {
   return withDatabaseError("getAreaTimeReport", async () => {
@@ -288,7 +288,7 @@ export async function getAreaTimeReport(
             : undefined,
         route: {
           visit: {
-            branchCode: input.branchCode || undefined,
+            branchCode: input.branchCode,
             isTestData: false,
             status: { not: "cancelled" }
           }
@@ -342,20 +342,5 @@ export async function getAreaTimeReport(
       }));
     });
     return aggregateAreaTimeReport(events, asOf);
-  });
-}
-
-export async function getAreaTimeReportBranches() {
-  return withDatabaseError("getAreaTimeReportBranches", async () => {
-    const branches = await prisma.visit.groupBy({
-      by: ["branchCode"],
-      where: { isTestData: false, status: { not: "cancelled" } },
-      _count: { _all: true },
-      orderBy: { branchCode: "asc" }
-    });
-    return branches.map((branch) => ({
-      value: branch.branchCode,
-      count: branch._count._all
-    }));
   });
 }

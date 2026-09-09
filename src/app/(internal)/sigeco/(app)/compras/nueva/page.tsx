@@ -19,7 +19,7 @@ export default async function NewPurchasePage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requirePermission("purchases_write");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const query = await searchParams;
   const [suppliers, items, urgentExpenses] = await Promise.all([
     getActiveSuppliers(),

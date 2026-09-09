@@ -100,7 +100,7 @@ const emptyMessage = (
 export default async function SalesListPage({ searchParams }: SalesPageProps) {
   const user = await requirePermission("sales_read");
   const [moduleAccess, params] = await Promise.all([getModuleAccessState(), searchParams]);
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
 
   const search = params.buscar?.trim() ?? "";
   const period: SalePeriod = periodOptions.some((option) => option.value === params.periodo)

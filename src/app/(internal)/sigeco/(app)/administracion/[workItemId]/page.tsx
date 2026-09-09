@@ -84,7 +84,7 @@ export default async function AdministrationWorkItemPage({
 }: AdministrationWorkItemPageProps) {
   const user = await requirePermission("sales_read");
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { workItemId } = await params;
   const query = await searchParams;
   const [item, inventoryItems] = await Promise.all([

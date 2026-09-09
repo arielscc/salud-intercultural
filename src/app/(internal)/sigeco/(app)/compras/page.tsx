@@ -63,7 +63,7 @@ export default async function PurchasesPage({
 }) {
   const user = await requirePermission("purchases_read");
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = 30;

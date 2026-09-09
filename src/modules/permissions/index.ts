@@ -12,6 +12,7 @@ import {
 } from "@/features/internal-auth/session";
 import { appendAuditEvent } from "@/modules/audit/append";
 import { getModuleAccessState } from "@/features/modules/request-state";
+import { requireBranchPageContext } from "@/features/branches/boundaries";
 
 export async function getCurrentInternalUser() {
   const token = await getInternalSessionToken();
@@ -72,10 +73,11 @@ export async function requirePermission(
   permission: InternalPermission,
   options?: { module?: SigecoModuleCode }
 ) {
-  const user = await requireInternalUser();
-  const actor = { id: user.id, role: user.role };
+  const branchContext = await requireBranchPageContext();
+  const { user, operationalRole } = branchContext;
+  const actor = { id: user.id, role: operationalRole };
 
-  if (!roleHasPermission(user.role, permission)) {
+  if (!roleHasPermission(operationalRole, permission)) {
     // Entrar por URL a una pantalla que el rol no tiene deja rastro: el menú
     // nunca la ofrece, así que un intento es una señal, no ruido.
     await appendAuditEvent({
@@ -90,7 +92,7 @@ export async function requirePermission(
 
   // Un módulo suspendido conserva la lectura para Dirección y el super
   // administrador; la escritura queda bloqueada para todos, ellos incluidos.
-  if ((await moduleAccessFor(user.role, permission, options?.module)) === "blocked") {
+  if ((await moduleAccessFor(operationalRole, permission, options?.module)) === "blocked") {
     await appendAuditEvent({
       actor,
       action: "module.disabled",
@@ -116,12 +118,12 @@ export async function requirePermission(
  * un módulo pero no piden un permiso propio.
  */
 export async function requireModule(module: SigecoModuleCode) {
-  const user = await requireInternalUser();
+  const { user, operationalRole } = await requireBranchPageContext();
   const { active } = await getModuleAccessState();
 
   if (!active.includes(module) && module !== "core") {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "module.disabled",
       entityType: "module",
       entityId: module,

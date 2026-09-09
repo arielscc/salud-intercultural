@@ -10,7 +10,7 @@ export default async function PrescriptionDocumentPage({
   params: Promise<{ visitId: string; documentId: string }>;
 }) {
   const user = await requirePermission("clinical_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { visitId, documentId } = await params;
   const document = await getGeneratedDocument(documentId, activeBranch.code);
   if (

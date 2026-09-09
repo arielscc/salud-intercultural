@@ -38,7 +38,7 @@ const emptySalesMessage = (
 export default async function AdministrationClientPage({ params }: ClientPageProps) {
   const user = await requirePermission("patients_read", { module: "administracion" });
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { id } = await params;
   const client = await getWalkInClientById(id);
 

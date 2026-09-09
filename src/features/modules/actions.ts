@@ -8,7 +8,6 @@ import {
   setModuleActivation
 } from "@/modules/database/queries/modules";
 import { moduleActivationSchema } from "@/features/modules/schemas/module-activation.schema";
-import { getActiveBranchCode } from "@/features/branches/active-branch";
 
 const modulesPath = "/sigeco/modulos";
 
@@ -48,11 +47,6 @@ export async function setModuleActivationAction(formData: FormData) {
   }
 
   const { code, active, reason } = parsed.data;
-  const branchCode = await getActiveBranchCode();
-
-  if (!branchCode) {
-    redirect(`${modulesPath}?error=missing_branch`);
-  }
 
   try {
     await runAuditedAction(
@@ -61,9 +55,10 @@ export async function setModuleActivationAction(formData: FormData) {
         action: active ? "module.activate" : "module.deactivate",
         entityType: "module",
         entityId: code,
-        context: { module: code, branch: branchCode }
+        context: { module: code }
       },
-      async (user) => {
+      async (user, branchContext) => {
+        const branchCode = branchContext.activeBranch.code;
         const activation = await setModuleActivation({
           code,
           branchCode,

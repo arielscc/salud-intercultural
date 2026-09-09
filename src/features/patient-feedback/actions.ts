@@ -53,7 +53,7 @@ export async function createFeedbackRequestAction(
         entityType: "patient_feedback_request"
       },
       async (user) => {
-        const { activeBranch } = await getBranchContext(user);
+        const { activeBranch } = await getBranchContext();
         const created = await createPatientFeedbackRequest({
           data: parsed.data,
           createdById: user.id,
@@ -106,7 +106,7 @@ export async function updateFeedbackCaseAction(formData: FormData) {
       entityId: caseId || undefined
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const parsed = updateFeedbackCaseSchema.safeParse(
         Object.fromEntries(formData.entries())
       );
@@ -144,7 +144,7 @@ export async function cancelFeedbackRequestAction(formData: FormData) {
       entityId: parsed.data.requestId
     },
     async (user) => {
-      const { activeBranch } = await getBranchContext(user);
+      const { activeBranch } = await getBranchContext();
       const cancelled = await cancelPatientFeedbackRequest({
         data: parsed.data,
         branchCode: activeBranch.code

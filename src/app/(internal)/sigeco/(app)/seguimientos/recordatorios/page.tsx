@@ -86,7 +86,7 @@ export default async function SupervisedRemindersPage({
   searchParams
 }: ReminderPageProps) {
   const user = await requirePermission("followups_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const moduleAccess = await getModuleAccessState();
   const query = await searchParams;
   const status = statuses.includes(query.estado as SupervisedReminderCandidateStatus)

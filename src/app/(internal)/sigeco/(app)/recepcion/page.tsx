@@ -196,7 +196,7 @@ export default async function ReceptionPage({
       ? await requirePermission("patients_read", { module: "recepcion" })
       : await requirePermission("visits_read");
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const canReadDuplicates = roleHasPermission(
     user.role,
     "patient_duplicates_read"

@@ -51,7 +51,7 @@ export async function createManagedInternalUserAction(formData: FormData) {
       action: "user.create",
       entityType: "internal_user"
     },
-    async () => {
+    async (_actor, branchContext) => {
       const parsed = createInternalUserSchema.safeParse(parseFormData(formData));
       if (!parsed.success) {
         const code = hasFieldIssue(parsed.error, "temporaryPassword")
@@ -65,7 +65,8 @@ export async function createManagedInternalUserAction(formData: FormData) {
           name: parsed.data.name,
           email: parsed.data.email,
           role: parsed.data.role,
-          passwordHash: await hashPassword(parsed.data.temporaryPassword)
+          passwordHash: await hashPassword(parsed.data.temporaryPassword),
+          branchCode: branchContext.activeBranch.code
         });
         return auditedResult(created, {
           entityId: created.id,
@@ -90,7 +91,7 @@ export async function updateManagedInternalUserAccessAction(formData: FormData) 
       entityType: "internal_user",
       entityId: targetId || undefined
     },
-    async (actor) => {
+    async (actor, branchContext) => {
       const parsed = updateInternalUserAccessSchema.safeParse(parseFormData(formData));
       if (!parsed.success) redirect(`/sigeco/usuarios/${targetId}?error=invalid-access`);
 
@@ -99,7 +100,8 @@ export async function updateManagedInternalUserAccessAction(formData: FormData) 
           actorId: actor.id,
           userId: parsed.data.userId,
           role: parsed.data.role,
-          active: parsed.data.active
+          active: parsed.data.active,
+          defaultBranchCode: branchContext.activeBranch.code
         });
         return auditedResult(result, {
           entityId: result.user.id,
@@ -283,7 +285,8 @@ export async function changeOwnInternalPasswordAction(formData: FormData) {
     {
       permission: "internal_access",
       action: "user.password.change",
-      entityType: "internal_user"
+      entityType: "internal_user",
+      branchless: true
     },
     async (actor) => {
       const parsed = changeInternalPasswordSchema.safeParse(parseFormData(formData));

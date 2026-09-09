@@ -36,7 +36,7 @@ export default async function FollowUpDetailPage({
   searchParams
 }: FollowUpDetailPageProps) {
   const user = await requirePermission("followups_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const [{ taskId }, query] = await Promise.all([params, searchParams]);
   const task = await getFollowUpTaskById(taskId, activeBranch.code, user.role);
 

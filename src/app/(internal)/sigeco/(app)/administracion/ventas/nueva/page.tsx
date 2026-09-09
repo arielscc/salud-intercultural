@@ -158,7 +158,7 @@ export default async function NewSalePage({ searchParams }: NewSalePageProps) {
   const client = await getWalkInClientById(params.cliente);
   if (!client) notFound();
 
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const [catalogItems, inventoryItems] = await Promise.all([
     getActiveServiceCatalogItems(),
     getInventoryItems({

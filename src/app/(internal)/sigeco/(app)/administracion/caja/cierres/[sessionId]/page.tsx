@@ -31,7 +31,7 @@ export default async function CashCloseReportPage({
   params
 }: CashCloseReportPageProps) {
   const user = await requirePermission("cash_sessions_read");
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { sessionId } = await params;
   const session = await getCashSessionCloseReport(sessionId, activeBranch.code);
 

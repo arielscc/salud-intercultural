@@ -3,9 +3,8 @@ import { NextResponse } from "next/server";
 import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { appendAuditEvent } from "@/modules/audit/service";
 import { getPurchaseDocumentById } from "@/modules/database/queries/purchases";
-import { getCurrentInternalUser } from "@/modules/permissions";
 import { readPurchaseDocument } from "@/modules/purchase-documents/storage";
-import { getBranchContext } from "@/features/branches/context";
+import { getBranchExportContext } from "@/features/branches/boundaries";
 
 export const runtime = "nodejs";
 
@@ -24,13 +23,12 @@ export async function GET(
   { params }: { params: Promise<{ documentId: string }> }
 ) {
   const { documentId } = await params;
-  const user = await getCurrentInternalUser();
-  if (!user) {
-    return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
-  }
-  if (!roleHasPermission(user.role, "purchases_read")) {
+  const branchAccess = await getBranchExportContext();
+  if (!branchAccess.ok) return branchAccess.response;
+  const { user, activeBranch, operationalRole } = branchAccess.context;
+  if (!roleHasPermission(operationalRole, "purchases_read")) {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "purchase.document.read",
       entityType: "purchase_document",
       entityId: documentId,
@@ -39,7 +37,6 @@ export async function GET(
     });
     return NextResponse.json({ error: "No tienes permiso." }, { status: 403 });
   }
-  const { activeBranch } = await getBranchContext(user);
   const document = await getPurchaseDocumentById(
     documentId,
     activeBranch.code
@@ -54,7 +51,7 @@ export async function GET(
       throw new Error("PURCHASE_DOCUMENT_INTEGRITY_FAILURE");
     }
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "purchase.document.read",
       entityType: "purchase_document",
       entityId: document.id,
@@ -72,7 +69,7 @@ export async function GET(
     });
   } catch {
     await appendAuditEvent({
-      actor: { id: user.id, role: user.role },
+      actor: { id: user.id, role: operationalRole },
       action: "purchase.document.read",
       entityType: "purchase_document",
       entityId: document.id,

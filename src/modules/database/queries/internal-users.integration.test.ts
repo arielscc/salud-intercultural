@@ -41,7 +41,8 @@ describe("internal user management integration", () => {
       name: "Administrador global",
       email: "global-admin@example.com",
       role: "super_admin",
-      passwordHash: await hashPassword("clave-segura-para-pruebas")
+      passwordHash: await hashPassword("clave-segura-para-pruebas"),
+      branchCode: "el-alto"
     });
 
     const assignments = await prisma.internalUserBranch.findMany({
@@ -67,7 +68,8 @@ describe("internal user management integration", () => {
         actorId: "otro-actor",
         userId: admin.id,
         role: "super_admin",
-        active: false
+        active: false,
+        defaultBranchCode: "el-alto"
       })
     ).rejects.toMatchObject({
       code: "LAST_SUPER_ADMIN"
@@ -77,7 +79,8 @@ describe("internal user management integration", () => {
         actorId: "otro-actor",
         userId: admin.id,
         role: "direccion",
-        active: true
+        active: true,
+        defaultBranchCode: "el-alto"
       })
     ).rejects.toMatchObject({
       code: "LAST_SUPER_ADMIN"
@@ -97,7 +100,8 @@ describe("internal user management integration", () => {
         actorId: admin.id,
         userId: admin.id,
         role: "direccion",
-        active: true
+        active: true,
+        defaultBranchCode: "el-alto"
       })
     ).rejects.toMatchObject({ code: "SELF_ROLE_CHANGE" });
     await expect(
@@ -105,7 +109,8 @@ describe("internal user management integration", () => {
         actorId: admin.id,
         userId: admin.id,
         role: "super_admin",
-        active: false
+        active: false,
+        defaultBranchCode: "el-alto"
       })
     ).rejects.toMatchObject({ code: "SELF_DEACTIVATE" });
   });
@@ -119,7 +124,8 @@ describe("internal user management integration", () => {
       actorId: actor.id,
       userId: target.id,
       role: "administracion",
-      active: true
+      active: true,
+      defaultBranchCode: "el-alto"
     });
 
     expect(result.revokedSessions).toBe(1);
@@ -132,7 +138,8 @@ describe("internal user management integration", () => {
         name: "Rol Antiguo",
         email: "captacion-nueva@example.com",
         role: "captacion",
-        passwordHash: await hashPassword("clave-segura-para-pruebas")
+        passwordHash: await hashPassword("clave-segura-para-pruebas"),
+        branchCode: "el-alto"
       })
     ).rejects.toMatchObject({ code: "INVALID_ROLE" });
   });

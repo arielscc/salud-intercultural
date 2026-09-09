@@ -49,7 +49,7 @@ export default async function SaleDetailPage({
 }: SaleDetailPageProps) {
   const user = await requirePermission("sales_read");
   const moduleAccess = await getModuleAccessState();
-  const { activeBranch } = await getBranchContext(user);
+  const { activeBranch } = await getBranchContext();
   const { saleId } = await params;
   const query = await searchParams;
   const sale = await getSaleById(saleId, activeBranch.code);

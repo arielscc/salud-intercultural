@@ -1,6 +1,5 @@
 import type { ClinicBranchStatus, InternalRole } from "@/generated/prisma/client";
 
-export const defaultBranchCode = "el-alto";
 export const activeBranchCookieName = "sigeco_active_branch";
 
 export const branchStatusLabels: Record<ClinicBranchStatus, string> = {

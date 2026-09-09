@@ -55,7 +55,7 @@ const operationalAreas: PatientRouteArea[] = [
 export default async function SigecoDashboardPage() {
   const user = await requireInternalUser();
   const [{ activeBranch }, moduleAccess] = await Promise.all([
-    getBranchContext(user),
+    getBranchContext(),
     getModuleAccessState()
   ]);
   // Cada indicador depende del permiso del rol y de que su módulo esté lanzado.
