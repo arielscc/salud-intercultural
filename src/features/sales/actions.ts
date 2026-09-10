@@ -66,6 +66,7 @@ export async function attendAdministrationWorkItemAction(formData: FormData) {
       try {
         await recordAreaTimeTransition({
           data: { visitId: updated.visitId, action: "start_attention" },
+          branchCode: activeBranch.code,
           userId: user.id,
           userRole: user.role
         });
@@ -424,10 +425,14 @@ export async function sendPaidStudiesToNursingAction(formData: FormData) {
       entityType: "work_item",
       entityId: workItemId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       if (!workItemId) redirect("/sigeco/administracion?error=invalid-study-order");
       try {
-        await releasePaidStudiesToNursing({ workItemId, userId: user.id });
+        await releasePaidStudiesToNursing({
+          workItemId,
+          branchCode: branchContext.activeBranch.code,
+          userId: user.id
+        });
       } catch (error) {
         if (hasPaidStudyFlowError(error, "STUDY_PAYMENT_REQUIRED")) {
           redirect(`/sigeco/administracion/${workItemId}?error=pago-pendiente`);

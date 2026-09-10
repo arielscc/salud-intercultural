@@ -493,6 +493,7 @@ describe("reception intake integration", () => {
 
     await updateVisitRouteStatus({
       visitId: result.visit.id,
+      branchCode: "cochabamba",
       userId: user.id,
       status: "completed",
       area: "cierre",
@@ -512,7 +513,7 @@ describe("reception intake integration", () => {
       currentMedication: null
     });
 
-    const closedVisit = await getVisitById(result.visit.id);
+    const closedVisit = await getVisitById(result.visit.id, "cochabamba");
     const cochabambaVisits = await getVisits({
       branchCode: "cochabamba",
       originCity: "Cochabamba",
@@ -581,6 +582,7 @@ describe("reception intake integration", () => {
 
     await recordVisitDiscontinuation({
       visitId: second.visit.id,
+      branchCode: "el-alto",
       recordedById: user.id,
       reason: "wait",
       pendingTypes: ["consultation"],

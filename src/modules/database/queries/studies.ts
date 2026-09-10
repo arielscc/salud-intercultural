@@ -2,6 +2,7 @@ import type { StudyStatus, StudyType } from "@/generated/prisma/client";
 import { prisma, withDatabaseError } from "@/modules/database";
 
 export async function createStudyRecord(input: {
+  branchCode: string;
   patientId: string;
   visitId?: string;
   workItemId?: string;
@@ -17,9 +18,10 @@ export async function createStudyRecord(input: {
 }) {
   return withDatabaseError("createStudyRecord", async () => {
     return prisma.$transaction(async (tx) => {
+      const { branchCode, ...studyInput } = input;
       const study = await tx.study.create({
         data: {
-          ...input,
+          ...studyInput,
           performedAt: input.performedAt ?? new Date()
         }
       });
@@ -35,11 +37,14 @@ export async function createStudyRecord(input: {
         const remainingOrders = await tx.clinicalOrder.count({
           where: {
             workItemId: input.workItemId,
+            visit: { branchCode },
             status: { in: ["pending", "acknowledged", "blocked"] }
           }
         });
         await tx.visitWorkItem.update({
-          where: { id: input.workItemId },
+          where: {
+            id_branchCode: { id: input.workItemId, branchCode }
+          },
           data: remainingOrders === 0
             ? { status: "completed", completedAt: new Date() }
             : { status: "in_progress", completedAt: null }

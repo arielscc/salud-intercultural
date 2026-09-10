@@ -91,13 +91,11 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
   const { activeBranch } = await getBranchContext();
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const [visit, studyCatalogItems] = await Promise.all([
-    getVisitById(id),
+    getVisitById(id, activeBranch.code),
     getActiveStudyCatalogItems()
   ]);
 
   if (!visit) notFound();
-  if (visit.branchCode !== activeBranch.code) notFound();
-
   const isActive = isActiveVisitStatus(visit.status);
   const currentArea = visit.route?.currentArea;
   const isOutsideReception = isActive && currentArea && currentArea !== "recepcion";

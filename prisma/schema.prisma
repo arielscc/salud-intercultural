@@ -878,6 +878,13 @@ model ClinicBranch {
   campaignAssignments     CaptureCampaignBranch[]
   visitAttributions       VisitAttribution[]
   attributionTouches      VisitAttributionTouch[]
+  visitDiscontinuations   VisitDiscontinuation[]
+  visitStatusHistory      VisitStatusHistory[]
+  receptionCheckIns       ReceptionCheckIn[]
+  patientRoutes           PatientRoute[]
+  patientRouteSteps       PatientRouteStep[]
+  visitAreaTimeEvents     VisitAreaTimeEvent[]
+  visitWorkItems          VisitWorkItem[]
 
   @@index([status, name])
 }
@@ -1305,7 +1312,7 @@ model PatientNote {
 
 model Visit {
   id                        String                        @id @default(cuid())
-  idempotencyKey            String?                       @unique
+  idempotencyKey            String?
   patientId                 String
   branchCode                String
   patientNameSnapshot       String
@@ -1369,6 +1376,7 @@ model Visit {
   feedbackSubmission        PatientFeedback?
 
   @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([patientId])
   @@index([patientId, branchCode])
   @@index([branchCode, checkedInAt])
@@ -1385,6 +1393,7 @@ model Visit {
 model VisitDiscontinuation {
   id             String                     @id @default(cuid())
   visitId        String                     @unique
+  branchCode     String
   fromStatus     VisitStatus
   area           PatientRouteArea
   reason         VisitDiscontinuationReason
@@ -1394,10 +1403,14 @@ model VisitDiscontinuation {
   followUpTaskId String?                    @unique
   occurredAt     DateTime                   @default(now())
   createdAt      DateTime                   @default(now())
-  visit          Visit                      @relation(fields: [visitId], references: [id], onDelete: Restrict)
+  visit          Visit                      @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch         ClinicBranch               @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   recordedBy     InternalUser?              @relation("VisitDiscontinuationRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
   followUpTask   FollowUpTask?              @relation(fields: [followUpTaskId], references: [id], onDelete: SetNull)
 
+  @@unique([visitId, branchCode])
+  @@index([branchCode, occurredAt])
+  @@index([branchCode, reason, occurredAt])
   @@index([reason, occurredAt])
   @@index([area, occurredAt])
   @@index([recordedById, occurredAt])
@@ -1512,15 +1525,17 @@ model VisitAttributionTouch {
 model VisitStatusHistory {
   id         String        @id @default(cuid())
   visitId    String
+  branchCode String
   userId     String?
   fromStatus VisitStatus?
   toStatus   VisitStatus
   note       String?
   createdAt  DateTime      @default(now())
-  visit      Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visit      Visit         @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch     ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   user       InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([visitId])
+  @@index([branchCode, visitId, createdAt])
   @@index([userId])
   @@index([createdAt])
 }
@@ -1811,27 +1826,36 @@ model ClinicalOrder {
 }
 
 model ReceptionCheckIn {
-  id        String        @id @default(cuid())
-  visitId   String        @unique
-  userId    String?
-  note      String?
-  createdAt DateTime      @default(now())
-  visit     Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  user      InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id         String        @id @default(cuid())
+  visitId    String        @unique
+  branchCode String
+  userId     String?
+  note       String?
+  createdAt  DateTime      @default(now())
+  visit      Visit         @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch     ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  user       InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@unique([visitId, branchCode])
+  @@index([branchCode, createdAt])
   @@index([userId])
 }
 
 model PatientRoute {
   id          String             @id @default(cuid())
   visitId     String             @unique
+  branchCode  String
   currentArea PatientRouteArea   @default(recepcion)
   active      Boolean            @default(true)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
-  visit       Visit              @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visit       Visit              @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch      ClinicBranch       @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   steps       PatientRouteStep[]
 
+  @@unique([id, branchCode])
+  @@unique([visitId, branchCode])
+  @@index([branchCode, active, currentArea])
   @@index([currentArea])
   @@index([active])
 }
@@ -1839,15 +1863,18 @@ model PatientRoute {
 model PatientRouteStep {
   id         String               @id @default(cuid())
   routeId    String
+  branchCode String
   area       PatientRouteArea
   status     VisitStatus
   note       String?
   startedAt  DateTime             @default(now())
   endedAt    DateTime?
-  route      PatientRoute         @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  route      PatientRoute         @relation(fields: [routeId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch     ClinicBranch         @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   timeEvents VisitAreaTimeEvent[]
 
-  @@index([routeId])
+  @@unique([id, branchCode])
+  @@index([branchCode, routeId, startedAt])
   @@index([area])
   @@index([startedAt])
 }
@@ -1859,6 +1886,7 @@ model VisitAreaTimeEvent {
   id           String                 @id @default(cuid())
   visitId      String
   routeStepId  String
+  branchCode   String
   area         PatientRouteArea
   type         VisitAreaTimeEventType
   sequence     Int
@@ -1867,12 +1895,14 @@ model VisitAreaTimeEvent {
   recordedById String?
   occurredAt   DateTime               @default(now())
   createdAt    DateTime               @default(now())
-  visit        Visit                  @relation(fields: [visitId], references: [id], onDelete: Restrict)
-  routeStep    PatientRouteStep       @relation(fields: [routeStepId], references: [id], onDelete: Restrict)
+  visit        Visit                  @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  routeStep    PatientRouteStep       @relation(fields: [routeStepId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch       ClinicBranch           @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   recordedBy   InternalUser?          @relation("VisitAreaTimeEventRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
 
   @@unique([routeStepId, sequence])
-  @@index([visitId, occurredAt])
+  @@index([branchCode, visitId, occurredAt])
+  @@index([branchCode, routeStepId, occurredAt])
   @@index([routeStepId, occurredAt])
   @@index([area, occurredAt])
   @@index([type, occurredAt])
@@ -1881,6 +1911,7 @@ model VisitAreaTimeEvent {
 model VisitWorkItem {
   id                     String                  @id @default(cuid())
   visitId                String
+  branchCode             String
   createdById            String?
   /// Quién está atendiendo esta tarea (p. ej. la enfermera que tomó al paciente).
   /// Permite trabajo en paralelo: cada tarea la atiende un responsable distinto.
@@ -1893,7 +1924,8 @@ model VisitWorkItem {
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   completedAt            DateTime?
-  visit                  Visit                   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visit                  Visit                   @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch                 ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   createdBy              InternalUser?           @relation("WorkItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   assignedTo             InternalUser?           @relation("WorkItemAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   clinicalOrders         ClinicalOrder[]
@@ -1903,7 +1935,9 @@ model VisitWorkItem {
   sales                  Sale[]
   followUpTasks          FollowUpTask[]
 
-  @@index([visitId])
+  @@unique([id, branchCode])
+  @@index([branchCode, visitId])
+  @@index([branchCode, area, status, createdAt])
   @@index([createdById])
   @@index([assignedToId])
   @@index([area, status])

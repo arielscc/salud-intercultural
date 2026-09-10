@@ -14,7 +14,7 @@ export async function recordAreaTimeTransitionAction(formData: FormData) {
       entityType: "visit",
       entityId: visitId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = areaTimeTransitionSchema.safeParse(
         Object.fromEntries(formData.entries())
       );
@@ -23,6 +23,7 @@ export async function recordAreaTimeTransitionAction(formData: FormData) {
       }
       const event = await recordAreaTimeTransition({
         data: parsed.data,
+        branchCode: branchContext.activeBranch.code,
         userId: user.id,
         userRole: user.role
       });

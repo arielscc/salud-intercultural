@@ -157,6 +157,7 @@ async function main() {
     });
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: branch.code,
       userId: doctor.id,
       status: "in_consultation",
       area: "medico",

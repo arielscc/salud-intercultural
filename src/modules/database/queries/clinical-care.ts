@@ -306,7 +306,7 @@ function derivedFromAreaOf(
 }
 
 export async function getConsultationVisits(
-  input: PaginationInput & { branchCode?: string } = {}
+  input: PaginationInput & { branchCode: string }
 ) {
   const pagination = getPagination(input);
 
@@ -333,7 +333,10 @@ export async function getConsultationVisits(
         // Última vez que la visita fue derivada al médico (para mostrar la "llegada"
         // real a consulta, no el check-in original) y desde qué área llegó.
         statusHistory: {
-          where: { toStatus: "in_consultation" },
+          where: {
+            branchCode: input.branchCode,
+            toStatus: "in_consultation"
+          },
           orderBy: { createdAt: "desc" },
           take: 1,
           select: { createdAt: true, fromStatus: true }
@@ -365,7 +368,7 @@ export async function getConsultationVisits(
 }
 
 export async function getConsultationDailyVisits(
-  input: PaginationInput & { branchCode?: string } = {}
+  input: PaginationInput & { branchCode: string }
 ) {
   const pagination = getPagination(input);
   const { start, end } = dayRange();
@@ -411,7 +414,7 @@ export async function getConsultationDailyVisits(
   });
 }
 
-export async function getActiveVisitsOutsideConsultation(branchCode?: string) {
+export async function getActiveVisitsOutsideConsultation(branchCode: string) {
   return withDatabaseError("getActiveVisitsOutsideConsultation", async () => {
     return prisma.visit.findMany({
       where: {
@@ -446,11 +449,12 @@ export async function getActiveVisitsOutsideConsultation(branchCode?: string) {
  * dentro de su día (abandono "no atendido"), cerrados hoy. Alimenta la tabla de
  * abandonos de la bandeja de Consultas.
  */
-export async function getConsultationAbandonedToday(branchCode?: string) {
+export async function getConsultationAbandonedToday(branchCode: string) {
   return withDatabaseError("getConsultationAbandonedToday", async () => {
     const { start, end } = dayRange();
     const discontinuations = await prisma.visitDiscontinuation.findMany({
       where: {
+        branchCode,
         area: "medico",
         reason: "no_show",
         createdAt: { gte: start, lt: end },
@@ -684,6 +688,7 @@ export async function getPatientConsultationHistory(patientId: string, excludeVi
 
 export async function createClinicalOrderRecord(input: {
   visitId: string;
+  branchCode: string;
   doctorId?: string;
   type: ClinicalOrderType;
   targetArea: PatientRouteArea;
@@ -693,13 +698,16 @@ export async function createClinicalOrderRecord(input: {
   return withDatabaseError("createClinicalOrderRecord", async () => {
     return prisma.$transaction(async (tx) => {
       const visit = await tx.visit.findUniqueOrThrow({
-        where: { id: input.visitId },
+        where: {
+          id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+        },
         select: { patientId: true }
       });
 
       const workItem = await tx.visitWorkItem.create({
         data: {
           visitId: input.visitId,
+          branchCode: input.branchCode,
           createdById: input.doctorId,
           area: input.targetArea,
           status: "pending",

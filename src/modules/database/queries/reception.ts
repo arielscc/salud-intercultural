@@ -72,7 +72,12 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
     return prisma.$transaction(async (tx) => {
       const reused = input.idempotencyKey
         ? await tx.visit.findUnique({
-            where: { idempotencyKey: input.idempotencyKey },
+            where: {
+              branchCode_idempotencyKey: {
+                branchCode: input.branchCode,
+                idempotencyKey: input.idempotencyKey
+              }
+            },
             include: {
               attribution: {
                 include: {
@@ -275,13 +280,13 @@ export async function getReceptionDashboardSummary(branchCode: string, date = ne
       }),
       prisma.patientRoute.groupBy({
         by: ["currentArea"],
-        where: { active: true, visit: { branchCode } },
+        where: { branchCode, active: true },
         _count: { _all: true }
       }),
       prisma.visitStatusHistory.findMany({
         where: {
+          branchCode,
           toStatus: "left_without_care",
-          visit: { branchCode },
           createdAt: { gte: day.start, lt: day.end }
         },
         distinct: ["visitId"],

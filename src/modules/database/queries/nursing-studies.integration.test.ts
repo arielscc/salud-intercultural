@@ -88,6 +88,7 @@ describe("nursing and studies integration", () => {
     });
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       userId: doctor.id,
       status: "in_consultation",
       area: "medico",
@@ -112,6 +113,7 @@ describe("nursing and studies integration", () => {
 
     const { sale, workItem } = await createPaidStudyOrder({
       visitId: visit.id,
+      branchCode: "el-alto",
       doctorId: doctor.id,
       requestedById: doctor.id,
       source: "consultation",
@@ -137,7 +139,11 @@ describe("nursing and studies integration", () => {
 
     let unpaidError: unknown;
     try {
-      await releasePaidStudiesToNursing({ workItemId: workItem.id, userId: doctor.id });
+      await releasePaidStudiesToNursing({
+        workItemId: workItem.id,
+        branchCode: "el-alto",
+        userId: doctor.id
+      });
     } catch (error) {
       unpaidError = error;
     }
@@ -149,6 +155,7 @@ describe("nursing and studies integration", () => {
     });
     const nursingWorkItem = await releasePaidStudiesToNursing({
       workItemId: workItem.id,
+      branchCode: "el-alto",
       userId: doctor.id
     });
 
@@ -197,6 +204,7 @@ describe("nursing and studies integration", () => {
 
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       userId: doctor.id,
       status: "in_consultation",
       area: "medico",
@@ -205,16 +213,18 @@ describe("nursing and studies integration", () => {
 
     const order = await createClinicalOrderRecord({
       visitId: visit.id,
+      branchCode: "el-alto",
       doctorId: doctor.id,
       type: "nursing_application",
       targetArea: "enfermeria",
       title: "Aplicar suero ABC",
       details: "500 ml por vía IV"
     });
-    const workItem = (await getNursingWorkItems())[0];
+    const workItem = (await getNursingWorkItems({ branchCode: "el-alto" }))[0];
 
     await assignNursingWorkItem({
       workItemId: workItem.id,
+      branchCode: "el-alto",
       userId: nurse.id
     });
     await createVitalSignsRecord({
@@ -228,6 +238,7 @@ describe("nursing and studies integration", () => {
     await createNursingApplicationRecord({
       patientId: patient.id,
       visitId: visit.id,
+      branchCode: "el-alto",
       workItemId: workItem.id,
       clinicalOrderId: order.id,
       responsibleId: nurse.id,
@@ -236,6 +247,7 @@ describe("nursing and studies integration", () => {
       route: "IV"
     });
     await createStudyRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       visitId: visit.id,
       workItemId: workItem.id,
@@ -247,7 +259,7 @@ describe("nursing and studies integration", () => {
       resultSummary: "Sin lesión aguda"
     });
 
-    const detail = await getNursingWorkItemById(workItem.id);
+    const detail = await getNursingWorkItemById(workItem.id, "el-alto");
     const studies = await getStudiesForVisit(visit.id);
     const patientDetail = await getPatientById(patient.id, "el-alto");
 

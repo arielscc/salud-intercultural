@@ -28,7 +28,7 @@ export async function saveDoctorOrderAction(formData: FormData) {
         entityType: "doctor_order",
         context: { visitId: visitId || undefined }
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = doctorOrderSchema.safeParse({
           visitId,
           intent: formData.get("intent") ?? "save",
@@ -56,6 +56,7 @@ export async function saveDoctorOrderAction(formData: FormData) {
         const submit = parsed.data.intent === "submit";
         const order = await saveDoctorOrder({
           visitId: parsed.data.visitId,
+          branchCode: branchContext.activeBranch.code,
           doctorId: user.id,
           indications: parsed.data.indications,
           chargeBaseCents: parsed.data.chargeBase
@@ -99,11 +100,12 @@ export async function releaseDoctorOrderToNursingAction(formData: FormData) {
       entityId: doctorOrderId || undefined,
       context: { workItemId: workItemId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       if (!doctorOrderId) redirect(`${target}?error=invalid-order`);
       try {
         const nursing = await releaseDoctorOrderToNursing({
           doctorOrderId,
+          branchCode: branchContext.activeBranch.code,
           userId: user.id
         });
         return auditedResult(nursing, {

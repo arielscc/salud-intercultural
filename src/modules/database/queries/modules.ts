@@ -253,6 +253,7 @@ export async function getModulePendingWork(
     // Cochabamba no le sirve saber cuántas visitas dejó abiertas El Alto.
     const ofBranch = { branchCode };
     const ofBranchVisit = { visit: { branchCode } };
+    const workOfBranch = { branchCode, visit: { branchCode } };
 
     if (wanted.has("recepcion")) {
       const [activeVisits, pendingWork] = await Promise.all([
@@ -264,7 +265,7 @@ export async function getModulePendingWork(
         }),
         prisma.visitWorkItem.count({
           where: {
-            ...ofBranchVisit,
+            ...workOfBranch,
             area: "recepcion",
             status: { in: ["pending", "acknowledged", "in_progress"] }
           }
@@ -284,7 +285,7 @@ export async function getModulePendingWork(
         prisma.clinicalConsultation.count({ where: { ...ofBranchVisit, status: "draft" } }),
         prisma.visitWorkItem.count({
           where: {
-            ...ofBranchVisit,
+            ...workOfBranch,
             area: "medico",
             status: { in: ["pending", "acknowledged", "in_progress"] }
           }
@@ -303,7 +304,7 @@ export async function getModulePendingWork(
       const [queue, openPackages] = await Promise.all([
         prisma.visitWorkItem.count({
           where: {
-            ...ofBranchVisit,
+            ...workOfBranch,
             area: "enfermeria",
             status: { in: ["pending", "acknowledged", "in_progress"] }
           }
@@ -329,7 +330,7 @@ export async function getModulePendingWork(
         }),
         prisma.visitWorkItem.count({
           where: {
-            ...ofBranchVisit,
+            ...workOfBranch,
             area: "administracion",
             status: { in: ["pending", "acknowledged", "in_progress"] }
           }

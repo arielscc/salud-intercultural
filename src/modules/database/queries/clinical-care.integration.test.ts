@@ -81,6 +81,7 @@ describe("clinical care integration", () => {
 
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       userId: doctor.id,
       status: "in_consultation",
       area: "medico",
@@ -109,6 +110,7 @@ describe("clinical care integration", () => {
 
     await createClinicalOrderRecord({
       visitId: visit.id,
+      branchCode: "el-alto",
       doctorId: doctor.id,
       type: "serum",
       targetArea: "enfermeria",
@@ -116,7 +118,7 @@ describe("clinical care integration", () => {
       details: "Aplicar en sala de enfermeria."
     });
 
-    const consultationVisits = await getConsultationVisits();
+    const consultationVisits = await getConsultationVisits({ branchCode: "el-alto" });
     const detail = await getClinicalVisitById(visit.id, "el-alto");
 
     expect(consultationVisits).toHaveLength(1);
@@ -171,6 +173,7 @@ describe("clinical care integration", () => {
     });
     const order = await createClinicalOrderRecord({
       visitId: visit.id,
+      branchCode: "el-alto",
       doctorId: doctor.id,
       type: "serum",
       targetArea: "enfermeria",
@@ -205,6 +208,7 @@ describe("clinical care integration", () => {
     try {
       await updateVisitRouteStatus({
         visitId: visit.id,
+        branchCode: "el-alto",
         userId: doctor.id,
         status: "completed",
         area: "cierre",

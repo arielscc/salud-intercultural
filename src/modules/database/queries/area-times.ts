@@ -23,6 +23,7 @@ export async function appendAreaEnteredEvent(
   tx: Prisma.TransactionClient,
   input: {
     visitId: string;
+    branchCode: string;
     routeStepId: string;
     area: PatientRouteArea;
     occurredAt: Date;
@@ -45,6 +46,7 @@ export async function appendAreaExitedEvents(
   tx: Prisma.TransactionClient,
   input: {
     visitId: string;
+    branchCode: string;
     routeStepIds: string[];
     areaByStepId: Map<string, PatientRouteArea>;
     occurredAt: Date;
@@ -53,7 +55,10 @@ export async function appendAreaExitedEvents(
 ) {
   const maximumSequences = await tx.visitAreaTimeEvent.groupBy({
     by: ["routeStepId"],
-    where: { routeStepId: { in: input.routeStepIds } },
+    where: {
+      branchCode: input.branchCode,
+      routeStepId: { in: input.routeStepIds }
+    },
     _max: { sequence: true }
   });
   const maximumByStep = new Map(
@@ -81,6 +86,7 @@ export async function appendAreaExitedEvents(
     )
     .map((row) => ({
       visitId: input.visitId,
+      branchCode: input.branchCode,
       routeStepId: row.routeStepId,
       area: row.area,
       type: "exited" as const,
@@ -107,6 +113,7 @@ function phaseFromType(type: VisitAreaTimeEventType) {
 
 export async function recordAreaTimeTransition(input: {
   data: AreaTimeTransitionInput;
+  branchCode: string;
   userId: string;
   userRole: InternalRole;
 }) {
@@ -114,7 +121,12 @@ export async function recordAreaTimeTransition(input: {
     prisma.$transaction(
       async (tx) => {
         const visit = await tx.visit.findUniqueOrThrow({
-          where: { id: input.data.visitId },
+          where: {
+            id_branchCode: {
+              id: input.data.visitId,
+              branchCode: input.branchCode
+            }
+          },
           select: {
             id: true,
             status: true,
@@ -199,6 +211,7 @@ export async function recordAreaTimeTransition(input: {
           data: {
             visitId: visit.id,
             routeStepId: step.id,
+            branchCode: input.branchCode,
             area: route.currentArea,
             type,
             sequence: last.sequence + 1,
@@ -213,10 +226,10 @@ export async function recordAreaTimeTransition(input: {
   );
 }
 
-export async function getVisitAreaTimingState(visitId: string) {
+export async function getVisitAreaTimingState(visitId: string, branchCode: string) {
   return withDatabaseError("getVisitAreaTimingState", async () => {
     const visit = await prisma.visit.findUnique({
-      where: { id: visitId },
+      where: { id_branchCode: { id: visitId, branchCode } },
       select: {
         id: true,
         status: true,
@@ -281,6 +294,7 @@ export async function getAreaTimeReport(
   return withDatabaseError("getAreaTimeReport", async () => {
     const steps = await prisma.patientRouteStep.findMany({
       where: {
+        branchCode: input.branchCode,
         area: input.area,
         startedAt:
           input.from || input.to

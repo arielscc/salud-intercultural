@@ -109,18 +109,21 @@ async function completeDoctorOrderPaidVisit(
   tx: Prisma.TransactionClient,
   input: {
     visitId: string;
+    branchCode: string;
     userId?: string;
   }
 ) {
   await tx.visitWorkItem.updateMany({
     where: {
       visitId: input.visitId,
+      branchCode: input.branchCode,
       status: { in: activeWorkItemStatuses }
     },
     data: { status: "completed", completedAt: new Date() }
   });
   await updateVisitRouteStatusInTransaction(tx, {
     visitId: input.visitId,
+    branchCode: input.branchCode,
     userId: input.userId,
     status: "completed",
     area: "cierre",
@@ -136,7 +139,7 @@ function paymentCodeToCashChannel(code: string): CashChannel {
 }
 
 export async function getAdministrationWorkItems(
-  input: PaginationInput & { branchCode?: string } = {}
+  input: PaginationInput & { branchCode: string }
 ) {
   const pagination = getPagination(input);
   const today = dayRange();
@@ -144,7 +147,7 @@ export async function getAdministrationWorkItems(
   return withDatabaseError("getAdministrationWorkItems", async () => {
     return prisma.visitWorkItem.findMany({
       where: {
-        visit: { branchCode: input.branchCode },
+        branchCode: input.branchCode,
         area: "administracion",
         OR: [
           {
@@ -197,11 +200,11 @@ export async function getAdministrationWorkItems(
   });
 }
 
-export async function getLatestPendingAdministrationWorkItem(branchCode?: string) {
+export async function getLatestPendingAdministrationWorkItem(branchCode: string) {
   return withDatabaseError("getLatestPendingAdministrationWorkItem", async () => {
     return prisma.visitWorkItem.findFirst({
       where: {
-        visit: { branchCode },
+        branchCode,
         area: "administracion",
         status: { in: ["pending", "acknowledged", "in_progress", "blocked"] },
         OR: [{ sales: { none: {} } }, { sales: { some: { balanceCents: { gt: 0 } } } }]
@@ -236,10 +239,13 @@ export async function getLatestPendingAdministrationWorkItem(branchCode?: string
   });
 }
 
-export async function getAdministrationWorkItemById(id: string) {
+export async function getAdministrationWorkItemById(
+  id: string,
+  branchCode: string
+) {
   return withDatabaseError("getAdministrationWorkItemById", async () => {
     return prisma.visitWorkItem.findUnique({
-      where: { id },
+      where: { id_branchCode: { id, branchCode } },
       include: {
         createdBy: true,
         clinicalOrders: {
@@ -281,7 +287,12 @@ export async function assignAdministrationWorkItem(input: {
   return withDatabaseError("assignAdministrationWorkItem", async () => {
     return prisma.$transaction(async (tx) => {
       const workItem = await tx.visitWorkItem.findUniqueOrThrow({
-        where: { id: input.workItemId },
+        where: {
+          id_branchCode: {
+            id: input.workItemId,
+            branchCode: input.branchCode
+          }
+        },
         select: {
           id: true,
           visitId: true,
@@ -301,7 +312,12 @@ export async function assignAdministrationWorkItem(input: {
       const shouldStart =
         workItem.status === "pending" || workItem.status === "acknowledged";
       const updated = await tx.visitWorkItem.update({
-        where: { id: input.workItemId },
+        where: {
+          id_branchCode: {
+            id: input.workItemId,
+            branchCode: input.branchCode
+          }
+        },
         data: {
           assignedToId: input.userId,
           assignedAt: new Date(),
@@ -461,7 +477,9 @@ export async function createSaleRecord(input: {
 
       if (input.workItemId && status === "paid") {
         await tx.visitWorkItem.update({
-          where: { id: input.workItemId },
+          where: {
+            id_branchCode: { id: input.workItemId, branchCode: input.branchCode }
+          },
           data: {
             status: "completed",
             completedAt: new Date()
@@ -766,7 +784,9 @@ export async function confirmDoctorOrderSale(input: {
 
       if (input.workItemId && status === "paid") {
         await tx.visitWorkItem.update({
-          where: { id: input.workItemId },
+          where: {
+            id_branchCode: { id: input.workItemId, branchCode }
+          },
           data: { status: "completed", completedAt: new Date() }
         });
       }
@@ -774,6 +794,7 @@ export async function confirmDoctorOrderSale(input: {
       if (status === "paid") {
         await completeDoctorOrderPaidVisit(tx, {
           visitId: order.visitId,
+          branchCode,
           userId: input.createdById
         });
       }
@@ -910,7 +931,12 @@ export async function createPaymentRecord(input: {
         });
         if (paidStudyOrders === 0) {
           await tx.visitWorkItem.update({
-            where: { id: sale.workItemId },
+            where: {
+              id_branchCode: {
+                id: sale.workItemId,
+                branchCode: sale.branchCode
+              }
+            },
             data: {
               status: "completed",
               completedAt: new Date()
@@ -926,6 +952,7 @@ export async function createPaymentRecord(input: {
       if (balanceCents === 0 && sale.doctorOrderId && sale.visitId) {
         await completeDoctorOrderPaidVisit(tx, {
           visitId: sale.visitId,
+          branchCode: sale.branchCode,
           userId: input.receivedById
         });
       }

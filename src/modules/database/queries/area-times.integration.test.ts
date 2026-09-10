@@ -45,7 +45,7 @@ describe("area time events integration", () => {
       reason: "Medición de atención"
     });
 
-    const initialState = await getVisitAreaTimingState(visit.id);
+    const initialState = await getVisitAreaTimingState(visit.id, "el-alto");
     expect(initialState?.phase).toBe("attention");
 
     await recordAreaTimeTransition({
@@ -54,16 +54,19 @@ describe("area time events integration", () => {
         action: "block",
         reason: "Espera de documento"
       },
+      branchCode: "el-alto",
       userId: user.id,
       userRole: "recepcion"
     });
     await recordAreaTimeTransition({
       data: { visitId: visit.id, action: "resume" },
+      branchCode: "el-alto",
       userId: user.id,
       userRole: "recepcion"
     });
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       userId: user.id,
       status: "in_consultation",
       area: "medico"

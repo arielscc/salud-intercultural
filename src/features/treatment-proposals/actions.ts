@@ -25,7 +25,7 @@ export async function recordTreatmentProposalOutcomeAction(
       entityType: "treatment_proposal_outcome",
       context: { visitId: visitId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = recordTreatmentProposalOutcomeSchema.safeParse(
         formValues(formData)
       );
@@ -38,6 +38,7 @@ export async function recordTreatmentProposalOutcomeAction(
       try {
         const result = await recordTreatmentProposalOutcome({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           doctorId: user.id
         });
         return auditedResult(result, {

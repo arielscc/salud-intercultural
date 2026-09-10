@@ -255,6 +255,7 @@ async function sourcesForRule(
 
   const rows = await tx.visitDiscontinuation.findMany({
     where: {
+      branchCode,
       occurredAt: { gte: from, lte: now },
       followUpTaskId: null,
       visit: {

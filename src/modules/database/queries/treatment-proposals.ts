@@ -99,13 +99,18 @@ async function createTreatmentDecisionFollowUp(
 }
 
 export async function recordTreatmentProposalOutcome(
-  input: RecordTreatmentProposalOutcomeInput & { doctorId: string }
+  input: RecordTreatmentProposalOutcomeInput & {
+    branchCode: string;
+    doctorId: string;
+  }
 ) {
   return withDatabaseError("recordTreatmentProposalOutcome", async () => {
     return prisma.$transaction(
       async (tx) => {
         const visit = await tx.visit.findUniqueOrThrow({
-          where: { id: input.visitId },
+          where: {
+            id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+          },
           include: {
             clinicalConsultation: true,
             treatmentProposalOutcomes: {
@@ -143,6 +148,7 @@ export async function recordTreatmentProposalOutcome(
           const instruction = input.administrationInstruction!;
           const { workItem } = await updateVisitRouteStatusInTransaction(tx, {
             visitId: visit.id,
+            branchCode: input.branchCode,
             userId: input.doctorId,
             status: "in_administration",
             area: "administracion",

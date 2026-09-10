@@ -57,10 +57,11 @@ export async function assignNursingWorkItemAction(formData: FormData) {
       entityType: "work_item",
       entityId: workItemId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       if (!workItemId) redirect("/sigeco/enfermeria?error=invalid-status");
       const updated = await assignNursingWorkItem({
         workItemId,
+        branchCode: branchContext.activeBranch.code,
         userId: user.id,
         release
       });
@@ -70,6 +71,7 @@ export async function assignNursingWorkItemAction(formData: FormData) {
         try {
           await recordAreaTimeTransition({
             data: { visitId: updated.visitId, action: "start_attention" },
+            branchCode: branchContext.activeBranch.code,
             userId: user.id,
             userRole: user.role
           });
@@ -169,7 +171,7 @@ export async function createNursingApplicationAction(formData: FormData) {
       entityType: "nursing_application",
       context: { patientId: patientId || undefined, workItemId: workItemId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createNursingApplicationSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -180,6 +182,7 @@ export async function createNursingApplicationAction(formData: FormData) {
       try {
         application = await createNursingApplicationRecord({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           responsibleId: user.id,
           // Permite registrar varios inyectables sin cerrar la tarea.
           completeWorkItem: false
@@ -284,9 +287,13 @@ export async function deriveNursingToDoctorAction(formData: FormData) {
       entityId: workItemId || undefined,
       context: { visitId: visitId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       if (!workItemId) redirect("/sigeco/enfermeria?error=invalid-derive");
-      await deriveNursingPatientToDoctor({ workItemId, userId: user.id });
+      await deriveNursingPatientToDoctor({
+        workItemId,
+        branchCode: branchContext.activeBranch.code,
+        userId: user.id
+      });
       return auditedResult(undefined, { entityId: workItemId, context: { visitId } });
     }
   );
@@ -307,7 +314,7 @@ export async function createNursingChargeOrderAction(formData: FormData) {
       entityId: visitId || undefined,
       context: { workItemId: workItemId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = paidStudyOrderSchema.safeParse(parsePaidStudyForm(formData));
       if (!parsed.success) {
         redirect(
@@ -320,6 +327,7 @@ export async function createNursingChargeOrderAction(formData: FormData) {
       try {
         await createPaidStudyOrder({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           requestedById: user.id,
           source: "nursing"
         });
@@ -356,10 +364,14 @@ export async function returnStudiesToDoctorAction(formData: FormData) {
       entityId: workItemId || undefined,
       context: { visitId: visitId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       if (!workItemId || !visitId) redirect("/sigeco/enfermeria?error=invalid-study-return");
       try {
-        await returnCompletedStudiesToDoctor({ workItemId, userId: user.id });
+        await returnCompletedStudiesToDoctor({
+          workItemId,
+          branchCode: branchContext.activeBranch.code,
+          userId: user.id
+        });
       } catch (error) {
         if (hasPaidStudyFlowError(error, "STUDIES_INCOMPLETE")) {
           redirect(`/sigeco/enfermeria/${workItemId}?error=estudios-incompletos`);

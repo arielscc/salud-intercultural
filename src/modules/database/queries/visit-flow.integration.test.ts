@@ -47,23 +47,41 @@ async function getVisitTrace(visitId: string) {
 }
 
 describe("flexible visit flow integration", () => {
+  it("rejects a visit child owned by another branch", async () => {
+    const visit = await createVisitInReception();
+
+    await expect(
+      prisma.visitStatusHistory.create({
+        data: {
+          visitId: visit.id,
+          branchCode: "cochabamba",
+          toStatus: "in_reception",
+          note: "Cruce de sede que PostgreSQL debe rechazar"
+        }
+      })
+    ).rejects.toThrow();
+  });
+
   it("traces consulta -> administracion -> salida in the status history", async () => {
     const visit = await createVisitInReception();
 
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       status: "in_consultation",
       area: "medico",
       note: "Pasa al médico"
     });
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       status: "in_administration",
       area: "administracion",
       note: "Pasa a administración tras la consulta"
     });
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       status: "completed",
       area: "cierre",
       note: "Visita cerrada desde administración"
@@ -88,11 +106,13 @@ describe("flexible visit flow integration", () => {
 
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       status: "in_consultation",
       area: "medico"
     });
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       status: "completed",
       area: "cierre",
       note: "Salida directa después de la consulta"
@@ -126,6 +146,7 @@ describe("flexible visit flow integration", () => {
     });
     await recordVisitDiscontinuation({
       visitId: visit.id,
+      branchCode: "el-alto",
       recordedById: user.id,
       reason: "wait",
       note: "Esperó demasiado.",
@@ -186,6 +207,7 @@ describe("flexible visit flow integration", () => {
     });
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       userId: marlen.id,
       status: "in_nursing",
       area: "enfermeria",
@@ -204,6 +226,7 @@ describe("flexible visit flow integration", () => {
 
     const result = await recordVisitDiscontinuation({
       visitId: visit.id,
+      branchCode: "el-alto",
       recordedById: marlen.id,
       reason: "missing_supply",
       pendingTypes: [],
@@ -251,13 +274,14 @@ describe("flexible visit flow integration", () => {
     });
     await recordVisitDiscontinuation({
       visitId: visit.id,
+      branchCode: "el-alto",
       recordedById: user.id,
       reason: "other",
       pendingTypes: [],
       createFollowUp: false
     });
 
-    const state = await getVisitFlowState(visit.id);
+    const state = await getVisitFlowState(visit.id, "el-alto");
 
     expect(state?.status).toBe("left_without_care");
     expect(state?.route?.currentArea).toBe("recepcion");
@@ -277,6 +301,7 @@ describe("flexible visit flow integration", () => {
     });
     await recordVisitDiscontinuation({
       visitId: visit.id,
+      branchCode: "el-alto",
       recordedById: user.id,
       reason: "other",
       pendingTypes: [],
@@ -287,6 +312,7 @@ describe("flexible visit flow integration", () => {
     try {
       await updateVisitRouteStatus({
         visitId: visit.id,
+        branchCode: "el-alto",
         status: "in_consultation",
         area: "medico"
       });
@@ -295,6 +321,8 @@ describe("flexible visit flow integration", () => {
     }
 
     expect(findClosedVisitTransitionError(failure)).toMatchObject({ visitId: visit.id });
-    expect((await getVisitFlowState(visit.id))?.status).toBe("left_without_care");
+    expect((await getVisitFlowState(visit.id, "el-alto"))?.status).toBe(
+      "left_without_care"
+    );
   });
 });

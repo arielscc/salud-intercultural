@@ -111,6 +111,7 @@ describe("sales integration", () => {
 
     await createClinicalOrderRecord({
       visitId: visit.id,
+      branchCode: "el-alto",
       doctorId: doctor.id,
       type: "administration",
       targetArea: "administracion",
@@ -118,7 +119,7 @@ describe("sales integration", () => {
       details: "Cobro de servicio indicado"
     });
 
-    const workItem = (await getAdministrationWorkItems())[0];
+    const workItem = (await getAdministrationWorkItems({ branchCode: "el-alto" }))[0];
     const sale = await createSaleRecord({
       idempotencyKey: "sale-mobile-retry",
       patientId: patient.id,

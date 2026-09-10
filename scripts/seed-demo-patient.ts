@@ -147,6 +147,7 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
   await tx.receptionCheckIn.create({
     data: {
       visitId: visit.id,
+      branchCode: SEED_BRANCH_CODE,
       userId: input.userId,
       note: input.checkInNote,
       createdAt: input.checkedInAt
@@ -156,6 +157,7 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
   const route = await tx.patientRoute.create({
     data: {
       visitId: visit.id,
+      branchCode: SEED_BRANCH_CODE,
       currentArea: lastStep.area,
       active: !isClosed,
       createdAt: input.checkedInAt
@@ -166,6 +168,7 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
     await tx.patientRouteStep.create({
       data: {
         routeId: route.id,
+        branchCode: SEED_BRANCH_CODE,
         area: step.area,
         status: step.status,
         note: step.note,
@@ -178,6 +181,7 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
   await tx.visitStatusHistory.create({
     data: {
       visitId: visit.id,
+      branchCode: SEED_BRANCH_CODE,
       userId: input.userId,
       toStatus: "in_reception",
       note: input.checkInNote ?? "Llegada registrada",
@@ -191,6 +195,7 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
     await tx.visitStatusHistory.create({
       data: {
         visitId: visit.id,
+        branchCode: SEED_BRANCH_CODE,
         userId: input.userId,
         fromStatus: previousStatus,
         toStatus: step.status,
@@ -204,6 +209,7 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
   await tx.visitWorkItem.create({
     data: {
       visitId: visit.id,
+      branchCode: SEED_BRANCH_CODE,
       createdById: input.userId,
       area: "recepcion",
       status: isClosed ? "completed" : "pending",
@@ -433,6 +439,7 @@ async function main() {
       const v1NursingWorkItem = await tx.visitWorkItem.create({
         data: {
           visitId: v1.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           createdById: userId,
           area: "enfermeria",
           status: "completed",
@@ -505,6 +512,7 @@ async function main() {
       const v1AdminWorkItem = await tx.visitWorkItem.create({
         data: {
           visitId: v1.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           createdById: userId,
           area: "administracion",
           status: "completed",
@@ -704,6 +712,7 @@ async function main() {
       const v2AdminWorkItem = await tx.visitWorkItem.create({
         data: {
           visitId: v2.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           createdById: userId,
           area: "administracion",
           status: "completed",
@@ -920,6 +929,7 @@ async function main() {
       const v4StudyWorkItem = await tx.visitWorkItem.create({
         data: {
           visitId: v4.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           createdById: userId,
           area: "medico",
           status: "completed",
@@ -984,6 +994,7 @@ async function main() {
       const v4AdminWorkItem = await tx.visitWorkItem.create({
         data: {
           visitId: v4.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           createdById: userId,
           area: "administracion",
           status: "completed",
@@ -1136,6 +1147,7 @@ async function main() {
       const v5SerumWorkItem = await tx.visitWorkItem.create({
         data: {
           visitId: v5.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           createdById: userId,
           area: "enfermeria",
           status: "in_progress",
@@ -1163,6 +1175,7 @@ async function main() {
       const v5AdminWorkItem = await tx.visitWorkItem.create({
         data: {
           visitId: v5.visit.id,
+          branchCode: SEED_BRANCH_CODE,
           createdById: userId,
           area: "administracion",
           status: "pending",

@@ -168,6 +168,7 @@ async function resolveLineMeta(
 
 export async function saveDoctorOrder(input: {
   visitId: string;
+  branchCode: string;
   doctorId: string;
   indications?: string;
   chargeBaseCents?: number;
@@ -178,7 +179,9 @@ export async function saveDoctorOrder(input: {
   return withDatabaseError("saveDoctorOrder", async () =>
     prisma.$transaction(async (tx) => {
       const visit = await tx.visit.findUniqueOrThrow({
-        where: { id: input.visitId },
+        where: {
+          id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+        },
         include: {
           clinicalConsultation: { select: { id: true, status: true } },
           doctorOrder: true
@@ -293,6 +296,7 @@ export async function saveDoctorOrder(input: {
         const existingAdministrationWorkItem = await tx.visitWorkItem.findFirst({
           where: {
             visitId: visit.id,
+            branchCode: input.branchCode,
             area: "administracion",
             status: { in: ["pending", "acknowledged", "in_progress", "blocked"] },
             clinicalOrders: {
@@ -304,12 +308,18 @@ export async function saveDoctorOrder(input: {
 
         const administrationWorkItem = existingAdministrationWorkItem
           ? await tx.visitWorkItem.update({
-              where: { id: existingAdministrationWorkItem.id },
+              where: {
+                id_branchCode: {
+                  id: existingAdministrationWorkItem.id,
+                  branchCode: input.branchCode
+                }
+              },
               data: { title, description }
             })
           : (
               await updateVisitRouteStatusInTransaction(tx, {
                 visitId: visit.id,
+                branchCode: input.branchCode,
                 userId: input.doctorId,
                 status: "in_administration",
                 area: "administracion",
@@ -371,17 +381,28 @@ export async function saveDoctorOrder(input: {
  */
 export async function releaseDoctorOrderToNursing(input: {
   doctorOrderId: string;
+  branchCode: string;
   userId?: string;
 }) {
   return withDatabaseError("releaseDoctorOrderToNursing", () =>
     prisma.$transaction(async (tx) => {
-      const order = await tx.doctorOrder.findUniqueOrThrow({
-        where: { id: input.doctorOrderId },
+      const order = await tx.doctorOrder.findFirstOrThrow({
+        where: {
+          id: input.doctorOrderId,
+          visit: { branchCode: input.branchCode }
+        },
         include: { lines: { orderBy: { position: "asc" } }, sale: true }
       });
 
       if (order.nursingReleasedAt && order.nursingWorkItemId) {
-        return tx.visitWorkItem.findUnique({ where: { id: order.nursingWorkItemId } });
+        return tx.visitWorkItem.findUnique({
+          where: {
+            id_branchCode: {
+              id: order.nursingWorkItemId,
+              branchCode: input.branchCode
+            }
+          }
+        });
       }
       if (order.status !== "confirmed" || !order.sale) {
         throw new DoctorOrderNursingError("not-confirmed");
@@ -397,6 +418,7 @@ export async function releaseDoctorOrderToNursing(input: {
 
       const { workItem: nursing } = await updateVisitRouteStatusInTransaction(tx, {
         visitId: order.visitId,
+        branchCode: input.branchCode,
         userId: input.userId,
         status: "in_nursing",
         area: "enfermeria",
@@ -445,7 +467,12 @@ export async function releaseDoctorOrderToNursing(input: {
 
       if (order.sale.workItemId) {
         await tx.visitWorkItem.update({
-          where: { id: order.sale.workItemId },
+          where: {
+            id_branchCode: {
+              id: order.sale.workItemId,
+              branchCode: input.branchCode
+            }
+          },
           data: { status: "completed", completedAt: new Date() }
         });
       }

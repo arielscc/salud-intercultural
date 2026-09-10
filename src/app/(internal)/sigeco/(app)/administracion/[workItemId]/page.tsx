@@ -88,7 +88,7 @@ export default async function AdministrationWorkItemPage({
   const { workItemId } = await params;
   const query = await searchParams;
   const [item, inventoryItems] = await Promise.all([
-    getAdministrationWorkItemById(workItemId),
+    getAdministrationWorkItemById(workItemId, activeBranch.code),
     getInventoryItems({
       pageSize: 100,
       status: "active",
@@ -98,12 +98,10 @@ export default async function AdministrationWorkItemPage({
   ]);
 
   if (!item) notFound();
-  if (item.visit.branchCode !== activeBranch.code) notFound();
-
   const patient = item.visit.patient;
   const [patientSales, areaTiming] = await Promise.all([
     getPatientSales(patient.id, activeBranch.code),
-    getVisitAreaTimingState(item.visit.id)
+    getVisitAreaTimingState(item.visit.id, activeBranch.code)
   ]);
   const administrationAreaTiming =
     areaTiming?.area === "administracion" &&

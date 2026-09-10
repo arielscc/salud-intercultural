@@ -17,7 +17,6 @@ import {
   updateVisitStatusSchema,
   visitFlowSchema
 } from "@/features/visits/schemas/visit.schema";
-import { getBranchContext } from "@/features/branches/context";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -39,8 +38,7 @@ export async function createVisitAction(formData: FormData) {
       entityType: "visit",
       context: { patientId: patientId || undefined }
     },
-    async (user) => {
-      const { activeBranch } = await getBranchContext();
+    async (user, branchContext) => {
       const parsed = createVisitSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -50,7 +48,7 @@ export async function createVisitAction(formData: FormData) {
       const created = await createVisitRecord({
         ...parsed.data,
         userId: user.id,
-        branchCode: activeBranch.code
+        branchCode: branchContext.activeBranch.code
       });
       return auditedResult(created, {
         entityId: created.id,
@@ -80,7 +78,7 @@ export async function applyVisitFlowAction(formData: FormData) {
       entityType: "visit",
       entityId: visitId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = visitFlowSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -88,7 +86,10 @@ export async function applyVisitFlowAction(formData: FormData) {
       }
 
       const { visitId: parsedVisitId, flow, note } = parsed.data;
-      const visit = await getVisitFlowState(parsedVisitId);
+      const visit = await getVisitFlowState(
+        parsedVisitId,
+        branchContext.activeBranch.code
+      );
 
       if (!visit) {
         redirect("/sigeco/recepcion?error=invalid-flow");
@@ -133,6 +134,7 @@ export async function applyVisitFlowAction(formData: FormData) {
       try {
         await updateVisitRouteStatus({
           visitId: parsedVisitId,
+          branchCode: branchContext.activeBranch.code,
           userId: user.id,
           ...transitions[flow]
         });
@@ -186,7 +188,7 @@ export async function updateVisitStatusAction(formData: FormData) {
       entityType: "visit",
       entityId: visitId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = updateVisitStatusSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -196,6 +198,7 @@ export async function updateVisitStatusAction(formData: FormData) {
       try {
         await updateVisitRouteStatus({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           userId: user.id
         });
       } catch (error) {

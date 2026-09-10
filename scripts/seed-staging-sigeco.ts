@@ -262,6 +262,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       },
       create: {
         id: `qa_checkin_${fixture.area}`,
+        branchCode: QA_BRANCH_CODE,
         note: "Llegada sintética de staging",
         userId: receptionUserId,
         visitId
@@ -276,6 +277,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       },
       create: {
         active: true,
+        branchCode: QA_BRANCH_CODE,
         currentArea: fixture.area,
         id: routeId,
         visitId
@@ -292,6 +294,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       },
       create: {
         area: fixture.area,
+        branchCode: QA_BRANCH_CODE,
         id: `qa_route_step_${fixture.area}`,
         note: "Paso sintético de staging",
         routeId: route.id,
@@ -311,6 +314,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       await prisma.visitAreaTimeEvent.create({
         data: {
           visitId,
+          branchCode: QA_BRANCH_CODE,
           routeStepId: routeStep.id,
           area: fixture.area,
           type: "entered",
@@ -331,6 +335,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       },
       create: {
         id: `qa_status_${fixture.area}`,
+        branchCode: QA_BRANCH_CODE,
         note: "Estado sintético de staging",
         toStatus: fixture.status,
         userId: receptionUserId,
@@ -370,6 +375,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       },
       create: {
         area: fixture.area,
+        branchCode: QA_BRANCH_CODE,
         createdById: receptionUserId,
         description: fixture.reason,
         id: `qa_work_item_${fixture.area}`,

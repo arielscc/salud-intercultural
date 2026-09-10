@@ -100,39 +100,10 @@ function temporaryDebt(
 // una excepción que deja de coincidir también hace fallar el chequeo.
 export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
   ...temporaryDebt(
-    7,
-    "Operación clínica",
-    "Las consultas de visitas exigirán el contexto de sede autenticado.",
-    [
-      ["src/modules/database/queries/visits.ts", "getVisits", "optional-branch-code"],
-      ["src/modules/database/queries/visits.ts", "countVisits", "optional-branch-code"]
-    ]
-  ),
-  ...temporaryDebt(
     8,
     "Consulta médica",
     "Las lecturas clínicas normales pasarán a exigir una sede explícita.",
     [
-      [
-        "src/modules/database/queries/clinical-care.ts",
-        "getConsultationVisits",
-        "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/clinical-care.ts",
-        "getConsultationDailyVisits",
-        "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/clinical-care.ts",
-        "getActiveVisitsOutsideConsultation",
-        "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/clinical-care.ts",
-        "getConsultationAbandonedToday",
-        "optional-branch-code"
-      ],
       [
         "src/modules/database/queries/treatment-proposals.ts",
         "getTreatmentProposalOutcomeSummary",
@@ -145,11 +116,6 @@ export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
     "Enfermería",
     "Enfermería recibirá siempre la sede desde el contexto operativo.",
     [
-      [
-        "src/modules/database/queries/nursing.ts",
-        "getNursingWorkItems",
-        "optional-branch-code"
-      ],
       [
         "src/modules/database/queries/nursing.ts",
         "getInjectableProductOptions",
@@ -272,16 +238,6 @@ export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
       [
         "src/modules/database/queries/cash.ts",
         "getCashSessionCloseReport",
-        "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/sales.ts",
-        "getAdministrationWorkItems",
-        "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/sales.ts",
-        "getLatestPendingAdministrationWorkItem",
         "optional-branch-code"
       ],
       ["src/modules/database/queries/sales.ts", "createPaymentRecord", "optional-branch-code"],

@@ -89,11 +89,13 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
   const { workItemId } = await params;
   const query = await searchParams;
   const invalidVitalField = invalidVitalSignField(query.campo);
-  const item = await getNursingWorkItemById(workItemId);
+  const item = await getNursingWorkItemById(workItemId, activeBranch.code);
 
   if (!item) notFound();
-  if (item.visit.branchCode !== activeBranch.code) notFound();
-  const areaTiming = await getVisitAreaTimingState(item.visit.id);
+  const areaTiming = await getVisitAreaTimingState(
+    item.visit.id,
+    activeBranch.code
+  );
   const sessionPackages = await getPatientServiceSessionPackages(item.visit.patientId);
   const injectableProducts = await getInjectableProductOptions(item.visit.branchCode);
   const chargeOptions = await getNursingChargeOptions();

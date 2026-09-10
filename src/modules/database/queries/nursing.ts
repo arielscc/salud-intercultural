@@ -19,6 +19,7 @@ export type CreateVitalSignsRecordInput = {
 };
 
 export type CreateNursingApplicationRecordInput = {
+  branchCode: string;
   patientId: string;
   visitId?: string;
   workItemId?: string;
@@ -37,13 +38,14 @@ export type CreateNursingApplicationRecordInput = {
 };
 
 export async function getNursingWorkItems(
-  input: PaginationInput & { branchCode?: string } = {}
+  input: PaginationInput & { branchCode: string }
 ) {
   const pagination = getPagination(input);
 
   return withDatabaseError("getNursingWorkItems", async () => {
     return prisma.visitWorkItem.findMany({
       where: {
+        branchCode: input.branchCode,
         // Solo visitas activas: las cerradas/abandonadas (p. ej. abandono por
         // superar 1 h en espera) salen de la lista de pacientes a atender.
         visit: {
@@ -79,10 +81,10 @@ export async function getNursingWorkItems(
   });
 }
 
-export async function getNursingWorkItemById(id: string) {
+export async function getNursingWorkItemById(id: string, branchCode: string) {
   return withDatabaseError("getNursingWorkItemById", async () => {
     return prisma.visitWorkItem.findUnique({
-      where: { id },
+      where: { id_branchCode: { id, branchCode } },
       include: {
         createdBy: true,
         assignedTo: { select: { id: true, name: true, email: true } },
@@ -177,19 +179,30 @@ export async function getNursingChargeOptions() {
  */
 export async function assignNursingWorkItem(input: {
   workItemId: string;
+  branchCode: string;
   userId: string;
   release?: boolean;
 }) {
   return withDatabaseError("assignNursingWorkItem", async () => {
     return prisma.$transaction(async (tx) => {
       const workItem = await tx.visitWorkItem.findUniqueOrThrow({
-        where: { id: input.workItemId },
+        where: {
+          id_branchCode: {
+            id: input.workItemId,
+            branchCode: input.branchCode
+          }
+        },
         include: { clinicalOrders: true }
       });
 
       if (input.release) {
         return tx.visitWorkItem.update({
-          where: { id: input.workItemId },
+          where: {
+            id_branchCode: {
+              id: input.workItemId,
+              branchCode: input.branchCode
+            }
+          },
           data: { assignedToId: null, assignedAt: null }
         });
       }
@@ -197,7 +210,12 @@ export async function assignNursingWorkItem(input: {
       const shouldStart =
         workItem.status === "pending" || workItem.status === "acknowledged";
       const updated = await tx.visitWorkItem.update({
-        where: { id: input.workItemId },
+        where: {
+          id_branchCode: {
+            id: input.workItemId,
+            branchCode: input.branchCode
+          }
+        },
         data: {
           assignedToId: input.userId,
           assignedAt: new Date(),
@@ -270,7 +288,13 @@ export async function updateVitalSignsRecord(input: {
 export async function createNursingApplicationRecord(input: CreateNursingApplicationRecordInput) {
   return withDatabaseError("createNursingApplicationRecord", async () => {
     return prisma.$transaction(async (tx) => {
-      const { completeWorkItem, inventoryItemId, quantityUnits, ...rest } = input;
+      const {
+        branchCode,
+        completeWorkItem,
+        inventoryItemId,
+        quantityUnits,
+        ...rest
+      } = input;
       const application = await tx.nursingApplication.create({
         data: {
           ...rest,
@@ -284,7 +308,9 @@ export async function createNursingApplicationRecord(input: CreateNursingApplica
       if (inventoryItemId && quantityUnits && quantityUnits > 0) {
         if (!input.visitId) throw new Error("inventory-branch-required");
         const visit = await tx.visit.findUniqueOrThrow({
-          where: { id: input.visitId },
+          where: {
+            id_branchCode: { id: input.visitId, branchCode }
+          },
           select: { branchCode: true }
         });
         await applyInventoryMovement(tx, {
@@ -302,7 +328,9 @@ export async function createNursingApplicationRecord(input: CreateNursingApplica
       // ocurre automáticamente en los flujos que sí lo solicitan.
       if (completeWorkItem !== false && input.workItemId) {
         await tx.visitWorkItem.update({
-          where: { id: input.workItemId },
+          where: {
+            id_branchCode: { id: input.workItemId, branchCode }
+          },
           data: {
             status: "completed",
             completedAt: new Date()

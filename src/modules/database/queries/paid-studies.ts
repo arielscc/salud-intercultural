@@ -18,31 +18,33 @@ function toCents(value: string) {
 
 async function moveVisit(
   tx: Prisma.TransactionClient,
-  input: { visitId: string; userId?: string; status: "in_administration" | "in_nursing" | "in_consultation"; area: "administracion" | "enfermeria" | "medico"; note: string }
+  input: { visitId: string; branchCode: string; userId?: string; status: "in_administration" | "in_nursing" | "in_consultation"; area: "administracion" | "enfermeria" | "medico"; note: string }
 ) {
-  const visit = await tx.visit.findUniqueOrThrow({ where: { id: input.visitId }, include: { route: true } });
+  const visit = await tx.visit.findUniqueOrThrow({ where: { id_branchCode: { id: input.visitId, branchCode: input.branchCode } }, include: { route: true } });
   const now = new Date();
-  await tx.visit.update({ where: { id: input.visitId }, data: { status: input.status } });
+  await tx.visit.update({ where: { id_branchCode: { id: input.visitId, branchCode: input.branchCode } }, data: { status: input.status } });
   await tx.visitStatusHistory.create({
-    data: { visitId: input.visitId, userId: input.userId, fromStatus: visit.status, toStatus: input.status, note: input.note }
+    data: { visitId: input.visitId, branchCode: input.branchCode, userId: input.userId, fromStatus: visit.status, toStatus: input.status, note: input.note }
   });
   if (visit.route) {
     const openSteps = await tx.patientRouteStep.findMany({
-      where: { routeId: visit.route.id, endedAt: null },
+      where: { routeId: visit.route.id, branchCode: input.branchCode, endedAt: null },
       select: { id: true, area: true }
     });
     await appendAreaExitedEvents(tx, {
       visitId: input.visitId,
+      branchCode: input.branchCode,
       routeStepIds: openSteps.map((step) => step.id),
       areaByStepId: new Map(openSteps.map((step) => [step.id, step.area])),
       occurredAt: now,
       recordedById: input.userId
     });
-    await tx.patientRouteStep.updateMany({ where: { routeId: visit.route.id, endedAt: null }, data: { endedAt: now } });
-    await tx.patientRoute.update({ where: { id: visit.route.id }, data: { currentArea: input.area, active: true } });
-    const nextStep = await tx.patientRouteStep.create({ data: { routeId: visit.route.id, area: input.area, status: input.status, note: input.note } });
+    await tx.patientRouteStep.updateMany({ where: { routeId: visit.route.id, branchCode: input.branchCode, endedAt: null }, data: { endedAt: now } });
+    await tx.patientRoute.update({ where: { id_branchCode: { id: visit.route.id, branchCode: input.branchCode } }, data: { currentArea: input.area, active: true } });
+    const nextStep = await tx.patientRouteStep.create({ data: { routeId: visit.route.id, branchCode: input.branchCode, area: input.area, status: input.status, note: input.note } });
     await appendAreaEnteredEvent(tx, {
       visitId: input.visitId,
+      branchCode: input.branchCode,
       routeStepId: nextStep.id,
       area: input.area,
       occurredAt: nextStep.startedAt,
@@ -60,6 +62,7 @@ export class PaidStudyCatalogError extends Error {
 
 export async function createPaidStudyOrder(
   input: PaidStudyOrderInput & {
+    branchCode: string;
     doctorId?: string;
     requestedById?: string;
     source?: "consultation" | "reception" | "nursing";
@@ -67,7 +70,7 @@ export async function createPaidStudyOrder(
 ) {
   return withDatabaseError("createPaidStudyOrder", () =>
     prisma.$transaction(async (tx) => {
-      const visit = await tx.visit.findUniqueOrThrow({ where: { id: input.visitId }, include: { patient: true } });
+      const visit = await tx.visit.findUniqueOrThrow({ where: { id_branchCode: { id: input.visitId, branchCode: input.branchCode } }, include: { patient: true } });
 
       const catalogIds = [
         ...new Set(
@@ -156,6 +159,7 @@ export async function createPaidStudyOrder(
       const workItem = await tx.visitWorkItem.create({
         data: {
           visitId: visit.id,
+          branchCode: input.branchCode,
           createdById: input.requestedById ?? input.doctorId,
           area: "administracion",
           title: "Cobro de estudios/servicios",
@@ -231,6 +235,7 @@ export async function createPaidStudyOrder(
       }
       await moveVisit(tx, {
         visitId: visit.id,
+        branchCode: input.branchCode,
         userId: input.requestedById ?? input.doctorId,
         status: "in_administration",
         area: "administracion",
@@ -241,11 +246,11 @@ export async function createPaidStudyOrder(
   );
 }
 
-export async function releasePaidStudiesToNursing(input: { workItemId: string; userId?: string }) {
+export async function releasePaidStudiesToNursing(input: { workItemId: string; branchCode: string; userId?: string }) {
   return withDatabaseError("releasePaidStudiesToNursing", () =>
     prisma.$transaction(async (tx) => {
       const billing = await tx.visitWorkItem.findUniqueOrThrow({
-        where: { id: input.workItemId },
+        where: { id_branchCode: { id: input.workItemId, branchCode: input.branchCode } },
         include: { sales: true, clinicalOrders: true }
       });
       if (billing.sales.length === 0 || billing.sales.some((sale) => sale.balanceCents > 0)) {
@@ -261,6 +266,7 @@ export async function releasePaidStudiesToNursing(input: { workItemId: string; u
       const existingNursing = await tx.visitWorkItem.findFirst({
         where: {
           visitId: billing.visitId,
+          branchCode: input.branchCode,
           area: "enfermeria",
           status: { in: ["pending", "acknowledged", "in_progress", "blocked"] }
         },
@@ -271,6 +277,7 @@ export async function releasePaidStudiesToNursing(input: { workItemId: string; u
         (await tx.visitWorkItem.create({
           data: {
             visitId: billing.visitId,
+            branchCode: input.branchCode,
             createdById: input.userId,
             area: "enfermeria",
             title: "Realizar estudios/servicios pagados",
@@ -278,8 +285,8 @@ export async function releasePaidStudiesToNursing(input: { workItemId: string; u
           }
         }));
       await tx.clinicalOrder.updateMany({ where: { id: { in: orders.map((order) => order.id) } }, data: { workItemId: nursing.id } });
-      await tx.visitWorkItem.update({ where: { id: billing.id }, data: { status: "completed", completedAt: new Date() } });
-      await moveVisit(tx, { visitId: billing.visitId, userId: input.userId, status: "in_nursing", area: "enfermeria", note: "Pago confirmado; enviado a enfermería" });
+      await tx.visitWorkItem.update({ where: { id_branchCode: { id: billing.id, branchCode: input.branchCode } }, data: { status: "completed", completedAt: new Date() } });
+      await moveVisit(tx, { visitId: billing.visitId, branchCode: input.branchCode, userId: input.userId, status: "in_nursing", area: "enfermeria", note: "Pago confirmado; enviado a enfermería" });
       return nursing;
     })
   );
@@ -288,18 +295,19 @@ export async function releasePaidStudiesToNursing(input: { workItemId: string; u
 // Derivación general de Enfermería al médico: cierra la tarea de enfermería y
 // devuelve la visita a consulta. Sin candado de estudios: manda al paciente con
 // todo lo registrado (signos, aplicaciones, estudios ya visibles para el médico).
-export async function deriveNursingPatientToDoctor(input: { workItemId: string; userId?: string }) {
+export async function deriveNursingPatientToDoctor(input: { workItemId: string; branchCode: string; userId?: string }) {
   return withDatabaseError("deriveNursingPatientToDoctor", () =>
     prisma.$transaction(async (tx) => {
       const nursing = await tx.visitWorkItem.findUniqueOrThrow({
-        where: { id: input.workItemId }
+        where: { id_branchCode: { id: input.workItemId, branchCode: input.branchCode } }
       });
       await tx.visitWorkItem.update({
-        where: { id: nursing.id },
+        where: { id_branchCode: { id: nursing.id, branchCode: input.branchCode } },
         data: { status: "completed", completedAt: new Date() }
       });
       await moveVisit(tx, {
         visitId: nursing.visitId,
+        branchCode: input.branchCode,
         userId: input.userId,
         status: "in_consultation",
         area: "medico",
@@ -309,14 +317,14 @@ export async function deriveNursingPatientToDoctor(input: { workItemId: string; 
   );
 }
 
-export async function returnCompletedStudiesToDoctor(input: { workItemId: string; userId?: string }) {
+export async function returnCompletedStudiesToDoctor(input: { workItemId: string; branchCode: string; userId?: string }) {
   return withDatabaseError("returnCompletedStudiesToDoctor", () =>
     prisma.$transaction(async (tx) => {
-      const nursing = await tx.visitWorkItem.findUniqueOrThrow({ where: { id: input.workItemId }, include: { clinicalOrders: true } });
+      const nursing = await tx.visitWorkItem.findUniqueOrThrow({ where: { id_branchCode: { id: input.workItemId, branchCode: input.branchCode } }, include: { clinicalOrders: true } });
       const studies = nursing.clinicalOrders.filter((order) => order.type === "study");
       if (studies.length === 0 || studies.some((order) => order.status !== "completed")) throw new Error("STUDIES_INCOMPLETE");
-      await tx.visitWorkItem.update({ where: { id: nursing.id }, data: { status: "completed", completedAt: new Date() } });
-      await moveVisit(tx, { visitId: nursing.visitId, userId: input.userId, status: "in_consultation", area: "medico", note: "Estudios finalizados; retorna al médico" });
+      await tx.visitWorkItem.update({ where: { id_branchCode: { id: nursing.id, branchCode: input.branchCode } }, data: { status: "completed", completedAt: new Date() } });
+      await moveVisit(tx, { visitId: nursing.visitId, branchCode: input.branchCode, userId: input.userId, status: "in_consultation", area: "medico", note: "Estudios finalizados; retorna al médico" });
     })
   );
 }

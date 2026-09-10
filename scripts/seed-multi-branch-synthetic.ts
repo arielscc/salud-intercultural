@@ -43,7 +43,12 @@ async function main() {
   });
 
   await prisma.visit.upsert({
-    where: { idempotencyKey: syntheticVisitKey },
+    where: {
+      branchCode_idempotencyKey: {
+        branchCode: branch.code,
+        idempotencyKey: syntheticVisitKey
+      }
+    },
     create: {
       idempotencyKey: syntheticVisitKey,
       patientId: patient.id,

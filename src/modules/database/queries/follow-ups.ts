@@ -177,6 +177,7 @@ export async function createFollowUpTaskRecord(input: {
             ? tx.visitWorkItem.count({
                 where: {
                   id: input.workItemId,
+                  branchCode: input.branchCode,
                   visit: { branchCode: input.branchCode }
                 }
               })

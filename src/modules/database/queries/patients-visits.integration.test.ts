@@ -79,6 +79,7 @@ describe("patients and visits integration", () => {
 
     await updateVisitRouteStatus({
       visitId: visit.id,
+      branchCode: "el-alto",
       userId: user.id,
       status: "in_consultation",
       area: "medico",
@@ -86,9 +87,9 @@ describe("patients and visits integration", () => {
     });
 
     const patients = await getPatients({ branchCode: "el-alto", search: "Recepcion" });
-    const visits = await getVisits({ activeOnly: true });
+    const visits = await getVisits({ activeOnly: true, branchCode: "el-alto" });
     const detail = await getPatientById(patient.id, "el-alto");
-    const visitDetail = await getVisitById(visit.id);
+    const visitDetail = await getVisitById(visit.id, "el-alto");
 
     expect(patients).toHaveLength(1);
     expect(retriedVisit.id).toBe(visit.id);

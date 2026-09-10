@@ -366,6 +366,9 @@ de contacto.
 
 **Prioridad:** P0. **Dependencias:** Tarea 5.
 
+**Estado:** terminada el 2026-09-09. Evidencia:
+[reporte de la Tarea 7](../task-reports/2026-09-09-tarea-7-visitas-recepcion-rutas-tiempos.md).
+
 **Objetivo:** materializar y asegurar la sucursal en todo el recorrido de una
 visita.
 

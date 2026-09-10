@@ -236,18 +236,6 @@ export const branchModelGroups = [
 
 const legacyMissingBranchModelsByTask = [
   {
-    remediationTask: 7,
-    models: [
-      "VisitDiscontinuation",
-      "VisitStatusHistory",
-      "ReceptionCheckIn",
-      "PatientRoute",
-      "PatientRouteStep",
-      "VisitAreaTimeEvent",
-      "VisitWorkItem"
-    ]
-  },
-  {
     remediationTask: 8,
     models: [
       "ClinicalConsultation",

@@ -65,13 +65,18 @@ function recoveryFollowUpAt(now = new Date()) {
 }
 
 export async function recordVisitDiscontinuation(
-  input: RecordVisitDiscontinuationInput & { recordedById: string }
+  input: RecordVisitDiscontinuationInput & {
+    branchCode: string;
+    recordedById: string;
+  }
 ) {
   return withDatabaseError("recordVisitDiscontinuation", async () => {
     return prisma.$transaction(
       async (tx) => {
         const visit = await tx.visit.findUniqueOrThrow({
-          where: { id: input.visitId },
+          where: {
+            id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+          },
           include: {
             route: true,
             discontinuation: { select: { id: true } },
@@ -216,6 +221,7 @@ export async function recordVisitDiscontinuation(
           tx.visitWorkItem.updateMany({
             where: {
               visitId: visit.id,
+              branchCode: input.branchCode,
               status: { in: ["pending", "acknowledged", "in_progress"] }
             },
             data: { status: "blocked", completedAt: null }
@@ -237,6 +243,7 @@ export async function recordVisitDiscontinuation(
 
         await updateVisitRouteStatusInTransaction(tx, {
           visitId: visit.id,
+          branchCode: input.branchCode,
           userId: input.recordedById,
           status: "left_without_care",
           area: currentArea,
@@ -251,6 +258,7 @@ export async function recordVisitDiscontinuation(
         const discontinuation = await tx.visitDiscontinuation.create({
           data: {
             visitId: visit.id,
+            branchCode: input.branchCode,
             fromStatus: visit.status,
             area: currentArea,
             reason: input.reason,
@@ -297,6 +305,7 @@ export async function autoAbandonExpiredNursingVisits(input: {
 
     const expired = await prisma.visitWorkItem.findMany({
       where: {
+        branchCode: input.branchCode,
         area: "enfermeria",
         status: "pending",
         assignedToId: null,
@@ -316,7 +325,9 @@ export async function autoAbandonExpiredNursingVisits(input: {
         await prisma.$transaction(
           async (tx) => {
             const visit = await tx.visit.findUniqueOrThrow({
-              where: { id: visitId },
+              where: {
+                id_branchCode: { id: visitId, branchCode: input.branchCode }
+              },
               include: { discontinuation: { select: { id: true } } }
             });
             // Otra ejecución (o una enfermera) pudo cerrarla/atenderla ya.
@@ -325,6 +336,7 @@ export async function autoAbandonExpiredNursingVisits(input: {
             await tx.visitWorkItem.updateMany({
               where: {
                 visitId: visit.id,
+                branchCode: input.branchCode,
                 status: { in: ["pending", "acknowledged", "in_progress"] }
               },
               data: { status: "blocked", completedAt: null }
@@ -339,6 +351,7 @@ export async function autoAbandonExpiredNursingVisits(input: {
 
             await updateVisitRouteStatusInTransaction(tx, {
               visitId: visit.id,
+              branchCode: input.branchCode,
               status: "left_without_care",
               area: "enfermeria",
               note: "Abandono automático: más de 1 h en espera en Enfermería.",
@@ -349,6 +362,7 @@ export async function autoAbandonExpiredNursingVisits(input: {
             await tx.visitDiscontinuation.create({
               data: {
                 visitId: visit.id,
+                branchCode: input.branchCode,
                 fromStatus: "in_nursing",
                 area: "enfermeria",
                 reason: "wait",
@@ -420,7 +434,9 @@ export async function autoAbandonUnattendedConsultationVisits(input: {
         await prisma.$transaction(
           async (tx) => {
             const visit = await tx.visit.findUniqueOrThrow({
-              where: { id: visitId },
+              where: {
+                id_branchCode: { id: visitId, branchCode: input.branchCode }
+              },
               include: {
                 discontinuation: { select: { id: true } },
                 clinicalConsultation: { select: { id: true } }
@@ -445,6 +461,7 @@ export async function autoAbandonUnattendedConsultationVisits(input: {
 
             await updateVisitRouteStatusInTransaction(tx, {
               visitId: visit.id,
+              branchCode: input.branchCode,
               status: "left_without_care",
               area: "medico",
               note: "Abandono automático: no entró a la consulta dentro de su día.",
@@ -455,6 +472,7 @@ export async function autoAbandonUnattendedConsultationVisits(input: {
             await tx.visitDiscontinuation.create({
               data: {
                 visitId: visit.id,
+                branchCode: input.branchCode,
                 fromStatus: "in_consultation",
                 area: "medico",
                 reason: "no_show",
@@ -487,7 +505,7 @@ function reportWhere(
   input: VisitDiscontinuationReportFilters
 ): Prisma.VisitDiscontinuationWhereInput {
   return {
-    visit: { branchCode: input.branchCode },
+    branchCode: input.branchCode,
     reason: input.reason,
     occurredAt:
       input.occurredFrom || input.occurredTo

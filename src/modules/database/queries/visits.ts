@@ -82,7 +82,12 @@ export async function createVisitInTransaction(
 ) {
   if (input.idempotencyKey) {
     const reused = await tx.visit.findUnique({
-      where: { idempotencyKey: input.idempotencyKey }
+      where: {
+        branchCode_idempotencyKey: {
+          branchCode: input.branchCode,
+          idempotencyKey: input.idempotencyKey
+        }
+      }
     });
     if (reused) return reused;
   }
@@ -129,6 +134,7 @@ export async function createVisitInTransaction(
   await tx.receptionCheckIn.create({
     data: {
       visitId: visit.id,
+      branchCode: input.branchCode,
       userId: input.userId,
       note: input.note
     }
@@ -137,6 +143,7 @@ export async function createVisitInTransaction(
   await tx.visitStatusHistory.create({
     data: {
       visitId: visit.id,
+      branchCode: input.branchCode,
       userId: input.userId,
       toStatus: "in_reception",
       note: input.note ?? "Llegada registrada"
@@ -146,6 +153,7 @@ export async function createVisitInTransaction(
   const route = await tx.patientRoute.create({
     data: {
       visitId: visit.id,
+      branchCode: input.branchCode,
       currentArea: "recepcion",
       active: true
     }
@@ -154,6 +162,7 @@ export async function createVisitInTransaction(
   const routeStep = await tx.patientRouteStep.create({
     data: {
       routeId: route.id,
+      branchCode: input.branchCode,
       area: "recepcion",
       status: "in_reception",
       note: input.note ?? "Paciente en recepción"
@@ -161,6 +170,7 @@ export async function createVisitInTransaction(
   });
   await appendAreaEnteredEvent(tx, {
     visitId: visit.id,
+    branchCode: input.branchCode,
     routeStepId: routeStep.id,
     area: "recepcion",
     occurredAt: routeStep.startedAt,
@@ -170,6 +180,7 @@ export async function createVisitInTransaction(
     data: {
       visitId: visit.id,
       routeStepId: routeStep.id,
+      branchCode: input.branchCode,
       area: "recepcion",
       type: "attention_started",
       sequence: 2,
@@ -181,6 +192,7 @@ export async function createVisitInTransaction(
   await tx.visitWorkItem.create({
     data: {
       visitId: visit.id,
+      branchCode: input.branchCode,
       createdById: input.userId,
       area: "recepcion",
       title: "Recepción registrada",
@@ -223,14 +235,14 @@ export async function createVisitRecord(input: CreateVisitRecordInput) {
 
 export async function getVisits(
   input: PaginationInput & {
+    branchCode: string;
     status?: VisitStatus;
     activeOnly?: boolean;
     checkedInFrom?: Date;
     checkedInTo?: Date;
     originCity?: string;
     originDepartment?: string;
-    branchCode?: string;
-  } = {}
+  }
 ) {
   const pagination = getPagination(input);
 
@@ -293,14 +305,14 @@ export async function getVisits(
 }
 
 export async function countVisits(input: {
+  branchCode: string;
   status?: VisitStatus;
   activeOnly?: boolean;
   checkedInFrom?: Date;
   checkedInTo?: Date;
   originCity?: string;
   originDepartment?: string;
-  branchCode?: string;
-} = {}) {
+}) {
   return withDatabaseError("countVisits", async () => {
     return prisma.visit.count({
       where: {
@@ -322,10 +334,10 @@ export async function countVisits(input: {
   });
 }
 
-export async function getVisitById(id: string) {
+export async function getVisitById(id: string, branchCode: string) {
   return withDatabaseError("getVisitById", async () => {
     return prisma.visit.findUnique({
-      where: { id },
+      where: { id_branchCode: { id, branchCode } },
       include: {
         patient: true,
         attribution: {
@@ -373,10 +385,10 @@ export async function getVisitById(id: string) {
   });
 }
 
-export async function getVisitFlowState(id: string) {
+export async function getVisitFlowState(id: string, branchCode: string) {
   return withDatabaseError("getVisitFlowState", async () => {
     return prisma.visit.findUnique({
-      where: { id },
+      where: { id_branchCode: { id, branchCode } },
       select: {
         id: true,
         status: true,
@@ -401,6 +413,7 @@ export async function getVisitFlowState(id: string) {
 
 export type UpdateVisitRouteStatusInput = {
   visitId: string;
+  branchCode: string;
   userId?: string;
   status: VisitStatus;
   area: PatientRouteArea;
@@ -414,7 +427,9 @@ export async function updateVisitRouteStatusInTransaction(
   input: UpdateVisitRouteStatusInput
 ) {
   const existing = await tx.visit.findUniqueOrThrow({
-    where: { id: input.visitId },
+    where: {
+      id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+    },
     include: { route: true }
   });
 
@@ -440,7 +455,9 @@ export async function updateVisitRouteStatusInTransaction(
   }
 
   const visit = await tx.visit.update({
-    where: { id: input.visitId },
+    where: {
+      id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+    },
     data: {
       status: input.status,
       completedAt: input.status === "completed" ? now : undefined,
@@ -451,6 +468,7 @@ export async function updateVisitRouteStatusInTransaction(
   await tx.visitStatusHistory.create({
     data: {
       visitId: input.visitId,
+      branchCode: input.branchCode,
       userId: input.userId,
       fromStatus: existing.status,
       toStatus: input.status,
@@ -462,12 +480,14 @@ export async function updateVisitRouteStatusInTransaction(
     const openSteps = await tx.patientRouteStep.findMany({
       where: {
         routeId: existing.route.id,
+        branchCode: input.branchCode,
         endedAt: null
       },
       select: { id: true, area: true }
     });
     await appendAreaExitedEvents(tx, {
       visitId: input.visitId,
+      branchCode: input.branchCode,
       routeStepIds: openSteps.map((step) => step.id),
       areaByStepId: new Map(openSteps.map((step) => [step.id, step.area])),
       occurredAt: now,
@@ -476,6 +496,7 @@ export async function updateVisitRouteStatusInTransaction(
     await tx.patientRouteStep.updateMany({
       where: {
         routeId: existing.route.id,
+        branchCode: input.branchCode,
         endedAt: null
       },
       data: {
@@ -484,7 +505,9 @@ export async function updateVisitRouteStatusInTransaction(
     });
 
     await tx.patientRoute.update({
-      where: { id: existing.route.id },
+      where: {
+        id_branchCode: { id: existing.route.id, branchCode: input.branchCode }
+      },
       data: {
         currentArea: input.area,
         active: !isClosed
@@ -494,6 +517,7 @@ export async function updateVisitRouteStatusInTransaction(
     const nextStep = await tx.patientRouteStep.create({
       data: {
         routeId: existing.route.id,
+        branchCode: input.branchCode,
         area: input.area,
         status: input.status,
         note: input.note
@@ -502,6 +526,7 @@ export async function updateVisitRouteStatusInTransaction(
     if (!isClosed) {
       await appendAreaEnteredEvent(tx, {
         visitId: input.visitId,
+        branchCode: input.branchCode,
         routeStepId: nextStep.id,
         area: input.area,
         occurredAt: nextStep.startedAt,
@@ -513,6 +538,7 @@ export async function updateVisitRouteStatusInTransaction(
   const workItem = await tx.visitWorkItem.create({
     data: {
       visitId: input.visitId,
+      branchCode: input.branchCode,
       createdById: input.userId,
       area: input.area,
       status: isClosed ? "completed" : "pending",

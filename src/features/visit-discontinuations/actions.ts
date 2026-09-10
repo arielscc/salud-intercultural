@@ -18,7 +18,7 @@ export async function recordVisitDiscontinuationAction(formData: FormData) {
       entityType: "visit",
       entityId: visitId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = recordVisitDiscontinuationSchema.safeParse({
         visitId,
         reason: formData.get("reason"),
@@ -38,6 +38,7 @@ export async function recordVisitDiscontinuationAction(formData: FormData) {
       try {
         const recorded = await recordVisitDiscontinuation({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           recordedById: user.id
         });
         return auditedResult(recorded, {

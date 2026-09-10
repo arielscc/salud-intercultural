@@ -54,7 +54,7 @@ export async function assignConsultationVisitAction(formData: FormData) {
       entityType: "visit",
       entityId: visitId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       if (!visitId) redirect("/sigeco/consultas?error=invalid-claim");
       const updated = await assignConsultationVisit({
         visitId,
@@ -67,6 +67,7 @@ export async function assignConsultationVisitAction(formData: FormData) {
         try {
           await recordAreaTimeTransition({
             data: { visitId, action: "start_attention" },
+            branchCode: branchContext.activeBranch.code,
             userId: user.id,
             userRole: user.role
           });
@@ -307,7 +308,7 @@ export async function createClinicalOrderAction(formData: FormData) {
       entityType: "clinical_order",
       context: { visitId: visitId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createClinicalOrderSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -316,6 +317,7 @@ export async function createClinicalOrderAction(formData: FormData) {
 
       const order = await createClinicalOrderRecord({
         ...parsed.data,
+        branchCode: branchContext.activeBranch.code,
         doctorId: user.id
       });
       return auditedResult(order, {
@@ -339,13 +341,14 @@ export async function createPaidStudyOrderAction(formData: FormData) {
       entityType: "visit",
       entityId: visitId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = paidStudyOrderSchema.safeParse(parsePaidStudyForm(formData));
       if (!parsed.success) redirect("/sigeco/consultas?error=invalid-study-order");
 
       try {
         await createPaidStudyOrder({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           doctorId: user.id,
           requestedById: user.id,
           source: "consultation"
@@ -377,7 +380,7 @@ export async function createReceptionPaidStudyOrderAction(formData: FormData) {
       entityType: "visit",
       entityId: visitId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = paidStudyOrderSchema.safeParse(parsePaidStudyForm(formData));
 
       if (!parsed.success) {
@@ -390,6 +393,7 @@ export async function createReceptionPaidStudyOrderAction(formData: FormData) {
       try {
         await createPaidStudyOrder({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           requestedById: user.id,
           source: "reception"
         });

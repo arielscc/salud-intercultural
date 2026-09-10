@@ -19,7 +19,7 @@ export async function createStudyAction(formData: FormData) {
       entityType: "study",
       context: { patientId: patientId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createStudySchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -28,6 +28,7 @@ export async function createStudyAction(formData: FormData) {
 
       const study = await createStudyRecord({
         ...parsed.data,
+        branchCode: branchContext.activeBranch.code,
         recordedById: user.id
       });
       return auditedResult(
