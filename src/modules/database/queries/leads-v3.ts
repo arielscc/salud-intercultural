@@ -10,10 +10,12 @@ import type {
   InternalLeadSource,
   InternalLeadStatus
 } from "@/generated/prisma/client";
+import { createHash } from "node:crypto";
 import { prisma, withDatabaseError } from "@/modules/database";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 
 export type ListInternalLeadsInput = PaginationInput & {
+  branchCode: string;
   status?: InternalLeadStatus;
   source?: InternalLeadSource;
   assignedToId?: string;
@@ -21,6 +23,7 @@ export type ListInternalLeadsInput = PaginationInput & {
 };
 
 export type CreateInternalLeadRecordInput = {
+  branchCode: string;
   name?: string;
   phone: string;
   email?: string;
@@ -32,13 +35,45 @@ export type CreateInternalLeadRecordInput = {
   source?: InternalLeadSource;
   assignedToId?: string;
   createdById?: string;
+  idempotencyKey?: string;
 };
 
 export async function createInternalLeadRecord(input: CreateInternalLeadRecordInput) {
   return withDatabaseError("createInternalLeadRecord", async () => {
     return prisma.$transaction(async (tx) => {
+      if (input.idempotencyKey) {
+        const existing = await tx.lead.findUnique({
+          where: {
+            branchCode_idempotencyKey: {
+              branchCode: input.branchCode,
+              idempotencyKey: input.idempotencyKey
+            }
+          }
+        });
+        if (existing) return existing;
+      }
+      const assigneeId = input.assignedToId || input.createdById;
+      if (assigneeId) {
+        const membership = await tx.internalUser.findFirst({
+          where: {
+            id: assigneeId,
+            active: true,
+            OR: [
+              { platformRole: "super_admin" },
+              {
+                branchAssignments: {
+                  some: { branchCode: input.branchCode, active: true }
+                }
+              }
+            ]
+          },
+          select: { id: true }
+        });
+        if (!membership) throw new Error("LEAD_ASSIGNEE_NOT_IN_BRANCH");
+      }
       const lead = await tx.lead.create({
         data: {
+          branchCode: input.branchCode,
           name: input.name,
           phone: input.phone,
           email: input.email,
@@ -48,13 +83,18 @@ export async function createInternalLeadRecord(input: CreateInternalLeadRecordIn
           estimatedVisitDate: input.estimatedVisitDate,
           commercialNotes: input.commercialNotes,
           source: input.source ?? "website",
-          assignedToId: input.assignedToId || input.createdById
+          assignedToId: assigneeId,
+          idempotencyKey: input.idempotencyKey,
+          deduplicationKey: createHash("sha256")
+            .update(`${input.branchCode}\0${input.phone.replace(/\D/g, "")}`)
+            .digest("hex")
         }
       });
 
       await tx.leadStatusHistory.create({
         data: {
           leadId: lead.id,
+          branchCode: input.branchCode,
           userId: input.createdById,
           toStatus: lead.status,
           note: "Lead creado"
@@ -66,13 +106,14 @@ export async function createInternalLeadRecord(input: CreateInternalLeadRecordIn
   });
 }
 
-export async function getInternalLeads(input: ListInternalLeadsInput = {}) {
+export async function getInternalLeads(input: ListInternalLeadsInput) {
   const pagination = getPagination(input);
   const search = input.search?.trim();
 
   return withDatabaseError("getInternalLeads", async () => {
     return prisma.lead.findMany({
       where: {
+        branchCode: input.branchCode,
         status: input.status,
         source: input.source,
         assignedToId: input.assignedToId,
@@ -118,10 +159,10 @@ export async function getInternalLeads(input: ListInternalLeadsInput = {}) {
   });
 }
 
-export async function getInternalLeadById(id: string) {
+export async function getInternalLeadById(id: string, branchCode: string) {
   return withDatabaseError("getInternalLeadById", async () => {
-    return prisma.lead.findUnique({
-      where: { id },
+    return prisma.lead.findFirst({
+      where: { id, branchCode },
       include: {
         assignedTo: {
           select: {
@@ -179,20 +220,21 @@ export async function getInternalLeadById(id: string) {
 
 export async function updateInternalLeadStatus(input: {
   leadId: string;
+  branchCode: string;
   status: InternalLeadStatus;
   userId?: string;
   note?: string;
 }) {
   return withDatabaseError("updateInternalLeadStatus", async () => {
     return prisma.$transaction(async (tx) => {
-      const existing = await tx.lead.findUniqueOrThrow({
-        where: { id: input.leadId },
+      const existing = await tx.lead.findFirstOrThrow({
+        where: { id: input.leadId, branchCode: input.branchCode },
         select: { status: true }
       });
 
       const now = new Date();
       const lead = await tx.lead.update({
-        where: { id: input.leadId },
+        where: { id_branchCode: { id: input.leadId, branchCode: input.branchCode } },
         data: {
           status: input.status,
           firstContactedAt:
@@ -204,6 +246,7 @@ export async function updateInternalLeadStatus(input: {
       await tx.leadStatusHistory.create({
         data: {
           leadId: input.leadId,
+          branchCode: input.branchCode,
           userId: input.userId,
           fromStatus: existing.status,
           toStatus: input.status,
@@ -218,6 +261,7 @@ export async function updateInternalLeadStatus(input: {
 
 export async function createLeadContactAttempt(input: {
   leadId: string;
+  branchCode: string;
   userId?: string;
   method: InternalLeadContactMethod;
   result: InternalLeadContactResult;
@@ -225,12 +269,16 @@ export async function createLeadContactAttempt(input: {
 }) {
   return withDatabaseError("createLeadContactAttempt", async () => {
     return prisma.$transaction(async (tx) => {
+      await tx.lead.findFirstOrThrow({
+        where: { id: input.leadId, branchCode: input.branchCode },
+        select: { id: true }
+      });
       const attempt = await tx.leadContactAttempt.create({
         data: input
       });
 
       await tx.lead.update({
-        where: { id: input.leadId },
+        where: { id_branchCode: { id: input.leadId, branchCode: input.branchCode } },
         data: {
           lastContactedAt: attempt.contactedAt,
           firstContactedAt: attempt.contactedAt
@@ -244,18 +292,23 @@ export async function createLeadContactAttempt(input: {
 
 export async function createLeadReminder(input: {
   leadId: string;
+  branchCode: string;
   userId?: string;
   dueAt: Date;
   note?: string;
 }) {
   return withDatabaseError("createLeadReminder", async () => {
     return prisma.$transaction(async (tx) => {
+      await tx.lead.findFirstOrThrow({
+        where: { id: input.leadId, branchCode: input.branchCode },
+        select: { id: true }
+      });
       const reminder = await tx.leadReminder.create({
         data: input
       });
 
       await tx.lead.update({
-        where: { id: input.leadId },
+        where: { id_branchCode: { id: input.leadId, branchCode: input.branchCode } },
         data: {
           status: "reminder_pending"
         }
@@ -264,6 +317,7 @@ export async function createLeadReminder(input: {
       await tx.leadStatusHistory.create({
         data: {
           leadId: input.leadId,
+          branchCode: input.branchCode,
           userId: input.userId,
           toStatus: "reminder_pending",
           note: input.note ?? "Recordatorio creado"
@@ -275,19 +329,21 @@ export async function createLeadReminder(input: {
   });
 }
 
-export async function getInternalLeadWorkSummary(userId?: string) {
+export async function getInternalLeadWorkSummary(branchCode: string, userId?: string) {
   const now = new Date();
 
   return withDatabaseError("getInternalLeadWorkSummary", async () => {
     const [newLeads, pendingReminders, noAnswer] = await Promise.all([
       prisma.lead.count({
         where: {
+          branchCode,
           status: "new",
           assignedToId: userId
         }
       }),
       prisma.leadReminder.count({
         where: {
+          branchCode,
           status: "pending",
           dueAt: {
             lte: now
@@ -297,6 +353,7 @@ export async function getInternalLeadWorkSummary(userId?: string) {
       }),
       prisma.lead.count({
         where: {
+          branchCode,
           status: "no_answer",
           assignedToId: userId
         }

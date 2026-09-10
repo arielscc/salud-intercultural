@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { createHash, randomUUID } from "node:crypto";
 import { normalizeCampaignCode } from "@/features/attribution/catalog";
 import { createLeadSchema, sanitizeLeadInput } from "@/features/leads/schemas/lead.schema";
 import { env } from "@/lib/env";
 import { isStagingEnvironment } from "@/lib/deployment-environment";
 import { createLeadRecord } from "@/modules/database/queries/leads";
 import { findActivePayloadCampaignByCode } from "@/modules/payload-sigeco/payload-campaigns";
+import { resolvePublicLeadBranch } from "@/features/leads/public-branch";
 
 type RateLimitEntry = {
   count: number;
@@ -97,8 +99,24 @@ export async function POST(request: Request) {
     );
   }
 
+  const branch = await resolvePublicLeadBranch(request, {
+    campaignCode: input.campaignCode,
+    branchProof: input.branchProof
+  }).catch(() => null);
+  if (!branch) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "branch_not_resolved",
+        message: "No pudimos identificar la sucursal de atención. Usa el enlace oficial de tu sede."
+      },
+      { status: 422 }
+    );
+  }
+
   const clientIp = getClientIp(request);
-  const rateLimitKey = `${clientIp}:${normalizePhone(input.phone)}`;
+  const normalizedPhone = normalizePhone(input.phone);
+  const rateLimitKey = `${branch.branchCode}:${clientIp}:${normalizedPhone}`;
 
   if (!checkRateLimit(rateLimitKey)) {
     return NextResponse.json(
@@ -113,12 +131,25 @@ export async function POST(request: Request) {
   try {
     const campaign = input.campaignCode
       ? await findActivePayloadCampaignByCode(
-          normalizeCampaignCode(input.campaignCode)
+          normalizeCampaignCode(input.campaignCode),
+          branch.branchCode
         ).catch(() => null)
       : null;
+    const requestIdempotencyKey = request.headers.get("idempotency-key")?.trim();
+    const idempotencyKey = createHash("sha256")
+      .update(`${branch.branchCode}\0${requestIdempotencyKey || randomUUID()}`)
+      .digest("hex");
+    const deduplicationKey = createHash("sha256")
+      .update(`${branch.branchCode}\0${normalizedPhone}`)
+      .digest("hex");
+    const { branchProof: _branchProof, ...leadInput } = input;
+    void _branchProof;
     const lead = await createLeadRecord({
-      ...input,
-      campaignCode: campaign?.code ?? input.campaignCode,
+      ...leadInput,
+      branchCode: branch.branchCode,
+      idempotencyKey,
+      deduplicationKey,
+      campaignCode: campaign?.code,
       attributedAccount:
         campaign?.accountLabel ?? campaign?.sourceCode,
       attributionTrafficType:

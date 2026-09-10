@@ -32,10 +32,17 @@ export async function syncPayloadCampaignToSigeco(rawInput: unknown) {
   const input = payloadCampaignContractSchema.parse(rawInput);
 
   return prisma.$transaction(async (tx) => {
-    const source = await tx.captureSource.findUnique({
-      where: { code: input.sourceCode }
-    });
+    const [source, branches] = await Promise.all([
+      tx.captureSource.findUnique({ where: { code: input.sourceCode } }),
+      tx.clinicBranch.findMany({
+        where: { code: { in: input.branchCodes }, status: { not: "inactive" } },
+        select: { code: true }
+      })
+    ]);
     if (!source) throw new Error("PAYLOAD_CAMPAIGN_SOURCE_NOT_CONFIGURED");
+    if (branches.length !== input.branchCodes.length) {
+      throw new Error("PAYLOAD_CAMPAIGN_BRANCH_NOT_CONFIGURED");
+    }
 
     const [byExternalId, byCode] = await Promise.all([
       tx.captureCampaign.findUnique({
@@ -62,6 +69,21 @@ export async function syncPayloadCampaignToSigeco(rawInput: unknown) {
       ? await tx.captureCampaign.update({ where: { id: existing.id }, data })
       : await tx.captureCampaign.create({ data });
 
+    await tx.captureCampaignBranch.updateMany({
+      where: {
+        campaignId: campaign.id,
+        branchCode: { notIn: input.branchCodes }
+      },
+      data: { active: false }
+    });
+    for (const branchCode of input.branchCodes) {
+      await tx.captureCampaignBranch.upsert({
+        where: { campaignId_branchCode: { campaignId: campaign.id, branchCode } },
+        create: { campaignId: campaign.id, branchCode, active: true },
+        update: { active: true }
+      });
+    }
+
     await tx.auditEvent.create({
       data: {
         action: "integration.payload_campaign.sync",
@@ -72,6 +94,7 @@ export async function syncPayloadCampaignToSigeco(rawInput: unknown) {
         context: {
           code: campaign.code,
           sourceCode: input.sourceCode,
+          branchCodes: input.branchCodes,
           active: campaign.active,
           outcome: existing ? "updated" : "created"
         }
@@ -95,6 +118,10 @@ export async function deactivatePayloadCampaignInSigeco(externalId: string) {
     const campaign = await tx.captureCampaign.update({
       where: { id: existing.id },
       data: { active: false, syncedAt: new Date() }
+    });
+    await tx.captureCampaignBranch.updateMany({
+      where: { campaignId: campaign.id },
+      data: { active: false }
     });
     await tx.auditEvent.create({
       data: {

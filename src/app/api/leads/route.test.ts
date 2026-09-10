@@ -3,6 +3,7 @@ import { persistedLead, validLeadInput } from "../../../../tests/fixtures/leads"
 import { createLeadRecord } from "@/modules/database/queries/leads";
 import { findActivePayloadCampaignByCode } from "@/modules/payload-sigeco/payload-campaigns";
 import { POST } from "@/app/api/leads/route";
+import { resolvePublicLeadBranch } from "@/features/leads/public-branch";
 
 vi.mock("@/modules/database/queries/leads", () => ({
   createLeadRecord: vi.fn()
@@ -10,9 +11,13 @@ vi.mock("@/modules/database/queries/leads", () => ({
 vi.mock("@/modules/payload-sigeco/payload-campaigns", () => ({
   findActivePayloadCampaignByCode: vi.fn()
 }));
+vi.mock("@/features/leads/public-branch", () => ({
+  resolvePublicLeadBranch: vi.fn()
+}));
 
 const createLeadRecordMock = vi.mocked(createLeadRecord);
 const findCampaignMock = vi.mocked(findActivePayloadCampaignByCode);
+const resolveBranchMock = vi.mocked(resolvePublicLeadBranch);
 
 function createJsonRequest(body: unknown, headers?: HeadersInit) {
   return new Request("http://localhost:3000/api/leads", {
@@ -34,6 +39,10 @@ beforeEach(() => {
   vi.unstubAllEnvs();
   createLeadRecordMock.mockReset();
   findCampaignMock.mockReset();
+  resolveBranchMock.mockResolvedValue({
+    branchCode: "el-alto",
+    source: "form-config"
+  });
   delete (globalThis as typeof globalThis & {
     __saludInterculturalLeadRateLimit?: unknown;
   }).__saludInterculturalLeadRateLimit;
@@ -46,6 +55,7 @@ describe("POST /api/leads", () => {
     const response = await POST(
       createJsonRequest({
         ...validLeadInput,
+        branchCode: "cochabamba",
         name: "  Paciente   Test  ",
         email: "PACIENTE@EXAMPLE.COM"
       })
@@ -66,6 +76,7 @@ describe("POST /api/leads", () => {
       expect.objectContaining({
         name: "Paciente Test",
         email: "paciente@example.com",
+        branchCode: "el-alto",
         status: "new"
       })
     );
@@ -95,6 +106,7 @@ describe("POST /api/leads", () => {
       accountLabel: "TikTok del Dr. Franco",
       accountHandle: "@clinicademedicinanatural",
       trafficType: "organic",
+      branchCodes: ["el-alto"],
       active: true,
       startsAt: null,
       endsAt: null
@@ -108,7 +120,7 @@ describe("POST /api/leads", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(findCampaignMock).toHaveBeenCalledWith("TIKTOK-DR");
+    expect(findCampaignMock).toHaveBeenCalledWith("TIKTOK-DR", "el-alto");
     expect(createLeadRecordMock).toHaveBeenCalledWith(
       expect.objectContaining({
         campaignCode: "TIKTOK-DR",
@@ -134,6 +146,19 @@ describe("POST /api/leads", () => {
       errors: {
         website: expect.any(Array)
       }
+    });
+    expect(createLeadRecordMock).not.toHaveBeenCalled();
+  });
+
+  it("does not persist PII when the public branch cannot be verified", async () => {
+    resolveBranchMock.mockResolvedValue(null);
+
+    const response = await POST(createJsonRequest(validLeadInput));
+
+    expect(response.status).toBe(422);
+    expect(await readJson(response)).toMatchObject({
+      ok: false,
+      code: "branch_not_resolved"
     });
     expect(createLeadRecordMock).not.toHaveBeenCalled();
   });
@@ -167,7 +192,7 @@ describe("POST /api/leads", () => {
     });
   });
 
-  it("keeps the lead when campaign lookup is temporarily unavailable", async () => {
+  it("keeps the local lead without unverified attribution when campaign lookup is unavailable", async () => {
     createLeadRecordMock.mockResolvedValue(persistedLead);
     findCampaignMock.mockRejectedValue(new Error("integration unavailable"));
 
@@ -178,7 +203,8 @@ describe("POST /api/leads", () => {
     expect(response.status).toBe(201);
     expect(createLeadRecordMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        campaignCode: "TIKTOK-DR",
+        branchCode: "el-alto",
+        campaignCode: undefined,
         attributionTrafficType: "unidentified"
       })
     );

@@ -13,6 +13,7 @@ const validCampaign = {
   accountLabel: "TikTok de la clínica",
   accountHandle: "@cuenta",
   trafficType: "paid",
+  branchCodes: ["cochabamba"],
   active: true,
   startsAt: "2026-08-01T00:00:00.000Z",
   endsAt: "2026-09-01T00:00:00.000Z"
@@ -42,16 +43,17 @@ describe("Payload-SIGECO integration contract", () => {
   it("limits aggregate exports to one year", () => {
     expect(
       payloadMetricsQuerySchema.safeParse({
+        branchCode: "cochabamba",
         from: "2026-01-01",
         to: "2026-12-31"
       }).success
     ).toBe(true);
     expect(
       payloadMetricsQuerySchema.safeParse({
+        branchCode: "cochabamba",
         from: "2025-01-01",
         to: "2026-12-31"
       }).success
     ).toBe(false);
   });
 });
-

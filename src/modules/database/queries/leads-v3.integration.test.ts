@@ -33,6 +33,7 @@ describe("internal lead queries integration", () => {
     });
 
     const lead = await createInternalLeadRecord({
+      branchCode: "el-alto",
       name: "Paciente V3",
       phone: "+591 70000003",
       city: "El Alto",
@@ -40,9 +41,16 @@ describe("internal lead queries integration", () => {
       assignedToId: user.id,
       createdById: user.id
     });
+    await createInternalLeadRecord({
+      branchCode: "cochabamba",
+      name: "Paciente Cochabamba",
+      phone: "+591 70000004",
+      source: "whatsapp"
+    });
 
     await updateInternalLeadStatus({
       leadId: lead.id,
+      branchCode: "el-alto",
       status: "interested",
       userId: user.id,
       note: "Quiere informacion adicional."
@@ -50,6 +58,7 @@ describe("internal lead queries integration", () => {
 
     await createLeadContactAttempt({
       leadId: lead.id,
+      branchCode: "el-alto",
       userId: user.id,
       method: "call",
       result: "interested",
@@ -58,12 +67,14 @@ describe("internal lead queries integration", () => {
 
     await createLeadReminder({
       leadId: lead.id,
+      branchCode: "el-alto",
       userId: user.id,
       dueAt: new Date("2026-06-01T14:00:00.000Z"),
       note: "Confirmar visita."
     });
 
     const filtered = await getInternalLeads({
+      branchCode: "el-alto",
       search: "Paciente V3",
       source: "whatsapp",
       pageSize: 10
@@ -76,11 +87,14 @@ describe("internal lead queries integration", () => {
       status: "reminder_pending"
     });
 
-    const detail = await getInternalLeadById(lead.id);
+    const detail = await getInternalLeadById(lead.id, "el-alto");
 
     expect(detail?.statusHistory).toHaveLength(3);
     expect(detail?.contactAttempts).toHaveLength(1);
     expect(detail?.reminders).toHaveLength(1);
     expect(detail?.assignedTo?.email).toBe("captacion@example.com");
+    expect(
+      await getInternalLeads({ branchCode: "cochabamba", pageSize: 10 })
+    ).toHaveLength(1);
   });
 });

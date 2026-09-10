@@ -71,6 +71,12 @@ export const privateEnvSchema = z.object({
     emptyToUndefined,
     z.string().min(32, "PAYLOAD_SIGECO_INTEGRATION_SECRET must contain at least 32 characters.").optional()
   ),
+  PUBLIC_LEAD_BRANCH_SIGNING_SECRET: z.preprocess(
+    emptyToUndefined,
+    z.string().min(32, "PUBLIC_LEAD_BRANCH_SIGNING_SECRET must contain at least 32 characters.").optional()
+  ),
+  PUBLIC_LEAD_FORM_BRANCH_CODE: optionalString,
+  PUBLIC_LEAD_HOST_BRANCH_MAP: optionalString,
   BLOB_READ_WRITE_TOKEN: optionalString,
   STAGING_BLOB_READ_WRITE_TOKEN: optionalString,
   CLINICAL_FILES_STORAGE_DRIVER: z.preprocess(

@@ -45,6 +45,7 @@ export function ContactLeadForm({
   );
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [attributionCode, setAttributionCode] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   const onSubmit = async (data: CreateLeadInput) => {
     setSubmitState("loading");
@@ -61,6 +62,7 @@ export function ContactLeadForm({
       status: "new",
       pagePath: pathname,
       campaignCode: query.get("camp") ?? undefined,
+      branchProof: query.get("branch_proof") ?? undefined,
       utmSource: query.get("utm_source") ?? undefined,
       utmMedium: query.get("utm_medium") ?? undefined,
       utmCampaign: query.get("utm_campaign") ?? undefined,
@@ -72,7 +74,10 @@ export function ContactLeadForm({
     try {
       response = await fetch("/api/leads", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey
+        },
         body: JSON.stringify(payload)
       });
     } catch {
@@ -98,6 +103,7 @@ export function ContactLeadForm({
     }
 
     setSubmitState("success");
+    setIdempotencyKey(crypto.randomUUID());
     setFeedbackMessage(result?.message ?? "Consulta registrada correctamente.");
     setAttributionCode(result?.lead?.attributionCode ?? "");
     trackLeadFormSubmit({

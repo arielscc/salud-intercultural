@@ -17,7 +17,8 @@ function isCurrentlyActive(campaign: {
 }
 
 export async function findActivePayloadCampaignByCode(
-  rawCode: string
+  rawCode: string,
+  branchCode: string
 ): Promise<PayloadCampaignContract | null> {
   const payload = await getPayload({ config });
   const code = normalizeCampaignCode(rawCode);
@@ -28,7 +29,13 @@ export async function findActivePayloadCampaignByCode(
     where: { code: { equals: code } }
   });
   const campaign = result.docs[0];
-  if (!campaign || !isCurrentlyActive(campaign)) return null;
+  if (
+    !campaign ||
+    !isCurrentlyActive(campaign) ||
+    !campaign.branchAssignments?.some(
+      (assignment) => assignment.branchCode === branchCode
+    )
+  ) return null;
 
   return {
     externalId: String(campaign.id),
@@ -39,19 +46,27 @@ export async function findActivePayloadCampaignByCode(
     accountLabel: campaign.accountLabel,
     accountHandle: campaign.accountHandle,
     trafficType: campaign.trafficType,
+    branchCodes: campaign.branchAssignments.map(
+      (assignment) => assignment.branchCode
+    ),
     active: campaign.active,
     startsAt: campaign.startsAt,
     endsAt: campaign.endsAt
   };
 }
 
-export async function findPayloadLeadCampaignCode(id: string) {
+export async function findPayloadLeadCampaignCode(id: string, branchCode: string) {
   const payload = await getPayload({ config });
   const result = await payload.find({
     collection: "lead-submissions",
     limit: 1,
     overrideAccess: true,
-    where: { id: { equals: id } },
+    where: {
+      and: [
+        { id: { equals: id } },
+        { branchCode: { equals: branchCode } }
+      ]
+    },
     select: { campaignCode: true }
   });
   const lead = result.docs[0];

@@ -15,7 +15,7 @@ const secret = "local-payload-sigeco-integration-secret-only";
 
 function request(authorization = `Bearer ${secret}`) {
   return new Request(
-    "http://localhost:3000/api/integrations/payload-sigeco/metrics?from=2026-08-01&to=2026-08-31",
+    "http://localhost:3000/api/integrations/payload-sigeco/metrics?branch=el-alto&from=2026-08-01&to=2026-08-31",
     { headers: { authorization } }
   );
 }
@@ -32,6 +32,7 @@ describe("GET Payload-SIGECO metrics", () => {
 
   it("returns only the approved aggregate DTO", async () => {
     metricsMock.mockResolvedValue({
+      branchCode: "el-alto",
       period: { from: "2026-08-01", to: "2026-08-31" },
       privacy: { minimumGroupSize: 5, suppressed: false },
       totals: { arrivals: 10, sales: 4, collectedCents: 200_000 },

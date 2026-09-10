@@ -34,7 +34,7 @@ export async function createInternalLeadAction(formData: FormData) {
       action: "lead.create",
       entityType: "lead"
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createInternalLeadSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -43,6 +43,7 @@ export async function createInternalLeadAction(formData: FormData) {
 
       const created = await createInternalLeadRecord({
         ...sanitizeInternalLeadInput(parsed.data),
+        branchCode: branchContext.activeBranch.code,
         createdById: user.id
       });
       return auditedResult(created, { entityId: created.id });
@@ -63,7 +64,7 @@ export async function updateLeadStatusAction(formData: FormData) {
       entityType: "lead",
       entityId: leadId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = updateInternalLeadStatusSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -72,6 +73,7 @@ export async function updateLeadStatusAction(formData: FormData) {
 
       const history = await updateInternalLeadStatus({
         ...parsed.data,
+        branchCode: branchContext.activeBranch.code,
         userId: user.id
       });
       return auditedResult(history, {
@@ -95,7 +97,7 @@ export async function createLeadContactAttemptAction(formData: FormData) {
       entityType: "lead",
       entityId: leadId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createLeadContactAttemptSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -104,6 +106,7 @@ export async function createLeadContactAttemptAction(formData: FormData) {
 
       const attempt = await createLeadContactAttempt({
         ...parsed.data,
+        branchCode: branchContext.activeBranch.code,
         userId: user.id
       });
       return auditedResult(attempt, {
@@ -127,7 +130,7 @@ export async function createLeadReminderAction(formData: FormData) {
       entityType: "lead",
       entityId: leadId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createLeadReminderSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -136,6 +139,7 @@ export async function createLeadReminderAction(formData: FormData) {
 
       const reminder = await createLeadReminder({
         ...parsed.data,
+        branchCode: branchContext.activeBranch.code,
         userId: user.id
       });
       return auditedResult(reminder, {

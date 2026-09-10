@@ -13,6 +13,9 @@ async function cleanAttributionFixtures() {
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
+  await prisma.captureCampaignBranch.deleteMany({
+    where: { campaign: { code: "TEST-PAYLOAD-SYNC" } }
+  });
   await prisma.captureCampaign.deleteMany({
     where: { code: "TEST-PAYLOAD-SYNC" }
   });
@@ -39,7 +42,7 @@ async function seedAttributionCatalog() {
     },
     update: {}
   });
-  await prisma.captureCampaign.upsert({
+  const campaign = await prisma.captureCampaign.upsert({
     where: { code: "TIKTOK-DR" },
     create: {
       code: "TIKTOK-DR",
@@ -49,6 +52,13 @@ async function seedAttributionCatalog() {
       trafficType: "organic"
     },
     update: {}
+  });
+  await prisma.captureCampaignBranch.upsert({
+    where: {
+      campaignId_branchCode: { campaignId: campaign.id, branchCode: "el-alto" }
+    },
+    create: { campaignId: campaign.id, branchCode: "el-alto" },
+    update: { active: true }
   });
 }
 
@@ -67,6 +77,7 @@ describe("capture attribution integration", () => {
       name: "Campaña sintética",
       sourceCode: "tiktok",
       trafficType: "paid" as const,
+      branchCodes: ["el-alto"],
       active: true
     };
 
@@ -151,6 +162,12 @@ describe("capture attribution integration", () => {
     });
 
     const report = await getCaptureAttributionReport({
+      branchCode: "el-alto",
+      city: "Cochabamba",
+      department: "Cochabamba"
+    });
+    const otherBranchReport = await getCaptureAttributionReport({
+      branchCode: "cochabamba",
       city: "Cochabamba",
       department: "Cochabamba"
     });
@@ -167,6 +184,7 @@ describe("capture attribution integration", () => {
       soldCents: 50000,
       collectedCents: 30000
     });
+    expect(otherBranchReport.totals.arrivals).toBe(0);
     expect(tiktok).toMatchObject({
       primaryArrivals: 1,
       assistedArrivals: 1,

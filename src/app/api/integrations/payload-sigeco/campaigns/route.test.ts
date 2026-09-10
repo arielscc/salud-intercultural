@@ -19,6 +19,7 @@ const campaign = {
   name: "Campaña Cochabamba agosto",
   sourceCode: "tiktok",
   trafficType: "paid",
+  branchCodes: ["cochabamba"],
   active: true
 };
 

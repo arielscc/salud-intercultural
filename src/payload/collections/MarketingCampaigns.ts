@@ -6,6 +6,7 @@ import {
 } from "@/modules/payload-sigeco/campaign-sync";
 import { adminOrEditor } from "../access.ts";
 import { authenticatedCollectionAccess } from "./Users.ts";
+import { prisma } from "@/modules/database";
 
 export const MarketingCampaigns: CollectionConfig = {
   slug: "marketing-campaigns",
@@ -101,17 +102,56 @@ export const MarketingCampaigns: CollectionConfig = {
       defaultValue: true,
       required: true,
       label: "Activa"
+    },
+    {
+      name: "branchAssignments",
+      type: "array",
+      required: true,
+      minRows: 1,
+      label: "Sucursales asignadas",
+      admin: {
+        description:
+          "La campaña y sus resultados solo estarán disponibles en estas sucursales."
+      },
+      fields: [
+        {
+          name: "branchCode",
+          type: "text",
+          required: true,
+          label: "Código de sucursal"
+        }
+      ]
     }
   ],
   hooks: {
     beforeValidate: [
-      ({ data, operation, originalDoc }) => {
+      async ({ data, operation, originalDoc }) => {
+        const branchAssignments = data?.branchAssignments ?? originalDoc?.branchAssignments;
+        const branchCodes = (branchAssignments ?? []).map(
+          (assignment: { branchCode: string }) => assignment.branchCode.trim()
+        );
+        if (branchCodes.length === 0 || new Set(branchCodes).size !== branchCodes.length) {
+          throw new Error("CAMPAIGN_BRANCH_ASSIGNMENTS_REQUIRED");
+        }
+        const configuredBranches = await prisma.clinicBranch.count({
+          where: {
+            code: { in: branchCodes },
+            status: { not: "inactive" }
+          }
+        });
+        if (configuredBranches !== branchCodes.length) {
+          throw new Error("CAMPAIGN_BRANCH_NOT_CONFIGURED");
+        }
+        const normalizedData = {
+          ...data,
+          branchAssignments: branchCodes.map((branchCode: string) => ({ branchCode }))
+        };
         if (operation === "update" && originalDoc?.code) {
-          return { ...data, code: originalDoc.code };
+          return { ...normalizedData, code: originalDoc.code };
         }
         return data?.code
-          ? { ...data, code: normalizeCampaignCode(String(data.code)) }
-          : data;
+          ? { ...normalizedData, code: normalizeCampaignCode(String(data.code)) }
+          : normalizedData;
       }
     ],
     afterChange: [
@@ -127,7 +167,10 @@ export const MarketingCampaigns: CollectionConfig = {
           trafficType: doc.trafficType,
           active: doc.active,
           startsAt: doc.startsAt,
-          endsAt: doc.endsAt
+          endsAt: doc.endsAt,
+          branchCodes: (doc.branchAssignments ?? []).map(
+            (assignment: { branchCode: string }) => assignment.branchCode
+          )
         }).catch(() => {
           req.payload.logger.warn(
             "La campaña se guardó en Payload, pero su copia técnica de SIGECO quedó pendiente."

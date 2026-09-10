@@ -172,7 +172,8 @@ const marketingCampaigns = [
     accountLabel: "TikTok del Dr. Franco",
     accountHandle: "@clinicademedicinanatural",
     trafficType: "organic" as const,
-    active: true
+    active: true,
+    branchAssignments: [{ branchCode: "el-alto" }, { branchCode: "cochabamba" }]
   },
   {
     code: "TIKTOK-DRA",
@@ -181,7 +182,8 @@ const marketingCampaigns = [
     accountLabel: "TikTok de la Dra. Cinthia",
     accountHandle: "@clinica_medicina_natural",
     trafficType: "organic" as const,
-    active: true
+    active: true,
+    branchAssignments: [{ branchCode: "el-alto" }, { branchCode: "cochabamba" }]
   },
   {
     code: "FACEBOOK-CLINICA",
@@ -190,7 +192,8 @@ const marketingCampaigns = [
     accountLabel: "Facebook de la clínica",
     accountHandle: "ClinicaDeMedicinaNaturalYTradicional",
     trafficType: "organic" as const,
-    active: true
+    active: true,
+    branchAssignments: [{ branchCode: "el-alto" }, { branchCode: "cochabamba" }]
   },
   {
     code: "WEB-FORM",
@@ -198,7 +201,8 @@ const marketingCampaigns = [
     sourceCode: "website" as const,
     accountLabel: "Sitio web de la clínica",
     trafficType: "organic" as const,
-    active: true
+    active: true,
+    branchAssignments: [{ branchCode: "el-alto" }, { branchCode: "cochabamba" }]
   }
 ];
 

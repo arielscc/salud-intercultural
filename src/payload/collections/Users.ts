@@ -1,5 +1,6 @@
 import type { CollectionConfig } from "payload";
 import { adminOrEditor, isAdmin, isAuthenticated } from "../access.ts";
+import { prisma } from "@/modules/database";
 
 const adminSessionSeconds = Number(process.env.ADMIN_SESSION_SECONDS ?? 60 * 60 * 8);
 const adminLockMinutes = Number(process.env.ADMIN_LOCK_MINUTES ?? 10);
@@ -43,24 +44,53 @@ export const Users: CollectionConfig = {
       name: "name",
       type: "text",
       label: "Nombre"
+    },
+    {
+      name: "payloadBranch",
+      type: "text",
+      index: true,
+      label: "Sucursal operativa",
+      admin: {
+        description:
+          "Obligatoria para editores. Debe coincidir con el código de ClinicBranch."
+      }
     }
   ],
   hooks: {
     beforeChange: [
-      async ({ data, operation, req }) => {
+      async ({ data, operation, originalDoc, req }) => {
+        let nextData = data;
         if (operation === "create" && !data.role) {
           const users = await req.payload.count({
             collection: "users",
             overrideAccess: true
           });
 
-          return {
+          nextData = {
             ...data,
             role: users.totalDocs === 0 ? "admin" : "editor"
           };
         }
 
-        return data;
+        const nextRole = nextData.role ?? originalDoc?.role;
+        const nextBranchCode = (
+          nextData.payloadBranch ?? originalDoc?.payloadBranch
+        )?.trim();
+        if (nextRole === "editor" && !nextBranchCode) {
+          throw new Error("PAYLOAD_EDITOR_BRANCH_REQUIRED");
+        }
+        if (nextRole === "editor" && nextBranchCode) {
+          const branch = await prisma.clinicBranch.findFirst({
+            where: { code: nextBranchCode, status: "active" },
+            select: { code: true }
+          });
+          if (!branch) throw new Error("PAYLOAD_EDITOR_BRANCH_NOT_CONFIGURED");
+        }
+        if (nextData.payloadBranch) {
+          return { ...nextData, payloadBranch: nextBranchCode };
+        }
+
+        return nextData;
       }
     ]
   }

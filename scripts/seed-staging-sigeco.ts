@@ -229,7 +229,20 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
 
     await prisma.$transaction(async (tx) => {
       await tx.visitAttribution.deleteMany({ where: { visitId } });
+      if (campaign) {
+        await tx.captureCampaignBranch.upsert({
+          where: {
+            campaignId_branchCode: {
+              campaignId: campaign.id,
+              branchCode: QA_BRANCH_CODE
+            }
+          },
+          create: { campaignId: campaign.id, branchCode: QA_BRANCH_CODE },
+          update: { active: true }
+        });
+      }
       await createVisitAttributionInTransaction(tx, {
+        branchCode: QA_BRANCH_CODE,
         patientId: patient.id,
         visitId,
         capturedById: receptionUserId,

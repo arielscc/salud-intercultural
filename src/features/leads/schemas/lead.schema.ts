@@ -38,6 +38,10 @@ export const createLeadSchema = z.object({
     emptyToUndefined,
     z.string().trim().min(2).max(80).optional()
   ),
+  branchProof: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().min(20).max(300).optional()
+  ),
   utmSource: z.preprocess(
     emptyToUndefined,
     z.string().trim().max(120).optional()
@@ -68,6 +72,7 @@ export function sanitizeLeadInput(input: CreateLeadInput) {
     campaignCode: input.campaignCode
       ? cleanText(input.campaignCode).toUpperCase()
       : undefined,
+    branchProof: input.branchProof ? input.branchProof.trim() : undefined,
     utmSource: input.utmSource ? cleanText(input.utmSource) : undefined,
     utmMedium: input.utmMedium ? cleanText(input.utmMedium) : undefined,
     utmCampaign: input.utmCampaign

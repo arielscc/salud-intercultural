@@ -93,6 +93,12 @@ export async function appendPatientIdentityVersionInTransaction(
 export async function createPatientRecord(input: CreatePatientRecordInput) {
   return withDatabaseError("createPatientRecord", async () => {
     return prisma.$transaction(async (tx) => {
+      if (input.sourceLeadId) {
+        await tx.lead.findFirstOrThrow({
+          where: { id: input.sourceLeadId, branchCode: input.branchCode },
+          select: { id: true }
+        });
+      }
       const patientCount = await tx.patient.count();
       const patient = await tx.patient.create({
         data: {
@@ -138,7 +144,12 @@ export async function createPatientRecord(input: CreatePatientRecordInput) {
 
       if (input.sourceLeadId) {
         await tx.lead.update({
-          where: { id: input.sourceLeadId },
+          where: {
+            id_branchCode: {
+              id: input.sourceLeadId,
+              branchCode: input.branchCode
+            }
+          },
           data: {
             convertedPatientId: patient.id,
             status: "converted_to_patient"
@@ -148,6 +159,7 @@ export async function createPatientRecord(input: CreatePatientRecordInput) {
         await tx.leadStatusHistory.create({
           data: {
             leadId: input.sourceLeadId,
+            branchCode: input.branchCode,
             userId: input.createdById,
             toStatus: "converted_to_patient",
             note: `Convertido a paciente ${patient.internalCode}`
@@ -157,6 +169,67 @@ export async function createPatientRecord(input: CreatePatientRecordInput) {
 
       await recordDuplicateCandidatesInTransaction(tx, patient.id);
       return patient;
+    });
+  });
+}
+
+/**
+ * Convierte un lead local reutilizando una identidad corporativa ya existente.
+ * Solo crea el expediente de la sede del lead; nunca replica historiales.
+ */
+export async function convertLeadToExistingPatient(input: {
+  leadId: string;
+  branchCode: string;
+  patientId: string;
+  convertedById?: string;
+}) {
+  return withDatabaseError("convertLeadToExistingPatient", async () => {
+    return prisma.$transaction(async (tx) => {
+      const [lead, patient] = await Promise.all([
+        tx.lead.findFirstOrThrow({
+          where: { id: input.leadId, branchCode: input.branchCode },
+          select: { id: true, status: true }
+        }),
+        tx.patient.findUniqueOrThrow({
+          where: { id: input.patientId },
+          select: { id: true, internalCode: true }
+        })
+      ]);
+
+      await tx.patientBranchRecord.upsert({
+        where: {
+          patientId_branchCode: {
+            patientId: patient.id,
+            branchCode: input.branchCode
+          }
+        },
+        create: {
+          patientId: patient.id,
+          branchCode: input.branchCode,
+          recordNumber: `${input.branchCode}-${patient.internalCode}`
+        },
+        update: {}
+      });
+      const converted = await tx.lead.update({
+        where: {
+          id_branchCode: { id: input.leadId, branchCode: input.branchCode }
+        },
+        data: {
+          convertedPatientId: patient.id,
+          status: "converted_to_patient"
+        }
+      });
+      await tx.leadStatusHistory.create({
+        data: {
+          leadId: lead.id,
+          branchCode: input.branchCode,
+          userId: input.convertedById,
+          fromStatus: lead.status,
+          toStatus: "converted_to_patient",
+          note: `Vinculado al paciente ${patient.internalCode}`
+        }
+      });
+      return converted;
     });
   });
 }
@@ -279,7 +352,7 @@ export async function getPatientById(id: string, branchCode: string) {
           include: {
             attribution: {
               include: {
-                campaign: true,
+                campaignAssignment: { include: { campaign: true } },
                 touches: { include: { source: true } }
               }
             },

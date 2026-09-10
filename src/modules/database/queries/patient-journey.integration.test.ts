@@ -59,6 +59,7 @@ describe("patient journey report integration", () => {
     await prisma.visitAttribution.create({
       data: {
         visitId: visit.id,
+        branchCode: "el-alto",
         patientId: patient.id,
         touches: {
           create: {

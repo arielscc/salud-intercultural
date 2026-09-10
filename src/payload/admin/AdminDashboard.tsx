@@ -8,6 +8,7 @@ type AdminDashboardProps = {
     email?: string;
     name?: string | null;
     role?: string;
+    payloadBranch?: string | null;
   };
 };
 
@@ -27,10 +28,15 @@ const collectionSlugs = [
   "team-members"
 ] as const;
 
-async function getCollectionCount(payload: Payload, slug: (typeof collectionSlugs)[number]) {
+async function getCollectionCount(
+  payload: Payload,
+  slug: (typeof collectionSlugs)[number],
+  user: NonNullable<AdminDashboardProps["user"]>
+) {
   const result = await payload.count({
     collection: slug,
-    overrideAccess: false
+    overrideAccess: false,
+    user
   });
 
   return result.totalDocs;
@@ -62,7 +68,7 @@ export async function AdminDashboard({ payload, user }: AdminDashboardProps) {
   }
 
   const metricResults = await Promise.allSettled([
-    ...collectionSlugs.map((slug) => getCollectionCount(payload, slug)),
+    ...collectionSlugs.map((slug) => getCollectionCount(payload, slug, user)),
     getSiteSettingsState(payload)
   ]);
 

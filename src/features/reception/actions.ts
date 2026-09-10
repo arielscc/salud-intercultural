@@ -43,7 +43,8 @@ export async function searchReceptionPatientsAction(query: string) {
 
 export async function validateAttributionEvidenceCodeAction(code: string) {
   await requirePermission("visits_create");
-  const result = await resolveAttributionEvidenceSafely(code);
+  const { activeBranch } = await getBranchContext();
+  const result = await resolveAttributionEvidenceSafely(code, activeBranch.code);
 
   return {
     valid: result.status !== "not_found",
@@ -72,7 +73,8 @@ export async function submitReceptionIntakeAction(formData: FormData) {
 
       const record = toReceptionIntakeRecord(parsed.data);
       const evidenceResolution = await resolveAttributionEvidenceSafely(
-        record.attribution.evidenceCode
+        record.attribution.evidenceCode,
+        activeBranch.code
       );
       const evidence = evidenceResolution.evidence;
       const pendingEvidenceCode =

@@ -1,5 +1,6 @@
 import type { CollectionConfig } from "payload";
-import { adminOrEditor, isAdmin } from "../access.ts";
+import { branchScopedAccess, isAdmin } from "../access.ts";
+import { prisma } from "@/modules/database";
 
 const contactedStatuses = ["contacted", "scheduled", "closed"] as const;
 
@@ -36,13 +37,36 @@ export const LeadSubmissions: CollectionConfig = {
     useAsTitle: "phone"
   },
   access: {
-    create: adminOrEditor,
+    create: isAdmin,
     delete: isAdmin,
-    read: adminOrEditor,
-    update: adminOrEditor
+    read: branchScopedAccess,
+    update: branchScopedAccess
   },
   defaultSort: "-createdAt",
   fields: [
+    {
+      name: "branchCode",
+      type: "text",
+      required: true,
+      index: true,
+      label: "Sucursal",
+      admin: { readOnly: true }
+    },
+    {
+      name: "idempotencyKey",
+      type: "text",
+      required: true,
+      unique: true,
+      index: true,
+      admin: { hidden: true }
+    },
+    {
+      name: "deduplicationKey",
+      type: "text",
+      required: true,
+      index: true,
+      admin: { hidden: true }
+    },
     {
       name: "name",
       type: "text",
@@ -163,7 +187,41 @@ export const LeadSubmissions: CollectionConfig = {
   ],
   hooks: {
     beforeChange: [
-      ({ data, originalDoc, operation }) => {
+      async ({ data, originalDoc, operation, req }) => {
+        if (
+          operation === "update" &&
+          originalDoc?.branchCode &&
+          data.branchCode &&
+          data.branchCode !== originalDoc.branchCode
+        ) {
+          throw new Error("LEAD_BRANCH_IMMUTABLE");
+        }
+        const branchCode =
+          typeof data.branchCode === "string"
+            ? data.branchCode
+            : originalDoc?.branchCode;
+        const branch = branchCode
+          ? await prisma.clinicBranch.findFirst({
+              where: { code: branchCode, status: "active" },
+              select: { code: true }
+            })
+          : null;
+        if (!branch) throw new Error("LEAD_BRANCH_NOT_CONFIGURED");
+        const campaignCode = data.campaignCode ?? originalDoc?.campaignCode;
+        if (campaignCode) {
+          const campaign = await req.payload.find({
+            collection: "marketing-campaigns",
+            limit: 1,
+            overrideAccess: true,
+            where: {
+              and: [
+                { code: { equals: campaignCode } },
+                { "branchAssignments.branchCode": { equals: branch.code } }
+              ]
+            }
+          });
+          if (!campaign.docs[0]) throw new Error("LEAD_CAMPAIGN_NOT_ASSIGNED_TO_BRANCH");
+        }
         if (
           operation === "update" &&
           contactedStatuses.includes(data.status) &&

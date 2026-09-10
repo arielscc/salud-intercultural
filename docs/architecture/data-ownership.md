@@ -151,7 +151,11 @@ No usar `src/data` como fuente viva si el contenido debe editarse desde admin.
 
 ## Estado Legacy
 
-Los modelos Prisma editoriales legacy (`Lead`, `Service`, `TeamMember`, `Testimonial`, `Faq`, `SiteSetting` y `TreatmentTopic`) fueron eliminados del schema Prisma. Payload queda como fuente activa para leads simples, servicios, equipo, testimonios, FAQs, configuracion global, paginas publicas y media.
+Payload queda como fuente activa para leads del formulario público, servicios,
+equipo, testimonios, FAQs, configuración global, páginas públicas y media. El
+modelo transaccional Prisma `Lead` se conserva únicamente para el flujo
+histórico interno de captación, hoy sin UI; no es una copia editable del lead
+de Payload. Ambos tipos de lead son operaciones locales y exigen sucursal.
 
 No reintroducir modelos Prisma para contenido editable salvo que una decision de arquitectura cambie explicitamente la fuente de verdad.
 

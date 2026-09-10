@@ -28,14 +28,18 @@ beforeEach(() => {
 describe("safe attribution evidence", () => {
   it("marks the integration unavailable instead of throwing", async () => {
     payloadCampaignMock.mockRejectedValue(new Error("Payload unavailable"));
-    await expect(resolveAttributionEvidenceSafely("TIKTOK-DR")).resolves.toEqual({
+    await expect(
+      resolveAttributionEvidenceSafely("TIKTOK-DR", "el-alto")
+    ).resolves.toEqual({
       status: "unavailable",
       evidence: null
     });
   });
 
   it("keeps manual intake available when no evidence was supplied", async () => {
-    await expect(resolveAttributionEvidenceSafely(undefined)).resolves.toEqual({
+    await expect(
+      resolveAttributionEvidenceSafely(undefined, "el-alto")
+    ).resolves.toEqual({
       status: "none",
       evidence: null
     });

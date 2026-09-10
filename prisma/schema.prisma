@@ -841,36 +841,43 @@ model InternalUser {
 /// Sede física de la clínica. `preparation` permite configurar una nueva sede
 /// sin habilitar todavía operaciones reales ni mostrarla como seleccionable.
 model ClinicBranch {
-  code                 String                   @id
-  name                 String
-  city                 String
-  department           String
-  status               ClinicBranchStatus       @default(preparation)
-  openedAt             DateTime?
-  createdAt            DateTime                 @default(now())
-  updatedAt            DateTime                 @updatedAt
-  userAssignments      InternalUserBranch[]
-  visits               Visit[]
-  sales                Sale[]
-  payments             Payment[]
-  cashMovements        CashMovement[]
-  cashSessions         CashSession[]
-  purchases            Purchase[]
-  purchasePayments     PurchasePayment[]
-  purchaseReceipts     PurchaseReceipt[]
-  inventoryLots        InventoryLot[]
-  inventoryMovements   InventoryMovement[]
-  inventoryAdjustments InventoryAdjustment[]
-  inventoryBalances    BranchInventoryBalance[]
-  outgoingTransfers    InventoryTransfer[]      @relation("InventoryTransferSourceBranch")
-  incomingTransfers    InventoryTransfer[]      @relation("InventoryTransferDestinationBranch")
-  moduleActivations    ModuleActivation[]
-  followUpTasks        FollowUpTask[]
+  code                    String                   @id
+  name                    String
+  city                    String
+  department              String
+  status                  ClinicBranchStatus       @default(preparation)
+  openedAt                DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  userAssignments         InternalUserBranch[]
+  visits                  Visit[]
+  sales                   Sale[]
+  payments                Payment[]
+  cashMovements           CashMovement[]
+  cashSessions            CashSession[]
+  purchases               Purchase[]
+  purchasePayments        PurchasePayment[]
+  purchaseReceipts        PurchaseReceipt[]
+  inventoryLots           InventoryLot[]
+  inventoryMovements      InventoryMovement[]
+  inventoryAdjustments    InventoryAdjustment[]
+  inventoryBalances       BranchInventoryBalance[]
+  outgoingTransfers       InventoryTransfer[]      @relation("InventoryTransferSourceBranch")
+  incomingTransfers       InventoryTransfer[]      @relation("InventoryTransferDestinationBranch")
+  moduleActivations       ModuleActivation[]
+  followUpTasks           FollowUpTask[]
   supervisedReminderRules SupervisedReminderRule[]
-  patientRecords         PatientBranchRecord[]
-  patientConsents        PatientConsent[]
-  patientContacts        PatientContact[]
-  patientNotes           PatientNote[]
+  patientRecords          PatientBranchRecord[]
+  patientConsents         PatientConsent[]
+  patientContacts         PatientContact[]
+  patientNotes            PatientNote[]
+  leads                   Lead[]
+  leadContactAttempts     LeadContactAttempt[]
+  leadReminders           LeadReminder[]
+  leadStatusHistory       LeadStatusHistory[]
+  campaignAssignments     CaptureCampaignBranch[]
+  visitAttributions       VisitAttribution[]
+  attributionTouches      VisitAttributionTouch[]
 
   @@index([status, name])
 }
@@ -931,7 +938,8 @@ model AuditEvent {
 }
 
 model Lead {
-  id                 String               @id @default(cuid())
+  id                 String                 @id @default(cuid())
+  branchCode         String
   name               String?
   phone              String
   email              String?
@@ -940,43 +948,54 @@ model Lead {
   intentionToVisit   String?
   estimatedVisitDate DateTime?
   commercialNotes    String?
-  source             InternalLeadSource   @default(website)
-  status             InternalLeadStatus   @default(new)
+  source             InternalLeadSource     @default(website)
+  status             InternalLeadStatus     @default(new)
   pagePath           String?
   assignedToId       String?
+  campaignId         String?
   convertedPatientId String?
+  idempotencyKey     String?
+  deduplicationKey   String?
   firstContactedAt   DateTime?
   lastContactedAt    DateTime?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  assignedTo         InternalUser?        @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  convertedPatient   Patient?             @relation("LeadConvertedPatient", fields: [convertedPatientId], references: [id], onDelete: SetNull)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  assignedTo         InternalUser?          @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  branch             ClinicBranch           @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  campaignAssignment CaptureCampaignBranch? @relation(fields: [campaignId, branchCode], references: [campaignId, branchCode], onDelete: Restrict)
+  convertedPatient   Patient?               @relation("LeadConvertedPatient", fields: [convertedPatientId], references: [id], onDelete: SetNull)
   contactAttempts    LeadContactAttempt[]
   reminders          LeadReminder[]
   statusHistory      LeadStatusHistory[]
   followUpTasks      FollowUpTask[]
 
-  @@index([createdAt])
-  @@index([phone])
-  @@index([status, createdAt])
-  @@index([source])
-  @@index([assignedToId])
+  @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
+  @@index([branchCode, createdAt])
+  @@index([branchCode, phone])
+  @@index([branchCode, deduplicationKey, createdAt])
+  @@index([branchCode, status, createdAt])
+  @@index([branchCode, source])
+  @@index([branchCode, assignedToId])
+  @@index([branchCode, campaignId, createdAt])
   @@index([convertedPatientId])
 }
 
 model LeadContactAttempt {
   id          String                    @id @default(cuid())
   leadId      String
+  branchCode  String
   userId      String?
   method      InternalLeadContactMethod @default(call)
   result      InternalLeadContactResult
   notes       String?
   contactedAt DateTime                  @default(now())
   createdAt   DateTime                  @default(now())
-  lead        Lead                      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead        Lead                      @relation(fields: [leadId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch      ClinicBranch              @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   user        InternalUser?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([leadId])
+  @@index([branchCode, leadId])
   @@index([userId])
   @@index([contactedAt])
 }
@@ -984,6 +1003,7 @@ model LeadContactAttempt {
 model LeadReminder {
   id          String                     @id @default(cuid())
   leadId      String
+  branchCode  String
   userId      String?
   dueAt       DateTime
   note        String?
@@ -991,10 +1011,11 @@ model LeadReminder {
   completedAt DateTime?
   createdAt   DateTime                   @default(now())
   updatedAt   DateTime                   @updatedAt
-  lead        Lead                       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead        Lead                       @relation(fields: [leadId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch      ClinicBranch               @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   user        InternalUser?              @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([leadId])
+  @@index([branchCode, leadId])
   @@index([userId])
   @@index([status, dueAt])
 }
@@ -1002,15 +1023,17 @@ model LeadReminder {
 model LeadStatusHistory {
   id         String              @id @default(cuid())
   leadId     String
+  branchCode String
   userId     String?
   fromStatus InternalLeadStatus?
   toStatus   InternalLeadStatus
   note       String?
   createdAt  DateTime            @default(now())
-  lead       Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead       Lead                @relation(fields: [leadId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch     ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   user       InternalUser?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([leadId])
+  @@index([branchCode, leadId])
   @@index([userId])
   @@index([createdAt])
 }
@@ -1126,17 +1149,17 @@ model PatientBranchRecord {
   patientId           String
   branchCode          String
   recordNumber        String
-  status              PatientStatus @default(active)
+  status              PatientStatus    @default(active)
   generalObservations String?
   allergies           String?
   relevantHistory     String?
   currentMedication   String?
   firstAttendedAt     DateTime?
   lastAttendedAt      DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  patient             Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  branch              ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  patient             Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch              ClinicBranch     @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   contacts            PatientContact[]
   notes               PatientNote[]
   consents            PatientConsent[]
@@ -1345,6 +1368,7 @@ model Visit {
   feedbackRequests          PatientFeedbackRequest[]
   feedbackSubmission        PatientFeedback?
 
+  @@unique([id, branchCode])
   @@index([patientId])
   @@index([patientId, branchCode])
   @@index([branchCode, checkedInAt])
@@ -1399,52 +1423,74 @@ model CaptureSource {
 }
 
 model CaptureCampaign {
-  id                String                 @id @default(cuid())
-  code              String                 @unique
+  id                String                  @id @default(cuid())
+  code              String                  @unique
   name              String
   sourceId          String
   accountLabel      String?
   accountHandle     String?
-  trafficType       AttributionTrafficType @default(unidentified)
-  active            Boolean                @default(true)
+  trafficType       AttributionTrafficType  @default(unidentified)
+  active            Boolean                 @default(true)
   startsAt          DateTime?
   endsAt            DateTime?
-  payloadCampaignId String?                @unique
+  payloadCampaignId String?                 @unique
   payloadUpdatedAt  DateTime?
   syncedAt          DateTime?
-  managedByPayload  Boolean                @default(false)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @default(now()) @updatedAt
-  source            CaptureSource          @relation(fields: [sourceId], references: [id], onDelete: Restrict)
-  attributions      VisitAttribution[]
+  managedByPayload  Boolean                 @default(false)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @default(now()) @updatedAt
+  source            CaptureSource           @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  branchAssignments CaptureCampaignBranch[]
 
   @@index([sourceId, active])
   @@index([active, startsAt, endsAt])
 }
 
+/// Asignación explícita de una campaña corporativa a una sede. La definición
+/// permanece global; leads, atribuciones y resultados cuelgan de esta unión.
+model CaptureCampaignBranch {
+  campaignId   String
+  branchCode   String
+  active       Boolean            @default(true)
+  assignedAt   DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  campaign     CaptureCampaign    @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  branch       ClinicBranch       @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  leads        Lead[]
+  attributions VisitAttribution[]
+
+  @@id([campaignId, branchCode])
+  @@index([branchCode, active, updatedAt])
+}
+
 model VisitAttribution {
   id                   String                  @id @default(cuid())
   visitId              String                  @unique
+  branchCode           String
   patientId            String
   capturedById         String?
   campaignId           String?
   evidenceKind         AttributionEvidenceKind @default(patient_reported)
   externalEvidenceCode String?
   createdAt            DateTime                @default(now())
-  visit                Visit                   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visit                Visit                   @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch               ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   patient              Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
   capturedBy           InternalUser?           @relation("VisitAttributionCapturedBy", fields: [capturedById], references: [id], onDelete: SetNull)
-  campaign             CaptureCampaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignAssignment   CaptureCampaignBranch?  @relation(fields: [campaignId, branchCode], references: [campaignId, branchCode], onDelete: Restrict)
   touches              VisitAttributionTouch[]
 
-  @@index([patientId, createdAt])
-  @@index([campaignId, createdAt])
-  @@index([evidenceKind, createdAt])
+  @@unique([id, branchCode])
+  @@unique([visitId, branchCode])
+  @@index([branchCode, patientId, createdAt])
+  @@index([branchCode, campaignId, createdAt])
+  @@index([branchCode, evidenceKind, createdAt])
 }
 
 model VisitAttributionTouch {
   id                    String                  @id @default(cuid())
   attributionId         String
+  branchCode            String
   sourceId              String
   role                  AttributionTouchRole
   evidenceKind          AttributionEvidenceKind
@@ -1454,12 +1500,13 @@ model VisitAttributionTouch {
   campaignCode          String?
   automaticallyCaptured Boolean                 @default(false)
   createdAt             DateTime                @default(now())
-  attribution           VisitAttribution        @relation(fields: [attributionId], references: [id], onDelete: Cascade)
+  attribution           VisitAttribution        @relation(fields: [attributionId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  branch                ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   source                CaptureSource           @relation(fields: [sourceId], references: [id], onDelete: Restrict)
 
   @@unique([attributionId, sourceId])
-  @@index([sourceId, role, createdAt])
-  @@index([campaignCode, createdAt])
+  @@index([branchCode, sourceId, role, createdAt])
+  @@index([branchCode, campaignCode, createdAt])
 }
 
 model VisitStatusHistory {

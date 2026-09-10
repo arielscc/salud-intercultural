@@ -120,7 +120,20 @@ async function seedVisit(tx: Tx, input: VisitSeedInput) {
         where: { code: input.campaignCode }
       })
     : null;
+  if (campaign) {
+    await tx.captureCampaignBranch.upsert({
+      where: {
+        campaignId_branchCode: {
+          campaignId: campaign.id,
+          branchCode: SEED_BRANCH_CODE
+        }
+      },
+      create: { campaignId: campaign.id, branchCode: SEED_BRANCH_CODE },
+      update: { active: true }
+    });
+  }
   await createVisitAttributionInTransaction(tx, {
+    branchCode: SEED_BRANCH_CODE,
     patientId: input.patientId,
     visitId: visit.id,
     capturedById: input.userId,

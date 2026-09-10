@@ -30,18 +30,41 @@ export async function getReceptionCaptureSources() {
   });
 }
 
-export async function getCaptureCatalog() {
+export async function getCaptureCatalog(branchCode: string) {
   return withDatabaseError("getCaptureCatalog", async () => {
     return Promise.all([
       prisma.captureSource.findMany({
-        include: { _count: { select: { campaigns: true, attributionTouches: true } } },
+        include: {
+          _count: {
+            select: {
+              campaigns: {
+                where: {
+                  branchAssignments: {
+                    some: { branchCode, active: true }
+                  }
+                }
+              },
+              attributionTouches: { where: { branchCode } }
+            }
+          }
+        },
         orderBy: [{ sortOrder: "asc" }, { patientLabel: "asc" }]
       }),
-      prisma.captureCampaign.findMany({
-        include: { source: true, _count: { select: { attributions: true } } },
-        orderBy: [{ active: "desc" }, { createdAt: "desc" }]
+      prisma.captureCampaignBranch.findMany({
+        where: { branchCode, active: true },
+        include: {
+          campaign: { include: { source: true } },
+          _count: { select: { attributions: true } }
+        },
+        orderBy: [{ campaign: { active: "desc" } }, { campaign: { createdAt: "desc" } }]
       })
-    ]);
+    ]).then(([sources, assignments]) => [
+      sources,
+      assignments.map((assignment) => ({
+        ...assignment.campaign,
+        _count: assignment._count
+      }))
+    ] as const);
   });
 }
 
@@ -84,6 +107,7 @@ export async function updateCaptureSourceRecord(input: {
 
 export async function findActiveCaptureCampaignByCode(
   code: string,
+  branchCode: string,
   now = new Date()
 ) {
   return withDatabaseError("findActiveCaptureCampaignByCode", async () => {
@@ -91,6 +115,7 @@ export async function findActiveCaptureCampaignByCode(
       where: {
         code,
         active: true,
+        branchAssignments: { some: { branchCode, active: true } },
         AND: [
           { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
           { OR: [{ endsAt: null }, { endsAt: { gt: now } }] }
@@ -103,6 +128,7 @@ export async function findActiveCaptureCampaignByCode(
 }
 
 export type VisitAttributionRecordInput = {
+  branchCode: string;
   patientId: string;
   visitId: string;
   capturedById?: string;
@@ -132,17 +158,21 @@ export async function createVisitAttributionInTransaction(
 
   const attributionTime = new Date();
   const campaign = input.campaignId
-    ? await tx.captureCampaign.findFirst({
+    ? await tx.captureCampaignBranch.findFirst({
         where: {
-          id: input.campaignId,
+          campaignId: input.campaignId,
+          branchCode: input.branchCode,
           active: true,
-          AND: [
-            { OR: [{ startsAt: null }, { startsAt: { lte: attributionTime } }] },
-            { OR: [{ endsAt: null }, { endsAt: { gt: attributionTime } }] }
-          ],
-          source: { active: true }
+          campaign: {
+            active: true,
+            AND: [
+              { OR: [{ startsAt: null }, { startsAt: { lte: attributionTime } }] },
+              { OR: [{ endsAt: null }, { endsAt: { gt: attributionTime } }] }
+            ],
+            source: { active: true }
+          }
         },
-        include: { source: true }
+        include: { campaign: { include: { source: true } } }
       })
     : null;
 
@@ -177,15 +207,16 @@ export async function createVisitAttributionInTransaction(
   }
 
   if (campaign) {
-    const existing = touchBySourceId.get(campaign.sourceId);
-    touchBySourceId.set(campaign.sourceId, {
-      sourceId: campaign.sourceId,
+    const configuredCampaign = campaign.campaign;
+    const existing = touchBySourceId.get(configuredCampaign.sourceId);
+    touchBySourceId.set(configuredCampaign.sourceId, {
+      sourceId: configuredCampaign.sourceId,
       role: existing?.role ?? "support",
       evidenceKind,
-      trafficType: campaign.trafficType,
-      accountLabel: campaign.accountLabel ?? undefined,
-      accountHandle: campaign.accountHandle ?? undefined,
-      campaignCode: campaign.code,
+      trafficType: configuredCampaign.trafficType,
+      accountLabel: configuredCampaign.accountLabel ?? undefined,
+      accountHandle: configuredCampaign.accountHandle ?? undefined,
+      campaignCode: configuredCampaign.code,
       automaticallyCaptured: true
     });
   }
@@ -193,23 +224,28 @@ export async function createVisitAttributionInTransaction(
   return tx.visitAttribution.create({
     data: {
       visitId: input.visitId,
+      branchCode: input.branchCode,
       patientId: input.patientId,
       capturedById: input.capturedById,
-      campaignId: campaign?.id,
+      campaignId: campaign?.campaignId,
       evidenceKind,
       externalEvidenceCode: input.externalEvidenceCode,
       touches: {
-        create: Array.from(touchBySourceId.values())
+        create: Array.from(touchBySourceId.values()).map((touch) => ({
+          ...touch,
+          branchCode: input.branchCode
+        }))
       }
     },
     include: {
-      campaign: true,
+      campaignAssignment: { include: { campaign: true } },
       touches: { include: { source: true } }
     }
   });
 }
 
 export async function getCaptureAttributionReport(input: {
+  branchCode: string;
   from?: Date;
   to?: Date;
   city?: string;
@@ -218,6 +254,7 @@ export async function getCaptureAttributionReport(input: {
   return withDatabaseError("getCaptureAttributionReport", async () => {
     const attributions = await prisma.visitAttribution.findMany({
       where: {
+        branchCode: input.branchCode,
         visit: {
           checkedInAt:
             input.from || input.to ? { gte: input.from, lt: input.to } : undefined,
@@ -230,7 +267,9 @@ export async function getCaptureAttributionReport(input: {
         }
       },
       include: {
-        campaign: { include: { source: true } },
+        campaignAssignment: {
+          include: { campaign: { include: { source: true } } }
+        },
         touches: { include: { source: true } },
         visit: {
           select: {
@@ -317,8 +356,8 @@ export async function getCaptureAttributionReport(input: {
         sourceMap.set(touch.sourceId, current);
       }
 
-      if (attribution.campaign) {
-        const campaign = attribution.campaign;
+      if (attribution.campaignAssignment) {
+        const campaign = attribution.campaignAssignment.campaign;
         const current = campaignMap.get(campaign.id) ?? {
           code: campaign.code,
           name: campaign.name,

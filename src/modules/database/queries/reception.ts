@@ -76,7 +76,7 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
             include: {
               attribution: {
                 include: {
-                  campaign: true,
+                  campaignAssignment: { include: { campaign: true } },
                   touches: { include: { source: true } }
                 }
               }
@@ -207,6 +207,7 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
         ...input.visit
       });
       const attribution = await createVisitAttributionInTransaction(tx, {
+        branchCode: input.branchCode,
         patientId,
         visitId: visit.id,
         capturedById: input.userId,

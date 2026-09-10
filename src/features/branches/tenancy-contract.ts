@@ -116,7 +116,13 @@ export const branchModelGroups = [
   },
   {
     remediationTask: 6,
-    models: ["Lead", "LeadContactAttempt", "LeadReminder", "LeadStatusHistory"]
+    models: [
+      "Lead",
+      "LeadContactAttempt",
+      "LeadReminder",
+      "LeadStatusHistory",
+      "CaptureCampaignBranch"
+    ]
   },
   {
     remediationTask: 7,
@@ -230,15 +236,9 @@ export const branchModelGroups = [
 
 const legacyMissingBranchModelsByTask = [
   {
-    remediationTask: 6,
-    models: ["Lead", "LeadContactAttempt", "LeadReminder", "LeadStatusHistory"]
-  },
-  {
     remediationTask: 7,
     models: [
       "VisitDiscontinuation",
-      "VisitAttribution",
-      "VisitAttributionTouch",
       "VisitStatusHistory",
       "ReceptionCheckIn",
       "PatientRoute",

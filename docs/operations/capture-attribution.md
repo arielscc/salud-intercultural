@@ -62,23 +62,28 @@ Cuando no hay evidencia, el detalle interno queda como **No identificado**.
 
 ## Enlaces Y Formularios
 
-Marketing puede usar un enlace con código:
+Marketing puede usar un enlace con código y prueba de sede firmada:
 
 ```text
-https://sitio.example/contacto?camp=TIKTOK-DR&utm_source=tiktok&utm_medium=organic
+https://sitio.example/contacto?camp=TIKTOK-DR&branch_proof=PRUEBA_FIRMADA&utm_source=tiktok&utm_medium=organic
 ```
 
 El formulario público conserva el código y las etiquetas UTM. Al enviarse,
 muestra un código como `WEB-123`. Si la persona continúa por WhatsApp, ese
 código se agrega al mensaje.
 
+El servidor resuelve la sede antes de almacenar el contacto por la prueba
+firmada, un hostname configurado o la sede fija del formulario. Un campo
+`branchCode` editable no se acepta. Sin sede verificable responde con un error
+controlado y no crea el lead.
+
 El contacto previo a la llegada continúa en Payload y en la bandeja comercial
 acordada. Esta tarea no reactiva el antiguo módulo de leads de SIGECO.
 
 ## Reporte
 
-La ruta `/sigeco/atribucion` permite filtrar por fechas, ciudad de llegada y
-departamento.
+La ruta `/sigeco/atribucion` usa siempre la sucursal activa y, dentro de ella,
+permite filtrar por fechas, ciudad de llegada y departamento.
 
 Muestra:
 
@@ -114,6 +119,7 @@ Dirección y el super administrador pueden:
 Marketing administra en Payload:
 
 - campañas con cuenta, código y tipo de tráfico;
+- sucursales explícitamente asignadas a cada campaña;
 - vigencia y estado activo.
 
 SIGECO muestra una copia técnica sincronizada que no se edita. El contrato y
@@ -121,6 +127,7 @@ los límites de privacidad se explican en [Integración segura
 Payload-SIGECO](./payload-sigeco-integration.md).
 
 Desactivar no elimina visitas anteriores.
+Una campaña no aparece ni acepta resultados en una sede no asignada.
 
 ## Ambientes
 

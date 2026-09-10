@@ -259,7 +259,7 @@ export async function getVisits(
         patient: true,
         attribution: {
           include: {
-            campaign: true,
+            campaignAssignment: { include: { campaign: true } },
             touches: { include: { source: true } }
           }
         },
@@ -330,7 +330,7 @@ export async function getVisitById(id: string) {
         patient: true,
         attribution: {
           include: {
-            campaign: true,
+            campaignAssignment: { include: { campaign: true } },
             touches: { include: { source: true } }
           }
         },

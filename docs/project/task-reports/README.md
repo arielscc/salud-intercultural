@@ -89,6 +89,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-09-09 | [Aislamiento Tarea 3: roles y permisos por sucursal](./2026-09-09-tarea-3-roles-permisos-sucursal.md) | Traslada el rol operativo a cada membresía, conserva una sola identidad global y limita personal, autorizadores y permisos a la sede activa. |
 | 2026-09-09 | [Aislamiento Tarea 4: backfill y reconciliación](./2026-09-09-tarea-4-backfill-reconciliacion-sucursales.md) | Agrega dry-run determinista, decisiones manuales validadas y un gate que impide endurecer filas sin sucursal resuelta. |
 | 2026-09-09 | [Aislamiento Tarea 5: identidad global y expediente local](./2026-09-09-tarea-5-identidad-global-expediente-local-paciente.md) | Conserva una identidad corporativa, separa la ficha clínica por sede y fotografía cada visita sin permitir backfills ambiguos. |
+| 2026-09-09 | [Aislamiento Tarea 6: leads, campañas y entradas públicas](./2026-09-09-tarea-6-leads-campanas-entradas-publicas.md) | Resuelve la sede antes de guardar PII, asigna campañas explícitamente y separa leads, atribución y métricas por sucursal. |
 
 ## Relacion Con Estado V3
 

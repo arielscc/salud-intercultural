@@ -22,6 +22,9 @@ export const payloadCampaignContractSchema = z
     accountLabel: optionalText(120),
     accountHandle: optionalText(120),
     trafficType: z.enum(["unidentified", "organic", "paid"]),
+    branchCodes: z.array(z.string().trim().min(1).max(80)).min(1).transform((codes) => [
+      ...new Set(codes)
+    ]),
     active: z.boolean(),
     startsAt: z.union([z.string().datetime({ offset: true }), z.null()]).optional(),
     endsAt: z.union([z.string().datetime({ offset: true }), z.null()]).optional()
@@ -44,6 +47,7 @@ export type PayloadCampaignContract = z.infer<
 
 export const payloadMetricsQuerySchema = z
   .object({
+    branchCode: z.string().trim().min(1).max(80),
     from: z.string().date(),
     to: z.string().date()
   })
@@ -63,9 +67,14 @@ export const payloadMetricsQuerySchema = z
       return z.NEVER;
     }
 
-    return { from, to, fromLabel: value.from, toLabel: value.to };
+    return {
+      branchCode: value.branchCode,
+      from,
+      to,
+      fromLabel: value.from,
+      toLabel: value.to
+    };
   });
 
 export const PAYLOAD_SIGECO_MAX_BODY_BYTES = 16 * 1024;
 export const PAYLOAD_SIGECO_MIN_AGGREGATE = 5;
-

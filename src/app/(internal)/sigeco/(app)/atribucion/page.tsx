@@ -39,6 +39,7 @@ import {
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 type AttributionPageProps = {
   searchParams: Promise<{
@@ -60,6 +61,7 @@ export default async function AttributionPage({
   searchParams
 }: AttributionPageProps) {
   const user = await requirePermission("reports_read");
+  const { activeBranch } = await getBranchContext();
   const moduleAccess = await getModuleAccessState();
   const filters = await searchParams;
   const currentMonth = monthRange();
@@ -71,8 +73,14 @@ export default async function AttributionPage({
     filters.departamento?.trim().slice(0, 120) || undefined;
   const canManage = canUse(user.role, moduleAccess, "attribution_manage", "reportes");
   const [report, catalog] = await Promise.all([
-    getCaptureAttributionReport({ from, to, city, department }),
-    getCaptureCatalog()
+    getCaptureAttributionReport({
+      branchCode: activeBranch.code,
+      from,
+      to,
+      city,
+      department
+    }),
+    getCaptureCatalog(activeBranch.code)
   ]);
   const [sources, campaigns] = catalog;
   const defaultFrom = filters.desde ?? toDateOnlyString(currentMonth.start);

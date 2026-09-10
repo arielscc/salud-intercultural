@@ -13,6 +13,7 @@ vi.mock("@/modules/database", () => ({
 const reportMock = vi.mocked(getCaptureAttributionReport);
 const auditMock = vi.mocked(prisma.auditEvent.create);
 const range = {
+  branchCode: "el-alto",
   from: new Date("2026-08-01T00:00:00.000Z"),
   to: new Date("2026-09-01T00:00:00.000Z"),
   fromLabel: "2026-08-01",

@@ -12,7 +12,8 @@ sucursal obligatorio y roles operativos resueltos desde cada membresía. La
 identidad queda global y solo conserva la capacidad de plataforma del super
 administrador. Todavía no se completó la partición general de operaciones ni se
 aplicó RLS. La identidad global del paciente y su expediente por sucursal ya
-están separados. La migración
+están separados. Leads, campañas, entradas públicas y atribución ya exigen una
+sede verificable y sus métricas se calculan localmente. La migración
 `20260908120000_require_explicit_branch_code` queda vigilada por el detector:
 elimina siete defaults de El Alto y hace explícitas las principales escrituras
 operativas.
@@ -34,17 +35,17 @@ operativas.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 12 |
+| Pendiente | 11 |
 | En progreso | 0 |
 | Bloqueada | 0 |
-| Terminada | 5 |
+| Terminada | 6 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
-| B. Partición de dominios | 5-13 | En progreso (1/9) | Maestros únicos y operaciones pertenecientes a una sede |
+| B. Partición de dominios | 5-13 | En progreso (2/9) | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
@@ -56,7 +57,7 @@ operativas.
 | 3 | Roles y permisos por sucursal | P0 | Terminada | 2 |
 | 4 | Herramientas de backfill y reconciliación | P0 | Terminada | 1-3 |
 | 5 | Identidad global y expediente local del paciente | P0 | Terminada | 4 |
-| 6 | Leads, campañas y entradas públicas | P0 | Pendiente | 2, 4-5 |
+| 6 | Leads, campañas y entradas públicas | P0 | Terminada | 2, 4-5 |
 | 7 | Visitas, recepción, rutas y tiempos | P0 | Pendiente | 5 |
 | 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Pendiente | 7 |
 | 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Pendiente | 7-8 |
@@ -71,10 +72,10 @@ operativas.
 
 ## Preparación Ya Disponible
 
-- Contrato canónico para los 102 modelos Prisma y chequeo automático de
+- Contrato canónico para los 103 modelos Prisma y chequeo automático de
   modelos, campos, relaciones, defaults y fallbacks de sucursal.
 - Deuda heredada registrada con coincidencia exacta, responsable y tarea de
-  retiro: 60 excepciones de modelo y 41 hallazgos de código.
+  retiro: 54 excepciones de modelo y 41 hallazgos de código.
 - `BranchRequestContext` resuelve usuario, asignación, sede activa y rol
   operativo exclusivamente desde sesión y membresías activas.
 - `InternalUser` conserva la identidad y la capacidad global de plataforma;
@@ -110,11 +111,19 @@ operativas.
   dirección; los consentimientos de contacto y las notas tienen sucursal.
 - El reconciliador de pacientes separa la migración estructural del
   endurecimiento para que ninguna ambigüedad clínica se resuelva por defecto.
+- El formulario público resuelve la sede antes de persistir PII mediante una
+  prueba firmada, hostname o configuración fija de servidor; un campo editable
+  del navegador nunca decide ownership.
+- Las campañas corporativas tienen asignaciones explícitas y sus leads,
+  atribuciones, dashboards, deduplicación, idempotencia y exportaciones quedan
+  limitados a una sede.
+- Los reconciliadores de leads Prisma y Payload reportan únicamente IDs
+  técnicos y el endurecimiento bloquea cualquier fila histórica pendiente.
 
 Estos avances no equivalen a aislamiento completo y no permiten adelantar la
 Tarea 16.
 
 ## Próximo Paso
 
-Ejecutar la Tarea 6: asignar leads, campañas y entradas públicas a una sucursal
-verificable antes de almacenar información de contacto.
+Ejecutar la Tarea 7: materializar la sucursal en todo el recorrido de una visita,
+sus estados, check-in, rutas, trabajos y eventos de tiempo.

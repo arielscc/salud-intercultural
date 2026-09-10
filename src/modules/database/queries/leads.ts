@@ -7,6 +7,9 @@ export type LeadSource = "website" | "whatsapp" | "facebook" | "tiktok" | "googl
 export type LeadStatus = "new" | "contacted" | "scheduled" | "closed" | "lost";
 
 export type CreateLeadRecordInput = {
+  branchCode: string;
+  idempotencyKey: string;
+  deduplicationKey: string;
   name?: string;
   phone: string;
   email?: string;
@@ -27,9 +30,25 @@ export async function createLeadRecord(input: CreateLeadRecordInput) {
   return withDatabaseError("createLeadRecord", async () => {
     const payload = await getPayload({ config });
 
+    const existing = await payload.find({
+      collection: "lead-submissions",
+      limit: 1,
+      overrideAccess: true,
+      where: {
+        and: [
+          { branchCode: { equals: input.branchCode } },
+          { idempotencyKey: { equals: input.idempotencyKey } }
+        ]
+      }
+    });
+    if (existing.docs[0]) return existing.docs[0];
+
     return payload.create({
       collection: "lead-submissions",
       data: {
+        branchCode: input.branchCode,
+        idempotencyKey: input.idempotencyKey,
+        deduplicationKey: input.deduplicationKey,
         name: input.name,
         phone: input.phone,
         email: input.email,
@@ -52,10 +71,11 @@ export async function createLeadRecord(input: CreateLeadRecordInput) {
 
 export async function getLeads(
   input: PaginationInput & {
+    branchCode: string;
     status?: LeadStatus;
     source?: LeadSource;
     search?: string;
-  } = {}
+  }
 ) {
   const pagination = getPagination(input);
   const search = input.search?.trim();
@@ -69,6 +89,7 @@ export async function getLeads(
       sort: "-createdAt",
       where: {
         and: [
+          { branchCode: { equals: input.branchCode } },
           input.status ? { status: { equals: input.status } } : {},
           input.source ? { source: { equals: input.source } } : {},
           search
@@ -89,9 +110,25 @@ export async function getLeads(
   });
 }
 
-export async function updateLeadStatus(id: number | string, status: LeadStatus) {
+export async function updateLeadStatus(
+  id: number | string,
+  branchCode: string,
+  status: LeadStatus
+) {
   return withDatabaseError("updateLeadStatus", async () => {
     const payload = await getPayload({ config });
+    const existing = await payload.find({
+      collection: "lead-submissions",
+      limit: 1,
+      overrideAccess: true,
+      where: {
+        and: [
+          { id: { equals: id } },
+          { branchCode: { equals: branchCode } }
+        ]
+      }
+    });
+    if (!existing.docs[0]) throw new Error("LEAD_NOT_FOUND_IN_BRANCH");
 
     return payload.update({
       id,

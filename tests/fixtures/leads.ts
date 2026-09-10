@@ -14,6 +14,9 @@ export const validLeadInput: CreateLeadInput = {
 
 export const persistedLead = {
   id: 123,
+  branchCode: "el-alto",
+  idempotencyKey: "idempotency-el-alto",
+  deduplicationKey: "deduplication-el-alto",
   name: validLeadInput.name ?? null,
   phone: validLeadInput.phone,
   email: validLeadInput.email ?? null,

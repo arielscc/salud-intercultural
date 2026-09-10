@@ -17,7 +17,9 @@ export type BranchEvidenceSource =
   | "sesión_caja"
   | "compra"
   | "lote"
-  | "membresía";
+  | "membresía"
+  | "seguimiento"
+  | "expediente";
 
 export type BranchOwnershipEvidence = {
   source: BranchEvidenceSource;

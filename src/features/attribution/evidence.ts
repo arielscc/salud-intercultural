@@ -24,7 +24,8 @@ export type AttributionEvidenceResolution =
   | { status: "unavailable"; evidence: null };
 
 export async function resolveAttributionEvidence(
-  rawCode: string | undefined
+  rawCode: string | undefined,
+  branchCode: string
 ): Promise<ResolvedAttributionEvidence | null> {
   const cleaned = rawCode?.trim();
   if (!cleaned) return null;
@@ -34,16 +35,22 @@ export async function resolveAttributionEvidence(
   let evidenceKind: AttributionEvidenceKind = "campaign_link";
 
   if (webLeadMatch) {
-    const leadCampaignCode = await findPayloadLeadCampaignCode(webLeadMatch[1]);
+    const leadCampaignCode = await findPayloadLeadCampaignCode(
+      webLeadMatch[1],
+      branchCode
+    );
     if (leadCampaignCode === null) return null;
     campaignCode = normalizeCampaignCode(leadCampaignCode || "WEB-FORM");
     evidenceKind = "web_form";
   }
 
-  const payloadCampaign = await findActivePayloadCampaignByCode(campaignCode);
+  const payloadCampaign = await findActivePayloadCampaignByCode(
+    campaignCode,
+    branchCode
+  );
   const legacyCampaign = payloadCampaign
     ? null
-    : await findActiveCaptureCampaignByCode(campaignCode);
+    : await findActiveCaptureCampaignByCode(campaignCode, branchCode);
   const campaign = payloadCampaign
     ? (await syncPayloadCampaignToSigeco(payloadCampaign)).campaign
     : legacyCampaign;
@@ -64,12 +71,13 @@ export async function resolveAttributionEvidence(
 }
 
 export async function resolveAttributionEvidenceSafely(
-  rawCode: string | undefined
+  rawCode: string | undefined,
+  branchCode: string
 ): Promise<AttributionEvidenceResolution> {
   if (!rawCode?.trim()) return { status: "none", evidence: null };
 
   try {
-    const evidence = await resolveAttributionEvidence(rawCode);
+    const evidence = await resolveAttributionEvidence(rawCode, branchCode);
     return evidence
       ? { status: "resolved", evidence }
       : { status: "not_found", evidence: null };

@@ -48,15 +48,17 @@ describe("capture attribution helpers", () => {
   });
 
   it("shows exact account and traffic only when campaign evidence exists", () => {
-    expect(verifiedAttributionDetail({ campaign: null })).toBe(
+    expect(verifiedAttributionDetail({ campaignAssignment: null })).toBe(
       "No identificado"
     );
     expect(
       verifiedAttributionDetail({
-        campaign: {
-          accountLabel: "TikTok del Dr. Franco",
-          name: "Contenido del doctor",
-          trafficType: "organic"
+        campaignAssignment: {
+          campaign: {
+            accountLabel: "TikTok del Dr. Franco",
+            name: "Contenido del doctor",
+            trafficType: "organic"
+          }
         }
       })
     ).toBe("TikTok del Dr. Franco · Orgánico");

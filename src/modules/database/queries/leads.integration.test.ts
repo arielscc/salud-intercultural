@@ -23,6 +23,9 @@ afterAll(deleteLeadSubmissions);
 describe("lead queries integration", () => {
   it("creates, lists, filters and updates leads in the test database", async () => {
     const created = await createLeadRecord({
+      branchCode: "el-alto",
+      idempotencyKey: "lead-test-1",
+      deduplicationKey: "lead-phone-1",
       name: "Paciente Integracion",
       phone: "+591 70000001",
       email: "integracion@example.com",
@@ -32,6 +35,9 @@ describe("lead queries integration", () => {
     });
 
     await createLeadRecord({
+      branchCode: "cochabamba",
+      idempotencyKey: "lead-test-2",
+      deduplicationKey: "lead-phone-2",
       name: "Otro Paciente",
       phone: "+591 70000002",
       source: "whatsapp"
@@ -46,15 +52,16 @@ describe("lead queries integration", () => {
       pagePath: "/contacto"
     });
 
-    const searchResults = await getLeads({ search: "integracion" });
+    const searchResults = await getLeads({ branchCode: "el-alto", search: "integracion" });
     expect(searchResults).toHaveLength(1);
     expect(searchResults[0]?.id).toBe(created.id);
 
-    const whatsappResults = await getLeads({ source: "whatsapp" });
+    const whatsappResults = await getLeads({ branchCode: "cochabamba", source: "whatsapp" });
     expect(whatsappResults).toHaveLength(1);
     expect(whatsappResults[0]?.phone).toBe("+591 70000002");
+    expect(await getLeads({ branchCode: "el-alto", source: "whatsapp" })).toHaveLength(0);
 
-    const updated = await updateLeadStatus(created.id, "contacted");
+    const updated = await updateLeadStatus(created.id, "el-alto", "contacted");
     expect(updated.status).toBe("contacted");
     expect(updated.contactedAt).toEqual(expect.any(String));
   });

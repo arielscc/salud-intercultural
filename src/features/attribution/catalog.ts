@@ -106,14 +106,16 @@ export function visitAttributionSummary(attribution: {
 }
 
 export function verifiedAttributionDetail(attribution: {
-  campaign?: {
-    accountLabel: string | null;
-    name: string;
-    trafficType: AttributionTrafficType;
+  campaignAssignment?: {
+    campaign: {
+      accountLabel: string | null;
+      name: string;
+      trafficType: AttributionTrafficType;
+    };
   } | null;
 } | null | undefined) {
-  if (!attribution?.campaign) return "No identificado";
-  const campaign = attribution.campaign;
+  if (!attribution?.campaignAssignment) return "No identificado";
+  const campaign = attribution.campaignAssignment.campaign;
   return `${campaign.accountLabel ?? campaign.name} · ${
     attributionTrafficTypeLabels[campaign.trafficType]
   }`;

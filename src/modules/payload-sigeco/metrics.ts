@@ -4,12 +4,14 @@ import { prisma } from "@/modules/database";
 import { PAYLOAD_SIGECO_MIN_AGGREGATE } from "@/modules/payload-sigeco/contract";
 
 export async function getApprovedPayloadCampaignMetrics(input: {
+  branchCode: string;
   from: Date;
   to: Date;
   fromLabel: string;
   toLabel: string;
 }) {
   const report = await getCaptureAttributionReport({
+    branchCode: input.branchCode,
     from: input.from,
     to: input.to
   });
@@ -32,6 +34,7 @@ export async function getApprovedPayloadCampaignMetrics(input: {
       context: {
         from: input.fromLabel,
         to: input.toLabel,
+        branchCode: input.branchCode,
         suppressed,
         campaignGroups: campaigns.length
       }
@@ -39,6 +42,7 @@ export async function getApprovedPayloadCampaignMetrics(input: {
   });
 
   return {
+    branchCode: input.branchCode,
     period: { from: input.fromLabel, to: input.toLabel },
     privacy: {
       minimumGroupSize: PAYLOAD_SIGECO_MIN_AGGREGATE,

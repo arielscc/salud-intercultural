@@ -25,6 +25,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const parsed = payloadMetricsQuerySchema.safeParse({
+    branchCode: url.searchParams.get("branch"),
     from: url.searchParams.get("from"),
     to: url.searchParams.get("to")
   });
@@ -40,7 +41,10 @@ export async function GET(request: Request) {
       action: "integration.payload_metrics.export",
       entityType: "attribution_metrics",
       result: "failure",
-      context: { reason: "export_failed" }
+      context: {
+        branchCode: parsed.data.branchCode,
+        reason: "export_failed"
+      }
     }).catch(() => undefined);
     return response(
       { ok: false, error: "metrics_unavailable", retryable: true },

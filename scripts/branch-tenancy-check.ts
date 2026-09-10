@@ -482,6 +482,7 @@ function applicationFiles(directory: string): string[] {
       return entry.name === "generated" ? [] : applicationFiles(path);
     }
     if (!/\.(ts|tsx)$/.test(entry.name) || entry.name.includes(".test.")) return [];
+    if (entry.name === "payload-types.ts") return [];
     return [path];
   });
 }
