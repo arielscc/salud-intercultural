@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   assignConsultationVisit,
+  createClinicalContinuityAccess,
   createClinicalOrderRecord,
   deleteIndicationCatalogItem,
+  findClinicalContinuityAccessError,
   recordClinicalNoteCatalogUsage,
   recordDiagnosisCatalogUsage,
   recordIndicationCatalogUsage,
@@ -39,6 +41,7 @@ import {
   correctClinicalConsultationSchema,
   finalizeClinicalConsultationSchema
 } from "@/features/clinical-records/schemas/clinical-record.schema";
+import { requestClinicalContinuitySchema } from "@/features/clinical-care/schemas/clinical-continuity.schema";
 
 function parseFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -58,6 +61,7 @@ export async function assignConsultationVisitAction(formData: FormData) {
       if (!visitId) redirect("/sigeco/consultas?error=invalid-claim");
       const updated = await assignConsultationVisit({
         visitId,
+        branchCode: branchContext.activeBranch.code,
         userId: user.id,
         release
       });
@@ -83,6 +87,62 @@ export async function assignConsultationVisitAction(formData: FormData) {
   revalidatePath(`/sigeco/consultas/${visitId}`);
 }
 
+export async function requestClinicalContinuityAction(formData: FormData) {
+  const visitId = String(formData.get("visitId") ?? "");
+  try {
+    const access = await runAuditedAction(
+      {
+        permission: "clinical_read",
+        action: "clinical.continuity.read",
+        entityType: "patient",
+        context: { visitId: visitId || undefined }
+      },
+      async (user, branchContext) => {
+        const parsed = requestClinicalContinuitySchema.safeParse(
+          parseFormData(formData)
+        );
+        if (!parsed.success || user.role !== "medico") {
+          denyAuditedAction(
+            !parsed.success ? "invalid_continuity_reason" : "medical_role_required"
+          );
+        }
+        const created = await createClinicalContinuityAccess({
+          ...parsed.data,
+          doctorId: user.id,
+          branchCode: branchContext.activeBranch.code
+        });
+        return auditedResult(created, {
+          entityId: parsed.data.patientId,
+          context: {
+            visitId: parsed.data.visitId,
+            continuityAccessId: created.id,
+            consultedBranchCodes: created.consultedBranchCodes
+          }
+        });
+      }
+    );
+    redirect(
+      `/sigeco/consultas/${encodeURIComponent(
+        visitId
+      )}?continuidad=${encodeURIComponent(access.id)}#historial-visitas`
+    );
+  } catch (error) {
+    const continuityError = findClinicalContinuityAccessError(error);
+    if (continuityError) {
+      const code =
+        continuityError.code === "CONTINUITY_CONSENT_REQUIRED"
+          ? "continuidad-sin-consentimiento"
+          : continuityError.code === "REMOTE_HISTORY_NOT_FOUND"
+            ? "continuidad-sin-antecedentes"
+            : "continuidad-no-disponible";
+      redirect(
+        `/sigeco/consultas/${encodeURIComponent(visitId)}?error=${code}#historial-visitas`
+      );
+    }
+    throw error;
+  }
+}
+
 export async function deleteIndicationCatalogItemAction(id: string) {
   await runAuditedAction(
     {
@@ -91,9 +151,9 @@ export async function deleteIndicationCatalogItemAction(id: string) {
       entityType: "indication_catalog_item",
       entityId: id || undefined
     },
-    async () => {
+    async (_user, branchContext) => {
       if (!id) denyAuditedAction("invalid_input");
-      await deleteIndicationCatalogItem(id);
+      await deleteIndicationCatalogItem(id, branchContext.activeBranch.code);
       return auditedResult(undefined, { entityId: id });
     }
   );
@@ -109,7 +169,7 @@ export async function saveClinicalConsultationAction(formData: FormData) {
         entityType: "visit",
         entityId: visitId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = upsertClinicalConsultationSchema.safeParse(
           parseFormData(formData)
         );
@@ -136,17 +196,29 @@ export async function saveClinicalConsultationAction(formData: FormData) {
 
         const consultation = await upsertClinicalConsultationRecord({
           ...input,
+          branchCode: branchContext.activeBranch.code,
           doctorId: user.id
         });
         // Los catálogos de indicaciones, diagnósticos, hallazgos y observaciones
         // crecen con el uso (best-effort).
-        await recordIndicationCatalogUsage(input.indications);
-        await recordDiagnosisCatalogUsage([
+        await recordIndicationCatalogUsage(
+          branchContext.activeBranch.code,
+          input.indications
+        );
+        await recordDiagnosisCatalogUsage(branchContext.activeBranch.code, [
           input.primaryDiagnosis,
           input.secondaryDiagnosis
         ]);
-        await recordClinicalNoteCatalogUsage("finding", input.findings);
-        await recordClinicalNoteCatalogUsage("observation", input.observations);
+        await recordClinicalNoteCatalogUsage(
+          branchContext.activeBranch.code,
+          "finding",
+          input.findings
+        );
+        await recordClinicalNoteCatalogUsage(
+          branchContext.activeBranch.code,
+          "observation",
+          input.observations
+        );
         return auditedResult(consultation, {
           entityId: consultation.id,
           context: {
@@ -163,6 +235,8 @@ export async function saveClinicalConsultationAction(formData: FormData) {
       const code =
         workflowError.code === "CLINICAL_RECORD_STALE"
           ? "consulta-desactualizada"
+          : workflowError.code === "CLINICAL_MEDICATION_OUTSIDE_BRANCH"
+            ? "medicamento-fuera-de-sucursal"
           : "consulta-finalizada";
       redirect(
         `/sigeco/consultas/${encodeURIComponent(visitId)}?error=${code}`
@@ -184,7 +258,7 @@ export async function finalizeClinicalConsultationAction(formData: FormData) {
         action: "clinical.consultation.finalize",
         entityType: "clinical_consultation"
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = finalizeClinicalConsultationSchema.safeParse(
           parseFormData(formData)
         );
@@ -197,6 +271,7 @@ export async function finalizeClinicalConsultationAction(formData: FormData) {
         }
         const consultation = await finalizeClinicalConsultation({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           finalizedById: user.id
         });
         return auditedResult(consultation, {
@@ -242,7 +317,7 @@ export async function correctClinicalConsultationAction(formData: FormData) {
         action: "clinical.consultation.correct",
         entityType: "clinical_consultation"
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = correctClinicalConsultationSchema.safeParse(
           parseFormData(formData)
         );
@@ -255,6 +330,7 @@ export async function correctClinicalConsultationAction(formData: FormData) {
         }
         const corrected = await correctClinicalConsultation({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           correctedById: user.id
         });
         return auditedResult(corrected, {

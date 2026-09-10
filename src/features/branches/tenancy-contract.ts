@@ -154,7 +154,11 @@ export const branchModelGroups = [
       "ClinicalOrder",
       "ClinicalProfessionalProfile",
       "DoctorOrder",
-      "DoctorOrderLine"
+      "DoctorOrderLine",
+      "ClinicalContinuityAccess",
+      "IndicationCatalogItemBranch",
+      "DiagnosisCatalogItemBranch",
+      "ClinicalNoteCatalogItemBranch"
     ]
   },
   {
@@ -235,24 +239,6 @@ export const branchModelGroups = [
 }>;
 
 const legacyMissingBranchModelsByTask = [
-  {
-    remediationTask: 8,
-    models: [
-      "ClinicalConsultation",
-      "ClinicalConsultationVersion",
-      "Diagnosis",
-      "TreatmentPlan",
-      "TreatmentProposalOutcome",
-      "Prescription",
-      "PrescriptionItem",
-      "ClinicalEvolution",
-      "ClinicalNote",
-      "ClinicalOrder",
-      "ClinicalProfessionalProfile",
-      "DoctorOrder",
-      "DoctorOrderLine"
-    ]
-  },
   {
     remediationTask: 9,
     models: [

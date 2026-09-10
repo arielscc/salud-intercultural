@@ -40,16 +40,31 @@ function normalizeCategory(value: string): string {
  * (usa categorías finas como Antibióticos, Analgésicos, etc.), así que el criterio es
  * por descarte de lo que claramente no es recetable.
  */
-export async function getMedicationOptions(): Promise<MedicationOption[]> {
+export async function getMedicationOptions(
+  branchCode: string
+): Promise<MedicationOption[]> {
   return withDatabaseError("getMedicationOptions", async () => {
-    const items = await prisma.inventoryItem.findMany({
-      where: { active: true, usage: { in: ["sale", "both"] } },
-      select: { id: true, name: true, currentStock: true, category: true },
-      orderBy: { name: "asc" }
+    const balances = await prisma.branchInventoryBalance.findMany({
+      where: {
+        branchCode,
+        item: { active: true, usage: { in: ["sale", "both"] } }
+      },
+      select: {
+        currentStock: true,
+        item: { select: { id: true, name: true, category: true } }
+      },
+      orderBy: { item: { name: "asc" } }
     });
-    return items
-      .filter((item) => !NON_MEDICATION_CATEGORIES.has(normalizeCategory(item.category)))
-      .map(({ id, name, currentStock }) => ({ id, name, currentStock }));
+    return balances
+      .filter(
+        ({ item }) =>
+          !NON_MEDICATION_CATEGORIES.has(normalizeCategory(item.category))
+      )
+      .map(({ item, currentStock }) => ({
+        id: item.id,
+        name: item.name,
+        currentStock
+      }));
   });
 }
 
@@ -69,11 +84,12 @@ export type PreviousPrescriptionItem = {
  */
 export async function getPatientPreviousPrescriptionItems(
   patientId: string,
-  currentVisitId: string
+  currentVisitId: string,
+  branchCode: string
 ): Promise<PreviousPrescriptionItem[]> {
   return withDatabaseError("getPatientPreviousPrescriptionItems", async () => {
     const prescriptions = await prisma.prescription.findMany({
-      where: { patientId, visitId: { not: currentVisitId } },
+      where: { patientId, branchCode, visitId: { not: currentVisitId } },
       orderBy: { createdAt: "desc" },
       include: { items: { orderBy: { createdAt: "asc" } } }
     });
@@ -100,11 +116,12 @@ export async function getPatientPreviousPrescriptionItems(
 
 /** Ítems de la receta vigente de la visita, para precargar el editor. */
 export async function getVisitCurrentPrescriptionItems(
-  visitId: string
+  visitId: string,
+  branchCode: string
 ): Promise<PreviousPrescriptionItem[]> {
   return withDatabaseError("getVisitCurrentPrescriptionItems", async () => {
     const latest = await prisma.prescription.findFirst({
-      where: { visitId },
+      where: { visitId, branchCode },
       orderBy: { createdAt: "desc" },
       include: { items: { orderBy: { createdAt: "asc" } } }
     });
@@ -130,14 +147,17 @@ function normalizeCatalogText(text: string): string {
 }
 
 /** Catálogo de indicaciones frecuentes para el buscador (más usadas primero). */
-export async function getIndicationCatalog(): Promise<IndicationCatalogOption[]> {
+export async function getIndicationCatalog(
+  branchCode: string
+): Promise<IndicationCatalogOption[]> {
   return withDatabaseError("getIndicationCatalog", async () => {
-    return prisma.indicationCatalogItem.findMany({
-      where: { active: true },
-      select: { id: true, text: true },
-      orderBy: [{ usageCount: "desc" }, { text: "asc" }],
+    const entries = await prisma.indicationCatalogItemBranch.findMany({
+      where: { branchCode, active: true, catalogItem: { active: true } },
+      select: { catalogItem: { select: { id: true, text: true } } },
+      orderBy: [{ usageCount: "desc" }, { catalogItem: { text: "asc" } }],
       take: 300
     });
+    return entries.map((entry) => entry.catalogItem);
   });
 }
 
@@ -146,7 +166,10 @@ export async function getIndicationCatalog(): Promise<IndicationCatalogOption[]>
  * elegida, crea la entrada en el catálogo (si es nueva) o suma a su `usageCount`.
  * Así el catálogo se siembra mínimo y crece con el uso. Best-effort.
  */
-export async function recordIndicationCatalogUsage(indications?: string | null): Promise<void> {
+export async function recordIndicationCatalogUsage(
+  branchCode: string,
+  indications?: string | null
+): Promise<void> {
   if (!indications) return;
   const lines = indications
     .split("\n")
@@ -165,19 +188,32 @@ export async function recordIndicationCatalogUsage(indications?: string | null):
   await withDatabaseError("recordIndicationCatalogUsage", async () => {
     for (const line of unique) {
       const normalized = normalizeCatalogText(line);
-      await prisma.indicationCatalogItem.upsert({
+      const item = await prisma.indicationCatalogItem.upsert({
         where: { normalized },
-        create: { text: line, normalized, usageCount: 1 },
-        update: { usageCount: { increment: 1 } }
+        create: { text: line, normalized },
+        update: {}
+      });
+      await prisma.indicationCatalogItemBranch.upsert({
+        where: {
+          catalogItemId_branchCode: { catalogItemId: item.id, branchCode }
+        },
+        create: { catalogItemId: item.id, branchCode, usageCount: 1 },
+        update: { active: true, usageCount: { increment: 1 } }
       });
     }
   });
 }
 
-/** Elimina una indicación del catálogo (borrado definitivo). */
-export async function deleteIndicationCatalogItem(id: string): Promise<void> {
+/** Desactiva la sugerencia únicamente en la sede activa. */
+export async function deleteIndicationCatalogItem(
+  id: string,
+  branchCode: string
+): Promise<void> {
   await withDatabaseError("deleteIndicationCatalogItem", async () => {
-    await prisma.indicationCatalogItem.deleteMany({ where: { id } });
+    await prisma.indicationCatalogItemBranch.updateMany({
+      where: { catalogItemId: id, branchCode },
+      data: { active: false }
+    });
   });
 }
 
@@ -189,14 +225,17 @@ export type DiagnosisCatalogOption = {
 };
 
 /** Catálogo de diagnósticos frecuentes para el buscador (más usados primero). */
-export async function getDiagnosisCatalog(): Promise<DiagnosisCatalogOption[]> {
+export async function getDiagnosisCatalog(
+  branchCode: string
+): Promise<DiagnosisCatalogOption[]> {
   return withDatabaseError("getDiagnosisCatalog", async () => {
-    return prisma.diagnosisCatalogItem.findMany({
-      where: { active: true },
-      select: { id: true, text: true, planTemplate: true, indicationsTemplate: true },
-      orderBy: [{ usageCount: "desc" }, { text: "asc" }],
+    const entries = await prisma.diagnosisCatalogItemBranch.findMany({
+      where: { branchCode, active: true, catalogItem: { active: true } },
+      select: { catalogItem: { select: { id: true, text: true, planTemplate: true, indicationsTemplate: true } } },
+      orderBy: [{ usageCount: "desc" }, { catalogItem: { text: "asc" } }],
       take: 300
     });
+    return entries.map((entry) => entry.catalogItem);
   });
 }
 
@@ -206,6 +245,7 @@ export async function getDiagnosisCatalog(): Promise<DiagnosisCatalogOption[]> {
  * catálogo se siembra mínimo y crece con el uso. Best-effort.
  */
 export async function recordDiagnosisCatalogUsage(
+  branchCode: string,
   diagnoses: Array<string | null | undefined>
 ): Promise<void> {
   const seen = new Set<string>();
@@ -223,10 +263,17 @@ export async function recordDiagnosisCatalogUsage(
   await withDatabaseError("recordDiagnosisCatalogUsage", async () => {
     for (const text of unique) {
       const normalized = normalizeCatalogText(text);
-      await prisma.diagnosisCatalogItem.upsert({
+      const item = await prisma.diagnosisCatalogItem.upsert({
         where: { normalized },
-        create: { text, normalized, usageCount: 1 },
-        update: { usageCount: { increment: 1 } }
+        create: { text, normalized },
+        update: {}
+      });
+      await prisma.diagnosisCatalogItemBranch.upsert({
+        where: {
+          catalogItemId_branchCode: { catalogItemId: item.id, branchCode }
+        },
+        create: { catalogItemId: item.id, branchCode, usageCount: 1 },
+        update: { active: true, usageCount: { increment: 1 } }
       });
     }
   });
@@ -238,17 +285,18 @@ export type ClinicalNoteCatalogOption = {
 };
 
 /** Catálogos de hallazgos y observaciones frecuentes (más usados primero). */
-export async function getClinicalNoteCatalogs(): Promise<{
+export async function getClinicalNoteCatalogs(branchCode: string): Promise<{
   findings: ClinicalNoteCatalogOption[];
   observations: ClinicalNoteCatalogOption[];
 }> {
   return withDatabaseError("getClinicalNoteCatalogs", async () => {
-    const items = await prisma.clinicalNoteCatalogItem.findMany({
-      where: { active: true },
-      select: { id: true, text: true, field: true },
-      orderBy: [{ usageCount: "desc" }, { text: "asc" }],
+    const entries = await prisma.clinicalNoteCatalogItemBranch.findMany({
+      where: { branchCode, active: true, catalogItem: { active: true } },
+      select: { catalogItem: { select: { id: true, text: true, field: true } } },
+      orderBy: [{ usageCount: "desc" }, { catalogItem: { text: "asc" } }],
       take: 600
     });
+    const items = entries.map((entry) => entry.catalogItem);
     return {
       findings: items
         .filter((item) => item.field === "finding")
@@ -266,6 +314,7 @@ export async function getClinicalNoteCatalogs(): Promise<{
  * `usageCount`. Best-effort.
  */
 export async function recordClinicalNoteCatalogUsage(
+  branchCode: string,
   field: "finding" | "observation",
   text?: string | null
 ): Promise<void> {
@@ -283,10 +332,17 @@ export async function recordClinicalNoteCatalogUsage(
   await withDatabaseError("recordClinicalNoteCatalogUsage", async () => {
     for (const line of unique) {
       const normalized = normalizeCatalogText(line);
-      await prisma.clinicalNoteCatalogItem.upsert({
+      const item = await prisma.clinicalNoteCatalogItem.upsert({
         where: { field_normalized: { field, normalized } },
-        create: { field, text: line, normalized, usageCount: 1 },
-        update: { usageCount: { increment: 1 } }
+        create: { field, text: line, normalized },
+        update: {}
+      });
+      await prisma.clinicalNoteCatalogItemBranch.upsert({
+        where: {
+          catalogItemId_branchCode: { catalogItemId: item.id, branchCode }
+        },
+        create: { catalogItemId: item.id, branchCode, usageCount: 1 },
+        update: { active: true, usageCount: { increment: 1 } }
       });
     }
   });
@@ -479,12 +535,15 @@ export async function getConsultationAbandonedToday(branchCode: string) {
  */
 export async function assignConsultationVisit(input: {
   visitId: string;
+  branchCode: string;
   userId: string;
   release?: boolean;
 }) {
   return withDatabaseError("assignConsultationVisit", async () => {
     return prisma.visit.update({
-      where: { id: input.visitId },
+      where: {
+        id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+      },
       data: input.release
         ? { attendingUserId: null, attendingAt: null }
         : { attendingUserId: input.userId, attendingAt: new Date() }
@@ -521,12 +580,15 @@ export async function getClinicalVisitById(visitId: string, branchCode: string) 
               select: { id: true, name: true, email: true }
             },
             diagnoses: {
+              where: { branchCode },
               orderBy: [{ kind: "asc" }, { createdAt: "asc" }]
             },
             treatmentPlans: {
+              where: { branchCode },
               orderBy: { createdAt: "desc" }
             },
             versions: {
+              where: { branchCode },
               orderBy: { version: "desc" },
               select: {
                 id: true,
@@ -543,18 +605,22 @@ export async function getClinicalVisitById(visitId: string, branchCode: string) 
           }
         },
         prescriptions: {
+          where: { branchCode },
           orderBy: [{ version: "desc" }, { createdAt: "desc" }],
           include: {
             items: true
           }
         },
         clinicalEvolutions: {
+          where: { branchCode },
           orderBy: { createdAt: "desc" }
         },
         clinicalNotes: {
+          where: { branchCode },
           orderBy: { createdAt: "desc" }
         },
         clinicalOrders: {
+          where: { branchCode },
           orderBy: { createdAt: "desc" },
           include: {
             workItem: true
@@ -599,9 +665,11 @@ export async function getClinicalVisitById(visitId: string, branchCode: string) 
           include: { user: true }
         },
         workItems: {
+          where: { branchCode },
           orderBy: { createdAt: "desc" }
         },
         treatmentProposalOutcomes: {
+          where: { branchCode },
           orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
           include: {
             doctor: true,
@@ -642,47 +710,192 @@ export async function getClinicalVisitById(visitId: string, branchCode: string) 
  * consultas previas (1..n reconsultas), lo vendido y su costo, sesiones y la
  * última receta. Solo lectura; no altera registros previos.
  */
-export async function getPatientConsultationHistory(patientId: string, excludeVisitId: string) {
+export class ClinicalContinuityAccessError extends Error {
+  constructor(
+    public readonly code:
+      | "MEDICAL_ROLE_REQUIRED"
+      | "PATIENT_VISIT_REQUIRED"
+      | "CONTINUITY_CONSENT_REQUIRED"
+      | "REMOTE_HISTORY_NOT_FOUND"
+      | "CONTINUITY_ACCESS_INVALID"
+  ) {
+    super(code);
+    this.name = "ClinicalContinuityAccessError";
+  }
+}
+
+export function findClinicalContinuityAccessError(error: unknown) {
+  let current = error;
+  while (current instanceof Error) {
+    if (current instanceof ClinicalContinuityAccessError) return current;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return null;
+}
+
+const continuityAccessDurationMs = 15 * 60 * 1_000;
+
+export async function createClinicalContinuityAccess(input: {
+  patientId: string;
+  visitId: string;
+  doctorId: string;
+  branchCode: string;
+  reason: string;
+}) {
+  return withDatabaseError("createClinicalContinuityAccess", async () => {
+    const [membership, visit, consent, remoteBranches] = await Promise.all([
+      prisma.internalUserBranch.findUnique({
+        where: {
+          userId_branchCode: {
+            userId: input.doctorId,
+            branchCode: input.branchCode
+          }
+        },
+        select: { role: true, active: true, user: { select: { active: true } } }
+      }),
+      prisma.visit.findUnique({
+        where: {
+          id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+        },
+        select: { patientId: true }
+      }),
+      prisma.patientConsent.findFirst({
+        where: {
+          patientId: input.patientId,
+          purpose: "clinical_continuity"
+        },
+        orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+        select: { decision: true }
+      }),
+      prisma.visit.findMany({
+        where: {
+          patientId: input.patientId,
+          branchCode: { not: input.branchCode },
+          clinicalConsultation: { isNot: null }
+        },
+        distinct: ["branchCode"],
+        select: { branchCode: true }
+      })
+    ]);
+
+    if (!membership?.active || !membership.user.active || membership.role !== "medico") {
+      throw new ClinicalContinuityAccessError("MEDICAL_ROLE_REQUIRED");
+    }
+    if (
+      input.reason.trim().length < 10 || input.reason.trim().length > 500 ||
+      !visit ||
+      visit.patientId !== input.patientId
+    ) {
+      throw new ClinicalContinuityAccessError("PATIENT_VISIT_REQUIRED");
+    }
+    if (consent?.decision !== "granted") {
+      throw new ClinicalContinuityAccessError("CONTINUITY_CONSENT_REQUIRED");
+    }
+    const consultedBranchCodes = remoteBranches.map((entry) => entry.branchCode);
+    if (consultedBranchCodes.length === 0) {
+      throw new ClinicalContinuityAccessError("REMOTE_HISTORY_NOT_FOUND");
+    }
+
+    return prisma.clinicalContinuityAccess.create({
+      data: {
+        patientId: input.patientId,
+        visitId: input.visitId,
+        doctorId: input.doctorId,
+        branchCode: input.branchCode,
+        reason: input.reason.trim(),
+        consultedBranchCodes,
+        expiresAt: new Date(Date.now() + continuityAccessDurationMs)
+      }
+    });
+  });
+}
+
+export async function getPatientConsultationHistory(input: {
+  patientId: string;
+  excludeVisitId: string;
+  branchCode: string;
+  doctorId?: string;
+  continuityAccessId?: string;
+}) {
   return withDatabaseError("getPatientConsultationHistory", async () => {
+    let visibleBranchCodes = [input.branchCode];
+    let crossBranch = false;
+    if (input.continuityAccessId && input.doctorId) {
+      const access = await prisma.clinicalContinuityAccess.findFirst({
+        where: {
+          id: input.continuityAccessId,
+          patientId: input.patientId,
+          visitId: input.excludeVisitId,
+          doctorId: input.doctorId,
+          branchCode: input.branchCode,
+          expiresAt: { gt: new Date() },
+          doctorMembership: { active: true, role: "medico", user: { active: true } },
+          visit: { patientId: input.patientId }
+        },
+        select: { consultedBranchCodes: true }
+      });
+      const consent = access ? await prisma.patientConsent.findFirst({
+        where: { patientId: input.patientId, purpose: "clinical_continuity" },
+        orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+        select: { decision: true }
+      }) : null;
+      if (access && consent?.decision === "granted") {
+        visibleBranchCodes = [
+        input.branchCode,
+        ...access.consultedBranchCodes.filter(
+          (code) => code !== input.branchCode
+        )
+      ];
+        crossBranch = true;
+      }
+    }
     const where = {
-      patientId,
-      id: { not: excludeVisitId },
+      patientId: input.patientId,
+      branchCode: { in: visibleBranchCodes },
+      id: { not: input.excludeVisitId },
       OR: [
         { clinicalConsultation: { isNot: null } },
-        { sales: { some: {} } },
-        { serviceSessionPackages: { some: {} } }
+        { branchCode: input.branchCode, sales: { some: {} } },
+        { branchCode: input.branchCode, serviceSessionPackages: { some: {} } }
       ]
     } satisfies Prisma.VisitWhereInput;
-    // El conteo total permite numerar las visitas ("1ra", "2da") aunque el
-    // listado se corte en las 20 más recientes.
+    // El historial conserva la cronología completa del paciente seleccionado.
     const [visits, totalCount] = await Promise.all([
       prisma.visit.findMany({
         where,
         include: {
           clinicalConsultation: {
             include: {
-              diagnoses: { orderBy: [{ kind: "asc" }, { createdAt: "asc" }] }
+              doctor: { select: { name: true } },
+              diagnoses: {
+                orderBy: [{ kind: "asc" }, { createdAt: "asc" }]
+              }
             }
           },
+          branch: { select: { code: true, name: true } },
+          clinicalEvolutions: { orderBy: { createdAt: "asc" } },
+          clinicalNotes: { orderBy: { createdAt: "asc" } },
+          clinicalOrders: { orderBy: { createdAt: "asc" } },
           prescriptions: {
             orderBy: [{ version: "desc" }, { createdAt: "desc" }],
             include: { items: { orderBy: { createdAt: "asc" } } },
             take: 1
           },
           sales: {
+            where: { branchCode: input.branchCode },
             include: { items: { orderBy: { createdAt: "asc" } } },
             orderBy: { createdAt: "desc" }
           },
           serviceSessionPackages: {
+            where: { originVisit: { branchCode: input.branchCode } },
             orderBy: { createdAt: "desc" }
           }
         },
         orderBy: [{ checkedInAt: "desc" }, { createdAt: "desc" }],
-        take: 20
       }),
       prisma.visit.count({ where })
     ]);
-    return { visits, totalCount };
+    return { visits, totalCount, crossBranch };
   });
 }
 
@@ -720,6 +933,7 @@ export async function createClinicalOrderRecord(input: {
         data: {
           visitId: input.visitId,
           patientId: visit.patientId,
+          branchCode: input.branchCode,
           doctorId: input.doctorId,
           workItemId: workItem.id,
           type: input.type,

@@ -62,11 +62,14 @@ function normalize(text: string): string {
 }
 
 async function main() {
+  const branchCode = process.argv.find((arg) => arg.startsWith("--branch="))?.slice(9);
+  if (!branchCode) throw new Error("Indica la sucursal con --branch=<codigo>");
+  await prisma.clinicBranch.findUniqueOrThrow({ where: { code: branchCode } });
   console.log("Sembrando plantillas mínimas por diagnóstico…");
   let applied = 0;
   for (const spec of TEMPLATES) {
     const normalized = normalize(spec.diagnosis);
-    await prisma.diagnosisCatalogItem.upsert({
+    const item = await prisma.diagnosisCatalogItem.upsert({
       where: { normalized },
       create: {
         text: spec.diagnosis,
@@ -80,6 +83,11 @@ async function main() {
         indicationsTemplate: spec.indications.join("\n")
       }
     });
+    await prisma.diagnosisCatalogItemBranch.upsert({
+        where: { catalogItemId_branchCode: { catalogItemId: item.id, branchCode } },
+        create: { catalogItemId: item.id, branchCode },
+        update: {}
+      });
     applied += 1;
   }
   console.log(`Plantillas aplicadas: ${applied}.`);

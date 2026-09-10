@@ -122,12 +122,13 @@ async function serializableDocumentTransaction<T>(
 
 export async function generatePrescriptionDocument(input: {
   visitId: string;
+  branchCode: string;
   generatedById: string;
 }) {
   return withDatabaseError("generatePrescriptionDocument", async () => {
     return serializableDocumentTransaction(async (tx) => {
       const visit = await tx.visit.findUnique({
-        where: { id: input.visitId },
+        where: { id_branchCode: { id: input.visitId, branchCode: input.branchCode } },
         include: {
           patient: true,
           clinicalConsultation: { select: { status: true } },
@@ -137,7 +138,7 @@ export async function generatePrescriptionDocument(input: {
             include: {
               items: { orderBy: { createdAt: "asc" } },
               doctor: {
-                include: { professionalProfile: true }
+                include: { professionalProfiles: { where: { branchCode: input.branchCode } } }
               }
             }
           }
@@ -150,7 +151,7 @@ export async function generatePrescriptionDocument(input: {
       if (visit.clinicalConsultation?.status !== "finalized") {
         throw new GeneratedDocumentError("DOCUMENT_SOURCE_NOT_FINALIZED");
       }
-      const profile = prescription.doctor?.professionalProfile;
+      const profile = prescription.doctor?.professionalProfiles[0];
       if (!profile?.active) {
         throw new GeneratedDocumentError(
           "DOCUMENT_PROFESSIONAL_PROFILE_REQUIRED"
@@ -508,6 +509,7 @@ export async function getSaleReceiptDocuments(saleId: string, branchCode: string
 
 export async function correctPrescription(input: {
   visitId: string;
+  branchCode: string;
   doctorId: string;
   reason: string;
   items: Array<{
@@ -522,7 +524,7 @@ export async function correctPrescription(input: {
   return withDatabaseError("correctPrescription", async () => {
     return serializableDocumentTransaction(async (tx) => {
       const visit = await tx.visit.findUnique({
-        where: { id: input.visitId },
+        where: { id_branchCode: { id: input.visitId, branchCode: input.branchCode } },
         include: {
           clinicalConsultation: { select: { status: true } },
           prescriptions: {
@@ -548,6 +550,13 @@ export async function correctPrescription(input: {
       const additions = input.items.filter((item) => normalize(item.medication));
       if (additions.length === 0) {
         throw new GeneratedDocumentError("DOCUMENT_SOURCE_NOT_FOUND");
+      }
+      const inventoryIds = [...new Set(additions.flatMap((item) => item.inventoryItemId ? [item.inventoryItemId] : []))];
+      if (inventoryIds.length > 0) {
+        const available = await tx.branchInventoryBalance.count({
+          where: { branchCode: input.branchCode, itemId: { in: inventoryIds }, item: { active: true } }
+        });
+        if (available !== inventoryIds.length) throw new GeneratedDocumentError("DOCUMENT_SOURCE_NOT_FOUND");
       }
 
       // Un medicamento que ya está en la receta no puede volver a agregarse.
@@ -583,6 +592,7 @@ export async function correctPrescription(input: {
 
       return tx.prescription.create({
         data: {
+          branchCode: input.branchCode,
           visitId: visit.id,
           patientId: visit.patientId,
           doctorId: input.doctorId,
@@ -590,7 +600,7 @@ export async function correctPrescription(input: {
           supersedesId: latest.id,
           correctionReason: input.reason.trim(),
           notes: null,
-          items: { create: mergedItems }
+          items: { create: mergedItems.map((item) => ({ ...item, branchCode: input.branchCode })) }
         },
         include: { items: true }
       });
@@ -604,16 +614,16 @@ const prescribingRoles = assignableInternalRoles.filter((role) =>
   roleHasPermission(role, "clinical_write")
 );
 
-export async function getClinicalProfessionalProfiles() {
+export async function getClinicalProfessionalProfiles(branchCode: string) {
   return withDatabaseError("getClinicalProfessionalProfiles", async () => {
-    return prisma.internalUser.findMany({
+    const users = await prisma.internalUser.findMany({
       where: {
         active: true,
         OR: [
           { platformRole: "super_admin" },
           {
             branchAssignments: {
-              some: { active: true, role: { in: prescribingRoles } }
+              some: { branchCode, active: true, role: { in: prescribingRoles } }
             }
           }
         ]
@@ -622,15 +632,17 @@ export async function getClinicalProfessionalProfiles() {
         id: true,
         name: true,
         email: true,
-        professionalProfile: true
+        professionalProfiles: { where: { branchCode } }
       },
       orderBy: [{ name: "asc" }, { email: "asc" }]
     });
+    return users.map((user) => ({ ...user, professionalProfile: user.professionalProfiles[0] }));
   });
 }
 
 export async function configureClinicalProfessionalProfile(input: {
   userId: string;
+  branchCode: string;
   configuredById: string;
   displayName: string;
   professionalTitle: string;
@@ -644,11 +656,12 @@ export async function configureClinicalProfessionalProfile(input: {
       where: {
         id: input.userId,
         active: true,
+        branchAssignments: { some: { branchCode: input.branchCode, active: true } },
         OR: [
           { platformRole: "super_admin" },
           {
             branchAssignments: {
-              some: { active: true, role: { in: prescribingRoles } }
+              some: { branchCode: input.branchCode, active: true, role: { in: prescribingRoles } }
             }
           }
         ]
@@ -659,8 +672,9 @@ export async function configureClinicalProfessionalProfile(input: {
       throw new GeneratedDocumentError("DOCUMENT_SOURCE_NOT_FOUND");
     }
     return prisma.clinicalProfessionalProfile.upsert({
-      where: { userId: input.userId },
+      where: { userId_branchCode: { userId: input.userId, branchCode: input.branchCode } },
       create: {
+        branchCode: input.branchCode,
         userId: input.userId,
         displayName: input.displayName.trim(),
         professionalTitle: input.professionalTitle.trim(),

@@ -359,6 +359,7 @@ async function main() {
 
       const v1Consultation = await tx.clinicalConsultation.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v1.visit.id,
           patientId: patient.id,
           doctorId: userId,
@@ -376,6 +377,7 @@ async function main() {
       await tx.diagnosis.createMany({
         data: [
           {
+            branchCode: SEED_BRANCH_CODE,
             consultationId: v1Consultation.id,
             kind: "primary",
             name: "Lumbalgia mecánica aguda",
@@ -383,6 +385,7 @@ async function main() {
             createdAt: at(18, 9, 55)
           },
           {
+            branchCode: SEED_BRANCH_CODE,
             consultationId: v1Consultation.id,
             kind: "secondary",
             name: "Sobrepeso",
@@ -394,6 +397,7 @@ async function main() {
 
       await tx.treatmentPlan.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           consultationId: v1Consultation.id,
           internalName: "Plan lumbalgia aguda",
           medications: "Diclofenaco 50 mg VO, Ciclobenzaprina 5 mg VO",
@@ -406,6 +410,7 @@ async function main() {
 
       const v1Prescription = await tx.prescription.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v1.visit.id,
           patientId: patient.id,
           doctorId: userId,
@@ -417,6 +422,7 @@ async function main() {
       await tx.prescriptionItem.createMany({
         data: [
           {
+            branchCode: SEED_BRANCH_CODE,
             prescriptionId: v1Prescription.id,
             medication: "Diclofenaco 50 mg",
             dose: "1 tableta",
@@ -426,6 +432,7 @@ async function main() {
             createdAt: at(18, 10, 0)
           },
           {
+            branchCode: SEED_BRANCH_CODE,
             prescriptionId: v1Prescription.id,
             medication: "Ciclobenzaprina 5 mg",
             dose: "1 tableta",
@@ -452,6 +459,7 @@ async function main() {
 
       const v1NursingOrder = await tx.clinicalOrder.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v1.visit.id,
           patientId: patient.id,
           doctorId: userId,
@@ -687,6 +695,7 @@ async function main() {
 
       await tx.clinicalConsultation.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v2.visit.id,
           patientId: patient.id,
           doctorId: userId,
@@ -701,6 +710,7 @@ async function main() {
 
       await tx.clinicalEvolution.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v2.visit.id,
           patientId: patient.id,
           userId,
@@ -904,6 +914,7 @@ async function main() {
 
       const v4Consultation = await tx.clinicalConsultation.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v4.visit.id,
           patientId: patient.id,
           doctorId: userId,
@@ -918,6 +929,7 @@ async function main() {
 
       await tx.diagnosis.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           consultationId: v4Consultation.id,
           kind: "primary",
           name: "Gastritis crónica reagudizada",
@@ -942,6 +954,7 @@ async function main() {
 
       const v4StudyOrder = await tx.clinicalOrder.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v4.visit.id,
           patientId: patient.id,
           doctorId: userId,
@@ -1115,6 +1128,7 @@ async function main() {
 
       await tx.clinicalConsultation.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v5.visit.id,
           patientId: patient.id,
           doctorId: userId,
@@ -1159,6 +1173,7 @@ async function main() {
 
       await tx.clinicalOrder.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v5.visit.id,
           patientId: patient.id,
           doctorId: userId,
@@ -1187,6 +1202,7 @@ async function main() {
 
       await tx.clinicalOrder.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           visitId: v5.visit.id,
           patientId: patient.id,
           doctorId: userId,

@@ -72,6 +72,7 @@ describe("patient journey report integration", () => {
     });
     const consultation = await prisma.clinicalConsultation.create({
       data: {
+        branchCode: "el-alto",
         visitId: visit.id,
         patientId: patient.id,
         doctorId: doctor.id,
@@ -83,6 +84,7 @@ describe("patient journey report integration", () => {
     });
     const administrationOrder = await prisma.clinicalOrder.create({
       data: {
+        branchCode: "el-alto",
         visitId: visit.id,
         patientId: patient.id,
         doctorId: doctor.id,
@@ -93,6 +95,7 @@ describe("patient journey report integration", () => {
     });
     await prisma.treatmentProposalOutcome.create({
       data: {
+        branchCode: "el-alto",
         consultationId: consultation.id,
         visitId: visit.id,
         doctorId: doctor.id,

@@ -24,6 +24,13 @@ export type VisitHistoryGroup = {
 
 export type VisitHistoryEntry = {
   id: string;
+  branchName: string;
+  localFinancialData: boolean;
+  doctorName?: string;
+  findings?: string;
+  observations?: string;
+  notes: Array<{ id: string; text: string; dateLabel: string }>;
+  orders: Array<{ id: string; title: string; details?: string }>;
   /** "1ra", "2da", … según la posición cronológica real de la visita. */
   ordinal: string;
   dateLabel: string;
@@ -87,7 +94,7 @@ export function PatientVisitHistoryDialog({
                 </Dialog.Title>
                 <Dialog.Description className="mt-1 text-sm text-muted">
                   {patientName} · {visits.length}{" "}
-                  {visits.length === 1 ? "visita previa" : "visitas previas"} · total cobrado{" "}
+                  {visits.length === 1 ? "visita previa" : "visitas previas"} · total en esta sucursal{" "}
                   <span className="font-semibold tabular-nums text-text">
                     {formatMoney(spentCents)}
                   </span>
@@ -116,9 +123,9 @@ export function PatientVisitHistoryDialog({
                       <h3 className="font-sora text-sm font-bold text-text">
                         Resumen {visit.ordinal} Visita
                       </h3>
-                      <p className="mt-0.5 text-xs tabular-nums text-muted">{visit.dateLabel}</p>
+                      <p className="mt-0.5 text-xs tabular-nums text-muted">{visit.dateLabel} · {visit.branchName}</p>
                     </div>
-                    <div className="text-right">
+                    {visit.localFinancialData ? <div className="text-right">
                       <p className="text-sm font-bold tabular-nums text-text">
                         {formatMoney(visit.totalCents)}
                       </p>
@@ -127,10 +134,20 @@ export function PatientVisitHistoryDialog({
                           Saldo {formatMoney(visit.pendingCents)}
                         </Chip>
                       ) : null}
-                    </div>
+                    </div> : <Chip>Solo lectura clínica</Chip>}
                   </div>
 
                   <dl className="mt-3 grid gap-1.5 text-sm">
+                    {[
+                      ["Médico", visit.doctorName],
+                      ["Hallazgos", visit.findings],
+                      ["Observaciones", visit.observations]
+                    ].map(([label, value]) => value ? (
+                      <div key={label} className="flex flex-wrap gap-x-2">
+                        <dt className="text-muted">{label}:</dt>
+                        <dd className="min-w-0 whitespace-pre-line text-text">{value}</dd>
+                      </div>
+                    ) : null)}
                     {visit.reason ? (
                       <div className="flex flex-wrap gap-x-2">
                         <dt className="text-muted">Motivo:</dt>
@@ -158,6 +175,8 @@ export function PatientVisitHistoryDialog({
                       </div>
                     ) : null}
                   </dl>
+                  {visit.notes.map((note) => <p key={note.id} className="mt-2 whitespace-pre-line text-sm"><span className="text-muted">{note.dateLabel} · </span>{note.text}</p>)}
+                  {visit.orders.map((order) => <p key={order.id} className="mt-2 whitespace-pre-line text-sm"><span className="font-medium">Orden: {order.title}</span>{order.details ? ` — ${order.details}` : ""}</p>)}
 
                   {visit.groups.length > 0 ? (
                     <div className="mt-3 grid gap-2 border-t border-border pt-3">

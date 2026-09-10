@@ -168,6 +168,7 @@ export async function createPaidStudyOrder(
       });
       await tx.clinicalOrder.createMany({
         data: lines.map((line) => ({
+          branchCode: input.branchCode,
           visitId: visit.id,
           patientId: visit.patientId,
           doctorId: input.doctorId,

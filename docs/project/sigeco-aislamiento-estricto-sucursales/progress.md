@@ -1,6 +1,6 @@
 # Progress — Aislamiento Operativo Y Continuidad Clínica Por Sucursal
 
-Última actualización: 2026-09-09.
+Última actualización: 2026-09-10.
 
 Plan: [tasks.md](./tasks.md)
 
@@ -61,7 +61,7 @@ operativas.
 | 5 | Identidad global y expediente local del paciente | P0 | Terminada | 4 |
 | 6 | Leads, campañas y entradas públicas | P0 | Terminada | 2, 4-5 |
 | 7 | Visitas, recepción, rutas y tiempos | P0 | Terminada | 5 |
-| 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Pendiente | 7 |
+| 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Implementada; validación acumulada pendiente | 7 |
 | 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Pendiente | 7-8 |
 | 10 | Maestros comerciales y configuración por sucursal | P0 | Pendiente | 4 |
 | 11 | Compras, stock, lotes, traslados y alertas | P0 | Pendiente | 10 |
@@ -74,10 +74,10 @@ operativas.
 
 ## Preparación Ya Disponible
 
-- Contrato canónico para los 103 modelos Prisma y chequeo automático de
+- Contrato canónico para los 107 modelos Prisma y chequeo automático de
   modelos, campos, relaciones, defaults y fallbacks de sucursal.
 - Deuda heredada registrada con coincidencia exacta, responsable y tarea de
-  retiro: 47 excepciones de modelo y 32 hallazgos de código asignados a tareas
+  retiro: 34 excepciones de modelo y 31 hallazgos de código asignados a tareas
   posteriores.
 - `BranchRequestContext` resuelve usuario, asignación, sede activa y rol
   operativo exclusivamente desde sesión y membresías activas.
@@ -131,7 +131,24 @@ operativas.
 Estos avances no equivalen a aislamiento completo y no permiten adelantar la
 Tarea 16.
 
+### Tarea 8 — Implementación
+
+- Consultas, versiones, diagnósticos, planes, resultados, recetas, ítems,
+  evoluciones, notas y órdenes exigen sucursal y relaciones compuestas.
+- Los catálogos clínicos conservan definiciones globales, con activación y
+  frecuencia de uso locales. Las semillas requieren `--branch=<codigo>`.
+- El perfil profesional se configura por usuario y sede; la receta usa el
+  perfil de la sucursal de atención.
+- La historia transversal se solicita desde un paciente/visita, solo por un
+  médico asignado, con motivo y consentimiento de continuidad. El acceso
+  registrado dura 15 minutos; se revalidan rol, asignación y consentimiento.
+  Las visitas muestran su origen en modo de solo lectura. Las precargas para
+  editar conservan exclusivamente la sede activa.
+- Migraciones de expansión y endurecimiento preparadas, sin aplicar a una base.
+  Los perfiles con varias sedes requieren atribución explícita antes de endurecer.
+- Detalle y operación: [reporte T8](../task-reports/2026-09-10-tarea-8-consulta-recetas-ordenes-catalogos.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 8: aislar consultas, recetas, órdenes y configuración clínica,
-y habilitar la continuidad médica transversal como lectura explícita y auditada.
+Ejecutar la Tarea 9: Enfermería, estudios, adjuntos y sesiones, incluida su
+continuidad limitada. La integración y el despliegue se validan en la Tarea 17.

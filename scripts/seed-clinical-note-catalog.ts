@@ -38,7 +38,7 @@ function normalize(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-async function seedField(field: "finding" | "observation", texts: string[]) {
+async function seedField(branchCode: string, field: "finding" | "observation", texts: string[]) {
   let created = 0;
   let skipped = 0;
   for (const text of texts) {
@@ -48,21 +48,34 @@ async function seedField(field: "finding" | "observation", texts: string[]) {
       select: { id: true }
     });
     if (existing) {
+      await prisma.clinicalNoteCatalogItemBranch.upsert({
+        where: { catalogItemId_branchCode: { catalogItemId: existing.id, branchCode } },
+        create: { catalogItemId: existing.id, branchCode },
+        update: {}
+      });
       skipped += 1;
       continue;
     }
-    await prisma.clinicalNoteCatalogItem.create({
+    const item = await prisma.clinicalNoteCatalogItem.create({
       data: { field, text, normalized, usageCount: 0 }
     });
+    await prisma.clinicalNoteCatalogItemBranch.upsert({
+        where: { catalogItemId_branchCode: { catalogItemId: item.id, branchCode } },
+        create: { catalogItemId: item.id, branchCode },
+        update: {}
+      });
     created += 1;
   }
   return { created, skipped };
 }
 
 async function main() {
+  const branchCode = process.argv.find((arg) => arg.startsWith("--branch="))?.slice(9);
+  if (!branchCode) throw new Error("Indica la sucursal con --branch=<codigo>");
+  await prisma.clinicBranch.findUniqueOrThrow({ where: { code: branchCode } });
   console.log("Sembrando catálogo mínimo de hallazgos y observaciones…");
-  const findings = await seedField("finding", FINDINGS);
-  const observations = await seedField("observation", OBSERVATIONS);
+  const findings = await seedField(branchCode, "finding", FINDINGS);
+  const observations = await seedField(branchCode, "observation", OBSERVATIONS);
   console.log(`Hallazgos: ${findings.created} creados, ${findings.skipped} ya existían.`);
   console.log(
     `Observaciones: ${observations.created} creadas, ${observations.skipped} ya existían.`

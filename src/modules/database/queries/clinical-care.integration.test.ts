@@ -89,6 +89,7 @@ describe("clinical care integration", () => {
     });
 
     await upsertClinicalConsultationRecord({
+      branchCode: "el-alto",
       visitId: visit.id,
       doctorId: doctor.id,
       expectedRevision: 0,
@@ -162,6 +163,7 @@ describe("clinical care integration", () => {
       reason: "Dolor abdominal"
     });
     const consultation = await upsertClinicalConsultationRecord({
+      branchCode: "el-alto",
       visitId: visit.id,
       doctorId: doctor.id,
       expectedRevision: 0,
@@ -220,6 +222,7 @@ describe("clinical care integration", () => {
     expect(findDraftClinicalConsultationError(draftCloseError)).not.toBeNull();
 
     const finalized = await finalizeClinicalConsultation({
+      branchCode: "el-alto",
       visitId: visit.id,
       consultationId: consultation.id,
       expectedRevision: 1,
@@ -233,6 +236,7 @@ describe("clinical care integration", () => {
     expect(finalized.finalizedAt).toBeInstanceOf(Date);
 
     const corrected = await correctClinicalConsultation({
+      branchCode: "el-alto",
       visitId: visit.id,
       consultationId: consultation.id,
       expectedRevision: 2,
@@ -309,6 +313,7 @@ describe("clinical care integration", () => {
       reason: "Control"
     });
     const consultation = await upsertClinicalConsultationRecord({
+      branchCode: "el-alto",
       visitId: visit.id,
       doctorId: doctor.id,
       expectedRevision: 0,
@@ -316,6 +321,7 @@ describe("clinical care integration", () => {
       primaryDiagnosis: "Diagnóstico inicial"
     });
     await finalizeClinicalConsultation({
+      branchCode: "el-alto",
       visitId: visit.id,
       consultationId: consultation.id,
       expectedRevision: 1,
@@ -333,10 +339,12 @@ describe("clinical care integration", () => {
     };
     const results = await Promise.allSettled([
       correctClinicalConsultation({
+        branchCode: "el-alto",
         ...baseCorrection,
         primaryDiagnosis: "Diagnóstico desde pestaña A"
       }),
       correctClinicalConsultation({
+        branchCode: "el-alto",
         ...baseCorrection,
         primaryDiagnosis: "Diagnóstico desde pestaña B"
       })

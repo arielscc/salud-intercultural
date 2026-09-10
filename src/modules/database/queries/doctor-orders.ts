@@ -64,10 +64,10 @@ export type DoctorOrderLineInput = {
   notes?: string;
 };
 
-export async function getDoctorOrderByVisit(visitId: string) {
+export async function getDoctorOrderByVisit(visitId: string, branchCode: string) {
   return withDatabaseError("getDoctorOrderByVisit", () =>
     prisma.doctorOrder.findUnique({
-      where: { visitId },
+      where: { visitId_branchCode: { visitId, branchCode } },
       include: {
         doctor: { select: { id: true, name: true, email: true } },
         lines: { orderBy: { position: "asc" } }
@@ -80,7 +80,7 @@ export async function getDoctorOrderByVisit(visitId: string) {
  * Opciones vendibles para el selector del médico: servicios y tratamientos del
  * catálogo (con su tope de descuento por unidad) y productos del inventario.
  */
-export async function getDoctorOrderOptions() {
+export async function getDoctorOrderOptions(branchCode: string) {
   return withDatabaseError("getDoctorOrderOptions", async () => {
     const [catalog, products] = await Promise.all([
       prisma.serviceCatalogItem.findMany({
@@ -91,7 +91,7 @@ export async function getDoctorOrderOptions() {
         orderBy: [{ kind: "asc" }, { name: "asc" }]
       }),
       prisma.inventoryItem.findMany({
-        where: { active: true },
+        where: { active: true, branchBalances: { some: { branchCode } } },
         select: { id: true, name: true, salePriceCents: true, maxDiscountCents: true },
         orderBy: { name: "asc" }
       })
@@ -135,12 +135,13 @@ export async function getDoctorOrderOptions() {
  */
 async function resolveLineMeta(
   tx: Prisma.TransactionClient,
-  line: DoctorOrderLineInput
+  line: DoctorOrderLineInput,
+  branchCode: string
 ): Promise<{ perUnitCapCents: number; requiresNursing: boolean }> {
   if (line.source === "product") {
     if (!line.inventoryItemId) throw new DoctorOrderError("invalid-line");
-    const product = await tx.inventoryItem.findUnique({
-      where: { id: line.inventoryItemId },
+    const product = await tx.inventoryItem.findFirst({
+      where: { id: line.inventoryItemId, branchBalances: { some: { branchCode } } },
       select: { active: true, maxDiscountCents: true }
     });
     if (!product || !product.active) throw new DoctorOrderError("invalid-line");
@@ -207,7 +208,7 @@ export async function saveDoctorOrder(input: {
         }
       >;
       for (const [position, line] of input.lines.entries()) {
-        const meta = await resolveLineMeta(tx, line);
+        const meta = await resolveLineMeta(tx, line, input.branchCode);
         resolvedLines.push({
           ...line,
           maxDiscountCents: 0,
@@ -218,8 +219,9 @@ export async function saveDoctorOrder(input: {
       const orderDiscountCents = Math.max(0, input.orderDiscountCents ?? 0);
 
       const order = await tx.doctorOrder.upsert({
-        where: { visitId: input.visitId },
+        where: { visitId_branchCode: { visitId: input.visitId, branchCode: input.branchCode } },
         create: {
+          branchCode: input.branchCode,
           visitId: input.visitId,
           patientId: visit.patientId,
           doctorId: input.doctorId,
@@ -239,11 +241,12 @@ export async function saveDoctorOrder(input: {
         }
       });
 
-      await tx.doctorOrderLine.deleteMany({ where: { orderId: order.id } });
+      await tx.doctorOrderLine.deleteMany({ where: { orderId: order.id, branchCode: input.branchCode } });
       for (const line of resolvedLines) {
         await tx.doctorOrderLine.create({
           data: {
             orderId: order.id,
+            branchCode: input.branchCode,
             source: line.source,
             itemType: line.itemType,
             catalogItemId: line.catalogItemId,
@@ -270,13 +273,14 @@ export async function saveDoctorOrder(input: {
       // aplica, sin decisión) desde otras acciones del proceso de atención.
       if (input.submit && visit.clinicalConsultation?.status === "finalized") {
         const latestOutcome = await tx.treatmentProposalOutcome.findFirst({
-          where: { visitId: visit.id },
+          where: { visitId: visit.id, branchCode: input.branchCode },
           orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }]
         });
         if (latestOutcome?.status !== "accepted") {
           await tx.treatmentProposalOutcome.create({
             data: {
               consultationId: visit.clinicalConsultation.id,
+              branchCode: input.branchCode,
               visitId: visit.id,
               doctorId: input.doctorId,
               status: "accepted",
@@ -334,6 +338,7 @@ export async function saveDoctorOrder(input: {
             visitId: visit.id,
             targetArea: "administracion",
             workItemId: administrationWorkItem.id,
+            branchCode: input.branchCode,
             title
           },
           orderBy: { createdAt: "desc" }
@@ -341,7 +346,7 @@ export async function saveDoctorOrder(input: {
 
         if (existingClinicalOrder) {
           await tx.clinicalOrder.update({
-            where: { id: existingClinicalOrder.id },
+            where: { id_branchCode: { id: existingClinicalOrder.id, branchCode: input.branchCode } },
             data: {
               doctorId: input.doctorId,
               details: input.indications || description,
@@ -353,6 +358,7 @@ export async function saveDoctorOrder(input: {
             data: {
               visitId: visit.id,
               patientId: visit.patientId,
+              branchCode: input.branchCode,
               doctorId: input.doctorId,
               workItemId: administrationWorkItem.id,
               type: "administration",
@@ -366,7 +372,7 @@ export async function saveDoctorOrder(input: {
       }
 
       return tx.doctorOrder.findUniqueOrThrow({
-        where: { id: order.id },
+        where: { id_branchCode: { id: order.id, branchCode: input.branchCode } },
         include: { lines: { orderBy: { position: "asc" } } }
       });
     })
@@ -389,7 +395,7 @@ export async function releaseDoctorOrderToNursing(input: {
       const order = await tx.doctorOrder.findFirstOrThrow({
         where: {
           id: input.doctorOrderId,
-          visit: { branchCode: input.branchCode }
+          branchCode: input.branchCode
         },
         include: { lines: { orderBy: { position: "asc" } }, sale: true }
       });
@@ -432,6 +438,7 @@ export async function releaseDoctorOrderToNursing(input: {
           data: {
             visitId: order.visitId,
             patientId: order.patientId,
+            branchCode: input.branchCode,
             doctorId: order.doctorId,
             workItemId: nursing.id,
             type: "nursing_application",
@@ -478,7 +485,7 @@ export async function releaseDoctorOrderToNursing(input: {
       }
 
       await tx.doctorOrder.update({
-        where: { id: order.id },
+        where: { id_branchCode: { id: order.id, branchCode: input.branchCode } },
         data: { nursingReleasedAt: new Date(), nursingWorkItemId: nursing.id }
       });
 

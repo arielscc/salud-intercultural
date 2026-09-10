@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/internal/ui/PageHeader";
 import { configureProfessionalProfileAction } from "@/features/generated-documents/actions";
 import { getClinicalProfessionalProfiles } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export default async function DocumentConfigurationPage({
   searchParams
@@ -15,7 +16,8 @@ export default async function DocumentConfigurationPage({
 }) {
   await requirePermission("documents_configure");
   const query = await searchParams;
-  const doctors = await getClinicalProfessionalProfiles();
+  const { activeBranch } = await getBranchContext();
+  const doctors = await getClinicalProfessionalProfiles(activeBranch.code);
 
   return (
     <div className="grid gap-5">

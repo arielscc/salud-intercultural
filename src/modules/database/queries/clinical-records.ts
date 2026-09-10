@@ -18,6 +18,7 @@ export type PrescriptionItemRecordInput = {
 
 export type UpsertClinicalConsultationRecordInput = ClinicalSnapshot & {
   visitId: string;
+  branchCode: string;
   doctorId: string;
   expectedRevision: number;
   prescriptionItems?: PrescriptionItemRecordInput[];
@@ -32,6 +33,7 @@ export class ClinicalRecordWorkflowError extends Error {
       | "CLINICAL_RECORD_NOT_FINALIZED"
       | "CLINICAL_RECORD_ALREADY_FINALIZED"
       | "CLINICAL_RECORD_NO_CHANGES"
+      | "CLINICAL_MEDICATION_OUTSIDE_BRANCH"
   ) {
     super(code);
     this.name = "ClinicalRecordWorkflowError";
@@ -61,6 +63,20 @@ function prismaErrorCode(error: unknown) {
     return error.code;
   }
   return null;
+}
+
+/** Un ID del catálogo solo se admite si el producto está disponible en la sede. */
+export async function assertClinicalMedicationBranch(
+  tx: Prisma.TransactionClient,
+  branchCode: string,
+  items: Array<{ inventoryItemId?: string | null }>
+) {
+  const ids = [...new Set(items.flatMap((item) => item.inventoryItemId ? [item.inventoryItemId] : []))];
+  if (ids.length === 0) return;
+  const count = await tx.branchInventoryBalance.count({
+    where: { branchCode, itemId: { in: ids }, item: { active: true } }
+  });
+  if (count !== ids.length) throw new ClinicalRecordWorkflowError("CLINICAL_MEDICATION_OUTSIDE_BRANCH");
 }
 
 async function runClinicalRecordTransaction<T>(
@@ -108,12 +124,14 @@ function snapshotFromConsultation(
 
 function versionData(
   consultationId: string,
+  branchCode: string,
   version: number,
   authorId: string | undefined,
   snapshot: ClinicalSnapshot
 ) {
   return {
     consultationId,
+    branchCode,
     version,
     authorId,
     motive: snapshot.motive,
@@ -129,12 +147,14 @@ function versionData(
 async function replaceDiagnosesAndPlan(
   tx: Prisma.TransactionClient,
   consultationId: string,
+  branchCode: string,
   snapshot: ClinicalSnapshot
 ) {
-  await tx.diagnosis.deleteMany({ where: { consultationId } });
+  await tx.diagnosis.deleteMany({ where: { consultationId, branchCode } });
   await tx.diagnosis.create({
     data: {
       consultationId,
+      branchCode,
       kind: "primary",
       name: snapshot.primaryDiagnosis,
       findings: snapshot.findings,
@@ -145,17 +165,19 @@ async function replaceDiagnosesAndPlan(
     await tx.diagnosis.create({
       data: {
         consultationId,
+        branchCode,
         kind: "secondary",
         name: snapshot.secondaryDiagnosis
       }
     });
   }
 
-  await tx.treatmentPlan.deleteMany({ where: { consultationId } });
+  await tx.treatmentPlan.deleteMany({ where: { consultationId, branchCode } });
   if (snapshot.treatmentPlanText || snapshot.indications) {
     await tx.treatmentPlan.create({
       data: {
         consultationId,
+        branchCode,
         observations: snapshot.treatmentPlanText,
         medications: snapshot.indications
       }
@@ -176,9 +198,10 @@ async function appendPrescriptionWhenChanged(
     normalize(item.medication)
   );
   if (items.length === 0) return;
+  await assertClinicalMedicationBranch(tx, input.branchCode, items);
 
   const latest = await tx.prescription.findFirst({
-    where: { visitId: input.visitId },
+    where: { visitId: input.visitId, branchCode: input.branchCode },
     orderBy: { createdAt: "desc" },
     include: { items: { orderBy: { createdAt: "asc" } } }
   });
@@ -203,6 +226,7 @@ async function appendPrescriptionWhenChanged(
     data: {
       visitId: input.visitId,
       patientId,
+      branchCode: input.branchCode,
       doctorId: input.doctorId,
       version: (latest?.version ?? 0) + 1,
       supersedesId: latest?.id,
@@ -215,6 +239,7 @@ async function appendPrescriptionWhenChanged(
   await tx.prescriptionItem.createMany({
     data: items.map((item) => ({
       prescriptionId: prescription.id,
+      branchCode: input.branchCode,
       inventoryItemId: item.inventoryItemId ?? null,
       medication: item.medication.trim(),
       dose: normalize(item.dose),
@@ -235,6 +260,7 @@ async function appendEvolution(
     data: {
       visitId: input.visitId,
       patientId,
+      branchCode: input.branchCode,
       userId: input.doctorId,
       note: input.evolutionNote
     }
@@ -247,11 +273,18 @@ export async function upsertClinicalConsultationRecord(
   return withDatabaseError("upsertClinicalConsultationRecord", async () => {
     return runClinicalRecordTransaction(async (tx) => {
         const visit = await tx.visit.findUniqueOrThrow({
-          where: { id: input.visitId },
+          where: {
+            id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+          },
           select: { patientId: true }
         });
         const existing = await tx.clinicalConsultation.findUnique({
-          where: { visitId: input.visitId },
+          where: {
+            visitId_branchCode: {
+              visitId: input.visitId,
+              branchCode: input.branchCode
+            }
+          },
           include: { diagnoses: true }
         });
 
@@ -263,6 +296,7 @@ export async function upsertClinicalConsultationRecord(
             data: {
               visitId: input.visitId,
               patientId: visit.patientId,
+              branchCode: input.branchCode,
               doctorId: input.doctorId,
               motive: input.motive,
               findings: input.findings,
@@ -271,11 +305,17 @@ export async function upsertClinicalConsultationRecord(
               indications: input.indications
             }
           });
-          await replaceDiagnosesAndPlan(tx, consultation.id, input);
+          await replaceDiagnosesAndPlan(
+            tx,
+            consultation.id,
+            input.branchCode,
+            input
+          );
           await tx.clinicalConsultationVersion.create({
             data: {
               ...versionData(
                 consultation.id,
+                input.branchCode,
                 consultation.revision,
                 input.doctorId,
                 input
@@ -299,6 +339,7 @@ export async function upsertClinicalConsultationRecord(
         const updated = await tx.clinicalConsultation.updateMany({
           where: {
             id: existing.id,
+            branchCode: input.branchCode,
             revision: input.expectedRevision,
             status: "draft"
           },
@@ -316,10 +357,16 @@ export async function upsertClinicalConsultationRecord(
           throw new ClinicalRecordWorkflowError("CLINICAL_RECORD_STALE");
         }
 
-        await replaceDiagnosesAndPlan(tx, existing.id, input);
+        await replaceDiagnosesAndPlan(tx, existing.id, input.branchCode, input);
         await tx.clinicalConsultationVersion.create({
           data: {
-            ...versionData(existing.id, nextRevision, input.doctorId, input),
+            ...versionData(
+              existing.id,
+              input.branchCode,
+              nextRevision,
+              input.doctorId,
+              input
+            ),
             kind: "draft"
           }
         });
@@ -327,7 +374,7 @@ export async function upsertClinicalConsultationRecord(
         await appendEvolution(tx, input, visit.patientId);
 
         return tx.clinicalConsultation.findUniqueOrThrow({
-          where: { id: existing.id }
+          where: { id_branchCode: { id: existing.id, branchCode: input.branchCode } }
         });
     });
   });
@@ -335,6 +382,7 @@ export async function upsertClinicalConsultationRecord(
 
 export async function finalizeClinicalConsultation(input: {
   visitId: string;
+  branchCode: string;
   consultationId: string;
   expectedRevision: number;
   finalizedById: string;
@@ -342,7 +390,11 @@ export async function finalizeClinicalConsultation(input: {
   return withDatabaseError("finalizeClinicalConsultation", async () => {
     return runClinicalRecordTransaction(async (tx) => {
         const consultation = await tx.clinicalConsultation.findFirstOrThrow({
-          where: { id: input.consultationId, visitId: input.visitId },
+          where: {
+            id: input.consultationId,
+            visitId: input.visitId,
+            branchCode: input.branchCode
+          },
           include: { diagnoses: true }
         });
         if (consultation.status === "finalized") {
@@ -359,6 +411,7 @@ export async function finalizeClinicalConsultation(input: {
         const updated = await tx.clinicalConsultation.updateMany({
           where: {
             id: consultation.id,
+            branchCode: input.branchCode,
             status: "draft",
             revision: input.expectedRevision
           },
@@ -377,6 +430,7 @@ export async function finalizeClinicalConsultation(input: {
           data: {
             ...versionData(
               consultation.id,
+              input.branchCode,
               nextRevision,
               input.finalizedById,
               snapshotFromConsultation(consultation)
@@ -386,19 +440,26 @@ export async function finalizeClinicalConsultation(input: {
         });
 
         return tx.clinicalConsultation.findUniqueOrThrow({
-          where: { id: consultation.id }
+          where: { id_branchCode: { id: consultation.id, branchCode: input.branchCode } }
         });
     });
   });
 }
 
 export async function correctClinicalConsultation(
-  input: CorrectClinicalConsultationInput & { correctedById: string }
+  input: CorrectClinicalConsultationInput & {
+    branchCode: string;
+    correctedById: string;
+  }
 ) {
   return withDatabaseError("correctClinicalConsultation", async () => {
     return runClinicalRecordTransaction(async (tx) => {
         const consultation = await tx.clinicalConsultation.findFirstOrThrow({
-          where: { id: input.consultationId, visitId: input.visitId },
+          where: {
+            id: input.consultationId,
+            visitId: input.visitId,
+            branchCode: input.branchCode
+          },
           include: { diagnoses: true }
         });
         if (consultation.status !== "finalized") {
@@ -416,14 +477,21 @@ export async function correctClinicalConsultation(
         }
 
         const [sales, applications, orders] = await Promise.all([
-          tx.sale.count({ where: { visitId: input.visitId } }),
-          tx.nursingApplication.count({ where: { visitId: input.visitId } }),
-          tx.clinicalOrder.count({ where: { visitId: input.visitId } })
+          tx.sale.count({
+            where: { visitId: input.visitId, branchCode: input.branchCode }
+          }),
+          tx.nursingApplication.count({
+            where: { visitId: input.visitId, visit: { branchCode: input.branchCode } }
+          }),
+          tx.clinicalOrder.count({
+            where: { visitId: input.visitId, branchCode: input.branchCode }
+          })
         ]);
         const nextRevision = consultation.revision + 1;
         const updated = await tx.clinicalConsultation.updateMany({
           where: {
             id: consultation.id,
+            branchCode: input.branchCode,
             status: "finalized",
             revision: input.expectedRevision
           },
@@ -440,11 +508,17 @@ export async function correctClinicalConsultation(
           throw new ClinicalRecordWorkflowError("CLINICAL_RECORD_STALE");
         }
 
-        await replaceDiagnosesAndPlan(tx, consultation.id, input);
+        await replaceDiagnosesAndPlan(
+          tx,
+          consultation.id,
+          input.branchCode,
+          input
+        );
         const version = await tx.clinicalConsultationVersion.create({
           data: {
             ...versionData(
               consultation.id,
+              input.branchCode,
               nextRevision,
               input.correctedById,
               input
@@ -471,8 +545,8 @@ export async function getClinicalConsultationVersionHistory(
   return withDatabaseError(
     "getClinicalConsultationVersionHistory",
     async () => {
-      return prisma.clinicalConsultation.findFirst({
-        where: { visitId, visit: { branchCode } },
+      return prisma.clinicalConsultation.findUnique({
+        where: { visitId_branchCode: { visitId, branchCode } },
         include: {
           finalizedBy: {
             select: { id: true, name: true, email: true }

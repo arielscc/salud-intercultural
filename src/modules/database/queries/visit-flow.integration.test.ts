@@ -215,6 +215,7 @@ describe("flexible visit flow integration", () => {
     });
     await prisma.clinicalOrder.create({
       data: {
+        branchCode: "el-alto",
         visitId: visit.id,
         patientId: visit.patientId,
         doctorId: marlen.id,

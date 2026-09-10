@@ -353,6 +353,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
             "[QA] Propuesta sintética para validar el resultado del tratamiento."
         },
         create: {
+          branchCode: QA_BRANCH_CODE,
           doctorId: doctorUserId,
           motive: fixture.reason,
           patientId: patient.id,

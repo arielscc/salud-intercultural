@@ -160,6 +160,7 @@ export async function recordTreatmentProposalOutcome(
             data: {
               visitId: visit.id,
               patientId: visit.patientId,
+              branchCode: input.branchCode,
               doctorId: input.doctorId,
               workItemId: workItem.id,
               type: "administration",
@@ -184,6 +185,7 @@ export async function recordTreatmentProposalOutcome(
         const outcome = await tx.treatmentProposalOutcome.create({
           data: {
             consultationId: visit.clinicalConsultation.id,
+            branchCode: input.branchCode,
             visitId: visit.id,
             doctorId: input.doctorId,
             status: input.status,
@@ -210,12 +212,12 @@ export async function recordTreatmentProposalOutcome(
   });
 }
 
-export async function getTreatmentProposalOutcomeSummary(now = new Date(), branchCode?: string) {
+export async function getTreatmentProposalOutcomeSummary(now: Date, branchCode: string) {
   return withDatabaseError("getTreatmentProposalOutcomeSummary", async () => {
     const range = monthRange(now);
     const outcomes = await prisma.treatmentProposalOutcome.findMany({
       where: {
-        visit: { branchCode },
+        branchCode,
         decidedAt: { gte: range.start, lt: range.end },
         supersededBy: null
       },

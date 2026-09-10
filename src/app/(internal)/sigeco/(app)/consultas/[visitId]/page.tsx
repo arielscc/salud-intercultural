@@ -23,6 +23,7 @@ import {
   assignConsultationVisitAction,
   createPaidStudyOrderAction,
   finalizeClinicalConsultationAction,
+  requestClinicalContinuityAction,
   saveClinicalConsultationAction
 } from "@/features/clinical-care/actions";
 import {
@@ -93,7 +94,7 @@ const contactPreferenceLabels: Record<string, string> = {
 
 type ConsultationDetailPageProps = {
   params: Promise<{ visitId: string }>;
-  searchParams: Promise<{ error?: string; aviso?: string }>;
+  searchParams: Promise<{ error?: string; aviso?: string; continuidad?: string }>;
 };
 
 function calculatePatientAge(birthDate: Date | null) {
@@ -170,6 +171,10 @@ function pageErrorMessage(error: string) {
       "No puedes recetar el mismo medicamento dos veces. Quita el repetido antes de guardar.",
     "consulta-desactualizada":
       "Otra persona modificó esta consulta. Recarga la información antes de intentarlo nuevamente.",
+    "continuidad-sin-consentimiento": "El paciente necesita tener registrado su consentimiento de continuidad clínica.",
+    "medicamento-fuera-de-sucursal": "Uno de los medicamentos seleccionados no está disponible en esta sucursal. Actualiza la selección.",
+    "continuidad-sin-antecedentes": "No hay consultas previas registradas en otras sucursales.",
+    "continuidad-no-disponible": "No se pudo habilitar la continuidad clínica. Revisa la visita y tu acceso médico en esta sucursal.",
     "consulta-finalizada":
       "La consulta ya está finalizada. Para cambiarla debes registrar una corrección.",
     "consulta-ya-finalizada": "La consulta ya había sido finalizada.",
@@ -245,23 +250,30 @@ export default async function ConsultationDetailPage({
       getClinicalVisitById(visitId, activeBranch.code),
       getPrescriptionDocuments(visitId, activeBranch.code),
       getVisitAreaTimingState(visitId, activeBranch.code),
-      getDoctorOrderByVisit(visitId),
-      getDoctorOrderOptions(),
+      getDoctorOrderByVisit(visitId, activeBranch.code),
+      getDoctorOrderOptions(activeBranch.code),
       getActiveStudyCatalogItems(),
-      getMedicationOptions(),
-      getVisitCurrentPrescriptionItems(visitId),
-      getIndicationCatalog(),
-      getDiagnosisCatalog(),
-      getClinicalNoteCatalogs()
+      getMedicationOptions(activeBranch.code),
+      getVisitCurrentPrescriptionItems(visitId, activeBranch.code),
+      getIndicationCatalog(activeBranch.code),
+      getDiagnosisCatalog(activeBranch.code),
+      getClinicalNoteCatalogs(activeBranch.code)
     ]);
 
   if (!visit) notFound();
   if (visit.branchCode !== activeBranch.code) notFound();
 
-  const consultationHistory = await getPatientConsultationHistory(visit.patient.id, visit.id);
+  const consultationHistory = await getPatientConsultationHistory({
+    patientId: visit.patient.id,
+    excludeVisitId: visit.id,
+    branchCode: activeBranch.code,
+    doctorId: user.id,
+    continuityAccessId: user.role === "medico" ? query.continuidad : undefined
+  });
   const previousPrescriptionItems = await getPatientPreviousPrescriptionItems(
     visit.patient.id,
-    visit.id
+    visit.id,
+    activeBranch.code
   );
 
   // Resumen de cada visita anterior para el modal del médico: qué se le hizo, qué
@@ -298,6 +310,15 @@ export default async function ConsultationDetailPage({
 
       return {
         id: entry.id,
+        branchName: entry.branch.name,
+        localFinancialData: entry.branch.code === activeBranch.code,
+        doctorName: entry.clinicalConsultation?.doctor?.name ?? undefined,
+        findings: entry.clinicalConsultation?.findings ?? undefined,
+        observations: entry.clinicalConsultation?.observations ?? undefined,
+        notes: [...entry.clinicalEvolutions, ...entry.clinicalNotes]
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+          .map((note) => ({ id: note.id, text: note.note, dateLabel: formatDateTime(note.createdAt) })),
+        orders: entry.clinicalOrders.map((order) => ({ id: order.id, title: order.title, details: order.details ?? undefined })),
         ordinal: visitOrdinal(position),
         dateLabel: formatDateTime(entry.checkedInAt ?? entry.createdAt),
         reason: entry.clinicalConsultation?.motive ?? entry.reason ?? undefined,
@@ -750,14 +771,26 @@ export default async function ConsultationDetailPage({
           </Card>
         ) : null}
 
-        {visitHistorySummaries.length > 0 ? (
-          <div className="max-sm:order-2">
+        <div id="historial-visitas" className="max-sm:order-2 grid gap-3">
+          {visitHistorySummaries.length > 0 ? (
             <PatientVisitHistoryDialog
               patientName={visit.patient.fullName}
               visits={visitHistorySummaries}
             />
-          </div>
-        ) : null}
+          ) : null}
+          {user.role === "medico" && !consultationHistory.crossBranch ? (
+            <form action={requestClinicalContinuityAction} className="grid gap-3 rounded-[9px] border border-border p-4">
+              <input type="hidden" name="patientId" value={visit.patient.id} />
+              <input type="hidden" name="visitId" value={visit.id} />
+              <Field label="Motivo para consultar el historial de otras sucursales">
+                <textarea name="reason" required minLength={10} maxLength={500} className={internalInputClassName} />
+              </Field>
+              <p className="text-xs text-muted">Consulta de solo lectura para continuidad médica. El acceso queda registrado y dura 15 minutos.</p>
+              <SubmitButton>Consultar otras sucursales</SubmitButton>
+            </form>
+          ) : null}
+          {consultationHistory.crossBranch ? <p className="text-sm text-muted">Continuidad clínica activa: cada visita indica su sucursal de origen y se consulta en modo de solo lectura.</p> : null}
+        </div>
 
         <Card className="max-sm:order-3 p-0">
           <details className="group" open>

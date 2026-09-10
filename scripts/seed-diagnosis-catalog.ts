@@ -32,6 +32,9 @@ function normalize(text: string): string {
 }
 
 async function main() {
+  const branchCode = process.argv.find((arg) => arg.startsWith("--branch="))?.slice(9);
+  if (!branchCode) throw new Error("Indica la sucursal con --branch=<codigo>");
+  await prisma.clinicBranch.findUniqueOrThrow({ where: { code: branchCode } });
   console.log("Sembrando catálogo mínimo de diagnósticos…");
   let created = 0;
   let skipped = 0;
@@ -42,12 +45,22 @@ async function main() {
       select: { id: true }
     });
     if (existing) {
+      await prisma.diagnosisCatalogItemBranch.upsert({
+        where: { catalogItemId_branchCode: { catalogItemId: existing.id, branchCode } },
+        create: { catalogItemId: existing.id, branchCode },
+        update: {}
+      });
       skipped += 1;
       continue;
     }
-    await prisma.diagnosisCatalogItem.create({
+    const item = await prisma.diagnosisCatalogItem.create({
       data: { text, normalized, usageCount: 0 }
     });
+    await prisma.diagnosisCatalogItemBranch.upsert({
+        where: { catalogItemId_branchCode: { catalogItemId: item.id, branchCode } },
+        create: { catalogItemId: item.id, branchCode },
+        update: {}
+      });
     created += 1;
   }
   console.log(`Diagnósticos: ${created} creados, ${skipped} ya existían.`);

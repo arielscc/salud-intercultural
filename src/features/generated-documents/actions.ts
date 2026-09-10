@@ -40,8 +40,9 @@ export async function generatePrescriptionDocumentAction(formData: FormData) {
         entityType: "generated_document",
         context: { visitId }
       },
-      async (user) => {
+      async (user, branchContext) => {
         const generated = await generatePrescriptionDocument({
+          branchCode: branchContext.activeBranch.code,
           visitId: parsed.data.visitId,
           generatedById: user.id
         });
@@ -103,20 +104,23 @@ export async function correctPrescriptionAction(formData: FormData) {
         entityType: "prescription",
         context: { visitId }
       },
-      async (user) => {
+      async (user, branchContext) => {
         // Valida consulta, fuente e identidad antes de insertar la corrección.
         // Así un perfil desactivado no deja una receta nueva sin documento.
         await generatePrescriptionDocument({
+          branchCode: branchContext.activeBranch.code,
           visitId,
           generatedById: user.id
         });
         const prescription = await correctPrescription({
+          branchCode: branchContext.activeBranch.code,
           visitId: parsed.data.visitId,
           reason: parsed.data.reason,
           items: parsed.data.prescriptionItems,
           doctorId: user.id
         });
         const generated = await generatePrescriptionDocument({
+          branchCode: branchContext.activeBranch.code,
           visitId,
           generatedById: user.id
         });
@@ -290,8 +294,9 @@ export async function configureProfessionalProfileAction(
       entityType: "clinical_professional_profile",
       entityId: parsed.data.userId
     },
-    async (user) => {
+    async (user, branchContext) => {
       const profile = await configureClinicalProfessionalProfile({
+        branchCode: branchContext.activeBranch.code,
         ...parsed.data,
         configuredById: user.id
       });

@@ -53,6 +53,7 @@ async function setup() {
     })
   ]);
   await configureClinicalProfessionalProfile({
+    branchCode: "el-alto",
     userId: doctor.id,
     configuredById: direction.id,
     displayName: "Médico de prueba",
@@ -83,6 +84,7 @@ async function setup() {
   });
   await prisma.clinicalConsultation.create({
     data: {
+      branchCode: "el-alto",
       visitId: visit.id,
       patientId: patient.id,
       doctorId: doctor.id,
@@ -94,6 +96,7 @@ async function setup() {
   });
   await prisma.prescription.create({
     data: {
+      branchCode: "el-alto",
       visitId: visit.id,
       patientId: patient.id,
       doctorId: doctor.id,
@@ -132,16 +135,19 @@ describe("versioned generated documents integration", () => {
   it("reuses the same source and creates a new prescription version after correction", async () => {
     const fixture = await setup();
     const first = await generatePrescriptionDocument({
+      branchCode: "el-alto",
       visitId: fixture.visit.id,
       generatedById: fixture.doctor.id
     });
     const reprintSource = await generatePrescriptionDocument({
+      branchCode: "el-alto",
       visitId: fixture.visit.id,
       generatedById: fixture.doctor.id
     });
     expect(reprintSource.id).toBe(first.id);
 
     await correctPrescription({
+      branchCode: "el-alto",
       visitId: fixture.visit.id,
       doctorId: fixture.doctor.id,
       reason: "Se agregó un medicamento a la receta",
@@ -154,6 +160,7 @@ describe("versioned generated documents integration", () => {
       ]
     });
     const second = await generatePrescriptionDocument({
+      branchCode: "el-alto",
       visitId: fixture.visit.id,
       generatedById: fixture.doctor.id
     });

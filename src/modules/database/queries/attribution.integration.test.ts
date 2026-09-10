@@ -125,6 +125,7 @@ describe("capture attribution integration", () => {
 
     const consultation = await prisma.clinicalConsultation.create({
       data: {
+        branchCode: "el-alto",
         visitId: created.visit.id,
         patientId: created.patientId,
         motive: "Valoración",
@@ -133,6 +134,7 @@ describe("capture attribution integration", () => {
     });
     const administrationOrder = await prisma.clinicalOrder.create({
       data: {
+        branchCode: "el-alto",
         visitId: created.visit.id,
         patientId: created.patientId,
         type: "administration",
@@ -142,6 +144,7 @@ describe("capture attribution integration", () => {
     });
     await prisma.treatmentProposalOutcome.create({
       data: {
+        branchCode: "el-alto",
         consultationId: consultation.id,
         visitId: created.visit.id,
         status: "accepted",
