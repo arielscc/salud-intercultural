@@ -2,6 +2,7 @@ import { ActionErrorToast } from "@/components/internal/ActionErrorToast";
 import { AnnulPrescriptionButton } from "@/components/internal/generated-documents/AnnulPrescriptionButton";
 import { AreaTimeInline } from "@/components/internal/area-times/AreaTimeInline";
 import { ClinicalConsultationFields } from "@/components/internal/ClinicalConsultationFields";
+import { ClinicalAttachmentsPanel } from "@/components/internal/clinical-attachments/ClinicalAttachmentsPanel";
 import { ChipRadio } from "@/components/internal/ui/ChipRadio";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
 import { DateTimePickerField } from "@/components/internal/ui/DatePickerField";
@@ -343,6 +344,21 @@ export default async function ConsultationDetailPage({
         pendingCents: sales.reduce((sum, sale) => sum + sale.balanceCents, 0)
       };
     }
+  );
+  const continuityAttachments = consultationHistory.visits.flatMap((entry) =>
+    entry.clinicalAttachments.map((attachment) => ({
+      id: attachment.id,
+      label: attachment.label,
+      contentType: attachment.contentType,
+      sizeBytes: attachment.sizeBytes,
+      scanStatus: attachment.scanStatus,
+      createdAt: attachment.createdAt.toISOString(),
+      visitId: attachment.visitId,
+      studyId: attachment.studyId,
+      uploadedByName: attachment.uploadedBy?.name ?? null,
+      visitLabel: `${entry.branch.name} · ${formatDateTime(entry.checkedInAt)}`,
+      studyTitle: attachment.study?.title ?? null
+    }))
   );
 
   const primaryDiagnosis = visit.clinicalConsultation?.diagnoses.find((item) => item.kind === "primary");
@@ -790,6 +806,17 @@ export default async function ConsultationDetailPage({
             </form>
           ) : null}
           {consultationHistory.crossBranch ? <p className="text-sm text-muted">Continuidad clínica activa: cada visita indica su sucursal de origen y se consulta en modo de solo lectura.</p> : null}
+          {consultationHistory.crossBranch && continuityAttachments.length > 0 ? (
+            <ClinicalAttachmentsPanel
+              patientId={visit.patient.id}
+              attachments={continuityAttachments}
+              visits={[]}
+              studies={[]}
+              canWrite={false}
+              canDelete={false}
+              continuityAccessId={query.continuidad}
+            />
+          ) : null}
         </div>
 
         <Card className="max-sm:order-3 p-0">

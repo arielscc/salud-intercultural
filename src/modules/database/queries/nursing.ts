@@ -3,6 +3,7 @@ import { getPagination, type PaginationInput } from "@/modules/database/paginati
 import { applyInventoryMovement } from "@/modules/database/queries/inventory";
 
 export type CreateVitalSignsRecordInput = {
+  branchCode: string;
   patientId: string;
   visitId?: string;
   recordedById?: string;
@@ -61,6 +62,7 @@ export async function getNursingWorkItems(
         createdBy: true,
         assignedTo: { select: { id: true, name: true, email: true } },
         clinicalOrders: {
+          where: { branchCode: input.branchCode },
           orderBy: { createdAt: "desc" },
           include: {
             doctor: true
@@ -93,21 +95,26 @@ export async function getNursingWorkItemById(id: string, branchCode: string) {
           include: {
             doctor: true,
             nursingApplications: {
+              where: { branchCode },
               orderBy: { appliedAt: "desc" }
             },
             studies: {
+              where: { branchCode },
               orderBy: { createdAt: "desc" }
             }
           }
         },
         nursingApplications: {
+          where: { branchCode },
           orderBy: { appliedAt: "desc" },
           include: { responsible: { select: { id: true, name: true, email: true } } }
         },
         studies: {
+          where: { branchCode },
           orderBy: { createdAt: "desc" }
         },
         nursingWorkItemResults: {
+          where: { branchCode },
           orderBy: { createdAt: "desc" },
           include: { user: true }
         },
@@ -115,9 +122,11 @@ export async function getNursingWorkItemById(id: string, branchCode: string) {
           include: {
             patient: true,
             vitalSigns: {
+              where: { branchCode },
               orderBy: { recordedAt: "desc" }
             },
             nursingNotes: {
+              where: { branchCode },
               orderBy: { createdAt: "desc" },
               include: { user: true }
             },
@@ -134,7 +143,7 @@ export async function getNursingWorkItemById(id: string, branchCode: string) {
  * estudios y servicios del catálogo que se ejecutan en enfermería, más productos
  * de inventario (p. ej. inyectables adicionales que solicita el paciente).
  */
-export async function getNursingChargeOptions() {
+export async function getNursingChargeOptions(branchCode: string) {
   return withDatabaseError("getNursingChargeOptions", async () => {
     const [catalog, products] = await Promise.all([
       prisma.serviceCatalogItem.findMany({
@@ -149,7 +158,7 @@ export async function getNursingChargeOptions() {
         orderBy: [{ kind: "asc" }, { name: "asc" }]
       }),
       prisma.inventoryItem.findMany({
-        where: { active: true },
+        where: { active: true, branchBalances: { some: { branchCode } } },
         select: { id: true, name: true, salePriceCents: true, maxDiscountCents: true },
         orderBy: { name: "asc" }
       })
@@ -227,6 +236,7 @@ export async function assignNursingWorkItem(input: {
         await tx.nursingWorkItemResult.create({
           data: {
             workItemId: input.workItemId,
+            branchCode: input.branchCode,
             clinicalOrderId: workItem.clinicalOrders[0]?.id,
             userId: input.userId,
             status: "in_progress",
@@ -255,6 +265,7 @@ export async function createVitalSignsRecord(input: CreateVitalSignsRecordInput)
 // blanco se limpian (null); la fecha solo cambia si se envía.
 export async function updateVitalSignsRecord(input: {
   id: string;
+  branchCode: string;
   temperatureCelsius?: number;
   systolicPressureMmHg?: number;
   diastolicPressureMmHg?: number;
@@ -268,7 +279,7 @@ export async function updateVitalSignsRecord(input: {
 }) {
   return withDatabaseError("updateVitalSignsRecord", async () => {
     return prisma.vitalSigns.update({
-      where: { id: input.id },
+      where: { id: input.id, branchCode: input.branchCode },
       data: {
         temperatureCelsius: input.temperatureCelsius ?? null,
         systolicPressureMmHg: input.systolicPressureMmHg ?? null,
@@ -298,6 +309,7 @@ export async function createNursingApplicationRecord(input: CreateNursingApplica
       const application = await tx.nursingApplication.create({
         data: {
           ...rest,
+          branchCode,
           inventoryItemId,
           quantityUnits,
           appliedAt: input.appliedAt ?? new Date()
@@ -340,6 +352,7 @@ export async function createNursingApplicationRecord(input: CreateNursingApplica
         await tx.nursingWorkItemResult.create({
           data: {
             workItemId: input.workItemId,
+            branchCode,
             clinicalOrderId: input.clinicalOrderId,
             userId: input.responsibleId,
             status: "completed",
@@ -351,7 +364,7 @@ export async function createNursingApplicationRecord(input: CreateNursingApplica
 
       if (completeWorkItem !== false && input.clinicalOrderId) {
         await tx.clinicalOrder.update({
-          where: { id: input.clinicalOrderId },
+          where: { id_branchCode: { id: input.clinicalOrderId, branchCode } },
           data: { status: "completed" }
         });
       }
@@ -362,7 +375,7 @@ export async function createNursingApplicationRecord(input: CreateNursingApplica
 }
 
 /** Productos inyectables del inventario para registrar aplicaciones en Enfermería. */
-export async function getInjectableProductOptions(branchCode?: string) {
+export async function getInjectableProductOptions(branchCode: string) {
   return withDatabaseError("getInjectableProductOptions", async () => {
     const items = await prisma.inventoryItem.findMany({
       where: {
@@ -374,7 +387,7 @@ export async function getInjectableProductOptions(branchCode?: string) {
         name: true,
         unit: true,
         branchBalances: {
-          where: { branchCode: branchCode ?? "el-alto" },
+          where: { branchCode },
           select: { currentStock: true }
         }
       },
@@ -390,6 +403,7 @@ export async function getInjectableProductOptions(branchCode?: string) {
 }
 
 export async function createNursingNoteRecord(input: {
+  branchCode: string;
   patientId: string;
   visitId?: string;
   userId?: string;
@@ -402,27 +416,27 @@ export async function createNursingNoteRecord(input: {
   });
 }
 
-export async function deleteNursingNoteRecord(input: { id: string }) {
+export async function deleteNursingNoteRecord(input: { id: string; branchCode: string }) {
   return withDatabaseError("deleteNursingNoteRecord", async () => {
-    return prisma.nursingNote.delete({ where: { id: input.id } });
+    return prisma.nursingNote.deleteMany({ where: { id: input.id, branchCode: input.branchCode } });
   });
 }
 
-export async function getNursingTimelineForPatient(patientId: string) {
+export async function getNursingTimelineForPatient(patientId: string, branchCode: string) {
   return withDatabaseError("getNursingTimelineForPatient", async () => {
     const [vitalSigns, applications, notes] = await Promise.all([
       prisma.vitalSigns.findMany({
-        where: { patientId },
+        where: { patientId, branchCode },
         orderBy: { recordedAt: "desc" },
         take: 8
       }),
       prisma.nursingApplication.findMany({
-        where: { patientId },
+        where: { patientId, branchCode },
         orderBy: { appliedAt: "desc" },
         take: 8
       }),
       prisma.nursingNote.findMany({
-        where: { patientId },
+        where: { patientId, branchCode },
         orderBy: { createdAt: "desc" },
         take: 8,
         include: { user: true }
@@ -430,5 +444,166 @@ export async function getNursingTimelineForPatient(patientId: string) {
     ]);
 
     return { vitalSigns, applications, notes };
+  });
+}
+
+export class NursingContinuityAccessError extends Error {
+  constructor(
+    public readonly code:
+      | "NURSING_ROLE_REQUIRED"
+      | "PATIENT_VISIT_REQUIRED"
+      | "CONTINUITY_CONSENT_REQUIRED"
+      | "REMOTE_HISTORY_NOT_FOUND"
+  ) {
+    super(code);
+    this.name = "NursingContinuityAccessError";
+  }
+}
+
+export function findNursingContinuityAccessError(error: unknown) {
+  let current = error;
+  while (current instanceof Error) {
+    if (current instanceof NursingContinuityAccessError) return current;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return null;
+}
+
+export async function createNursingContinuityAccess(input: {
+  patientId: string;
+  visitId: string;
+  nurseId: string;
+  branchCode: string;
+  reason: string;
+}) {
+  return withDatabaseError("createNursingContinuityAccess", async () => {
+    const [membership, visit, consent, remoteBranches] = await Promise.all([
+      prisma.internalUserBranch.findUnique({
+        where: { userId_branchCode: { userId: input.nurseId, branchCode: input.branchCode } },
+        select: { role: true, active: true, user: { select: { active: true } } }
+      }),
+      prisma.visit.findUnique({
+        where: { id_branchCode: { id: input.visitId, branchCode: input.branchCode } },
+        select: { patientId: true }
+      }),
+      prisma.patientConsent.findFirst({
+        where: { patientId: input.patientId, purpose: "clinical_continuity" },
+        orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+        select: { decision: true }
+      }),
+      prisma.visit.findMany({
+        where: {
+          patientId: input.patientId,
+          branchCode: { not: input.branchCode },
+          OR: [
+            { vitalSigns: { some: {} } },
+            { nursingApplications: { some: {} } },
+            { nursingNotes: { some: {} } },
+            { serviceSessionUses: { some: {} } },
+            { clinicalOrders: { some: { targetArea: "enfermeria" } } }
+          ]
+        },
+        distinct: ["branchCode"],
+        select: { branchCode: true }
+      })
+    ]);
+    if (!membership?.active || !membership.user.active || membership.role !== "enfermeria") {
+      throw new NursingContinuityAccessError("NURSING_ROLE_REQUIRED");
+    }
+    if (!visit || visit.patientId !== input.patientId || input.reason.trim().length < 10 || input.reason.trim().length > 500) {
+      throw new NursingContinuityAccessError("PATIENT_VISIT_REQUIRED");
+    }
+    if (consent?.decision !== "granted") {
+      throw new NursingContinuityAccessError("CONTINUITY_CONSENT_REQUIRED");
+    }
+    const consultedBranchCodes = remoteBranches.map(({ branchCode }) => branchCode);
+    if (consultedBranchCodes.length === 0) {
+      throw new NursingContinuityAccessError("REMOTE_HISTORY_NOT_FOUND");
+    }
+    return prisma.nursingContinuityAccess.create({
+      data: {
+        patientId: input.patientId,
+        visitId: input.visitId,
+        nurseId: input.nurseId,
+        branchCode: input.branchCode,
+        reason: input.reason.trim(),
+        consultedBranchCodes,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1_000)
+      }
+    });
+  });
+}
+
+export async function getNursingContinuityHistory(input: {
+  patientId: string;
+  visitId: string;
+  nurseId: string;
+  branchCode: string;
+  accessId?: string;
+}) {
+  return withDatabaseError("getNursingContinuityHistory", async () => {
+    if (!input.accessId) return { visits: [], active: false };
+    const access = await prisma.nursingContinuityAccess.findFirst({
+      where: {
+        id: input.accessId,
+        patientId: input.patientId,
+        visitId: input.visitId,
+        nurseId: input.nurseId,
+        branchCode: input.branchCode,
+        expiresAt: { gt: new Date() },
+        nurseMembership: { active: true, role: "enfermeria", user: { active: true } }
+      },
+      select: { consultedBranchCodes: true }
+    });
+    const consent = access ? await prisma.patientConsent.findFirst({
+      where: { patientId: input.patientId, purpose: "clinical_continuity" },
+      orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+      select: { decision: true }
+    }) : null;
+    if (!access || consent?.decision !== "granted") return { visits: [], active: false };
+    const visits = await prisma.visit.findMany({
+      where: {
+        patientId: input.patientId,
+        branchCode: { in: access.consultedBranchCodes },
+        id: { not: input.visitId }
+      },
+      select: {
+        id: true,
+        checkedInAt: true,
+        branch: { select: { code: true, name: true } },
+        vitalSigns: { orderBy: { recordedAt: "asc" } },
+        nursingApplications: { orderBy: { appliedAt: "asc" } },
+        nursingNotes: { orderBy: { createdAt: "asc" }, include: { user: { select: { name: true } } } },
+        serviceSessionUses: { orderBy: { appliedAt: "asc" }, include: { package: { select: { serviceName: true } } } },
+        clinicalOrders: {
+          where: { targetArea: "enfermeria" },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, type: true, title: true, details: true, status: true }
+        },
+        studies: {
+          where: { clinicalOrder: { targetArea: "enfermeria" } },
+          select: {
+            id: true,
+            title: true,
+            attachments: {
+              where: { status: "available" },
+              select: {
+                id: true,
+                label: true,
+                contentType: true,
+                sizeBytes: true,
+                scanStatus: true,
+                createdAt: true,
+                visitId: true,
+                studyId: true,
+                uploadedBy: { select: { name: true } }
+              }
+            }
+          }
+        }
+      },
+      orderBy: [{ checkedInAt: "desc" }, { createdAt: "desc" }]
+    });
+    return { visits, active: true };
   });
 }

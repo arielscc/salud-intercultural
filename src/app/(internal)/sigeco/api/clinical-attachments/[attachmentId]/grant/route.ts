@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ClinicalAttachmentAccessPurpose } from "@/generated/prisma/client";
+import { appendAuditEvent } from "@/modules/audit/service";
+import { getBranchApiContext } from "@/features/branches/boundaries";
 import {
   ClinicalAttachmentApiAccessError,
   requireClinicalAttachmentApiAccess
@@ -26,6 +28,7 @@ export async function POST(
     });
     const body = (await request.json().catch(() => null)) as {
       purpose?: ClinicalAttachmentAccessPurpose;
+      continuityAccessId?: string;
     } | null;
 
     if (body?.purpose !== "preview" && body?.purpose !== "download") {
@@ -35,7 +38,20 @@ export async function POST(
     const grant = await createClinicalAttachmentAccessGrant({
       attachmentId,
       actor,
-      purpose: body.purpose
+      purpose: body.purpose,
+      continuityAccessId:
+        typeof body.continuityAccessId === "string" && body.continuityAccessId.length <= 80
+          ? body.continuityAccessId
+          : undefined
+    });
+
+    await appendAuditEvent({
+      actor,
+      action: "attachment.grant.create",
+      entityType: "clinical_attachment",
+      entityId: attachmentId,
+      result: "success",
+      context: { purpose: body.purpose, expiresAt: grant.expiresAt.toISOString() }
     });
 
     return NextResponse.json({
@@ -57,6 +73,18 @@ export async function POST(
       );
     }
     if (error instanceof ClinicalAttachmentError) {
+      const branchAccess = await getBranchApiContext();
+      await appendAuditEvent({
+        actor: branchAccess.ok ? {
+          id: branchAccess.context.user.id,
+          role: branchAccess.context.operationalRole
+        } : undefined,
+        action: "attachment.grant.create",
+        entityType: "clinical_attachment",
+        entityId: attachmentId,
+        result: "denied",
+        context: { reason: error.code }
+      });
       return NextResponse.json(
         { error: "El archivo ya no está disponible." },
         { status: error.status }

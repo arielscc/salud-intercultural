@@ -18,7 +18,7 @@ import { Button } from "@/components/internal/ui/Button";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
 import { formatDateTime } from "@/lib/dates";
 
-type AttachmentItem = {
+export type AttachmentItem = {
   id: string;
   label: string;
   contentType: string;
@@ -115,7 +115,8 @@ export function ClinicalAttachmentsPanel({
   visits,
   studies,
   canWrite,
-  canDelete
+  canDelete,
+  continuityAccessId
 }: {
   patientId: string;
   attachments: AttachmentItem[];
@@ -123,6 +124,7 @@ export function ClinicalAttachmentsPanel({
   studies: RelatedOption[];
   canWrite: boolean;
   canDelete: boolean;
+  continuityAccessId?: string;
 }) {
   const router = useRouter();
   const requestIds = useRef(new Map<string, string>());
@@ -270,7 +272,7 @@ export function ClinicalAttachmentsPanel({
         method: "POST",
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ purpose })
+        body: JSON.stringify({ purpose, continuityAccessId })
       }
     );
     const grant = await readJsonResponse(grantResponse);

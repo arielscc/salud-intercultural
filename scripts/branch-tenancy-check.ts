@@ -100,24 +100,6 @@ function temporaryDebt(
 // una excepción que deja de coincidir también hace fallar el chequeo.
 export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
   ...temporaryDebt(
-    9,
-    "Enfermería",
-    "Enfermería recibirá siempre la sede desde el contexto operativo.",
-    [
-      [
-        "src/modules/database/queries/nursing.ts",
-        "getInjectableProductOptions",
-        "optional-branch-code"
-      ],
-      ["src/modules/database/queries/nursing.ts", "items", "branch-fallback"],
-      [
-        "src/modules/database/queries/nursing.ts",
-        "items",
-        "hardcoded-branch-literal"
-      ]
-    ]
-  ),
-  ...temporaryDebt(
     10,
     "Catálogo comercial",
     "La configuración local del producto se separará de su maestro global.",

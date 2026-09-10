@@ -7,11 +7,14 @@ import {
   assignNursingWorkItem,
   createNursingApplicationRecord,
   createNursingNoteRecord,
+  createNursingContinuityAccess,
+  findNursingContinuityAccessError,
   createVitalSignsRecord,
   deleteNursingNoteRecord,
   updateVitalSignsRecord
 } from "@/modules/database/queries/nursing";
-import { auditedResult, runAuditedAction } from "@/modules/audit/service";
+import { auditedResult, denyAuditedAction, runAuditedAction } from "@/modules/audit/service";
+import { requestClinicalContinuitySchema } from "@/features/clinical-care/schemas/clinical-continuity.schema";
 import {
   createPaidStudyOrder,
   deriveNursingPatientToDoctor,
@@ -45,6 +48,52 @@ function invalidVitalsTarget(workItemId: string, error: z.ZodError) {
   const field = error.issues.find((issue) => typeof issue.path[0] === "string")?.path[0];
   const query = field ? `?error=invalid-vitals&campo=${String(field)}` : "?error=invalid-vitals";
   return workItemId ? `/sigeco/enfermeria/${workItemId}${query}` : `/sigeco/enfermeria${query}`;
+}
+
+export async function requestNursingContinuityAction(formData: FormData) {
+  const workItemId = String(formData.get("workItemId") ?? "");
+  try {
+    const access = await runAuditedAction(
+      {
+        permission: "nursing_read",
+        action: "nursing.continuity.read",
+        entityType: "patient",
+        context: { workItemId: workItemId || undefined }
+      },
+      async (user, branchContext) => {
+        const parsed = requestClinicalContinuitySchema.safeParse(parseFormData(formData));
+        if (!parsed.success || user.role !== "enfermeria") {
+          denyAuditedAction(!parsed.success ? "invalid_continuity_reason" : "nursing_role_required");
+        }
+        const created = await createNursingContinuityAccess({
+          ...parsed.data,
+          nurseId: user.id,
+          branchCode: branchContext.activeBranch.code
+        });
+        return auditedResult(created, {
+          entityId: parsed.data.patientId,
+          context: {
+            visitId: parsed.data.visitId,
+            workItemId,
+            continuityAccessId: created.id,
+            consultedBranchCodes: created.consultedBranchCodes
+          }
+        });
+      }
+    );
+    redirect(`/sigeco/enfermeria/${encodeURIComponent(workItemId)}?continuidad=${encodeURIComponent(access.id)}#continuidad-enfermeria`);
+  } catch (error) {
+    const continuityError = findNursingContinuityAccessError(error);
+    if (continuityError) {
+      const code = continuityError.code === "CONTINUITY_CONSENT_REQUIRED"
+        ? "continuidad-sin-consentimiento"
+        : continuityError.code === "REMOTE_HISTORY_NOT_FOUND"
+          ? "continuidad-sin-antecedentes"
+          : "continuidad-no-disponible";
+      redirect(`/sigeco/enfermeria/${encodeURIComponent(workItemId)}?error=${code}#continuidad-enfermeria`);
+    }
+    throw error;
+  }
 }
 
 export async function assignNursingWorkItemAction(formData: FormData) {
@@ -97,7 +146,7 @@ export async function createVitalSignsAction(formData: FormData) {
       entityType: "vital_signs",
       context: { patientId: patientId || undefined, workItemId: workItemId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createVitalSignsSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -106,6 +155,7 @@ export async function createVitalSignsAction(formData: FormData) {
 
       const vitalSigns = await createVitalSignsRecord({
         ...parsed.data,
+        branchCode: branchContext.activeBranch.code,
         recordedById: user.id
       });
       return auditedResult(vitalSigns, {
@@ -130,7 +180,7 @@ export async function updateVitalSignsAction(formData: FormData) {
       entityType: "vital_signs",
       context: { patientId: patientId || undefined, workItemId: workItemId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = updateVitalSignsSchema.safeParse(parseFormData(formData));
       if (!parsed.success) {
         redirect(invalidVitalsTarget(workItemId, parsed.error));
@@ -138,6 +188,7 @@ export async function updateVitalSignsAction(formData: FormData) {
 
       const updated = await updateVitalSignsRecord({
         id: parsed.data.id,
+        branchCode: branchContext.activeBranch.code,
         temperatureCelsius: parsed.data.temperatureCelsius,
         systolicPressureMmHg: parsed.data.systolicPressureMmHg,
         diastolicPressureMmHg: parsed.data.diastolicPressureMmHg,
@@ -220,7 +271,7 @@ export async function createNursingNoteAction(formData: FormData) {
       entityType: "nursing_note",
       context: { patientId: patientId || undefined, workItemId: workItemId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = createNursingNoteSchema.safeParse(parseFormData(formData));
 
       if (!parsed.success) {
@@ -229,6 +280,7 @@ export async function createNursingNoteAction(formData: FormData) {
 
       const nursingNote = await createNursingNoteRecord({
         ...parsed.data,
+        branchCode: branchContext.activeBranch.code,
         userId: user.id
       });
       return auditedResult(nursingNote, {
@@ -253,7 +305,7 @@ export async function deleteNursingNoteAction(formData: FormData) {
       entityType: "nursing_note",
       context: { patientId: patientId || undefined, workItemId: workItemId || undefined }
     },
-    async () => {
+    async (_user, branchContext) => {
       const parsed = deleteNursingNoteSchema.safeParse(parseFormData(formData));
       if (!parsed.success) {
         redirect(
@@ -263,7 +315,11 @@ export async function deleteNursingNoteAction(formData: FormData) {
         );
       }
 
-      await deleteNursingNoteRecord({ id: parsed.data.noteId });
+      const deleted = await deleteNursingNoteRecord({
+        id: parsed.data.noteId,
+        branchCode: branchContext.activeBranch.code
+      });
+      if (deleted.count !== 1) redirect("/sigeco/enfermeria?error=invalid-note");
       return auditedResult(undefined, {
         entityId: parsed.data.noteId,
         context: { patientId: patientId || undefined, workItemId: workItemId || undefined }

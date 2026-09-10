@@ -106,7 +106,8 @@ const globalMasterTaskByModel: Record<
 export const platformEventModels = ["AuditEvent"] as const satisfies readonly ModelName[];
 
 export const controlledCrossBranchReadModels = [
-  "ClinicalAttachmentAccessGrant"
+  "ClinicalAttachmentAccessGrant",
+  "NursingContinuityAccess"
 ] as const satisfies readonly ModelName[];
 
 export const branchModelGroups = [
@@ -239,20 +240,6 @@ export const branchModelGroups = [
 }>;
 
 const legacyMissingBranchModelsByTask = [
-  {
-    remediationTask: 9,
-    models: [
-      "Study",
-      "VitalSigns",
-      "NursingApplication",
-      "NursingNote",
-      "ClinicalAttachment",
-      "ClinicalAttachmentAccessGrant",
-      "NursingWorkItemResult",
-      "ServiceSessionPackage",
-      "ServiceSessionUse"
-    ]
-  },
   {
     remediationTask: 10,
     models: ["InventoryItemSupplier", "InventoryItemCatalogVersion"]

@@ -17,10 +17,10 @@ export function findServiceSessionError(error: unknown): ServiceSessionError | n
 }
 
 /** Paquetes de sesiones de un paciente, con sus consumos, para ver usadas y restantes. */
-export async function getPatientServiceSessionPackages(patientId: string) {
+export async function getPatientServiceSessionPackages(patientId: string, branchCode: string) {
   return withDatabaseError("getPatientServiceSessionPackages", () =>
     prisma.serviceSessionPackage.findMany({
-      where: { patientId },
+      where: { patientId, branchCode },
       include: {
         uses: {
           orderBy: { sessionNumber: "asc" },
@@ -36,6 +36,7 @@ export async function getPatientServiceSessionPackages(patientId: string) {
 /** Consume una sesión de un paquete pagado (Enfermería). Cuenta como una visita. */
 export async function consumeServiceSession(input: {
   packageId: string;
+  branchCode: string;
   visitId?: string;
   userId?: string;
   notes?: string;
@@ -44,7 +45,7 @@ export async function consumeServiceSession(input: {
   return withDatabaseError("consumeServiceSession", () =>
     prisma.$transaction(async (tx) => {
       const pkg = await tx.serviceSessionPackage.findUniqueOrThrow({
-        where: { id: input.packageId }
+        where: { id_branchCode: { id: input.packageId, branchCode: input.branchCode } }
       });
       if (pkg.status !== "active") throw new ServiceSessionError("not-active");
       if (pkg.sessionsUsed >= pkg.totalSessions) {
@@ -55,6 +56,7 @@ export async function consumeServiceSession(input: {
       await tx.serviceSessionUse.create({
         data: {
           packageId: pkg.id,
+          branchCode: input.branchCode,
           visitId: input.visitId,
           sessionNumber,
           appliedById: input.userId,
@@ -65,7 +67,7 @@ export async function consumeServiceSession(input: {
 
       const sessionsUsed = sessionNumber;
       return tx.serviceSessionPackage.update({
-        where: { id: pkg.id },
+        where: { id_branchCode: { id: pkg.id, branchCode: input.branchCode } },
         data: {
           sessionsUsed,
           status: sessionsUsed >= pkg.totalSessions ? "completed" : "active"

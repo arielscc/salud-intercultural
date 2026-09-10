@@ -457,6 +457,7 @@ export async function releaseDoctorOrderToNursing(input: {
           await tx.serviceSessionPackage.create({
             data: {
               patientId: order.patientId,
+              branchCode: input.branchCode,
               catalogItemId: line.catalogItemId,
               serviceName: line.description,
               originVisitId: order.visitId,

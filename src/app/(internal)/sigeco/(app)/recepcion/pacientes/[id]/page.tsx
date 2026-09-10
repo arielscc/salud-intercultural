@@ -118,9 +118,9 @@ export default async function PatientDetailPage({
 
   const canReadAttachments = roleHasPermission(user.role, "attachments_read");
   const attachments = canReadAttachments
-    ? await getClinicalAttachmentsForPatient(patient.id)
+    ? await getClinicalAttachmentsForPatient(patient.id, activeBranch.code)
     : [];
-  const sessionPackages = await getPatientServiceSessionPackages(patient.id);
+  const sessionPackages = await getPatientServiceSessionPackages(patient.id, activeBranch.code);
   const nursingCount =
     patient.vitalSigns.length + patient.nursingApplications.length + patient.nursingNotes.length;
   const age = calculateAgeFromDate(patient.birthDate);

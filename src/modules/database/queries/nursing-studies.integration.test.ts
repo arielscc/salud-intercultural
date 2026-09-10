@@ -2,10 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { hashPassword } from "@/features/internal-auth/password";
 import { prisma } from "@/modules/database";
 import { createClinicalOrderRecord } from "@/modules/database/queries/clinical-care";
+import { appendPatientConsentRecord } from "@/modules/database/queries/patient-consents";
 import {
   assignNursingWorkItem,
   createNursingApplicationRecord,
+  createNursingContinuityAccess,
+  createNursingNoteRecord,
   createVitalSignsRecord,
+  getNursingContinuityHistory,
   getNursingWorkItemById,
   getNursingWorkItems
 } from "@/modules/database/queries/nursing";
@@ -45,6 +49,8 @@ async function cleanNursingStudies() {
   await prisma.clinicalAttachmentAccessGrant.deleteMany();
   await prisma.clinicalAttachment.deleteMany();
   await prisma.study.deleteMany();
+  await prisma.nursingContinuityAccess.deleteMany();
+  await prisma.clinicalContinuityAccess.deleteMany();
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
@@ -228,6 +234,7 @@ describe("nursing and studies integration", () => {
       userId: nurse.id
     });
     await createVitalSignsRecord({
+      branchCode: "el-alto",
       patientId: patient.id,
       visitId: visit.id,
       recordedById: nurse.id,
@@ -260,7 +267,7 @@ describe("nursing and studies integration", () => {
     });
 
     const detail = await getNursingWorkItemById(workItem.id, "el-alto");
-    const studies = await getStudiesForVisit(visit.id);
+    const studies = await getStudiesForVisit(visit.id, "el-alto");
     const patientDetail = await getPatientById(patient.id, "el-alto");
 
     expect(detail?.status).toBe("completed");
@@ -276,5 +283,118 @@ describe("nursing and studies integration", () => {
     });
     expect(patientDetail?.vitalSigns[0]?.heartRateBpm).toBe(78);
     expect(patientDetail?.studies[0]?.type).toBe("resonance");
+  });
+
+  it("limits nursing continuity to its role and invalidates it after changing branch", async () => {
+    const nurse = await prisma.internalUser.create({
+      data: {
+        email: "enfermeria-continuidad@example.com",
+        passwordHash: await hashPassword("clave-segura-123"),
+        branchAssignments: {
+          create: [
+            { branchCode: "el-alto", role: "enfermeria", active: true, isDefault: true },
+            { branchCode: "cochabamba", role: "enfermeria", active: true }
+          ]
+        }
+      }
+    });
+    const patient = await createPatientRecord({
+      branchCode: "el-alto",
+      fullName: "Paciente Continuidad Enfermería",
+      phone: "+591 70000109",
+      captureSource: "whatsapp",
+      createdById: nurse.id
+    });
+    await prisma.patientBranchRecord.create({
+      data: {
+        patientId: patient.id,
+        branchCode: "cochabamba",
+        recordNumber: `cochabamba-${patient.internalCode}`
+      }
+    });
+    const [currentVisit, remoteVisit] = await Promise.all([
+      createVisitRecord({
+        branchCode: "el-alto",
+        patientId: patient.id,
+        userId: nurse.id,
+        reason: "Continuidad asistencial"
+      }),
+      createVisitRecord({
+        branchCode: "cochabamba",
+        patientId: patient.id,
+        userId: nurse.id,
+        reason: "Atención anterior"
+      })
+    ]);
+    await appendPatientConsentRecord({
+      patientId: patient.id,
+      branchCode: "el-alto",
+      purpose: "clinical_continuity",
+      decision: "granted",
+      contactChannels: [],
+      captureMethod: "written_form",
+      recordedById: nurse.id
+    });
+    await createVitalSignsRecord({
+      branchCode: "cochabamba",
+      patientId: patient.id,
+      visitId: remoteVisit.id,
+      recordedById: nurse.id,
+      heartRateBpm: 76
+    });
+    await createNursingNoteRecord({
+      branchCode: "cochabamba",
+      patientId: patient.id,
+      visitId: remoteVisit.id,
+      userId: nurse.id,
+      note: "Observación necesaria para el relevo"
+    });
+    await createClinicalOrderRecord({
+      visitId: remoteVisit.id,
+      branchCode: "cochabamba",
+      type: "nursing_application",
+      targetArea: "enfermeria",
+      title: "Orden necesaria"
+    });
+
+    const access = await createNursingContinuityAccess({
+      patientId: patient.id,
+      visitId: currentVisit.id,
+      nurseId: nurse.id,
+      branchCode: "el-alto",
+      reason: "Necesito verificar la atención previa"
+    });
+    const history = await getNursingContinuityHistory({
+      patientId: patient.id,
+      visitId: currentVisit.id,
+      nurseId: nurse.id,
+      branchCode: "el-alto",
+      accessId: access.id
+    });
+
+    expect(history.active).toBe(true);
+    expect(history.visits).toHaveLength(1);
+    expect(history.visits[0]?.branch.code).toBe("cochabamba");
+    expect(history.visits[0]?.vitalSigns[0]?.heartRateBpm).toBe(76);
+    expect(history.visits[0]?.clinicalOrders).toHaveLength(1);
+    expect(history.visits[0]).not.toHaveProperty("clinicalConsultation");
+    await expect(
+      getNursingContinuityHistory({
+        patientId: patient.id,
+        visitId: currentVisit.id,
+        nurseId: nurse.id,
+        branchCode: "cochabamba",
+        accessId: access.id
+      })
+    ).resolves.toEqual({ visits: [], active: false });
+    await expect(
+      createVitalSignsRecord({
+        branchCode: "el-alto",
+        patientId: patient.id,
+        visitId: remoteVisit.id,
+        recordedById: nurse.id,
+        heartRateBpm: 77
+      })
+    ).rejects.toThrow();
   });
 });

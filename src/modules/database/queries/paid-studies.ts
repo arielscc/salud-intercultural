@@ -222,6 +222,7 @@ export async function createPaidStudyOrder(
         await tx.serviceSessionPackage.create({
           data: {
             patientId: visit.patientId,
+            branchCode: input.branchCode,
             catalogItemId: line.catalogItemId,
             serviceName: line.title,
             originVisitId: visit.id,

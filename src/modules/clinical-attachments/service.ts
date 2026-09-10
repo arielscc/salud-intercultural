@@ -19,6 +19,7 @@ const accessGrantLifetimeMs = 2 * 60 * 1000;
 export type ClinicalAttachmentActor = {
   id: string;
   role: InternalRole;
+  branchCode: string;
 };
 
 export class ClinicalAttachmentError extends Error {
@@ -49,24 +50,25 @@ function hashAccessToken(token: string) {
 }
 
 async function assertAssociations(input: {
+  branchCode: string;
   patientId: string;
   visitId?: string;
   studyId?: string;
 }) {
   const [patient, visit, study] = await Promise.all([
-    prisma.patient.findUnique({
-      where: { id: input.patientId },
-      select: { id: true }
+    prisma.patientBranchRecord.findUnique({
+      where: { patientId_branchCode: { patientId: input.patientId, branchCode: input.branchCode } },
+      select: { patientId: true }
     }),
     input.visitId
       ? prisma.visit.findUnique({
-          where: { id: input.visitId },
+          where: { id_branchCode: { id: input.visitId, branchCode: input.branchCode } },
           select: { id: true, patientId: true }
         })
       : null,
     input.studyId
       ? prisma.study.findUnique({
-          where: { id: input.studyId },
+          where: { id_branchCode: { id: input.studyId, branchCode: input.branchCode } },
           select: { id: true, patientId: true, visitId: true }
         })
       : null
@@ -109,10 +111,10 @@ export async function createClinicalAttachment(input: {
   label?: string;
   file: File;
 }) {
-  await assertAssociations(input);
+  await assertAssociations({ ...input, branchCode: input.actor.branchCode });
   const validated = await validateClinicalFile(input.file, input.label);
   const existing = await prisma.clinicalAttachment.findUnique({
-    where: { uploadRequestId: input.uploadRequestId }
+    where: { branchCode_uploadRequestId: { branchCode: input.actor.branchCode, uploadRequestId: input.uploadRequestId } }
   });
 
   if (existing) {
@@ -134,11 +136,13 @@ export async function createClinicalAttachment(input: {
   }
 
   const storageKey = createClinicalStorageKey(
+    input.actor.branchCode,
     input.uploadRequestId,
     validated.extension
   );
   const pendingData = {
     patientId: input.patientId,
+    branchCode: input.actor.branchCode,
     visitId: input.visitId,
     studyId: input.studyId,
     uploadedById: input.actor.id,
@@ -158,7 +162,7 @@ export async function createClinicalAttachment(input: {
 
   const attachment = existing
     ? await prisma.clinicalAttachment.update({
-        where: { id: existing.id },
+        where: { id_branchCode: { id: existing.id, branchCode: input.actor.branchCode } },
         data: pendingData
       })
     : await prisma.clinicalAttachment.create({
@@ -183,7 +187,7 @@ export async function createClinicalAttachment(input: {
     }
 
     const available = await prisma.clinicalAttachment.update({
-      where: { id: attachment.id },
+      where: { id_branchCode: { id: attachment.id, branchCode: input.actor.branchCode } },
       data: { status: "available" }
     });
 
@@ -194,7 +198,7 @@ export async function createClinicalAttachment(input: {
     }
     await prisma.clinicalAttachment
       .update({
-        where: { id: attachment.id },
+        where: { id_branchCode: { id: attachment.id, branchCode: input.actor.branchCode } },
         data: { status: "failed" }
       })
       .catch(() => undefined);
@@ -202,10 +206,11 @@ export async function createClinicalAttachment(input: {
   }
 }
 
-export async function getClinicalAttachmentsForPatient(patientId: string) {
+export async function getClinicalAttachmentsForPatient(patientId: string, branchCode: string) {
   return prisma.clinicalAttachment.findMany({
     where: {
       patientId,
+      branchCode,
       status: "available"
     },
     select: {
@@ -235,13 +240,79 @@ export async function createClinicalAttachmentAccessGrant(input: {
   attachmentId: string;
   actor: ClinicalAttachmentActor;
   purpose: ClinicalAttachmentAccessPurpose;
+  continuityAccessId?: string;
 }) {
-  const attachment = await prisma.clinicalAttachment.findUnique({
-    where: { id: input.attachmentId },
-    select: { id: true, status: true }
+  let allowedBranchCodes = [input.actor.branchCode];
+  let remotePatientId: string | undefined;
+  let reason = `Acceso local: ${input.purpose}`;
+
+  if (input.continuityAccessId && input.actor.role === "medico") {
+    const access = await prisma.clinicalContinuityAccess.findFirst({
+      where: {
+        id: input.continuityAccessId,
+        doctorId: input.actor.id,
+        branchCode: input.actor.branchCode,
+        expiresAt: { gt: new Date() },
+        doctorMembership: { active: true, role: "medico" }
+      },
+      select: { patientId: true, consultedBranchCodes: true, reason: true }
+    });
+    const consent = access ? await prisma.patientConsent.findFirst({
+      where: { patientId: access.patientId, purpose: "clinical_continuity" },
+      orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+      select: { decision: true }
+    }) : null;
+    if (access && consent?.decision === "granted") {
+      allowedBranchCodes = [input.actor.branchCode, ...access.consultedBranchCodes];
+      remotePatientId = access.patientId;
+      reason = access.reason;
+    }
+  } else if (input.continuityAccessId && input.actor.role === "enfermeria") {
+    const access = await prisma.nursingContinuityAccess.findFirst({
+      where: {
+        id: input.continuityAccessId,
+        nurseId: input.actor.id,
+        branchCode: input.actor.branchCode,
+        expiresAt: { gt: new Date() },
+        nurseMembership: { active: true, role: "enfermeria" }
+      },
+      select: { patientId: true, consultedBranchCodes: true, reason: true }
+    });
+    const consent = access ? await prisma.patientConsent.findFirst({
+      where: { patientId: access.patientId, purpose: "clinical_continuity" },
+      orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
+      select: { decision: true }
+    }) : null;
+    if (access && consent?.decision === "granted") {
+      allowedBranchCodes = [input.actor.branchCode, ...access.consultedBranchCodes];
+      remotePatientId = access.patientId;
+      reason = access.reason;
+    }
+  }
+
+  const attachment = await prisma.clinicalAttachment.findFirst({
+    where: {
+      id: input.attachmentId,
+      branchCode: { in: allowedBranchCodes },
+      ...(remotePatientId ? { patientId: remotePatientId } : {})
+    },
+    select: {
+      id: true,
+      patientId: true,
+      branchCode: true,
+      status: true,
+      study: { select: { clinicalOrder: { select: { targetArea: true } } } }
+    }
   });
 
   if (!attachment) throw new ClinicalAttachmentError("not_found", 404);
+  if (
+    attachment.branchCode !== input.actor.branchCode &&
+    input.actor.role === "enfermeria" &&
+    attachment.study?.clinicalOrder?.targetArea !== "enfermeria"
+  ) {
+    throw new ClinicalAttachmentError("not_found", 404);
+  }
   if (attachment.status !== "available") {
     throw new ClinicalAttachmentError("not_available", 410);
   }
@@ -252,7 +323,12 @@ export async function createClinicalAttachmentAccessGrant(input: {
   await prisma.clinicalAttachmentAccessGrant.create({
     data: {
       attachmentId: attachment.id,
+      patientId: attachment.patientId,
+      branchCode: attachment.branchCode,
+      requestingBranchCode: input.actor.branchCode,
       userId: input.actor.id,
+      actorRole: input.actor.role,
+      reason,
       tokenHash: hashAccessToken(token),
       purpose: input.purpose,
       expiresAt
@@ -281,10 +357,23 @@ export async function consumeClinicalAttachmentAccessGrant(input: {
       !grant ||
       grant.attachmentId !== input.attachmentId ||
       grant.userId !== input.actor.id ||
+      grant.requestingBranchCode !== input.actor.branchCode ||
+      grant.actorRole !== input.actor.role ||
+      grant.branchCode !== grant.attachment.branchCode ||
+      grant.patientId !== grant.attachment.patientId ||
       grant.purpose !== input.purpose ||
       grant.expiresAt <= now ||
       grant.consumedAt ||
-      grant.attachment.status !== "available"
+      grant.attachment.status !== "available" ||
+      !(await tx.internalUserBranch.findFirst({
+        where: {
+          userId: input.actor.id,
+          branchCode: input.actor.branchCode,
+          active: true,
+          role: input.actor.role
+        },
+        select: { userId: true }
+      }))
     ) {
       return null;
     }
@@ -313,7 +402,7 @@ export async function consumeClinicalAttachmentAccessGrant(input: {
     checksum !== attachment.checksumSha256
   ) {
     await prisma.clinicalAttachment.update({
-      where: { id: attachment.id },
+      where: { id_branchCode: { id: attachment.id, branchCode: attachment.branchCode } },
       data: {
         status: "quarantined",
         quarantineReason: "integrity_mismatch"
@@ -330,7 +419,7 @@ export async function softDeleteClinicalAttachment(input: {
   actor: ClinicalAttachmentActor;
 }) {
   const attachment = await prisma.clinicalAttachment.findUnique({
-    where: { id: input.attachmentId }
+    where: { id_branchCode: { id: input.attachmentId, branchCode: input.actor.branchCode } }
   });
 
   if (!attachment) throw new ClinicalAttachmentError("not_found", 404);
@@ -340,7 +429,7 @@ export async function softDeleteClinicalAttachment(input: {
   }
 
   await prisma.clinicalAttachment.update({
-    where: { id: attachment.id },
+    where: { id_branchCode: { id: attachment.id, branchCode: input.actor.branchCode } },
     data: {
       status: "quarantined",
       quarantineReason: "controlled_deletion"
@@ -351,10 +440,10 @@ export async function softDeleteClinicalAttachment(input: {
     await deleteClinicalFile(attachment);
     await prisma.$transaction([
       prisma.clinicalAttachmentAccessGrant.deleteMany({
-        where: { attachmentId: attachment.id }
+        where: { attachmentId: attachment.id, branchCode: input.actor.branchCode }
       }),
       prisma.clinicalAttachment.update({
-        where: { id: attachment.id },
+        where: { id_branchCode: { id: attachment.id, branchCode: input.actor.branchCode } },
         data: {
           status: "deleted",
           deletedAt: new Date(),
@@ -366,7 +455,7 @@ export async function softDeleteClinicalAttachment(input: {
   } catch (error) {
     await prisma.clinicalAttachment
       .update({
-        where: { id: attachment.id },
+        where: { id_branchCode: { id: attachment.id, branchCode: input.actor.branchCode } },
         data: {
           status: "available",
           quarantineReason: null

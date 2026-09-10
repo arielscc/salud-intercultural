@@ -372,23 +372,23 @@ export async function getPatientById(id: string, branchCode: string) {
           }
         },
         vitalSigns: {
-          where: { visit: { branchCode } },
+          where: { branchCode },
           orderBy: { recordedAt: "desc" },
           take: 8
         },
         nursingApplications: {
-          where: { visit: { branchCode } },
+          where: { branchCode },
           orderBy: { appliedAt: "desc" },
           take: 8
         },
         nursingNotes: {
-          where: { visit: { branchCode } },
+          where: { branchCode },
           orderBy: { createdAt: "desc" },
           take: 8,
           include: { user: true }
         },
         studies: {
-          where: { visit: { branchCode } },
+          where: { branchCode },
           orderBy: [{ performedAt: "desc" }, { createdAt: "desc" }],
           take: 8,
           include: {

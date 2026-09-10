@@ -475,6 +475,7 @@ async function main() {
 
       await tx.vitalSigns.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v1.visit.id,
           recordedById: userId,
@@ -493,6 +494,7 @@ async function main() {
 
       await tx.nursingApplication.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v1.visit.id,
           clinicalOrderId: v1NursingOrder.id,
@@ -509,6 +511,7 @@ async function main() {
 
       await tx.nursingNote.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v1.visit.id,
           userId,
@@ -970,6 +973,7 @@ async function main() {
 
       await tx.study.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v4.visit.id,
           requestedById: userId,
@@ -987,6 +991,7 @@ async function main() {
 
       await tx.study.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v4.visit.id,
           clinicalOrderId: v4StudyOrder.id,
@@ -1142,6 +1147,7 @@ async function main() {
 
       await tx.vitalSigns.create({
         data: {
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v5.visit.id,
           recordedById: userId,

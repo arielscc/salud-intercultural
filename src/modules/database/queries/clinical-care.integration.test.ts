@@ -184,6 +184,7 @@ describe("clinical care integration", () => {
     });
     const application = await prisma.nursingApplication.create({
       data: {
+        branchCode: "el-alto",
         patientId: patient.id,
         visitId: visit.id,
         responsibleId: doctor.id,

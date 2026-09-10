@@ -876,6 +876,14 @@ export async function getPatientConsultationHistory(input: {
           clinicalEvolutions: { orderBy: { createdAt: "asc" } },
           clinicalNotes: { orderBy: { createdAt: "asc" } },
           clinicalOrders: { orderBy: { createdAt: "asc" } },
+          clinicalAttachments: {
+            where: { status: "available" },
+            include: {
+              uploadedBy: { select: { name: true } },
+              study: { select: { title: true } }
+            },
+            orderBy: { createdAt: "asc" }
+          },
           prescriptions: {
             orderBy: [{ version: "desc" }, { createdAt: "desc" }],
             include: { items: { orderBy: { createdAt: "asc" } } },

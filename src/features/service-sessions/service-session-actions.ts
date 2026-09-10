@@ -29,11 +29,12 @@ export async function consumeServiceSessionAction(formData: FormData) {
       entityId: packageId || undefined,
       context: { visitId: visitId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       if (!packageId) redirect(`${target}?error=sesion-invalida`);
       try {
         const pkg = await consumeServiceSession({
           packageId,
+          branchCode: branchContext.activeBranch.code,
           visitId: visitId || undefined,
           userId: user.id,
           notes: notes.length > 0 ? notes : undefined,

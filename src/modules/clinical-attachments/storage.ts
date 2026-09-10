@@ -11,11 +11,22 @@ type StoredAttachmentReference = {
   storageKey: string;
 };
 
-const safeStorageKey =
+const branchScopedStorageKey =
+  /^clinical\/(?:local|test|staging|production)\/[a-z0-9-]{2,64}\/[a-zA-Z0-9-]{20,80}\.(?:pdf|jpg|png|webp)$/;
+const legacyStorageKey =
   /^clinical\/(?:local|test|staging|production)\/[a-zA-Z0-9-]{20,80}\.(?:pdf|jpg|png|webp)$/;
 
-function assertSafeStorageKey(storageKey: string) {
-  if (!safeStorageKey.test(storageKey)) {
+function assertBranchScopedStorageKey(storageKey: string) {
+  if (!branchScopedStorageKey.test(storageKey)) {
+    throw new Error("CLINICAL_FILE_INVALID_STORAGE_KEY");
+  }
+}
+
+function assertReadableStorageKey(storageKey: string) {
+  if (
+    !branchScopedStorageKey.test(storageKey) &&
+    !legacyStorageKey.test(storageKey)
+  ) {
     throw new Error("CLINICAL_FILE_INVALID_STORAGE_KEY");
   }
 }
@@ -49,7 +60,7 @@ function localStorageRoot() {
 }
 
 function localFilePath(storageKey: string) {
-  assertSafeStorageKey(storageKey);
+  assertReadableStorageKey(storageKey);
   return `${localStorageRoot()}/${storageKey}`;
 }
 
@@ -62,12 +73,16 @@ function blobConfiguration() {
 }
 
 export function createClinicalStorageKey(
+  branchCode: string,
   uploadRequestId: string,
   extension: "pdf" | "jpg" | "png" | "webp"
 ) {
   const environment = resolveDeploymentEnvironment();
-  const storageKey = `clinical/${environment}/${uploadRequestId}.${extension}`;
-  assertSafeStorageKey(storageKey);
+  if (!/^[a-z0-9-]{2,64}$/.test(branchCode)) {
+    throw new Error("CLINICAL_FILE_INVALID_BRANCH");
+  }
+  const storageKey = `clinical/${environment}/${branchCode}/${uploadRequestId}.${extension}`;
+  assertBranchScopedStorageKey(storageKey);
   return storageKey;
 }
 
@@ -76,7 +91,7 @@ export async function storeClinicalFile(input: {
   bytes: Uint8Array;
   contentType: string;
 }): Promise<ClinicalAttachmentStorageDriver> {
-  assertSafeStorageKey(input.storageKey);
+  assertBranchScopedStorageKey(input.storageKey);
   const configuration = resolveClinicalAttachmentStorage();
 
   if (configuration.driver === "local") {
@@ -107,7 +122,7 @@ export async function storeClinicalFile(input: {
 export async function readClinicalFile(
   reference: StoredAttachmentReference
 ): Promise<Uint8Array> {
-  assertSafeStorageKey(reference.storageKey);
+  assertReadableStorageKey(reference.storageKey);
   const configuration = resolveClinicalAttachmentStorage();
 
   if (reference.storageDriver === "local") {
@@ -138,7 +153,7 @@ export async function readClinicalFile(
 }
 
 export async function deleteClinicalFile(reference: StoredAttachmentReference) {
-  assertSafeStorageKey(reference.storageKey);
+  assertReadableStorageKey(reference.storageKey);
   const configuration = resolveClinicalAttachmentStorage();
 
   if (reference.storageDriver === "local") {

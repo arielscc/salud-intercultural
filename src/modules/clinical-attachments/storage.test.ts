@@ -41,7 +41,7 @@ afterEach(async () => {
 
 describe("private clinical file storage", () => {
   it("writes, reads and removes a local file outside public", async () => {
-    const storageKey = createClinicalStorageKey(randomUUID(), "pdf");
+    const storageKey = createClinicalStorageKey("el-alto", randomUUID(), "pdf");
     const bytes = new TextEncoder().encode("%PDF-1.7\n%%EOF");
 
     await expect(
@@ -77,7 +77,7 @@ describe("private clinical file storage", () => {
     "rejects an unsafe local storage root: %s",
     async (unsafeRoot) => {
       process.env.CLINICAL_FILES_LOCAL_PATH = unsafeRoot;
-      const storageKey = createClinicalStorageKey(randomUUID(), "pdf");
+      const storageKey = createClinicalStorageKey("el-alto", randomUUID(), "pdf");
 
       await expect(
         readClinicalFile({ storageDriver: "local", storageKey })

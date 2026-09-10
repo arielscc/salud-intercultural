@@ -18,6 +18,8 @@ async function cleanClinicalAttachments() {
   await prisma.clinicalAttachmentAccessGrant.deleteMany();
   await prisma.clinicalAttachment.deleteMany();
   await prisma.study.deleteMany();
+  await prisma.nursingContinuityAccess.deleteMany();
+  await prisma.clinicalContinuityAccess.deleteMany();
   await prisma.visit.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.internalSession.deleteMany();
@@ -70,6 +72,7 @@ describe("secure clinical attachments integration", () => {
     });
     const study = await prisma.study.create({
       data: {
+        branchCode: "el-alto",
         patientId: patient.id,
         visitId: visit.id,
         recordedById: user.id,
@@ -83,7 +86,7 @@ describe("secure clinical attachments integration", () => {
       "laboratorio.pdf",
       { type: "application/pdf" }
     );
-    const actor = { id: user.id, role: "medico" as const };
+    const actor = { id: user.id, role: "medico" as const, branchCode: "el-alto" };
 
     const first = await createClinicalAttachment({
       actor,
@@ -110,7 +113,7 @@ describe("secure clinical attachments integration", () => {
       attachment: { id: first.attachment.id }
     });
 
-    const list = await getClinicalAttachmentsForPatient(patient.id);
+    const list = await getClinicalAttachmentsForPatient(patient.id, "el-alto");
     expect(list).toHaveLength(1);
     expect(list[0]).toMatchObject({
       label: "Resultado de laboratorio",
@@ -229,7 +232,7 @@ describe("secure clinical attachments integration", () => {
 
     await expect(
       createClinicalAttachment({
-        actor: { id: user.id, role: "medico" },
+        actor: { id: user.id, role: "medico", branchCode: "el-alto" },
         patientId: patient.id,
         visitId: otherVisit.id,
         uploadRequestId: randomUUID(),
@@ -239,5 +242,70 @@ describe("secure clinical attachments integration", () => {
         })
       })
     ).rejects.toBeInstanceOf(ClinicalAttachmentError);
+  });
+
+  it("does not reveal or delete an attachment from another branch", async () => {
+    const user = await prisma.internalUser.create({
+      data: {
+        email: `adjuntos-sedes-${randomUUID()}@example.com`,
+        passwordHash: "integration-only",
+        branchAssignments: {
+          create: [
+            { branchCode: "el-alto", role: "medico", active: true, isDefault: true },
+            { branchCode: "cochabamba", role: "medico", active: true }
+          ]
+        }
+      }
+    });
+    const patient = await prisma.patient.create({
+      data: {
+        internalCode: `ATT-${randomUUID()}`,
+        fullName: "Paciente Dos Sedes",
+        phone: "70000009",
+        branchRecords: {
+          create: [
+            { branchCode: "el-alto", recordNumber: `el-alto-${randomUUID()}` },
+            { branchCode: "cochabamba", recordNumber: `cochabamba-${randomUUID()}` }
+          ]
+        }
+      }
+    });
+    const visit = await prisma.visit.create({
+      data: {
+        patientId: patient.id,
+        branchCode: "cochabamba",
+        patientNameSnapshot: patient.fullName,
+        patientPhoneSnapshot: patient.phone
+      }
+    });
+    const attachment = await createClinicalAttachment({
+      actor: { id: user.id, role: "medico", branchCode: "cochabamba" },
+      patientId: patient.id,
+      visitId: visit.id,
+      uploadRequestId: randomUUID(),
+      file: new File(["%PDF-1.7\n%%EOF"], "resultado.pdf", {
+        type: "application/pdf"
+      })
+    });
+    const elAltoActor = {
+      id: user.id,
+      role: "medico" as const,
+      branchCode: "el-alto"
+    };
+
+    await expect(getClinicalAttachmentsForPatient(patient.id, "el-alto")).resolves.toEqual([]);
+    await expect(
+      createClinicalAttachmentAccessGrant({
+        attachmentId: attachment.attachment.id,
+        actor: elAltoActor,
+        purpose: "preview"
+      })
+    ).rejects.toMatchObject({ code: "not_found", status: 404 });
+    await expect(
+      softDeleteClinicalAttachment({
+        attachmentId: attachment.attachment.id,
+        actor: elAltoActor
+      })
+    ).rejects.toMatchObject({ code: "not_found", status: 404 });
   });
 });

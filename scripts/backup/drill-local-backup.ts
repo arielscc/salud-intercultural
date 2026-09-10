@@ -102,13 +102,14 @@ async function seedRecoveryFixture(input: {
       "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF"
     );
     const checksumSha256 = await sha256Bytes(bytes);
-    const storageKey = `clinical/local/${randomUUID()}.pdf`;
+    const storageKey = `clinical/local/${branchCode}/${randomUUID()}.pdf`;
     const attachmentPath = join(input.clinicalFilesRoot, storageKey);
     await mkdir(dirname(attachmentPath), { recursive: true, mode: 0o700 });
     await writeFile(attachmentPath, bytes, { flag: "wx", mode: 0o600 });
     await chmod(attachmentPath, 0o600);
     await prisma.clinicalAttachment.create({
       data: {
+        branchCode: branchCode,
         patientId: patient.id,
         visitId: visit.id,
         uploadedById: user.id,

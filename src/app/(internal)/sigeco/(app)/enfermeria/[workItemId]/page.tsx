@@ -1,4 +1,5 @@
 import { AreaTimeInline } from "@/components/internal/area-times/AreaTimeInline";
+import { ClinicalAttachmentsPanel } from "@/components/internal/clinical-attachments/ClinicalAttachmentsPanel";
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { MobileBackLink } from "@/components/internal/MobileBackLink";
 import { ConfirmForm } from "@/components/internal/ConfirmForm";
@@ -18,6 +19,7 @@ import {
   createNursingNoteAction,
   deleteNursingNoteAction,
   createVitalSignsAction,
+  requestNursingContinuityAction,
   deriveNursingToDoctorAction,
   updateVitalSignsAction
 } from "@/features/nursing/actions";
@@ -47,6 +49,7 @@ import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import {
   getInjectableProductOptions,
   getNursingChargeOptions,
+  getNursingContinuityHistory,
   getNursingWorkItemById
 } from "@/modules/database/queries/nursing";
 import { getPatientServiceSessionPackages } from "@/modules/database/queries/service-sessions";
@@ -75,7 +78,7 @@ function formatVitalsSummary(vs: VitalSigns) {
 
 type NursingWorkItemPageProps = {
   params: Promise<{ workItemId: string }>;
-  searchParams: Promise<{ error?: string; aviso?: string; campo?: string }>;
+  searchParams: Promise<{ error?: string; aviso?: string; campo?: string; continuidad?: string }>;
 };
 
 function invalidVitalSignField(campo: string | undefined) {
@@ -92,13 +95,20 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
   const item = await getNursingWorkItemById(workItemId, activeBranch.code);
 
   if (!item) notFound();
+  const continuityHistory = await getNursingContinuityHistory({
+    patientId: item.visit.patientId,
+    visitId: item.visit.id,
+    nurseId: user.id,
+    branchCode: activeBranch.code,
+    accessId: user.role === "enfermeria" ? query.continuidad : undefined
+  });
   const areaTiming = await getVisitAreaTimingState(
     item.visit.id,
     activeBranch.code
   );
-  const sessionPackages = await getPatientServiceSessionPackages(item.visit.patientId);
+  const sessionPackages = await getPatientServiceSessionPackages(item.visit.patientId, activeBranch.code);
   const injectableProducts = await getInjectableProductOptions(item.visit.branchCode);
-  const chargeOptions = await getNursingChargeOptions();
+  const chargeOptions = await getNursingChargeOptions(activeBranch.code);
   // Opciones para derivar a Administración: catálogo (estudios/servicios de
   // enfermería) + productos de inventario que el paciente puede solicitar.
   const chargeStudyOptions: PaidStudyOption[] = [
@@ -108,6 +118,23 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
 
   const patient = item.visit.patient;
   const canWriteNursing = canUse(user.role, moduleAccess, "nursing_write");
+  const continuityAttachments = continuityHistory.visits.flatMap((historyVisit) =>
+    historyVisit.studies.flatMap((study) =>
+      study.attachments.map((attachment) => ({
+        id: attachment.id,
+        label: attachment.label,
+        contentType: attachment.contentType,
+        sizeBytes: attachment.sizeBytes,
+        scanStatus: attachment.scanStatus,
+        createdAt: attachment.createdAt.toISOString(),
+        visitId: attachment.visitId,
+        studyId: attachment.studyId,
+        uploadedByName: attachment.uploadedBy?.name ?? null,
+        visitLabel: `Atención en ${historyVisit.branch.name}`,
+        studyTitle: study.title
+      }))
+    )
+  );
   const order = item.clinicalOrders[0];
   // Solo inyectables/procedimientos: excluye sueroterapia/ozono (sesiones) y estudios.
   const injectableOrder = item.clinicalOrders.find(
@@ -212,6 +239,63 @@ export default async function NursingWorkItemPage({ params, searchParams }: Nurs
             </p>
           </div>
         </Card>
+
+        <div id="continuidad-enfermeria" className="max-sm:order-2">
+          <Card>
+            <CardHeader
+              title="Antecedentes de Enfermería en otras sucursales"
+              description="Acceso temporal y de solo lectura; no incluye diagnósticos, recetas ni notas médicas."
+            />
+          {!continuityHistory.active && user.role === "enfermeria" ? (
+            <form action={requestNursingContinuityAction} className="grid gap-3">
+              <input type="hidden" name="workItemId" value={item.id} />
+              <input type="hidden" name="patientId" value={patient.id} />
+              <input type="hidden" name="visitId" value={item.visit.id} />
+              <Field label="Motivo asistencial">
+                <textarea name="reason" required minLength={10} maxLength={500} className={internalInputClassName} />
+              </Field>
+              <SubmitButton>Consultar antecedentes de Enfermería</SubmitButton>
+            </form>
+          ) : null}
+          {query.error?.startsWith("continuidad-") ? (
+            <p className="rounded-[9px] bg-error/10 px-3 py-2 text-sm text-error">
+              {query.error === "continuidad-sin-consentimiento"
+                ? "El paciente necesita consentimiento de continuidad clínica vigente."
+                : query.error === "continuidad-sin-antecedentes"
+                  ? "No hay antecedentes de Enfermería en otras sucursales."
+                  : "No se pudo habilitar la consulta transversal."}
+            </p>
+          ) : null}
+          {continuityHistory.active ? (
+            <div className="grid gap-3">
+              <p className="text-xs text-muted">Acceso registrado por 15 minutos. Cada atención conserva su sucursal de origen.</p>
+              {continuityHistory.visits.map((historyVisit) => (
+                <article key={historyVisit.id} className="rounded-[9px] border border-border p-3">
+                  <p className="font-semibold text-text">{historyVisit.branch.name} · {formatDateTime(historyVisit.checkedInAt)}</p>
+                  {historyVisit.clinicalOrders.map((historyOrder) => (
+                    <p key={historyOrder.id} className="mt-2 text-sm"><span className="font-medium">Orden: {historyOrder.title}</span>{historyOrder.details ? ` — ${historyOrder.details}` : ""}</p>
+                  ))}
+                  {historyVisit.vitalSigns.map((vital) => <p key={vital.id} className="mt-2 text-sm">Signos vitales: {formatVitalsSummary(vital)}</p>)}
+                  {historyVisit.nursingApplications.map((application) => <p key={application.id} className="mt-2 text-sm">Aplicación: {application.medication}{application.quantity ? ` · ${application.quantity}` : ""}</p>)}
+                  {historyVisit.serviceSessionUses.map((use) => <p key={use.id} className="mt-2 text-sm">Sesión {use.sessionNumber}: {use.package.serviceName}</p>)}
+                  {historyVisit.nursingNotes.map((note) => <p key={note.id} className="mt-2 whitespace-pre-line text-sm">Nota: {note.note}</p>)}
+                </article>
+              ))}
+              {continuityAttachments.length > 0 ? (
+                <ClinicalAttachmentsPanel
+                  patientId={patient.id}
+                  attachments={continuityAttachments}
+                  visits={[]}
+                  studies={[]}
+                  canWrite={false}
+                  canDelete={false}
+                  continuityAccessId={query.continuidad}
+                />
+              ) : null}
+            </div>
+          ) : null}
+          </Card>
+        </div>
 
         {query.aviso === "sesion-registrada" ? (
           <div

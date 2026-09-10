@@ -18,7 +18,9 @@ de una visita —recepción, estados, ruta, pasos, trabajos, abandonos y tiempos
 ya materializa la sede y usa relaciones compuestas. La migración
 `20260908120000_require_explicit_branch_code` queda vigilada por el detector:
 elimina siete defaults de El Alto y hace explícitas las principales escrituras
-operativas.
+operativas. Enfermería, estudios, adjuntos clínicos y paquetes de sesiones ya
+materializan la sede; la continuidad de Enfermería queda separada de la historia
+diagnóstica y los archivos usan permisos breves ligados al contexto activo.
 
 ## Decisiones Confirmadas Por Dirección
 
@@ -37,8 +39,8 @@ operativas.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 10 |
-| En progreso | 0 |
+| Pendiente | 8 |
+| En progreso | 2 |
 | Bloqueada | 0 |
 | Terminada | 7 |
 
@@ -47,7 +49,7 @@ operativas.
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
-| B. Partición de dominios | 5-13 | En progreso (3/9) | Maestros únicos y operaciones pertenecientes a una sede |
+| B. Partición de dominios | 5-13 | En progreso (5/9 implementadas; 3 cerradas) | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
@@ -62,7 +64,7 @@ operativas.
 | 6 | Leads, campañas y entradas públicas | P0 | Terminada | 2, 4-5 |
 | 7 | Visitas, recepción, rutas y tiempos | P0 | Terminada | 5 |
 | 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Implementada; validación acumulada pendiente | 7 |
-| 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Pendiente | 7-8 |
+| 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Implementada; validación acumulada pendiente | 7-8 |
 | 10 | Maestros comerciales y configuración por sucursal | P0 | Pendiente | 4 |
 | 11 | Compras, stock, lotes, traslados y alertas | P0 | Pendiente | 10 |
 | 12 | Ventas, pagos, Caja y documentos | P0 | Pendiente | 5, 7, 10-11 |
@@ -74,10 +76,10 @@ operativas.
 
 ## Preparación Ya Disponible
 
-- Contrato canónico para los 107 modelos Prisma y chequeo automático de
+- Contrato canónico para los 108 modelos Prisma y chequeo automático de
   modelos, campos, relaciones, defaults y fallbacks de sucursal.
 - Deuda heredada registrada con coincidencia exacta, responsable y tarea de
-  retiro: 34 excepciones de modelo y 31 hallazgos de código asignados a tareas
+  retiro: 25 excepciones de modelo y 28 hallazgos de código asignados a tareas
   posteriores.
 - `BranchRequestContext` resuelve usuario, asignación, sede activa y rol
   operativo exclusivamente desde sesión y membresías activas.
@@ -127,6 +129,17 @@ operativas.
 - Las bandejas, detalles, derivaciones, reportes y el dashboard de recepción
   reciben una sucursal obligatoria; una ruta activa de Cochabamba no aparece en
   los conteos de El Alto.
+- Estudios, signos vitales, aplicaciones, notas y resultados de Enfermería,
+  paquetes y usos de sesiones exigen sede y relaciones compuestas con visita,
+  expediente, orden o trabajo según corresponda.
+- La continuidad de Enfermería exige rol local activo, visita, motivo y
+  consentimiento. Dura 15 minutos y muestra únicamente signos, aplicaciones,
+  notas, sesiones, órdenes necesarias y adjuntos de estudios de Enfermería.
+- Los adjuntos incorporan la sede en metadatos, idempotencia, checksum, claves
+  de storage y grants. Una lectura remota requiere la continuidad autorizada;
+  cada grant dura dos minutos, se usa una vez y revalida usuario, rol y sede.
+- El reconciliador de claves de archivos es `dry-run` por defecto y permite
+  mover archivos antiguos después de la expansión, sin imprimir datos clínicos.
 
 Estos avances no equivalen a aislamiento completo y no permiten adelantar la
 Tarea 16.
@@ -148,7 +161,25 @@ Tarea 16.
   Los perfiles con varias sedes requieren atribución explícita antes de endurecer.
 - Detalle y operación: [reporte T8](../task-reports/2026-09-10-tarea-8-consulta-recetas-ordenes-catalogos.md).
 
+### Tarea 9 — Implementación
+
+- La sede se volvió obligatoria para estudios, signos vitales, aplicaciones y
+  notas de Enfermería, resultados de trabajos, adjuntos y paquetes/usos de
+  sesiones. Las relaciones compuestas impiden enlazar padres de otra sede.
+- Las cuatro APIs de adjuntos resuelven el usuario, rol y sucursal activos. El
+  acceso ordinario solo encuentra archivos locales; la lectura remota exige un
+  acceso de continuidad médica o de Enfermería válido y no habilita escritura.
+- Enfermería dispone de una vista transversal limitada y auditada, sin
+  diagnósticos, planes, recetas, evoluciones ni notas médicas.
+- La aplicación de un insumo valida la visita de la sede antes de descontar el
+  inventario local. Los paquetes y sus consumos tampoco cruzan sucursales.
+- Migraciones de expansión y endurecimiento preparadas, sin aplicar. Los grants
+  efímeros anteriores se revocan porque su sede histórica no es demostrable; no
+  se elimina ningún adjunto. Las claves antiguas se reconcilian con el script
+  seguro antes del endurecimiento.
+- Detalle y operación: [reporte T9](../task-reports/2026-09-10-tarea-9-enfermeria-estudios-adjuntos-sesiones.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 9: Enfermería, estudios, adjuntos y sesiones, incluida su
-continuidad limitada. La integración y el despliegue se validan en la Tarea 17.
+Ejecutar la Tarea 10: maestros comerciales y configuración por sucursal. La
+integración y el despliegue se validan en la Tarea 17.

@@ -813,6 +813,7 @@ model InternalUser {
   uploadedAttachments            ClinicalAttachment[]            @relation("ClinicalAttachmentUploadedBy")
   deletedAttachments             ClinicalAttachment[]            @relation("ClinicalAttachmentDeletedBy")
   attachmentAccessGrants         ClinicalAttachmentAccessGrant[]
+  nursingContinuityAccesses      NursingContinuityAccess[]       @relation("NursingContinuityNurse")
   capturedAttributions           VisitAttribution[]              @relation("VisitAttributionCapturedBy")
   reviewedDuplicateCandidates    PatientDuplicateCandidate[]     @relation("PatientDuplicateCandidateReviewedBy")
   performedPatientMerges         PatientMerge[]                  @relation("PatientMergePerformedBy")
@@ -842,67 +843,78 @@ model InternalUser {
 /// Sede física de la clínica. `preparation` permite configurar una nueva sede
 /// sin habilitar todavía operaciones reales ni mostrarla como seleccionable.
 model ClinicBranch {
-  code                    String                          @id
-  name                    String
-  city                    String
-  department              String
-  status                  ClinicBranchStatus              @default(preparation)
-  openedAt                DateTime?
-  createdAt               DateTime                        @default(now())
-  updatedAt               DateTime                        @updatedAt
-  userAssignments         InternalUserBranch[]
-  visits                  Visit[]
-  sales                   Sale[]
-  payments                Payment[]
-  cashMovements           CashMovement[]
-  cashSessions            CashSession[]
-  purchases               Purchase[]
-  purchasePayments        PurchasePayment[]
-  purchaseReceipts        PurchaseReceipt[]
-  inventoryLots           InventoryLot[]
-  inventoryMovements      InventoryMovement[]
-  inventoryAdjustments    InventoryAdjustment[]
-  inventoryBalances       BranchInventoryBalance[]
-  outgoingTransfers       InventoryTransfer[]             @relation("InventoryTransferSourceBranch")
-  incomingTransfers       InventoryTransfer[]             @relation("InventoryTransferDestinationBranch")
-  moduleActivations       ModuleActivation[]
-  followUpTasks           FollowUpTask[]
-  supervisedReminderRules SupervisedReminderRule[]
-  patientRecords          PatientBranchRecord[]
-  patientConsents         PatientConsent[]
-  patientContacts         PatientContact[]
-  patientNotes            PatientNote[]
-  clinicalConsultations   ClinicalConsultation[]
-  clinicalVersions        ClinicalConsultationVersion[]
-  diagnoses               Diagnosis[]
-  treatmentPlans          TreatmentPlan[]
-  treatmentOutcomes       TreatmentProposalOutcome[]
-  prescriptions           Prescription[]
-  prescriptionItems       PrescriptionItem[]
-  clinicalEvolutions      ClinicalEvolution[]
-  clinicalNotes           ClinicalNote[]
-  clinicalOrders          ClinicalOrder[]
-  professionalProfiles    ClinicalProfessionalProfile[]
-  doctorOrders            DoctorOrder[]
-  doctorOrderLines        DoctorOrderLine[]
-  continuityAccesses      ClinicalContinuityAccess[]
-  indicationCatalog       IndicationCatalogItemBranch[]
-  diagnosisCatalog        DiagnosisCatalogItemBranch[]
-  clinicalNoteCatalog     ClinicalNoteCatalogItemBranch[]
-  leads                   Lead[]
-  leadContactAttempts     LeadContactAttempt[]
-  leadReminders           LeadReminder[]
-  leadStatusHistory       LeadStatusHistory[]
-  campaignAssignments     CaptureCampaignBranch[]
-  visitAttributions       VisitAttribution[]
-  attributionTouches      VisitAttributionTouch[]
-  visitDiscontinuations   VisitDiscontinuation[]
-  visitStatusHistory      VisitStatusHistory[]
-  receptionCheckIns       ReceptionCheckIn[]
-  patientRoutes           PatientRoute[]
-  patientRouteSteps       PatientRouteStep[]
-  visitAreaTimeEvents     VisitAreaTimeEvent[]
-  visitWorkItems          VisitWorkItem[]
+  code                      String                          @id
+  name                      String
+  city                      String
+  department                String
+  status                    ClinicBranchStatus              @default(preparation)
+  openedAt                  DateTime?
+  createdAt                 DateTime                        @default(now())
+  updatedAt                 DateTime                        @updatedAt
+  userAssignments           InternalUserBranch[]
+  visits                    Visit[]
+  sales                     Sale[]
+  payments                  Payment[]
+  cashMovements             CashMovement[]
+  cashSessions              CashSession[]
+  purchases                 Purchase[]
+  purchasePayments          PurchasePayment[]
+  purchaseReceipts          PurchaseReceipt[]
+  inventoryLots             InventoryLot[]
+  inventoryMovements        InventoryMovement[]
+  inventoryAdjustments      InventoryAdjustment[]
+  inventoryBalances         BranchInventoryBalance[]
+  outgoingTransfers         InventoryTransfer[]             @relation("InventoryTransferSourceBranch")
+  incomingTransfers         InventoryTransfer[]             @relation("InventoryTransferDestinationBranch")
+  moduleActivations         ModuleActivation[]
+  followUpTasks             FollowUpTask[]
+  supervisedReminderRules   SupervisedReminderRule[]
+  patientRecords            PatientBranchRecord[]
+  patientConsents           PatientConsent[]
+  patientContacts           PatientContact[]
+  patientNotes              PatientNote[]
+  clinicalConsultations     ClinicalConsultation[]
+  clinicalVersions          ClinicalConsultationVersion[]
+  diagnoses                 Diagnosis[]
+  treatmentPlans            TreatmentPlan[]
+  treatmentOutcomes         TreatmentProposalOutcome[]
+  prescriptions             Prescription[]
+  prescriptionItems         PrescriptionItem[]
+  clinicalEvolutions        ClinicalEvolution[]
+  clinicalNotes             ClinicalNote[]
+  clinicalOrders            ClinicalOrder[]
+  professionalProfiles      ClinicalProfessionalProfile[]
+  doctorOrders              DoctorOrder[]
+  doctorOrderLines          DoctorOrderLine[]
+  continuityAccesses        ClinicalContinuityAccess[]
+  nursingContinuityAccesses NursingContinuityAccess[]
+  studies                   Study[]
+  vitalSigns                VitalSigns[]
+  nursingApplications       NursingApplication[]
+  nursingNotes              NursingNote[]
+  clinicalAttachments       ClinicalAttachment[]            @relation("ClinicalAttachmentOriginBranch")
+  attachmentOriginGrants    ClinicalAttachmentAccessGrant[] @relation("ClinicalAttachmentGrantOriginBranch")
+  attachmentRequestGrants   ClinicalAttachmentAccessGrant[] @relation("ClinicalAttachmentGrantRequestBranch")
+  nursingWorkItemResults    NursingWorkItemResult[]
+  serviceSessionPackages    ServiceSessionPackage[]
+  serviceSessionUses        ServiceSessionUse[]
+  indicationCatalog         IndicationCatalogItemBranch[]
+  diagnosisCatalog          DiagnosisCatalogItemBranch[]
+  clinicalNoteCatalog       ClinicalNoteCatalogItemBranch[]
+  leads                     Lead[]
+  leadContactAttempts       LeadContactAttempt[]
+  leadReminders             LeadReminder[]
+  leadStatusHistory         LeadStatusHistory[]
+  campaignAssignments       CaptureCampaignBranch[]
+  visitAttributions         VisitAttribution[]
+  attributionTouches        VisitAttributionTouch[]
+  visitDiscontinuations     VisitDiscontinuation[]
+  visitStatusHistory        VisitStatusHistory[]
+  receptionCheckIns         ReceptionCheckIn[]
+  patientRoutes             PatientRoute[]
+  patientRouteSteps         PatientRouteStep[]
+  visitAreaTimeEvents       VisitAreaTimeEvent[]
+  visitWorkItems            VisitWorkItem[]
 
   @@index([status, name])
 }
@@ -910,17 +922,19 @@ model ClinicBranch {
 /// Una persona puede estar asignada a varias sedes. Para médicos y enfermería,
 /// isDefault identifica la única sede de trabajo; las demás son de consulta.
 model InternalUserBranch {
-  userId              String
-  branchCode          String
-  role                InternalRole
-  active              Boolean                      @default(true)
-  isDefault           Boolean                      @default(false)
-  assignedAt          DateTime                     @default(now())
-  updatedAt           DateTime                     @updatedAt
-  user                InternalUser                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branch              ClinicBranch                 @relation(fields: [branchCode], references: [code], onDelete: Restrict)
-  professionalProfile ClinicalProfessionalProfile?
-  continuityAccesses  ClinicalContinuityAccess[]
+  userId                    String
+  branchCode                String
+  role                      InternalRole
+  active                    Boolean                         @default(true)
+  isDefault                 Boolean                         @default(false)
+  assignedAt                DateTime                        @default(now())
+  updatedAt                 DateTime                        @updatedAt
+  user                      InternalUser                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch                    ClinicBranch                    @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  professionalProfile       ClinicalProfessionalProfile?
+  continuityAccesses        ClinicalContinuityAccess[]
+  nursingContinuityAccesses NursingContinuityAccess[]
+  attachmentAccessGrants    ClinicalAttachmentAccessGrant[]
 
   @@id([userId, branchCode])
   @@index([branchCode, userId])
@@ -1066,34 +1080,34 @@ model LeadStatusHistory {
 }
 
 model Patient {
-  id                         String                        @id @default(cuid())
-  internalCode               String                        @unique
+  id                         String                          @id @default(cuid())
+  internalCode               String                          @unique
   documentNumber             String?
-  normalizedDocumentNumber   String                        @default("")
+  normalizedDocumentNumber   String                          @default("")
   fullName                   String
   phone                      String
   secondaryPhone             String?
   birthDate                  DateTime?
-  gender                     PatientGender                 @default(unknown)
+  gender                     PatientGender                   @default(unknown)
   city                       String?
   department                 String?
   country                    String?
   address                    String?
-  captureSource              PatientCaptureSource          @default(other)
-  captureSources             PatientCaptureSource[]        @default([])
+  captureSource              PatientCaptureSource            @default(other)
+  captureSources             PatientCaptureSource[]          @default([])
   firstVisitAt               DateTime?
-  followUpPreference         FollowUpContactPreference     @default(unknown)
-  revision                   Int                           @default(1)
-  status                     PatientStatus                 @default(active)
-  normalizedName             String                        @default("")
-  normalizedPhone            String                        @default("")
-  normalizedSecondaryPhone   String                        @default("")
+  followUpPreference         FollowUpContactPreference       @default(unknown)
+  revision                   Int                             @default(1)
+  status                     PatientStatus                   @default(active)
+  normalizedName             String                          @default("")
+  normalizedPhone            String                          @default("")
+  normalizedSecondaryPhone   String                          @default("")
   mergedIntoId               String?
-  createdAt                  DateTime                      @default(now())
-  updatedAt                  DateTime                      @updatedAt
-  mergedInto                 Patient?                      @relation("PatientMergeRedirect", fields: [mergedIntoId], references: [id], onDelete: Restrict)
-  mergedPatients             Patient[]                     @relation("PatientMergeRedirect")
-  convertedLeads             Lead[]                        @relation("LeadConvertedPatient")
+  createdAt                  DateTime                        @default(now())
+  updatedAt                  DateTime                        @updatedAt
+  mergedInto                 Patient?                        @relation("PatientMergeRedirect", fields: [mergedIntoId], references: [id], onDelete: Restrict)
+  mergedPatients             Patient[]                       @relation("PatientMergeRedirect")
+  convertedLeads             Lead[]                          @relation("LeadConvertedPatient")
   contacts                   PatientContact[]
   notes                      PatientNote[]
   branchRecords              PatientBranchRecord[]
@@ -1116,19 +1130,21 @@ model Patient {
   cashMovements              CashMovement[]
   followUpTasks              FollowUpTask[]
   clinicalAttachments        ClinicalAttachment[]
+  attachmentAccessGrants     ClinicalAttachmentAccessGrant[]
   consents                   PatientConsent[]
   visitAttributions          VisitAttribution[]
-  duplicateCandidatesA       PatientDuplicateCandidate[]   @relation("PatientDuplicateCandidateA")
-  duplicateCandidatesB       PatientDuplicateCandidate[]   @relation("PatientDuplicateCandidateB")
-  mergesReceived             PatientMerge[]                @relation("PatientMergeTarget")
-  mergeAsSource              PatientMerge?                 @relation("PatientMergeSource")
-  aliases                    PatientAlias[]                @relation("PatientAliasCanonical")
-  aliasAsSource              PatientAlias?                 @relation("PatientAliasSource")
+  duplicateCandidatesA       PatientDuplicateCandidate[]     @relation("PatientDuplicateCandidateA")
+  duplicateCandidatesB       PatientDuplicateCandidate[]     @relation("PatientDuplicateCandidateB")
+  mergesReceived             PatientMerge[]                  @relation("PatientMergeTarget")
+  mergeAsSource              PatientMerge?                   @relation("PatientMergeSource")
+  aliases                    PatientAlias[]                  @relation("PatientAliasCanonical")
+  aliasAsSource              PatientAlias?                   @relation("PatientAliasSource")
   generatedDocuments         GeneratedDocument[]
   reminderCandidates         SupervisedReminderCandidate[]
   feedbackRequests           PatientFeedbackRequest[]
   feedbackSubmissions        PatientFeedback[]
   clinicalContinuityAccesses ClinicalContinuityAccess[]
+  nursingContinuityAccesses  NursingContinuityAccess[]
 
   @@index([fullName])
   @@index([phone])
@@ -1174,31 +1190,38 @@ model PatientIdentityVersion {
 
 /// Expediente operativo que vincula una identidad global con una sucursal.
 model PatientBranchRecord {
-  patientId             String
-  branchCode            String
-  recordNumber          String
-  status                PatientStatus              @default(active)
-  generalObservations   String?
-  allergies             String?
-  relevantHistory       String?
-  currentMedication     String?
-  firstAttendedAt       DateTime?
-  lastAttendedAt        DateTime?
-  createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @updatedAt
-  patient               Patient                    @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  branch                ClinicBranch               @relation(fields: [branchCode], references: [code], onDelete: Restrict)
-  contacts              PatientContact[]
-  notes                 PatientNote[]
-  consents              PatientConsent[]
-  visits                Visit[]
-  clinicalConsultations ClinicalConsultation[]
-  prescriptions         Prescription[]
-  clinicalEvolutions    ClinicalEvolution[]
-  clinicalNotes         ClinicalNote[]
-  clinicalOrders        ClinicalOrder[]
-  doctorOrders          DoctorOrder[]
-  continuityAccesses    ClinicalContinuityAccess[]
+  patientId                 String
+  branchCode                String
+  recordNumber              String
+  status                    PatientStatus              @default(active)
+  generalObservations       String?
+  allergies                 String?
+  relevantHistory           String?
+  currentMedication         String?
+  firstAttendedAt           DateTime?
+  lastAttendedAt            DateTime?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  patient                   Patient                    @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch                    ClinicBranch               @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  contacts                  PatientContact[]
+  notes                     PatientNote[]
+  consents                  PatientConsent[]
+  visits                    Visit[]
+  clinicalConsultations     ClinicalConsultation[]
+  prescriptions             Prescription[]
+  clinicalEvolutions        ClinicalEvolution[]
+  clinicalNotes             ClinicalNote[]
+  clinicalOrders            ClinicalOrder[]
+  doctorOrders              DoctorOrder[]
+  continuityAccesses        ClinicalContinuityAccess[]
+  nursingContinuityAccesses NursingContinuityAccess[]
+  studies                   Study[]
+  vitalSigns                VitalSigns[]
+  nursingApplications       NursingApplication[]
+  nursingNotes              NursingNote[]
+  clinicalAttachments       ClinicalAttachment[]
+  serviceSessionPackages    ServiceSessionPackage[]
 
   @@id([patientId, branchCode])
   @@unique([branchCode, recordNumber])
@@ -1403,6 +1426,7 @@ model Visit {
   feedbackRequests           PatientFeedbackRequest[]
   feedbackSubmission         PatientFeedback?
   clinicalContinuityAccesses ClinicalContinuityAccess[]
+  nursingContinuityAccesses  NursingContinuityAccess[]
 
   @@unique([id, branchCode])
   @@unique([branchCode, idempotencyKey])
@@ -2033,7 +2057,7 @@ model VisitWorkItem {
   createdBy              InternalUser?           @relation("WorkItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   assignedTo             InternalUser?           @relation("WorkItemAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   clinicalOrders         ClinicalOrder[]
-  releasedDoctorOrders   DoctorOrder[] @relation("DoctorOrderNursingWorkItem")
+  releasedDoctorOrders   DoctorOrder[]           @relation("DoctorOrderNursingWorkItem")
   nursingApplications    NursingApplication[]
   studies                Study[]
   nursingWorkItemResults NursingWorkItemResult[]
@@ -2052,6 +2076,7 @@ model VisitWorkItem {
 model Study {
   id              String               @id @default(cuid())
   patientId       String
+  branchCode      String
   visitId         String?
   clinicalOrderId String?
   workItemId      String?
@@ -2067,15 +2092,18 @@ model Study {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   patient         Patient              @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit           Visit?               @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  clinicalOrder   ClinicalOrder?       @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
-  workItem        VisitWorkItem?       @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  branchRecord    PatientBranchRecord  @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  branch          ClinicBranch         @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  visit           Visit?               @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  clinicalOrder   ClinicalOrder?       @relation(fields: [clinicalOrderId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  workItem        VisitWorkItem?       @relation(fields: [workItemId, branchCode], references: [id, branchCode], onDelete: Restrict)
   requestedBy     InternalUser?        @relation("StudyRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
   recordedBy      InternalUser?        @relation("StudyRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
   attachments     ClinicalAttachment[]
 
-  @@index([patientId])
-  @@index([visitId])
+  @@unique([id, branchCode])
+  @@index([branchCode, patientId])
+  @@index([branchCode, visitId])
   @@index([clinicalOrderId])
   @@index([workItemId])
   @@index([type, status])
@@ -2084,34 +2112,38 @@ model Study {
 }
 
 model VitalSigns {
-  id                    String        @id @default(cuid())
+  id                    String              @id @default(cuid())
   patientId             String
+  branchCode            String
   visitId               String?
   recordedById          String?
-  temperatureCelsius    Decimal?      @db.Decimal(4, 1)
+  temperatureCelsius    Decimal?            @db.Decimal(4, 1)
   systolicPressureMmHg  Int?
   diastolicPressureMmHg Int?
   heartRateBpm          Int?
   respiratoryRateRpm    Int?
   oxygenSaturation      Int?
-  weightKg              Decimal?      @db.Decimal(5, 2)
-  heightCm              Decimal?      @db.Decimal(5, 2)
+  weightKg              Decimal?            @db.Decimal(5, 2)
+  heightCm              Decimal?            @db.Decimal(5, 2)
   notes                 String?
-  recordedAt            DateTime      @default(now())
-  createdAt             DateTime      @default(now())
-  patient               Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit                 Visit?        @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  recordedBy            InternalUser? @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  recordedAt            DateTime            @default(now())
+  createdAt             DateTime            @default(now())
+  patient               Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branchRecord          PatientBranchRecord @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  branch                ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  visit                 Visit?              @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  recordedBy            InternalUser?       @relation(fields: [recordedById], references: [id], onDelete: SetNull)
 
-  @@index([patientId])
-  @@index([visitId])
+  @@index([branchCode, patientId])
+  @@index([branchCode, visitId])
   @@index([recordedById])
   @@index([recordedAt])
 }
 
 model NursingApplication {
-  id              String         @id @default(cuid())
+  id              String              @id @default(cuid())
   patientId       String
+  branchCode      String
   visitId         String?
   clinicalOrderId String?
   workItemId      String?
@@ -2123,18 +2155,20 @@ model NursingApplication {
   quantity        String?
   quantityUnits   Int?
   route           String?
-  appliedAt       DateTime       @default(now())
+  appliedAt       DateTime            @default(now())
   notes           String?
-  createdAt       DateTime       @default(now())
-  patient         Patient        @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit           Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  clinicalOrder   ClinicalOrder? @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
-  workItem        VisitWorkItem? @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  responsible     InternalUser?  @relation("NursingApplicationResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
-  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+  patient         Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branchRecord    PatientBranchRecord @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  branch          ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  visit           Visit?              @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  clinicalOrder   ClinicalOrder?      @relation(fields: [clinicalOrderId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  workItem        VisitWorkItem?      @relation(fields: [workItemId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  responsible     InternalUser?       @relation("NursingApplicationResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+  inventoryItem   InventoryItem?      @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
 
-  @@index([patientId])
-  @@index([visitId])
+  @@index([branchCode, patientId])
+  @@index([branchCode, visitId])
   @@index([clinicalOrderId])
   @@index([workItemId])
   @@index([responsibleId])
@@ -2143,18 +2177,21 @@ model NursingApplication {
 }
 
 model NursingNote {
-  id        String        @id @default(cuid())
-  patientId String
-  visitId   String?
-  userId    String?
-  note      String
-  createdAt DateTime      @default(now())
-  patient   Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit     Visit?        @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  user      InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id           String              @id @default(cuid())
+  patientId    String
+  branchCode   String
+  visitId      String?
+  userId       String?
+  note         String
+  createdAt    DateTime            @default(now())
+  patient      Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branchRecord PatientBranchRecord @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  branch       ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  visit        Visit?              @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  user         InternalUser?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([patientId])
-  @@index([visitId])
+  @@index([branchCode, patientId])
+  @@index([branchCode, visitId])
   @@index([userId])
   @@index([createdAt])
 }
@@ -2162,11 +2199,12 @@ model NursingNote {
 model ClinicalAttachment {
   id               String                          @id @default(cuid())
   patientId        String
+  branchCode       String
   visitId          String?
   studyId          String?
   uploadedById     String?
   deletedById      String?
-  uploadRequestId  String                          @unique
+  uploadRequestId  String
   label            String
   contentType      String
   fileExtension    String
@@ -2184,52 +2222,67 @@ model ClinicalAttachment {
   updatedAt        DateTime                        @updatedAt
   deletedAt        DateTime?
   patient          Patient                         @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit            Visit?                          @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  study            Study?                          @relation(fields: [studyId], references: [id], onDelete: SetNull)
+  branchRecord     PatientBranchRecord             @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  branch           ClinicBranch                    @relation("ClinicalAttachmentOriginBranch", fields: [branchCode], references: [code], onDelete: Restrict)
+  visit            Visit?                          @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  study            Study?                          @relation(fields: [studyId, branchCode], references: [id, branchCode], onDelete: Restrict)
   uploadedBy       InternalUser?                   @relation("ClinicalAttachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
   deletedBy        InternalUser?                   @relation("ClinicalAttachmentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   accessGrants     ClinicalAttachmentAccessGrant[]
 
-  @@index([patientId])
-  @@index([visitId])
+  @@unique([id, branchCode])
+  @@unique([branchCode, uploadRequestId])
+  @@index([branchCode, patientId])
+  @@index([branchCode, visitId])
   @@index([studyId])
   @@index([uploadedById])
   @@index([status, createdAt])
-  @@index([checksumSha256])
+  @@index([branchCode, checksumSha256])
   @@index([createdAt])
 }
 
 model ClinicalAttachmentAccessGrant {
-  id           String                          @id @default(cuid())
-  attachmentId String
-  userId       String
-  tokenHash    String                          @unique
-  purpose      ClinicalAttachmentAccessPurpose
-  expiresAt    DateTime
-  consumedAt   DateTime?
-  createdAt    DateTime                        @default(now())
-  attachment   ClinicalAttachment              @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
-  user         InternalUser                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String                          @id @default(cuid())
+  attachmentId         String
+  userId               String
+  patientId            String
+  branchCode           String
+  requestingBranchCode String
+  actorRole            InternalRole
+  reason               String
+  tokenHash            String                          @unique
+  purpose              ClinicalAttachmentAccessPurpose
+  expiresAt            DateTime
+  consumedAt           DateTime?
+  createdAt            DateTime                        @default(now())
+  attachment           ClinicalAttachment              @relation(fields: [attachmentId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  user                 InternalUser                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userMembership       InternalUserBranch              @relation(fields: [userId, requestingBranchCode], references: [userId, branchCode], onDelete: Restrict)
+  patient              Patient                         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch               ClinicBranch                    @relation("ClinicalAttachmentGrantOriginBranch", fields: [branchCode], references: [code], onDelete: Restrict)
+  requestingBranch     ClinicBranch                    @relation("ClinicalAttachmentGrantRequestBranch", fields: [requestingBranchCode], references: [code], onDelete: Restrict)
 
-  @@index([attachmentId, expiresAt])
-  @@index([userId, expiresAt])
+  @@index([branchCode, attachmentId, expiresAt])
+  @@index([requestingBranchCode, userId, expiresAt])
   @@index([expiresAt])
 }
 
 model NursingWorkItemResult {
   id              String              @id @default(cuid())
   workItemId      String
+  branchCode      String
   clinicalOrderId String?
   userId          String?
   status          VisitWorkItemStatus
   outcome         String?
   notes           String?
   createdAt       DateTime            @default(now())
-  workItem        VisitWorkItem       @relation(fields: [workItemId], references: [id], onDelete: Cascade)
-  clinicalOrder   ClinicalOrder?      @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
+  workItem        VisitWorkItem       @relation(fields: [workItemId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  clinicalOrder   ClinicalOrder?      @relation(fields: [clinicalOrderId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch          ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   user            InternalUser?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([workItemId])
+  @@index([branchCode, workItemId])
   @@index([clinicalOrderId])
   @@index([userId])
   @@index([status])
@@ -2326,6 +2379,30 @@ model ClinicalContinuityAccess {
 
   @@index([branchCode, patientId, createdAt])
   @@index([doctorId, expiresAt])
+  @@index([visitId, expiresAt])
+}
+
+/// Acceso transversal limitado a antecedentes de Enfermería y órdenes necesarias.
+/// No incluye diagnósticos, planes, recetas ni notas médicas.
+model NursingContinuityAccess {
+  id                   String              @id @default(cuid())
+  patientId            String
+  visitId              String
+  nurseId              String
+  branchCode           String
+  reason               String
+  consultedBranchCodes String[]
+  expiresAt            DateTime
+  createdAt            DateTime            @default(now())
+  patient              Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branchRecord         PatientBranchRecord @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit                Visit               @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  nurse                InternalUser        @relation("NursingContinuityNurse", fields: [nurseId], references: [id], onDelete: Restrict)
+  nurseMembership      InternalUserBranch  @relation(fields: [nurseId, branchCode], references: [userId, branchCode], onDelete: Restrict)
+  branch               ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+
+  @@index([branchCode, patientId, createdAt])
+  @@index([nurseId, expiresAt])
   @@index([visitId, expiresAt])
 }
 
@@ -3516,7 +3593,7 @@ model DoctorOrder {
   /// Derivación a Enfermería después del pago (Tarea 4). Idempotente.
   nursingReleasedAt   DateTime?
   nursingWorkItemId   String?
-  nursingWorkItem     VisitWorkItem? @relation("DoctorOrderNursingWorkItem", fields: [nursingWorkItemId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  nursingWorkItem     VisitWorkItem?          @relation("DoctorOrderNursingWorkItem", fields: [nursingWorkItemId, branchCode], references: [id, branchCode], onDelete: Restrict)
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
   visit               Visit                   @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Cascade)
@@ -3573,6 +3650,7 @@ model DoctorOrderLine {
 model ServiceSessionPackage {
   id                String                      @id @default(cuid())
   patientId         String
+  branchCode        String
   catalogItemId     String?
   serviceName       String
   originVisitId     String?
@@ -3588,13 +3666,16 @@ model ServiceSessionPackage {
   createdAt         DateTime                    @default(now())
   updatedAt         DateTime                    @updatedAt
   patient           Patient                     @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branchRecord      PatientBranchRecord         @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  branch            ClinicBranch                @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   catalogItem       ServiceCatalogItem?         @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
-  originVisit       Visit?                      @relation("ServiceSessionPackageOriginVisit", fields: [originVisitId], references: [id], onDelete: SetNull)
-  doctorOrder       DoctorOrder?                @relation(fields: [doctorOrderId], references: [id], onDelete: SetNull)
+  originVisit       Visit?                      @relation("ServiceSessionPackageOriginVisit", fields: [originVisitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  doctorOrder       DoctorOrder?                @relation(fields: [doctorOrderId, branchCode], references: [id, branchCode], onDelete: Restrict)
   sale              Sale?                       @relation(fields: [saleId], references: [id], onDelete: SetNull)
   uses              ServiceSessionUse[]
 
-  @@index([patientId, status])
+  @@unique([id, branchCode])
+  @@index([branchCode, patientId, status])
   @@index([catalogItemId])
   @@index([doctorOrderId])
 }
@@ -3604,17 +3685,19 @@ model ServiceSessionPackage {
 model ServiceSessionUse {
   id            String                @id @default(cuid())
   packageId     String
+  branchCode    String
   visitId       String?
   sessionNumber Int
   appliedById   String?
   notes         String?
   appliedAt     DateTime              @default(now())
-  package       ServiceSessionPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  visit         Visit?                @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  package       ServiceSessionPackage @relation(fields: [packageId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  visit         Visit?                @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch        ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   appliedBy     InternalUser?         @relation("ServiceSessionAppliedBy", fields: [appliedById], references: [id], onDelete: SetNull)
 
-  @@index([packageId])
-  @@index([visitId])
+  @@index([branchCode, packageId])
+  @@index([branchCode, visitId])
 }
 
 /// Estado de un módulo de SIGECO dentro del lanzamiento por etapas.

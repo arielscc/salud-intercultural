@@ -18,17 +18,16 @@ export async function createStudyRecord(input: {
 }) {
   return withDatabaseError("createStudyRecord", async () => {
     return prisma.$transaction(async (tx) => {
-      const { branchCode, ...studyInput } = input;
       const study = await tx.study.create({
         data: {
-          ...studyInput,
+          ...input,
           performedAt: input.performedAt ?? new Date()
         }
       });
 
       if (input.clinicalOrderId && input.status !== "requested") {
         await tx.clinicalOrder.update({
-          where: { id: input.clinicalOrderId },
+          where: { id_branchCode: { id: input.clinicalOrderId, branchCode: input.branchCode } },
           data: { status: input.status === "cancelled" ? "cancelled" : "completed" }
         });
       }
@@ -37,13 +36,13 @@ export async function createStudyRecord(input: {
         const remainingOrders = await tx.clinicalOrder.count({
           where: {
             workItemId: input.workItemId,
-            visit: { branchCode },
+            branchCode: input.branchCode,
             status: { in: ["pending", "acknowledged", "blocked"] }
           }
         });
         await tx.visitWorkItem.update({
           where: {
-            id_branchCode: { id: input.workItemId, branchCode }
+            id_branchCode: { id: input.workItemId, branchCode: input.branchCode }
           },
           data: remainingOrders === 0
             ? { status: "completed", completedAt: new Date() }
@@ -56,10 +55,10 @@ export async function createStudyRecord(input: {
   });
 }
 
-export async function getStudiesForPatient(patientId: string) {
+export async function getStudiesForPatient(patientId: string, branchCode: string) {
   return withDatabaseError("getStudiesForPatient", async () => {
     return prisma.study.findMany({
-      where: { patientId },
+      where: { patientId, branchCode },
       include: {
         recordedBy: true,
         requestedBy: true,
@@ -79,10 +78,10 @@ export async function getStudiesForPatient(patientId: string) {
   });
 }
 
-export async function getStudiesForVisit(visitId: string) {
+export async function getStudiesForVisit(visitId: string, branchCode: string) {
   return withDatabaseError("getStudiesForVisit", async () => {
     return prisma.study.findMany({
-      where: { visitId },
+      where: { visitId, branchCode },
       include: {
         recordedBy: true,
         requestedBy: true,
