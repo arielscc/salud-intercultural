@@ -161,26 +161,36 @@ async function checkProducts(): Promise<Check[]> {
 async function checkStockBacking(): Promise<Check> {
   // El stock del sistema tiene que ser la suma de sus movimientos: un número
   // escrito a mano no se puede auditar ni explicar frente a una diferencia.
-  const items = await prisma.inventoryItem.findMany({
-    where: { active: true },
-    select: { id: true, internalCode: true, currentStock: true }
+  const balances = await prisma.branchInventoryBalance.findMany({
+    where: {
+      branchCode: stageOneBranchCode,
+      configuration: { available: true }
+    },
+    select: {
+      itemId: true,
+      currentStock: true,
+      item: { select: { internalCode: true } }
+    }
   });
   const movements = await prisma.inventoryMovement.groupBy({
-    by: ["itemId"],
+    by: ["itemId", "branchCode"],
+    where: { branchCode: stageOneBranchCode },
     _sum: { quantityDelta: true }
   });
   const byItem = new Map(movements.map((row) => [row.itemId, row._sum.quantityDelta ?? 0]));
-  const mismatched = items.filter((item) => (byItem.get(item.id) ?? 0) !== item.currentStock);
+  const mismatched = balances.filter(
+    (balance) => (byItem.get(balance.itemId) ?? 0) !== balance.currentStock
+  );
 
   return {
     name: "El stock coincide con sus movimientos",
     ok: mismatched.length === 0,
     detail:
       mismatched.length === 0
-        ? `${items.length} productos revisados`
+        ? `${balances.length} productos revisados en ${stageOneBranchCode}`
         : `${mismatched.length} sin respaldo: ${mismatched
             .slice(0, 5)
-            .map((item) => item.internalCode)
+            .map((balance) => balance.item.internalCode)
             .join(", ")}`
   };
 }

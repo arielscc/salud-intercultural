@@ -80,10 +80,18 @@ function generatedNumber(prefix: "OC" | "REC" | "LOT") {
   return `${prefix}-${date}-${randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
-async function lockPurchase(tx: Prisma.TransactionClient, purchaseId: string) {
-  await tx.$queryRaw`SELECT "id" FROM "Purchase" WHERE "id" = ${purchaseId} FOR UPDATE`;
+async function lockPurchase(
+  tx: Prisma.TransactionClient,
+  purchaseId: string,
+  branchCode: string
+) {
+  await tx.$queryRaw`
+    SELECT "id" FROM "Purchase"
+    WHERE "id" = ${purchaseId} AND "branchCode" = ${branchCode}
+    FOR UPDATE
+  `;
   return tx.purchase.findUniqueOrThrow({
-    where: { id: purchaseId },
+    where: { id_branchCode: { id: purchaseId, branchCode } },
     include: {
       lines: true,
       payments: {
@@ -175,7 +183,12 @@ async function createPaidPurchasePayment(
   const reused = await tx.purchasePayment.findUnique({
     where: { idempotencyKey: input.idempotencyKey }
   });
-  if (reused) return reused;
+  if (reused) {
+    if (reused.branchCode !== input.branchCode) {
+      throw new PurchaseWorkflowError("branch-mismatch");
+    }
+    return reused;
+  }
 
   const session = await lockOpenCashSession(tx, input.cashSessionId);
   if (session.branchCode !== input.branchCode) {
@@ -236,7 +249,13 @@ export async function createPurchaseDraftRecord(input: {
       const reused = await tx.purchase.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
-      if (reused) return reused;
+      if (reused) {
+        if (reused.branchCode !== input.branchCode) {
+          throw new PurchaseWorkflowError("branch-mismatch");
+        }
+        return reused;
+      }
+      await assertActiveUser(tx, input.createdById, input.branchCode);
 
       const supplier = await tx.supplier.findFirst({
         where: {
@@ -276,13 +295,14 @@ export async function createPurchaseDraftRecord(input: {
       if (input.sourceCashExpenseId) {
         const expense = await tx.cashExpense.findUnique({
           where: { id: input.sourceCashExpenseId },
-          include: { purchase: true }
+          include: { purchase: true, cashSession: { select: { branchCode: true } } }
         });
         if (
           !expense ||
           expense.purchase ||
           expense.kind !== "urgent_purchase" ||
-          !expense.requiresInventoryEntry
+          !expense.requiresInventoryEntry ||
+          expense.cashSession.branchCode !== input.branchCode
         ) {
           throw new PurchaseWorkflowError("source-expense-invalid");
         }
@@ -310,6 +330,7 @@ export async function createPurchaseDraftRecord(input: {
               const item = itemById.get(line.itemId)!;
               return {
                 itemId: line.itemId,
+                branchCode: input.branchCode,
                 description: item.name,
                 unit: item.unit,
                 orderedQuantity: line.orderedQuantity,
@@ -325,6 +346,7 @@ export async function createPurchaseDraftRecord(input: {
         await tx.purchaseDocument.create({
           data: {
             purchaseId: purchase.id,
+            branchCode: input.branchCode,
             uploadedById: input.createdById,
             kind: "purchase",
             storageKey: input.document.storageKey,
@@ -391,8 +413,12 @@ export async function createPurchaseBatchRecord(input: {
         orderBy: { createdAt: "asc" }
       });
       if (reused.length > 0) {
+        if (reused.some((purchase) => purchase.branchCode !== input.branchCode)) {
+          throw new PurchaseWorkflowError("branch-mismatch");
+        }
         return { purchases: reused, createdItemIds: [] as string[] };
       }
+      await assertActiveUser(tx, input.createdById, input.branchCode);
       if (input.lines.length === 0 || input.lines.length > 100) {
         throw new PurchaseWorkflowError("invalid-lines");
       }
@@ -537,13 +563,14 @@ export async function createPurchaseBatchRecord(input: {
         if (input.sourceCashExpenseId) {
           const expense = await tx.cashExpense.findUnique({
             where: { id: input.sourceCashExpenseId },
-            include: { purchase: true }
+            include: { purchase: true, cashSession: { select: { branchCode: true } } }
           });
           if (
             !expense ||
             expense.purchase ||
             expense.kind !== "urgent_purchase" ||
-            !expense.requiresInventoryEntry
+            !expense.requiresInventoryEntry ||
+            expense.cashSession.branchCode !== input.branchCode
           ) {
             throw new PurchaseWorkflowError("source-expense-invalid");
           }
@@ -571,6 +598,7 @@ export async function createPurchaseBatchRecord(input: {
                 const item = itemById.get(line.itemId)!;
                 return {
                   itemId: line.itemId,
+                  branchCode: input.branchCode,
                   description: item.name,
                   unit: item.unit,
                   orderedQuantity: line.orderedQuantity,
@@ -585,6 +613,7 @@ export async function createPurchaseBatchRecord(input: {
           await tx.purchaseDocument.create({
             data: {
               purchaseId: purchase.id,
+              branchCode: input.branchCode,
               uploadedById: input.createdById,
               kind: "purchase",
               storageKey: input.document.storageKey,
@@ -605,6 +634,7 @@ export async function createPurchaseBatchRecord(input: {
 
 export async function confirmPurchaseRecord(input: {
   purchaseId: string;
+  branchCode: string;
   expectedRevision: number;
   confirmedById: string;
   cashSessionId?: string;
@@ -613,14 +643,18 @@ export async function confirmPurchaseRecord(input: {
 }) {
   return withDatabaseError("confirmPurchaseRecord", async () =>
     prisma.$transaction(async (tx) => {
-      const purchase = await lockPurchase(tx, input.purchaseId);
+      const purchase = await lockPurchase(tx, input.purchaseId, input.branchCode);
+      await assertActiveUser(tx, input.confirmedById, input.branchCode);
       if (purchase.status !== "draft") throw new PurchaseWorkflowError("invalid-status");
       if (purchase.revision !== input.expectedRevision) {
         throw new PurchaseWorkflowError("concurrent-update");
       }
 
       if (purchase.sourceCashExpense) {
-        if (purchase.sourceCashExpense.totalCents !== purchase.totalCents) {
+        if (
+          purchase.sourceCashExpense.totalCents !== purchase.totalCents ||
+          purchase.sourceCashExpense.movement.branchCode !== purchase.branchCode
+        ) {
           throw new PurchaseWorkflowError("source-expense-total-mismatch");
         }
         await tx.purchasePayment.create({
@@ -671,6 +705,7 @@ export async function confirmPurchaseRecord(input: {
 
 export async function recordPurchasePayment(input: {
   purchaseId: string;
+  branchCode: string;
   cashSessionId: string;
   method: Exclude<PurchasePaymentMethod, "credit">;
   amountCents: number;
@@ -684,8 +719,14 @@ export async function recordPurchasePayment(input: {
       const reused = await tx.purchasePayment.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
-      if (reused) return reused;
-      const purchase = await lockPurchase(tx, input.purchaseId);
+      if (reused) {
+        if (reused.branchCode !== input.branchCode) {
+          throw new PurchaseWorkflowError("branch-mismatch");
+        }
+        return reused;
+      }
+      const purchase = await lockPurchase(tx, input.purchaseId, input.branchCode);
+      await assertActiveUser(tx, input.recordedById, input.branchCode);
       if (purchase.status === "draft" || purchase.status === "cancelled") {
         throw new PurchaseWorkflowError("invalid-status");
       }
@@ -707,13 +748,15 @@ export async function recordPurchasePayment(input: {
 
 export async function cancelPurchaseRecord(input: {
   purchaseId: string;
+  branchCode: string;
   expectedRevision: number;
   cancelledById: string;
   reason: string;
 }) {
   return withDatabaseError("cancelPurchaseRecord", async () =>
     prisma.$transaction(async (tx) => {
-      const purchase = await lockPurchase(tx, input.purchaseId);
+      const purchase = await lockPurchase(tx, input.purchaseId, input.branchCode);
+      await assertActiveUser(tx, input.cancelledById, input.branchCode);
       if (
         !["draft", "confirmed"].includes(purchase.status) ||
         purchase.payments.length > 0 ||
@@ -764,12 +807,22 @@ export async function createPurchaseReceiptRecord(input: {
       const reused = await tx.purchaseReceipt.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
-      if (reused) return reused;
-      const purchase = await lockPurchase(tx, input.purchaseId);
+      if (reused) {
+        if (reused.branchCode !== input.branchCode) {
+          throw new PurchaseWorkflowError("branch-mismatch");
+        }
+        return reused;
+      }
+      const purchase = await lockPurchase(tx, input.purchaseId, input.branchCode);
       const reusedAfterLock = await tx.purchaseReceipt.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
-      if (reusedAfterLock) return reusedAfterLock;
+      if (reusedAfterLock) {
+        if (reusedAfterLock.branchCode !== input.branchCode) {
+          throw new PurchaseWorkflowError("branch-mismatch");
+        }
+        return reusedAfterLock;
+      }
       if (!["confirmed", "partially_received"].includes(purchase.status)) {
         throw new PurchaseWorkflowError("invalid-status");
       }
@@ -777,6 +830,7 @@ export async function createPurchaseReceiptRecord(input: {
         throw new PurchaseWorkflowError("branch-mismatch");
       }
       await assertActiveUser(tx, input.receivedById, purchase.branchCode);
+      await assertActiveUser(tx, input.recordedById, purchase.branchCode);
       const validLines = input.lines.filter((line) => line.quantity > 0);
       if (validLines.length === 0) throw new PurchaseWorkflowError("receipt-empty");
       const purchaseLineById = new Map(purchase.lines.map((line) => [line.id, line]));
@@ -831,6 +885,7 @@ export async function createPurchaseReceiptRecord(input: {
             purchaseLineId: purchaseLine.id,
             itemId: purchaseLine.itemId,
             lotId: lot.id,
+            branchCode: input.branchCode,
             quantity: line.quantity,
             unitCostCents: line.unitCostCents,
             subtotalCents: line.quantity * line.unitCostCents
@@ -851,7 +906,9 @@ export async function createPurchaseReceiptRecord(input: {
           reason: `Recepción ${receipt.receiptNumber} · ${lot.internalLotCode}`
         });
         await tx.purchaseLine.update({
-          where: { id: purchaseLine.id },
+          where: {
+            id_branchCode: { id: purchaseLine.id, branchCode: input.branchCode }
+          },
           data: { receivedQuantity: { increment: line.quantity } }
         });
       }
@@ -875,6 +932,7 @@ export async function createPurchaseReceiptRecord(input: {
           data: {
             purchaseId: purchase.id,
             receiptId: receipt.id,
+            branchCode: input.branchCode,
             uploadedById: input.recordedById,
             kind: "receipt",
             storageKey: input.document.storageKey,
@@ -893,6 +951,7 @@ export async function createPurchaseReceiptRecord(input: {
 
 export async function createInventoryLotAdjustmentRecord(input: {
   lotId: string;
+  branchCode: string;
   kind: InventoryLotAdjustmentKind;
   quantity: number;
   restocked: boolean;
@@ -906,13 +965,30 @@ export async function createInventoryLotAdjustmentRecord(input: {
       const reused = await tx.inventoryLotAdjustment.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
-      if (reused) return reused;
-      await tx.$queryRaw`SELECT "id" FROM "InventoryLot" WHERE "id" = ${input.lotId} FOR UPDATE`;
+      if (reused) {
+        if (reused.branchCode !== input.branchCode) {
+          throw new PurchaseWorkflowError("branch-mismatch");
+        }
+        return reused;
+      }
+      await tx.$queryRaw`
+        SELECT "id" FROM "InventoryLot"
+        WHERE "id" = ${input.lotId} AND "branchCode" = ${input.branchCode}
+        FOR UPDATE
+      `;
       const reusedAfterLock = await tx.inventoryLotAdjustment.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
-      if (reusedAfterLock) return reusedAfterLock;
-      const lot = await tx.inventoryLot.findUniqueOrThrow({ where: { id: input.lotId } });
+      if (reusedAfterLock) {
+        if (reusedAfterLock.branchCode !== input.branchCode) {
+          throw new PurchaseWorkflowError("branch-mismatch");
+        }
+        return reusedAfterLock;
+      }
+      const lot = await tx.inventoryLot.findUniqueOrThrow({
+        where: { id_branchCode: { id: input.lotId, branchCode: input.branchCode } }
+      });
+      await assertActiveUser(tx, input.recordedById, input.branchCode);
       await assertDirectionAuthorizer(tx, input.authorizedById, lot.branchCode);
       const restocked =
         input.kind === "patient_return" || input.kind === "correction"
@@ -936,6 +1012,7 @@ export async function createInventoryLotAdjustmentRecord(input: {
         data: {
           itemId: lot.itemId,
           lotId: lot.id,
+          branchCode: lot.branchCode,
           recordedById: input.recordedById,
           authorizedById: input.authorizedById,
           kind: input.kind,
@@ -950,9 +1027,9 @@ export async function createInventoryLotAdjustmentRecord(input: {
         await applyInventoryMovement(tx, {
           itemId: lot.itemId,
           userId: input.recordedById,
-          purchaseId: lot.purchaseId,
-          purchaseLineId: lot.purchaseLineId,
-          receiptId: lot.receiptId,
+          purchaseId: lot.purchaseId ?? undefined,
+          purchaseLineId: lot.purchaseLineId ?? undefined,
+          receiptId: lot.receiptId ?? undefined,
           lotId: lot.id,
           lotAdjustmentId: adjustment.id,
           branchCode: lot.branchCode,
@@ -973,10 +1050,10 @@ export async function createInventoryLotAdjustmentRecord(input: {
 }
 
 function purchaseWhere(input: {
+  branchCode: string;
   search?: string;
   status?: PurchaseStatus | "all";
   supplierId?: string;
-  branchCode?: string;
 }): Prisma.PurchaseWhereInput {
   const search = input.search?.trim();
   return {
@@ -995,11 +1072,11 @@ function purchaseWhere(input: {
 
 export async function getPurchases(
   input: PaginationInput & {
+    branchCode: string;
     search?: string;
     status?: PurchaseStatus | "all";
     supplierId?: string;
-    branchCode?: string;
-  } = {}
+  }
 ) {
   const pagination = getPagination(input);
   return withDatabaseError("getPurchases", () =>
@@ -1026,17 +1103,17 @@ export async function getPurchases(
 }
 
 export async function countPurchases(input: {
+  branchCode: string;
   search?: string;
   status?: PurchaseStatus | "all";
   supplierId?: string;
-  branchCode?: string;
-} = {}) {
+}) {
   return withDatabaseError("countPurchases", () =>
     prisma.purchase.count({ where: purchaseWhere(input) })
   );
 }
 
-export async function getPurchaseById(id: string, branchCode?: string) {
+export async function getPurchaseById(id: string, branchCode: string) {
   return withDatabaseError("getPurchaseById", () =>
     prisma.purchase.findFirst({
       where: { id, branchCode },
@@ -1080,7 +1157,7 @@ export async function getPurchaseById(id: string, branchCode?: string) {
   );
 }
 
-export async function getPurchaseSummary(branchCode?: string) {
+export async function getPurchaseSummary(branchCode: string) {
   return withDatabaseError("getPurchaseSummary", async () => {
     const today = todayDatabaseDate();
     const [drafts, pendingReceipts, pendingPayments, expiringLots] = await Promise.all([
@@ -1131,13 +1208,14 @@ export async function getPurchaseSummary(branchCode?: string) {
   });
 }
 
-export async function getPendingUrgentPurchaseExpenses() {
+export async function getPendingUrgentPurchaseExpenses(branchCode: string) {
   return withDatabaseError("getPendingUrgentPurchaseExpenses", () =>
     prisma.cashExpense.findMany({
       where: {
         kind: "urgent_purchase",
         requiresInventoryEntry: true,
-        purchase: null
+        purchase: null,
+        cashSession: { branchCode }
       },
       include: { movement: true },
       orderBy: { occurredAt: "desc" },
@@ -1180,7 +1258,7 @@ export async function getPurchaseFormItems(branchCode: string) {
   );
 }
 
-export async function getOpenPurchaseCashSessions(branchCode?: string) {
+export async function getOpenPurchaseCashSessions(branchCode: string) {
   return withDatabaseError("getOpenPurchaseCashSessions", () =>
     prisma.cashSession.findMany({
       where: { branchCode, status: "open", businessDate: todayDatabaseDate() },
@@ -1197,11 +1275,11 @@ export async function getOpenPurchaseCashSessions(branchCode?: string) {
 
 export async function getInventoryLots(
   input: PaginationInput & {
+    branchCode: string;
     search?: string;
     status?: "available" | "expiring" | "expired" | "empty" | "all";
     itemId?: string;
-    branchCode?: string;
-  } = {}
+  }
 ) {
   const pagination = getPagination(input);
   const today = todayDatabaseDate();
@@ -1238,6 +1316,18 @@ export async function getInventoryLots(
         supplier: true,
         purchase: true,
         receipt: true,
+        incomingTransferAllocation: {
+          include: {
+            transfer: {
+              select: {
+                id: true,
+                transferNumber: true,
+                sourceBranchCode: true,
+                destinationBranchCode: true
+              }
+            }
+          }
+        },
         adjustments: {
           include: { recordedBy: true, authorizedBy: true },
           orderBy: { createdAt: "desc" }
@@ -1253,7 +1343,7 @@ export async function getInventoryLots(
   );
 }
 
-export async function getFefoInventoryLotIds(branchCode = "el-alto") {
+export async function getFefoInventoryLotIds(branchCode: string) {
   return withDatabaseError("getFefoInventoryLotIds", async () => {
     const today = todayDatabaseDate();
     const rows = await prisma.$queryRaw<Array<{ id: string }>>`
@@ -1270,11 +1360,11 @@ export async function getFefoInventoryLotIds(branchCode = "el-alto") {
 }
 
 export async function countInventoryLots(input: {
+  branchCode: string;
   search?: string;
   status?: "available" | "expiring" | "expired" | "empty" | "all";
   itemId?: string;
-  branchCode?: string;
-} = {}) {
+}) {
   const today = todayDatabaseDate();
   const threshold = new Date(today.getTime() + 60 * 86_400_000);
   const search = input.search?.trim();
@@ -1317,7 +1407,7 @@ export async function countInventoryLots(input: {
 export async function getPurchaseDocumentById(id: string, branchCode: string) {
   return withDatabaseError("getPurchaseDocumentById", () =>
     prisma.purchaseDocument.findFirst({
-      where: { id, purchase: { branchCode } }
+      where: { id, branchCode }
     })
   );
 }

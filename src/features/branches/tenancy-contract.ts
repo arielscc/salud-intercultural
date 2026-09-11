@@ -250,17 +250,6 @@ export const branchModelGroups = [
 
 const legacyMissingBranchModelsByTask = [
   {
-    remediationTask: 11,
-    models: [
-      "PurchaseLine",
-      "PurchaseReceiptLine",
-      "InventoryLotAdjustment",
-      "PurchaseDocument",
-      "InventoryTransferLotAllocation",
-      "InventoryAlert"
-    ]
-  },
-  {
     remediationTask: 12,
     models: [
       "GeneratedDocument",
@@ -299,7 +288,8 @@ const legacyNullableBranchModelsByTask = [
 }>;
 
 const requiredBranchFieldOverrides: Partial<Record<ModelName, readonly string[]>> = {
-  InventoryTransfer: ["sourceBranchCode", "destinationBranchCode"]
+  InventoryTransfer: ["sourceBranchCode", "destinationBranchCode"],
+  InventoryTransferLotAllocation: ["sourceBranchCode", "destinationBranchCode"]
 };
 
 function addContract(

@@ -843,14 +843,14 @@ model InternalUser {
 /// Sede física de la clínica. `preparation` permite configurar una nueva sede
 /// sin habilitar todavía operaciones reales ni mostrarla como seleccionable.
 model ClinicBranch {
-  code                      String                          @id
+  code                      String                           @id
   name                      String
   city                      String
   department                String
-  status                    ClinicBranchStatus              @default(preparation)
+  status                    ClinicBranchStatus               @default(preparation)
   openedAt                  DateTime?
-  createdAt                 DateTime                        @default(now())
-  updatedAt                 DateTime                        @updatedAt
+  createdAt                 DateTime                         @default(now())
+  updatedAt                 DateTime                         @updatedAt
   userAssignments           InternalUserBranch[]
   visits                    Visit[]
   sales                     Sale[]
@@ -858,14 +858,21 @@ model ClinicBranch {
   cashMovements             CashMovement[]
   cashSessions              CashSession[]
   purchases                 Purchase[]
+  purchaseLines             PurchaseLine[]
   purchasePayments          PurchasePayment[]
   purchaseReceipts          PurchaseReceipt[]
+  purchaseReceiptLines      PurchaseReceiptLine[]
+  purchaseDocuments         PurchaseDocument[]
   inventoryLots             InventoryLot[]
+  inventoryLotAdjustments   InventoryLotAdjustment[]
   inventoryMovements        InventoryMovement[]
   inventoryAdjustments      InventoryAdjustment[]
+  inventoryAlerts           InventoryAlert[]
   inventoryBalances         BranchInventoryBalance[]
-  outgoingTransfers         InventoryTransfer[]             @relation("InventoryTransferSourceBranch")
-  incomingTransfers         InventoryTransfer[]             @relation("InventoryTransferDestinationBranch")
+  outgoingTransfers         InventoryTransfer[]              @relation("InventoryTransferSourceBranch")
+  incomingTransfers         InventoryTransfer[]              @relation("InventoryTransferDestinationBranch")
+  outgoingTransferLots      InventoryTransferLotAllocation[] @relation("InventoryTransferLotSourceBranch")
+  incomingTransferLots      InventoryTransferLotAllocation[] @relation("InventoryTransferLotDestinationBranch")
   moduleActivations         ModuleActivation[]
   followUpTasks             FollowUpTask[]
   supervisedReminderRules   SupervisedReminderRule[]
@@ -892,9 +899,9 @@ model ClinicBranch {
   vitalSigns                VitalSigns[]
   nursingApplications       NursingApplication[]
   nursingNotes              NursingNote[]
-  clinicalAttachments       ClinicalAttachment[]            @relation("ClinicalAttachmentOriginBranch")
-  attachmentOriginGrants    ClinicalAttachmentAccessGrant[] @relation("ClinicalAttachmentGrantOriginBranch")
-  attachmentRequestGrants   ClinicalAttachmentAccessGrant[] @relation("ClinicalAttachmentGrantRequestBranch")
+  clinicalAttachments       ClinicalAttachment[]             @relation("ClinicalAttachmentOriginBranch")
+  attachmentOriginGrants    ClinicalAttachmentAccessGrant[]  @relation("ClinicalAttachmentGrantOriginBranch")
+  attachmentRequestGrants   ClinicalAttachmentAccessGrant[]  @relation("ClinicalAttachmentGrantRequestBranch")
   nursingWorkItemResults    NursingWorkItemResult[]
   serviceSessionPackages    ServiceSessionPackage[]
   serviceSessionUses        ServiceSessionUse[]
@@ -2629,6 +2636,7 @@ model CashSession {
   purchasePayments   PurchasePayment[]
   reconciliations    CashSessionReconciliation[]
 
+  @@unique([id, branchCode])
   @@index([status, openedAt])
   @@index([branchCode, registerName, businessDate])
   @@index([responsibleId])
@@ -3034,91 +3042,98 @@ model Supplier {
 }
 
 model SupplierBranchProfile {
-  supplierId             String
-  branchCode             String
-  active                 Boolean       @default(false)
-  accountExecutiveName   String?
-  accountExecutivePhone  String?
-  commercialTerms        String?
-  paymentTermDays        Int?
-  references             String?
-  notes                  String?
-  revision               Int           @default(1)
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
-  supplier               Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-  branch                 ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
-  preferredForItems      BranchInventoryItem[]
+  supplierId            String
+  branchCode            String
+  active                Boolean               @default(false)
+  accountExecutiveName  String?
+  accountExecutivePhone String?
+  commercialTerms       String?
+  paymentTermDays       Int?
+  references            String?
+  notes                 String?
+  revision              Int                   @default(1)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  supplier              Supplier              @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  branch                ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  preferredForItems     BranchInventoryItem[]
+  purchases             Purchase[]
 
   @@id([supplierId, branchCode])
   @@index([branchCode, active])
 }
 
 model InventoryItem {
-  id                  String                        @id @default(cuid())
+  id                   String                        @id @default(cuid())
   /// Campos de compatibilidad histórica. Las operaciones usan BranchInventoryItem.
-  sku                 String?                       @unique
-  internalCode        String                        @unique
-  name                String
-  description         String?
-  category            String                        @default("Sin categoría")
-  unit                String                        @default("unidad")
-  usage               InventoryItemUsage            @default(both)
-  presentation        String?
-  manufacturer        String?
-  barcode             String?                       @unique
-  salePriceCents      Int                           @default(0)
-  referenceCostCents  Int                           @default(0)
-  maxDiscountCents    Int                           @default(0)
-  /// Total global heredado hasta la Tarea 11. Ninguna validación operativa debe
-  /// usarlo: el saldo efectivo vive en `BranchInventoryBalance`.
-  currentStock        Int                           @default(0)
-  minimumStock        Int                           @default(0)
-  active              Boolean                       @default(true)
-  revision            Int                           @default(1)
-  createdAt           DateTime                      @default(now())
-  updatedAt           DateTime                      @updatedAt
-  saleItems           SaleItem[]
-  serviceComponents   ServiceCatalogComponent[]
-  doctorOrderLines    DoctorOrderLine[]
-  nursingApplications NursingApplication[]
-  prescriptionItems   PrescriptionItem[]
-  movements           InventoryMovement[]
-  adjustments         InventoryAdjustment[]
-  alerts              InventoryAlert[]
-  supplierLinks       InventoryItemSupplier[]
-  catalogVersions     InventoryItemCatalogVersion[]
-  purchaseLines       PurchaseLine[]
-  receiptLines        PurchaseReceiptLine[]
-  lots                InventoryLot[]
-  lotAdjustments      InventoryLotAdjustment[]
-  branchBalances      BranchInventoryBalance[]
+  sku                  String?                       @unique
+  internalCode         String                        @unique
+  name                 String
+  description          String?
+  category             String                        @default("Sin categoría")
+  unit                 String                        @default("unidad")
+  usage                InventoryItemUsage            @default(both)
+  presentation         String?
+  manufacturer         String?
+  barcode              String?                       @unique
+  salePriceCents       Int                           @default(0)
+  referenceCostCents   Int                           @default(0)
+  maxDiscountCents     Int                           @default(0)
+  minimumStock         Int                           @default(0)
+  active               Boolean                       @default(true)
+  revision             Int                           @default(1)
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  saleItems            SaleItem[]
+  serviceComponents    ServiceCatalogComponent[]
+  doctorOrderLines     DoctorOrderLine[]
+  nursingApplications  NursingApplication[]
+  prescriptionItems    PrescriptionItem[]
+  movements            InventoryMovement[]
+  adjustments          InventoryAdjustment[]
+  alerts               InventoryAlert[]
+  supplierLinks        InventoryItemSupplier[]
+  catalogVersions      InventoryItemCatalogVersion[]
+  purchaseLines        PurchaseLine[]
+  receiptLines         PurchaseReceiptLine[]
+  lots                 InventoryLot[]
+  lotAdjustments       InventoryLotAdjustment[]
+  branchBalances       BranchInventoryBalance[]
   branchConfigurations BranchInventoryItem[]
-  transfers           InventoryTransfer[]
+  transfers            InventoryTransfer[]
 
   @@index([name])
   @@index([category])
   @@index([usage])
-  @@index([currentStock])
 }
 
 model BranchInventoryItem {
   itemId              String
   branchCode          String
   sku                 String?
-  available           Boolean                @default(false)
-  salePriceCents      Int                    @default(0)
-  referenceCostCents Int                    @default(0)
-  maxDiscountCents   Int                    @default(0)
-  minimumStock       Int                    @default(0)
-  locationCode       String?
+  available           Boolean                  @default(false)
+  salePriceCents      Int                      @default(0)
+  referenceCostCents  Int                      @default(0)
+  maxDiscountCents    Int                      @default(0)
+  minimumStock        Int                      @default(0)
+  locationCode        String?
   preferredSupplierId String?
-  revision            Int                    @default(1)
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
-  item                 InventoryItem          @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  branch               ClinicBranch           @relation(fields: [branchCode], references: [code], onDelete: Restrict)
-  preferredSupplier    SupplierBranchProfile? @relation(fields: [preferredSupplierId, branchCode], references: [supplierId, branchCode], onDelete: Restrict)
+  revision            Int                      @default(1)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  item                InventoryItem            @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branch              ClinicBranch             @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  preferredSupplier   SupplierBranchProfile?   @relation(fields: [preferredSupplierId, branchCode], references: [supplierId, branchCode], onDelete: Restrict)
+  balance             BranchInventoryBalance?
+  purchaseLines       PurchaseLine[]
+  receiptLines        PurchaseReceiptLine[]
+  lots                InventoryLot[]
+  lotAdjustments      InventoryLotAdjustment[]
+  movements           InventoryMovement[]
+  adjustments         InventoryAdjustment[]
+  alerts              InventoryAlert[]
+  outgoingTransfers   InventoryTransfer[]      @relation("InventoryTransferSourceItem")
+  incomingTransfers   InventoryTransfer[]      @relation("InventoryTransferDestinationItem")
 
   @@id([itemId, branchCode])
   @@unique([branchCode, sku])
@@ -3127,15 +3142,16 @@ model BranchInventoryItem {
   @@index([preferredSupplierId, branchCode])
 }
 
-/// Stock operativo separado por producto y sucursal. `InventoryItem.currentStock`
-/// se conserva como total compatible, pero las validaciones usan este saldo.
+/// Saldo materializado por producto y sucursal. Se reconcilia exclusivamente
+/// contra el libro append-only de movimientos de la misma sede.
 model BranchInventoryBalance {
-  itemId       String
-  branchCode   String
-  currentStock Int           @default(0)
-  updatedAt    DateTime      @updatedAt
-  item         InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  branch       ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  itemId        String
+  branchCode    String
+  currentStock  Int                 @default(0)
+  updatedAt     DateTime            @updatedAt
+  item          InventoryItem       @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branch        ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  configuration BranchInventoryItem @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
 
   @@id([itemId, branchCode])
   @@index([branchCode, currentStock])
@@ -3236,6 +3252,7 @@ model Purchase {
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
   supplier              Supplier              @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  supplierProfile       SupplierBranchProfile @relation(fields: [supplierId, branchCode], references: [supplierId, branchCode], onDelete: Restrict)
   sourceCashExpense     CashExpense?          @relation(fields: [sourceCashExpenseId], references: [id], onDelete: Restrict)
   createdBy             InternalUser          @relation("PurchaseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   confirmedBy           InternalUser?         @relation("PurchaseConfirmedBy", fields: [confirmedById], references: [id], onDelete: Restrict)
@@ -3248,6 +3265,7 @@ model Purchase {
   movements             InventoryMovement[]
   documents             PurchaseDocument[]
 
+  @@unique([id, branchCode])
   @@index([supplierId, purchaseDate])
   @@index([status, purchaseDate])
   @@index([branchCode, purchaseDate])
@@ -3258,6 +3276,7 @@ model PurchaseLine {
   id               String                @id @default(cuid())
   purchaseId       String
   itemId           String
+  branchCode       String
   description      String
   unit             String
   orderedQuantity  Int
@@ -3265,14 +3284,18 @@ model PurchaseLine {
   unitCostCents    Int
   subtotalCents    Int
   createdAt        DateTime              @default(now())
-  purchase         Purchase              @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchase         Purchase              @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
   item             InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branchItem       BranchInventoryItem   @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
+  branch           ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   receiptLines     PurchaseReceiptLine[]
   lots             InventoryLot[]
   movements        InventoryMovement[]
 
+  @@unique([id, branchCode])
   @@index([purchaseId])
-  @@index([itemId])
+  @@index([itemId, branchCode])
+  @@index([branchCode, createdAt])
 }
 
 model PurchasePayment {
@@ -3288,13 +3311,13 @@ model PurchasePayment {
   idempotencyKey String                @unique
   paidAt         DateTime              @default(now())
   createdAt      DateTime              @default(now())
-  purchase       Purchase              @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
-  cashSession    CashSession?          @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+  purchase       Purchase              @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  cashSession    CashSession?          @relation(fields: [cashSessionId, branchCode], references: [id, branchCode], onDelete: Restrict)
   cashMovement   CashMovement?         @relation(fields: [cashMovementId], references: [id], onDelete: Restrict)
   recordedBy     InternalUser          @relation("PurchasePaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
   branch         ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([purchaseId, paidAt])
+  @@index([purchaseId, branchCode, paidAt])
   @@index([cashSessionId])
   @@index([recordedById])
   @@index([branchCode, paidAt])
@@ -3313,7 +3336,7 @@ model PurchaseReceipt {
   notes          String?
   idempotencyKey String                @unique
   createdAt      DateTime              @default(now())
-  purchase       Purchase              @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchase       Purchase              @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
   recordedBy     InternalUser          @relation("PurchaseReceiptRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
   receivedBy     InternalUser          @relation("PurchaseReceiptReceivedBy", fields: [receivedById], references: [id], onDelete: Restrict)
   branch         ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
@@ -3322,31 +3345,37 @@ model PurchaseReceipt {
   movements      InventoryMovement[]
   documents      PurchaseDocument[]
 
-  @@index([purchaseId, receivedAt])
+  @@unique([id, branchCode])
+  @@index([purchaseId, branchCode, receivedAt])
   @@index([branchCode, locationCode, receivedAt])
   @@index([recordedById])
   @@index([receivedById])
 }
 
 model PurchaseReceiptLine {
-  id             String             @id @default(cuid())
+  id             String              @id @default(cuid())
   receiptId      String
   purchaseLineId String
   itemId         String
-  lotId          String             @unique
+  lotId          String              @unique
+  branchCode     String
   quantity       Int
   unitCostCents  Int
   subtotalCents  Int
-  createdAt      DateTime           @default(now())
-  receipt        PurchaseReceipt    @relation(fields: [receiptId], references: [id], onDelete: Restrict)
-  purchaseLine   PurchaseLine       @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
-  item           InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  lot            InventoryLot       @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  createdAt      DateTime            @default(now())
+  receipt        PurchaseReceipt     @relation(fields: [receiptId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  purchaseLine   PurchaseLine        @relation(fields: [purchaseLineId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  item           InventoryItem       @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branchItem     BranchInventoryItem @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
+  lot            InventoryLot        @relation(fields: [lotId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch         ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   inventoryEntry InventoryMovement?
 
-  @@index([receiptId])
-  @@index([purchaseLineId])
-  @@index([itemId])
+  @@unique([id, branchCode])
+  @@unique([lotId, branchCode])
+  @@index([receiptId, branchCode])
+  @@index([purchaseLineId, branchCode])
+  @@index([itemId, branchCode])
 }
 
 model InventoryLot {
@@ -3354,9 +3383,9 @@ model InventoryLot {
   internalLotCode             String                           @unique
   itemId                      String
   supplierId                  String
-  purchaseId                  String
-  purchaseLineId              String
-  receiptId                   String
+  purchaseId                  String?
+  purchaseLineId              String?
+  receiptId                   String?
   batchNumber                 String?
   expirationDate              DateTime?                        @db.Date
   branchCode                  String
@@ -3368,10 +3397,11 @@ model InventoryLot {
   createdAt                   DateTime                         @default(now())
   updatedAt                   DateTime                         @updatedAt
   item                        InventoryItem                    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branchItem                  BranchInventoryItem              @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
   supplier                    Supplier                         @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-  purchase                    Purchase                         @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
-  purchaseLine                PurchaseLine                     @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
-  receipt                     PurchaseReceipt                  @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  purchase                    Purchase?                        @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  purchaseLine                PurchaseLine?                    @relation(fields: [purchaseLineId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  receipt                     PurchaseReceipt?                 @relation(fields: [receiptId, branchCode], references: [id, branchCode], onDelete: Restrict)
   branch                      ClinicBranch                     @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   receiptLine                 PurchaseReceiptLine?
   movements                   InventoryMovement[]
@@ -3379,10 +3409,11 @@ model InventoryLot {
   outgoingTransferAllocations InventoryTransferLotAllocation[] @relation("InventoryTransferSourceLot")
   incomingTransferAllocation  InventoryTransferLotAllocation?  @relation("InventoryTransferDestinationLot")
 
+  @@unique([id, branchCode])
   @@index([itemId, branchCode, locationCode, expirationDate])
-  @@index([supplierId])
-  @@index([purchaseId])
-  @@index([receiptId])
+  @@index([supplierId, branchCode])
+  @@index([purchaseId, branchCode])
+  @@index([receiptId, branchCode])
   @@index([batchNumber])
   @@index([active, expirationDate])
 }
@@ -3391,6 +3422,7 @@ model InventoryLotAdjustment {
   id             String                     @id @default(cuid())
   itemId         String
   lotId          String
+  branchCode     String
   recordedById   String
   authorizedById String
   kind           InventoryLotAdjustmentKind
@@ -3401,13 +3433,16 @@ model InventoryLotAdjustment {
   idempotencyKey String                     @unique
   createdAt      DateTime                   @default(now())
   item           InventoryItem              @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  lot            InventoryLot               @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  branchItem     BranchInventoryItem        @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
+  lot            InventoryLot               @relation(fields: [lotId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch         ClinicBranch               @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   recordedBy     InternalUser               @relation("InventoryLotAdjustmentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
   authorizedBy   InternalUser               @relation("InventoryLotAdjustmentAuthorizedBy", fields: [authorizedById], references: [id], onDelete: Restrict)
   movement       InventoryMovement?
 
-  @@index([itemId, createdAt])
-  @@index([lotId, createdAt])
+  @@unique([id, branchCode])
+  @@index([itemId, branchCode, createdAt])
+  @@index([lotId, branchCode, createdAt])
   @@index([recordedById])
   @@index([authorizedById])
 }
@@ -3416,6 +3451,7 @@ model PurchaseDocument {
   id             String                          @id @default(cuid())
   purchaseId     String
   receiptId      String?
+  branchCode     String
   uploadedById   String
   kind           PurchaseDocumentKind
   storageKey     String                          @unique
@@ -3425,12 +3461,14 @@ model PurchaseDocument {
   sizeBytes      Int
   checksumSha256 String
   createdAt      DateTime                        @default(now())
-  purchase       Purchase                        @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
-  receipt        PurchaseReceipt?                @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  purchase       Purchase                        @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  receipt        PurchaseReceipt?                @relation(fields: [receiptId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch         ClinicBranch                    @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   uploadedBy     InternalUser                    @relation("PurchaseDocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
 
-  @@index([purchaseId, createdAt])
-  @@index([receiptId])
+  @@unique([id, branchCode])
+  @@index([purchaseId, branchCode, createdAt])
+  @@index([receiptId, branchCode])
   @@index([uploadedById])
 }
 
@@ -3455,20 +3493,24 @@ model InventoryMovement {
   reason           String
   createdAt        DateTime                @default(now())
   item             InventoryItem           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branchItem       BranchInventoryItem     @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
   sale             Sale?                   @relation(fields: [saleId], references: [id], onDelete: SetNull)
   saleItem         SaleItem?               @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
-  purchase         Purchase?               @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
-  purchaseLine     PurchaseLine?           @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
-  receipt          PurchaseReceipt?        @relation(fields: [receiptId], references: [id], onDelete: Restrict)
-  receiptLine      PurchaseReceiptLine?    @relation(fields: [receiptLineId], references: [id], onDelete: Restrict)
-  lot              InventoryLot?           @relation(fields: [lotId], references: [id], onDelete: Restrict)
-  lotAdjustment    InventoryLotAdjustment? @relation(fields: [lotAdjustmentId], references: [id], onDelete: Restrict)
+  purchase         Purchase?               @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  purchaseLine     PurchaseLine?           @relation(fields: [purchaseLineId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  receipt          PurchaseReceipt?        @relation(fields: [receiptId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  receiptLine      PurchaseReceiptLine?    @relation(fields: [receiptLineId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  lot              InventoryLot?           @relation(fields: [lotId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  lotAdjustment    InventoryLotAdjustment? @relation(fields: [lotAdjustmentId, branchCode], references: [id, branchCode], onDelete: Restrict)
   user             InternalUser?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   branch           ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   outgoingTransfer InventoryTransfer?      @relation("InventoryTransferOutMovement")
   incomingTransfer InventoryTransfer?      @relation("InventoryTransferInMovement")
 
-  @@index([itemId])
+  @@unique([id, branchCode])
+  @@unique([receiptLineId, branchCode])
+  @@unique([lotAdjustmentId, branchCode])
+  @@index([itemId, branchCode])
   @@index([saleId])
   @@index([saleItemId])
   @@index([purchaseId])
@@ -3481,18 +3523,19 @@ model InventoryMovement {
 }
 
 model InventoryAdjustment {
-  id            String        @id @default(cuid())
+  id            String              @id @default(cuid())
   itemId        String
   userId        String?
   branchCode    String
   quantityDelta Int
   reason        String
-  createdAt     DateTime      @default(now())
-  item          InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  user          InternalUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
-  branch        ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  createdAt     DateTime            @default(now())
+  item          InventoryItem       @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branchItem    BranchInventoryItem @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
+  user          InternalUser?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch        ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([itemId])
+  @@index([itemId, branchCode])
   @@index([userId])
   @@index([branchCode, createdAt])
   @@index([createdAt])
@@ -3514,13 +3557,18 @@ model InventoryTransfer {
   idempotencyKey        String                           @unique
   createdAt             DateTime                         @default(now())
   item                  InventoryItem                    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  sourceItem            BranchInventoryItem              @relation("InventoryTransferSourceItem", fields: [itemId, sourceBranchCode], references: [itemId, branchCode], onDelete: Restrict)
+  destinationItem       BranchInventoryItem              @relation("InventoryTransferDestinationItem", fields: [itemId, destinationBranchCode], references: [itemId, branchCode], onDelete: Restrict)
   sourceBranch          ClinicBranch                     @relation("InventoryTransferSourceBranch", fields: [sourceBranchCode], references: [code], onDelete: Restrict)
   destinationBranch     ClinicBranch                     @relation("InventoryTransferDestinationBranch", fields: [destinationBranchCode], references: [code], onDelete: Restrict)
   createdBy             InternalUser                     @relation("InventoryTransferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  sourceMovement        InventoryMovement                @relation("InventoryTransferOutMovement", fields: [sourceMovementId], references: [id], onDelete: Restrict)
-  destinationMovement   InventoryMovement                @relation("InventoryTransferInMovement", fields: [destinationMovementId], references: [id], onDelete: Restrict)
+  sourceMovement        InventoryMovement                @relation("InventoryTransferOutMovement", fields: [sourceMovementId, sourceBranchCode], references: [id, branchCode], onDelete: Restrict)
+  destinationMovement   InventoryMovement                @relation("InventoryTransferInMovement", fields: [destinationMovementId, destinationBranchCode], references: [id, branchCode], onDelete: Restrict)
   lotAllocations        InventoryTransferLotAllocation[]
 
+  @@unique([id, sourceBranchCode, destinationBranchCode])
+  @@unique([sourceMovementId, sourceBranchCode])
+  @@unique([destinationMovementId, destinationBranchCode])
   @@index([sourceBranchCode, createdAt])
   @@index([destinationBranchCode, createdAt])
   @@index([itemId, createdAt])
@@ -3529,32 +3577,41 @@ model InventoryTransfer {
 /// Parte de un traslado que conserva el lote físico, su costo y vencimiento.
 /// El lote de destino es una nueva existencia de la misma partida en otra sede.
 model InventoryTransferLotAllocation {
-  id               String            @id @default(cuid())
-  transferId       String
-  sourceLotId      String
-  destinationLotId String            @unique
-  quantity         Int
-  createdAt        DateTime          @default(now())
-  transfer         InventoryTransfer @relation(fields: [transferId], references: [id], onDelete: Restrict)
-  sourceLot        InventoryLot      @relation("InventoryTransferSourceLot", fields: [sourceLotId], references: [id], onDelete: Restrict)
-  destinationLot   InventoryLot      @relation("InventoryTransferDestinationLot", fields: [destinationLotId], references: [id], onDelete: Restrict)
+  id                    String            @id @default(cuid())
+  transferId            String
+  sourceLotId           String
+  destinationLotId      String            @unique
+  sourceBranchCode      String
+  destinationBranchCode String
+  quantity              Int
+  createdAt             DateTime          @default(now())
+  transfer              InventoryTransfer @relation(fields: [transferId, sourceBranchCode, destinationBranchCode], references: [id, sourceBranchCode, destinationBranchCode], onDelete: Restrict)
+  sourceLot             InventoryLot      @relation("InventoryTransferSourceLot", fields: [sourceLotId, sourceBranchCode], references: [id, branchCode], onDelete: Restrict)
+  destinationLot        InventoryLot      @relation("InventoryTransferDestinationLot", fields: [destinationLotId, destinationBranchCode], references: [id, branchCode], onDelete: Restrict)
+  sourceBranch          ClinicBranch      @relation("InventoryTransferLotSourceBranch", fields: [sourceBranchCode], references: [code], onDelete: Restrict)
+  destinationBranch     ClinicBranch      @relation("InventoryTransferLotDestinationBranch", fields: [destinationBranchCode], references: [code], onDelete: Restrict)
 
   @@unique([transferId, sourceLotId])
-  @@index([sourceLotId, createdAt])
-  @@index([transferId])
+  @@unique([destinationLotId, destinationBranchCode])
+  @@index([sourceLotId, sourceBranchCode, createdAt])
+  @@index([destinationLotId, destinationBranchCode])
+  @@index([transferId, sourceBranchCode, destinationBranchCode])
 }
 
 model InventoryAlert {
   id         String               @id @default(cuid())
   itemId     String
+  branchCode String
   status     InventoryAlertStatus @default(open)
   message    String
   createdAt  DateTime             @default(now())
   resolvedAt DateTime?
   item       InventoryItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  branchItem BranchInventoryItem  @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Cascade)
+  branch     ClinicBranch         @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([itemId])
-  @@index([status, createdAt])
+  @@index([itemId, branchCode])
+  @@index([branchCode, status, createdAt])
 }
 
 /// Oferta vendible que el médico puede elegir en la consulta (servicio,
@@ -3563,31 +3620,31 @@ model InventoryAlert {
 /// al armar el pedido. El precio y el umbral históricos de una venta no cambian
 /// al editar este catálogo (se versiona de forma append-only).
 model ServiceCatalogItem {
-  id                  String                      @id @default(cuid())
-  code                String                      @unique
-  name                String
-  description         String?
-  category            String                      @default("Sin categoría")
-  kind                ServiceCatalogKind          @default(service)
+  id                   String                      @id @default(cuid())
+  code                 String                      @unique
+  name                 String
+  description          String?
+  category             String                      @default("Sin categoría")
+  kind                 ServiceCatalogKind          @default(service)
   /// Campos de compatibilidad histórica. La configuración efectiva es local.
-  basePriceCents      Int                         @default(0)
-  ownMaxDiscountCents Int                         @default(0)
+  basePriceCents       Int                         @default(0)
+  ownMaxDiscountCents  Int                         @default(0)
   /// Se ejecuta en Enfermería (sueroterapia, ozonoterapia o estudios): requiere
   /// pago previo antes de derivar (Tareas 4 y 8).
-  requiresNursing     Boolean                     @default(false)
+  requiresNursing      Boolean                     @default(false)
   /// Marca los servicios que se venden por sesiones (ver Tarea 5).
-  supportsSessions    Boolean                     @default(false)
-  sessionCount        Int?
-  packagePriceCents   Int?
-  sessionPriceCents   Int?
-  active              Boolean                     @default(true)
-  revision            Int                         @default(1)
-  createdAt           DateTime                    @default(now())
-  updatedAt           DateTime                    @updatedAt
-  components          ServiceCatalogComponent[]
-  versions            ServiceCatalogItemVersion[]
-  orderLines          DoctorOrderLine[]
-  sessionPackages     ServiceSessionPackage[]
+  supportsSessions     Boolean                     @default(false)
+  sessionCount         Int?
+  packagePriceCents    Int?
+  sessionPriceCents    Int?
+  active               Boolean                     @default(true)
+  revision             Int                         @default(1)
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  components           ServiceCatalogComponent[]
+  versions             ServiceCatalogItemVersion[]
+  orderLines           DoctorOrderLine[]
+  sessionPackages      ServiceSessionPackage[]
   branchConfigurations ServiceCatalogItemBranch[]
 
   @@index([name])

@@ -293,7 +293,7 @@ async function collectDomainSummaryFromClient(
     'SELECT COALESCE(SUM("amountCents"), 0)::text AS amount FROM "CashMovement"'
   );
   const inventory = await client.query<{ stock: string }>(
-    'SELECT COALESCE(SUM("currentStock"), 0)::text AS stock FROM "InventoryItem"'
+    'SELECT COALESCE(SUM("currentStock"), 0)::text AS stock FROM "BranchInventoryBalance"'
   );
   const available = await client.query<{ count: string }>(
     `SELECT COUNT(*)::text AS count

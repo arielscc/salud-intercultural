@@ -29,6 +29,7 @@ export class InventoryCatalogError extends Error {
       | "inactive-item"
       | "not-for-sale"
       | "inactive-supplier"
+      | "branch-mismatch"
       | "invalid-preferred"
   ) {
     super(code);
@@ -126,6 +127,11 @@ async function syncLowStockAlert(
   itemId: string,
   branchCode: string
 ) {
+  await tx.branchInventoryBalance.upsert({
+    where: { itemId_branchCode: { itemId, branchCode } },
+    create: { itemId, branchCode, currentStock: 0 },
+    update: {}
+  });
   const [item, configuration, balance] = await Promise.all([
     tx.inventoryItem.findUniqueOrThrow({ where: { id: itemId } }),
     tx.branchInventoryItem.findUniqueOrThrow({
@@ -141,13 +147,14 @@ async function syncLowStockAlert(
 
   if (hasLowStock) {
     const existing = await tx.inventoryAlert.findFirst({
-      where: { itemId, status: "open" }
+      where: { itemId, branchCode, status: "open" }
     });
 
     if (!existing) {
       await tx.inventoryAlert.create({
         data: {
           itemId,
+          branchCode,
           status: "open",
           message: `${item.name} está en stock bajo (${currentStock} ${item.unit}) en ${branchCode}.`
         }
@@ -157,7 +164,7 @@ async function syncLowStockAlert(
   }
 
   await tx.inventoryAlert.updateMany({
-    where: { itemId, status: "open" },
+    where: { itemId, branchCode, status: "open" },
     data: { status: "resolved", resolvedAt: new Date() }
   });
 }
@@ -383,9 +390,9 @@ export async function applyInventoryMovement(
           saleId: input.saleId,
           saleItemId: input.saleItemId,
           lotId: lot.id,
-          purchaseId: lot.purchaseId,
-          purchaseLineId: lot.purchaseLineId,
-          receiptId: lot.receiptId,
+          purchaseId: lot.purchaseId ?? undefined,
+          purchaseLineId: lot.purchaseLineId ?? undefined,
+          receiptId: lot.receiptId ?? undefined,
           userId: input.userId,
           type: input.type,
           quantityDelta: -quantity,
@@ -419,10 +426,6 @@ export async function applyInventoryMovement(
       where: { itemId_branchCode: { itemId: input.itemId, branchCode } },
       data: { currentStock: stockAfter }
     });
-    await tx.inventoryItem.update({
-      where: { id: input.itemId },
-      data: { currentStock: { increment: input.quantityDelta } }
-    });
     await syncLowStockAlert(tx, input.itemId, branchCode);
     return lastMovement!;
   }
@@ -431,11 +434,6 @@ export async function applyInventoryMovement(
     where: { itemId_branchCode: { itemId: input.itemId, branchCode } },
     data: { currentStock: stockAfter }
   });
-  await tx.inventoryItem.update({
-    where: { id: input.itemId },
-    data: { currentStock: { increment: input.quantityDelta } }
-  });
-
   const movement = await tx.inventoryMovement.create({
     data: {
       idempotencyKey: input.idempotencyKey,
@@ -569,7 +567,6 @@ export async function createInventoryItemInTransaction(
       salePriceCents: input.salePriceCents ?? 0,
       referenceCostCents: input.referenceCostCents ?? 0,
       minimumStock: input.minimumStock ?? 0,
-      currentStock: 0,
       supplierLinks: {
         create: supplierIds.map((supplierId) => ({
           supplierId
@@ -673,10 +670,20 @@ export async function createInventoryItemRecord(input: NewInventoryItemInput) {
         await syncLowStockAlert(tx, item.id, input.branchCode);
       }
 
-      return tx.inventoryItem.findUniqueOrThrow({
-        where: { id: item.id },
-        include: { alerts: { where: { status: "open" } } }
-      });
+      const [record, balance] = await Promise.all([
+        tx.inventoryItem.findUniqueOrThrow({
+          where: { id: item.id },
+          include: {
+            alerts: { where: { branchCode: input.branchCode, status: "open" } }
+          }
+        }),
+        tx.branchInventoryBalance.findUnique({
+          where: {
+            itemId_branchCode: { itemId: item.id, branchCode: input.branchCode }
+          }
+        })
+      ]);
+      return { ...record, currentStock: balance?.currentStock ?? 0 };
     })
   );
 }
@@ -1091,7 +1098,12 @@ export async function addInventoryEntryRecord(input: {
         const reused = await tx.inventoryMovement.findUnique({
           where: { idempotencyKey: input.idempotencyKey }
         });
-        if (reused) return reused;
+        if (reused) {
+          if (reused.branchCode !== input.branchCode || reused.itemId !== input.itemId) {
+            throw new InventoryCatalogError("branch-mismatch");
+          }
+          return reused;
+        }
       }
       return applyInventoryMovement(tx, {
         idempotencyKey: input.idempotencyKey,
@@ -1120,7 +1132,12 @@ export async function createInventoryAdjustmentRecord(input: {
         const reused = await tx.inventoryMovement.findUnique({
           where: { idempotencyKey: input.idempotencyKey }
         });
-        if (reused) return reused;
+        if (reused) {
+          if (reused.branchCode !== input.branchCode || reused.itemId !== input.itemId) {
+            throw new InventoryCatalogError("branch-mismatch");
+          }
+          return reused;
+        }
       }
       await tx.inventoryAdjustment.create({
         data: {
@@ -1149,6 +1166,10 @@ export class InventoryTransferError extends Error {
     public readonly code:
       | "same-branch"
       | "branch-not-active"
+      | "inactive-item"
+      | "reconciliation-failed"
+      | "branch-mismatch"
+      | "invalid-authorizer"
       | "invalid-quantity"
   ) {
     super(code);
@@ -1176,7 +1197,16 @@ export async function createInventoryTransferRecord(input: {
           lotAllocations: { include: { sourceLot: true, destinationLot: true } }
         }
       });
-      if (reused) return reused;
+      if (reused) {
+        if (
+          reused.sourceBranchCode !== input.sourceBranchCode ||
+          reused.destinationBranchCode !== input.destinationBranchCode ||
+          reused.itemId !== input.itemId
+        ) {
+          throw new InventoryTransferError("branch-mismatch");
+        }
+        return reused;
+      }
       if (input.sourceBranchCode === input.destinationBranchCode) {
         throw new InventoryTransferError("same-branch");
       }
@@ -1193,6 +1223,41 @@ export async function createInventoryTransferRecord(input: {
       });
       if (branches.length !== 2) {
         throw new InventoryTransferError("branch-not-active");
+      }
+      const authorizer = await tx.internalUser.findFirst({
+        where: {
+          id: input.createdById,
+          active: true,
+          OR: [
+            { platformRole: "super_admin" },
+            {
+              AND: [
+                {
+                  branchAssignments: {
+                    some: { branchCode: input.sourceBranchCode, active: true }
+                  }
+                },
+                {
+                  branchAssignments: {
+                    some: { branchCode: input.destinationBranchCode, active: true }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        select: { id: true }
+      });
+      if (!authorizer) throw new InventoryTransferError("invalid-authorizer");
+      const configuredBranches = await tx.branchInventoryItem.count({
+        where: {
+          itemId: input.itemId,
+          branchCode: { in: [input.sourceBranchCode, input.destinationBranchCode] },
+          available: true
+        }
+      });
+      if (configuredBranches !== 2) {
+        throw new InventoryTransferError("inactive-item");
       }
 
       await tx.$queryRaw`SELECT "id" FROM "InventoryItem" WHERE "id" = ${input.itemId} FOR UPDATE`;
@@ -1225,7 +1290,16 @@ export async function createInventoryTransferRecord(input: {
           lotAllocations: { include: { sourceLot: true, destinationLot: true } }
         }
       });
-      if (reusedAfterLock) return reusedAfterLock;
+      if (reusedAfterLock) {
+        if (
+          reusedAfterLock.sourceBranchCode !== input.sourceBranchCode ||
+          reusedAfterLock.destinationBranchCode !== input.destinationBranchCode ||
+          reusedAfterLock.itemId !== input.itemId
+        ) {
+          throw new InventoryTransferError("branch-mismatch");
+        }
+        return reusedAfterLock;
+      }
 
       const sourceBalance = await tx.branchInventoryBalance.findUniqueOrThrow({
         where: {
@@ -1314,10 +1388,36 @@ export async function createInventoryTransferRecord(input: {
         itemId: input.itemId,
         userId: input.createdById,
         branchCode: input.destinationBranchCode,
+        locationCode: input.destinationLocationCode,
         type: "transfer_in",
         quantityDelta: input.quantity,
         reason: `Traslado desde ${input.sourceBranchCode}: ${input.reason}`
       });
+      const [sourceAfter, destinationAfter] = await Promise.all([
+        tx.branchInventoryBalance.findUniqueOrThrow({
+          where: {
+            itemId_branchCode: {
+              itemId: input.itemId,
+              branchCode: input.sourceBranchCode
+            }
+          }
+        }),
+        tx.branchInventoryBalance.findUniqueOrThrow({
+          where: {
+            itemId_branchCode: {
+              itemId: input.itemId,
+              branchCode: input.destinationBranchCode
+            }
+          }
+        })
+      ]);
+      if (
+        sourceMovement.quantityDelta + destinationMovement.quantityDelta !== 0 ||
+        sourceMovement.stockAfter !== sourceAfter.currentStock ||
+        destinationMovement.stockAfter !== destinationAfter.currentStock
+      ) {
+        throw new InventoryTransferError("reconciliation-failed");
+      }
 
       const transfer = await tx.inventoryTransfer.create({
         data: {
@@ -1340,9 +1440,6 @@ export async function createInventoryTransferRecord(input: {
             internalLotCode: `${allocation.sourceLot.internalLotCode}-${input.destinationBranchCode.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}`,
             itemId: allocation.sourceLot.itemId,
             supplierId: allocation.sourceLot.supplierId,
-            purchaseId: allocation.sourceLot.purchaseId,
-            purchaseLineId: allocation.sourceLot.purchaseLineId,
-            receiptId: allocation.sourceLot.receiptId,
             batchNumber: allocation.sourceLot.batchNumber,
             expirationDate: allocation.sourceLot.expirationDate,
             branchCode: input.destinationBranchCode,
@@ -1357,6 +1454,8 @@ export async function createInventoryTransferRecord(input: {
             transferId: transfer.id,
             sourceLotId: allocation.sourceLot.id,
             destinationLotId: destinationLot.id,
+            sourceBranchCode: input.sourceBranchCode,
+            destinationBranchCode: input.destinationBranchCode,
             quantity: allocation.quantity
           }
         });
@@ -1374,16 +1473,18 @@ export async function createInventoryTransferRecord(input: {
   );
 }
 
-export async function getInventoryTransfers(branchCode?: string) {
+export async function getInventoryTransfers(branchCode: string) {
   return withDatabaseError("getInventoryTransfers", () =>
     prisma.inventoryTransfer.findMany({
-      where: branchCode
-        ? { OR: [{ sourceBranchCode: branchCode }, { destinationBranchCode: branchCode }] }
-        : undefined,
+      where: {
+        OR: [{ sourceBranchCode: branchCode }, { destinationBranchCode: branchCode }]
+      },
       include: {
         item: true,
         sourceBranch: true,
         destinationBranch: true,
+        sourceMovement: true,
+        destinationMovement: true,
         createdBy: { select: { id: true, name: true, email: true } },
         lotAllocations: {
           include: { sourceLot: true, destinationLot: true },
@@ -1429,7 +1530,7 @@ export async function getInventoryItems(input: InventoryListInput) {
           orderBy: { supplier: { name: "asc" } }
         },
         alerts: {
-          where: { status: "open" },
+          where: { branchCode: input.branchCode, status: "open" },
           orderBy: { createdAt: "desc" },
           take: 1
         }
@@ -1497,7 +1598,7 @@ export async function getInventoryItemById(id: string, branchCode: string) {
           orderBy: { version: "desc" },
           take: 30
         },
-        alerts: { orderBy: { createdAt: "desc" }, take: 8 },
+        alerts: { where: { branchCode }, orderBy: { createdAt: "desc" }, take: 8 },
         movements: {
           where: { branchCode },
           include: {
@@ -1682,7 +1783,7 @@ export async function getLowStockItems(branchCode: string) {
 
 export async function getInventorySummary(branchCode: string) {
   return withDatabaseError("getInventorySummary", async () => {
-    const [totalItems, balances] = await Promise.all([
+    const [totalItems, balances, openAlerts] = await Promise.all([
       prisma.branchInventoryItem.count({ where: { branchCode, available: true } }),
       prisma.branchInventoryBalance.findMany({
         where: {
@@ -1700,13 +1801,13 @@ export async function getInventorySummary(branchCode: string) {
             }
           }
         }
-      })
+      }),
+      prisma.inventoryAlert.count({ where: { branchCode, status: "open" } })
     ]);
     const lowStock = balances.filter(
       (balance) =>
         balance.currentStock <= balance.item.branchConfigurations[0]!.minimumStock
     ).length;
-    const openAlerts = lowStock;
     return { totalItems, lowStock, openAlerts };
   });
 }

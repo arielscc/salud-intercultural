@@ -347,10 +347,9 @@ export async function getModulePendingWork(
     }
 
     if (wanted.has("inventario")) {
-      // La alerta de stock es del producto y no de una sede: `InventoryAlert` no
-      // guarda sucursal. El número es del sistema entero y se deja así antes que
-      // atribuirlo a una sede que no le corresponde.
-      const alerts = await prisma.inventoryAlert.count({ where: { status: "open" } });
+      const alerts = await prisma.inventoryAlert.count({
+        where: { ...ofBranch, status: "open" }
+      });
       results.push({
         code: "inventario",
         items: [{ label: "Alertas de stock abiertas", count: alerts }]

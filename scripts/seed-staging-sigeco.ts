@@ -9,6 +9,7 @@ import {
   internalRoleLabels
 } from "../src/features/internal-auth/permissions";
 import { prisma } from "../src/modules/database";
+import { applyInventoryMovement } from "../src/modules/database/queries/inventory";
 import { createVisitAttributionInTransaction } from "../src/modules/database/queries/attribution";
 import {
   normalizePatientName,
@@ -510,24 +511,47 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
     }
   });
 
-  await prisma.inventoryItem.upsert({
-    where: { internalCode: "QA-INV-001" },
-    update: {
-      active: true,
-      currentStock: 3,
-      description: "Producto sintético para pruebas de staging",
-      minimumStock: 5,
-      name: "[QA] Producto con stock bajo"
-    },
-    create: {
-      active: true,
-      currentStock: 3,
-      description: "Producto sintético para pruebas de staging",
-      internalCode: "QA-INV-001",
-      minimumStock: 5,
-      name: "[QA] Producto con stock bajo",
-      sku: "QA-SKU-001",
-      unit: "unidad"
+  await prisma.$transaction(async (tx) => {
+    const item = await tx.inventoryItem.upsert({
+      where: { internalCode: "QA-INV-001" },
+      update: {
+        description: "Producto sintético para pruebas de staging",
+        name: "[QA] Producto con stock bajo"
+      },
+      create: {
+        description: "Producto sintético para pruebas de staging",
+        internalCode: "QA-INV-001",
+        name: "[QA] Producto con stock bajo",
+        unit: "unidad"
+      }
+    });
+    await tx.branchInventoryItem.upsert({
+      where: {
+        itemId_branchCode: { itemId: item.id, branchCode: QA_BRANCH_CODE }
+      },
+      update: { available: true, minimumStock: 5, sku: "QA-SKU-001" },
+      create: {
+        itemId: item.id,
+        branchCode: QA_BRANCH_CODE,
+        available: true,
+        minimumStock: 5,
+        sku: "QA-SKU-001"
+      }
+    });
+    const balance = await tx.branchInventoryBalance.findUnique({
+      where: {
+        itemId_branchCode: { itemId: item.id, branchCode: QA_BRANCH_CODE }
+      }
+    });
+    const quantityDelta = 3 - (balance?.currentStock ?? 0);
+    if (quantityDelta !== 0) {
+      await applyInventoryMovement(tx, {
+        itemId: item.id,
+        branchCode: QA_BRANCH_CODE,
+        type: "authorized_manual_adjustment",
+        quantityDelta,
+        reason: "Ajuste sintético reproducible para QA de staging"
+      });
     }
   });
 }

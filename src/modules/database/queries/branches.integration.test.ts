@@ -162,6 +162,7 @@ describe("multi-branch operations", () => {
       data: {
         email: "branch-transfer@example.invalid",
         passwordHash: "not-used-in-integration-test",
+        platformRole: "super_admin",
         branchAssignments: {
           create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
         }
@@ -192,19 +193,18 @@ describe("multi-branch operations", () => {
       idempotencyKey: "7d8678ea-cfb2-4ec6-8261-68d8375cc6bb"
     });
 
-    const [source, destination, currentItem] = await Promise.all([
+    const [source, destination] = await Promise.all([
       prisma.branchInventoryBalance.findUniqueOrThrow({
         where: { itemId_branchCode: { itemId: item.id, branchCode: "el-alto" } }
       }),
       prisma.branchInventoryBalance.findUniqueOrThrow({
         where: { itemId_branchCode: { itemId: item.id, branchCode: "cochabamba" } }
-      }),
-      prisma.inventoryItem.findUniqueOrThrow({ where: { id: item.id } })
+      })
     ]);
 
     expect(source.currentStock).toBe(6);
     expect(destination.currentStock).toBe(4);
-    expect(currentItem.currentStock).toBe(10);
+    expect(source.currentStock + destination.currentStock).toBe(10);
     expect(transfer.sourceMovement.type).toBe("transfer_out");
     expect(transfer.destinationMovement.type).toBe("transfer_in");
   });
@@ -214,6 +214,7 @@ describe("multi-branch operations", () => {
       data: {
         email: "branch-lot-transfer@example.invalid",
         passwordHash: "not-used-in-integration-test",
+        platformRole: "super_admin",
         branchAssignments: {
           create: { branchCode: "el-alto", role: "administracion", active: true, isDefault: true }
         }
@@ -253,6 +254,7 @@ describe("multi-branch operations", () => {
     });
     await confirmPurchaseRecord({
       purchaseId: purchase.id,
+      branchCode: "el-alto",
       expectedRevision: 1,
       confirmedById: user.id,
       paymentIdempotencyKey: "08e3ab30-523d-454a-93d9-b5a0874b095d"

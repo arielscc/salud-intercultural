@@ -29,6 +29,7 @@ export default async function InventoryTransfersPage({
   const { activeBranch, branches } = await getBranchContext();
   const query = await searchParams;
   const canWrite = canUse(user.role, moduleAccess, "inventory_write");
+  const canViewReconciliation = roleHasPermission(user.role, "audit_read");
   const activeDestinations = branches.filter(
     (branch) =>
       branch.assigned && branch.status === "active" && branch.code !== activeBranch.code
@@ -119,34 +120,65 @@ export default async function InventoryTransfersPage({
         <Card>
           <CardHeader
             title="Traslados todavía bloqueados"
-            description="Cochabamba está en preparación. La opción se habilitará cuando Dirección active esa sede y asigne al personal correspondiente."
+            description="La opción requiere otra sucursal activa y asignada al usuario."
           />
         </Card>
       )}
 
       <Card className="overflow-hidden p-0">
-        <CardHeader className="p-[18px] pb-3" title="Historial enlazado" description="Cada fila conserva origen, destino, responsable y las dos operaciones de stock." />
+        <CardHeader
+          className="p-[18px] pb-3"
+          title={canViewReconciliation ? "Conciliación de traslados" : "Comprobantes locales"}
+          description={
+            canViewReconciliation
+              ? "Dirección puede contrastar la salida y la entrada inmutables de cada traslado."
+              : `Se muestra únicamente el comprobante que corresponde a ${activeBranch.name}.`
+          }
+        />
         <div className="overflow-x-auto">
           <Table caption="Traslados de inventario entre sucursales">
-            <thead><tr><Th>Traslado</Th><Th>Producto</Th><Th>Ruta</Th><Th>Lotes trasladados</Th><Th>Cantidad</Th><Th>Responsable</Th><Th>Fecha</Th></tr></thead>
+            <thead><tr><Th>Traslado</Th><Th>Producto</Th><Th>Ruta</Th><Th>Comprobante</Th><Th>Lotes trasladados</Th><Th>Cantidad</Th><Th>Responsable</Th><Th>Fecha</Th></tr></thead>
             <tbody>
-              {transfers.map((transfer) => (
-                <Tr key={transfer.id}>
+              {transfers.map((transfer) => {
+                const localMovement =
+                  transfer.sourceBranchCode === activeBranch.code
+                    ? transfer.sourceMovement
+                    : transfer.destinationMovement;
+                return (
+                  <Tr key={transfer.id}>
                   <Td className="font-mono text-xs">{transfer.transferNumber}</Td>
                   <Td className="font-semibold text-text">{transfer.item.name}</Td>
                   <Td>{transfer.sourceBranch.name} → {transfer.destinationBranch.name}</Td>
+                  <Td className="text-xs">
+                    {canViewReconciliation ? (
+                      <div className="grid gap-1">
+                        <span>Salida: {transfer.sourceMovement.quantityDelta} · saldo {transfer.sourceMovement.stockAfter}</span>
+                        <span>Entrada: +{transfer.destinationMovement.quantityDelta} · saldo {transfer.destinationMovement.stockAfter}</span>
+                      </div>
+                    ) : (
+                      <span>
+                        {localMovement.type === "transfer_out" ? "Salida" : "Entrada"}: {localMovement.quantityDelta > 0 ? "+" : ""}{localMovement.quantityDelta} · saldo {localMovement.stockAfter}
+                      </span>
+                    )}
+                  </Td>
                   <Td>
                     {transfer.lotAllocations.length > 0 ? (
                       <div className="grid gap-1 text-xs">
-                        {transfer.lotAllocations.map((allocation) => (
-                          <span key={allocation.id}>
-                            {allocation.sourceLot.batchNumber ?? allocation.sourceLot.internalLotCode}
-                            {allocation.destinationLot.expirationDate
-                              ? ` · vence ${formatDateOnly(allocation.destinationLot.expirationDate)}`
+                        {transfer.lotAllocations.map((allocation) => {
+                          const localLot =
+                            transfer.sourceBranchCode === activeBranch.code
+                              ? allocation.sourceLot
+                              : allocation.destinationLot;
+                          return (
+                            <span key={allocation.id}>
+                            {localLot.batchNumber ?? localLot.internalLotCode}
+                            {localLot.expirationDate
+                              ? ` · vence ${formatDateOnly(localLot.expirationDate)}`
                               : " · sin vencimiento"}
-                            {` · ${allocation.quantity} a ${allocation.destinationLot.locationCode}`}
+                            {` · ${allocation.quantity} en ${localLot.locationCode}`}
                           </span>
-                        ))}
+                          );
+                        })}
                         {transfer.quantity - transfer.lotAllocations.reduce(
                           (total, allocation) => total + allocation.quantity,
                           0
@@ -155,7 +187,7 @@ export default async function InventoryTransfersPage({
                             Stock anterior sin lote · {transfer.quantity - transfer.lotAllocations.reduce(
                               (total, allocation) => total + allocation.quantity,
                               0
-                            )} a {transfer.lotAllocations[0]?.destinationLot.locationCode}
+                            )} a {transfer.destinationMovement.locationCode ?? "ubicación de destino"}
                           </span>
                         ) : null}
                       </div>
@@ -167,8 +199,9 @@ export default async function InventoryTransfersPage({
                   <Td>{transfer.createdBy.name ?? transfer.createdBy.email}</Td>
                   <Td>{formatDateTime(transfer.createdAt)}</Td>
                 </Tr>
-              ))}
-              {transfers.length === 0 ? <tr><Td colSpan={7} className="py-8 text-center text-muted">Todavía no hay traslados.</Td></tr> : null}
+                );
+              })}
+              {transfers.length === 0 ? <tr><Td colSpan={8} className="py-8 text-center text-muted">Todavía no hay traslados.</Td></tr> : null}
             </tbody>
           </Table>
         </div>

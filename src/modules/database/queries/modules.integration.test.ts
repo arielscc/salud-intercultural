@@ -260,9 +260,10 @@ describe("apagar y reactivar", () => {
   it("no altera ningún registro del módulo", async () => {
     await setModuleActivation({ code: "inventario", branchCode, active: true });
 
-    const before = await prisma.inventoryItem.findMany({
-      select: { id: true, name: true, currentStock: true, updatedAt: true },
-      orderBy: { id: "asc" }
+    const before = await prisma.branchInventoryBalance.findMany({
+      where: { branchCode },
+      select: { itemId: true, currentStock: true, updatedAt: true },
+      orderBy: { itemId: "asc" }
     });
 
     await setModuleActivation({
@@ -273,9 +274,10 @@ describe("apagar y reactivar", () => {
     });
     await setModuleActivation({ code: "inventario", branchCode, active: true });
 
-    const after = await prisma.inventoryItem.findMany({
-      select: { id: true, name: true, currentStock: true, updatedAt: true },
-      orderBy: { id: "asc" }
+    const after = await prisma.branchInventoryBalance.findMany({
+      where: { branchCode },
+      select: { itemId: true, currentStock: true, updatedAt: true },
+      orderBy: { itemId: "asc" }
     });
 
     expect(after).toEqual(before);

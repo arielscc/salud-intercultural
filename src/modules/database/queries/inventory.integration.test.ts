@@ -400,6 +400,48 @@ describe("inventory integration", () => {
     expect(itemElAlto?.catalogVersions).toHaveLength(2);
   });
 
+  it("keeps balances and low-stock alerts isolated between branches", async () => {
+    const item = await createInventoryItemRecord({
+      branchCode: "el-alto",
+      internalCode: "STOCK-LOCAL-001",
+      name: "Producto con saldo local",
+      minimumStock: 2,
+      initialStock: 1
+    });
+    await createInventoryItemRecord({
+      branchCode: "cochabamba",
+      internalCode: "STOCK-LOCAL-001",
+      name: "Producto con saldo local",
+      minimumStock: 2,
+      initialStock: 5
+    });
+
+    const [elAltoBefore, cochabambaBefore] = await Promise.all([
+      getInventoryItemById(item.id, "el-alto"),
+      getInventoryItemById(item.id, "cochabamba")
+    ]);
+    expect(elAltoBefore?.currentStock).toBe(1);
+    expect(elAltoBefore?.alerts.filter((alert) => alert.status === "open")).toHaveLength(1);
+    expect(cochabambaBefore?.currentStock).toBe(5);
+    expect(cochabambaBefore?.alerts).toHaveLength(0);
+
+    await addInventoryEntryRecord({
+      itemId: item.id,
+      branchCode: "el-alto",
+      quantity: 2,
+      reason: "Reposición local"
+    });
+
+    const [elAltoAfter, cochabambaAfter, openAlerts] = await Promise.all([
+      getInventoryItemById(item.id, "el-alto"),
+      getInventoryItemById(item.id, "cochabamba"),
+      prisma.inventoryAlert.findMany({ where: { itemId: item.id, status: "open" } })
+    ]);
+    expect(elAltoAfter?.currentStock).toBe(3);
+    expect(cochabambaAfter?.currentStock).toBe(5);
+    expect(openAlerts).toHaveLength(0);
+  });
+
   it("prevents stale edits, code changes and deletion while preserving stock history", async () => {
     const item = await createInventoryItemRecord({
       internalCode: "RESERVADO-001",

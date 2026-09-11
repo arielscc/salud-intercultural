@@ -88,15 +88,35 @@ async function seedRecoveryFixture(input: {
         description: "Movimiento sintético para recuperación"
       }
     });
-    await prisma.inventoryItem.create({
+    const inventoryItem = await prisma.inventoryItem.create({
       data: {
         internalCode: `BKP-ITEM-${input.runId.toUpperCase()}`,
-        sku: `BKP-${input.runId.toUpperCase()}`,
         name: "Producto sintético para recuperación",
-        currentStock: 7,
-        minimumStock: 2
+        branchConfigurations: {
+          create: {
+            branchCode,
+            sku: `BKP-${input.runId.toUpperCase()}`,
+            available: true,
+            minimumStock: 2
+          }
+        }
       }
     });
+    await prisma.$transaction([
+      prisma.branchInventoryBalance.create({
+        data: { itemId: inventoryItem.id, branchCode, currentStock: 7 }
+      }),
+      prisma.inventoryMovement.create({
+        data: {
+          itemId: inventoryItem.id,
+          branchCode,
+          type: "entry",
+          quantityDelta: 7,
+          stockAfter: 7,
+          reason: "Stock sintético para simulacro de recuperación"
+        }
+      })
+    ]);
 
     const bytes = new TextEncoder().encode(
       "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF"

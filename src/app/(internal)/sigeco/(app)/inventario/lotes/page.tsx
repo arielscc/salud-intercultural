@@ -210,7 +210,7 @@ export default async function InventoryLotsPage({
               </dl>
 
               <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3 text-xs">
-                {canReadPurchases ? (
+                {canReadPurchases && lot.purchase ? (
                   <>
                     <Link
                       className="font-semibold text-primary-dark hover:underline"
@@ -221,9 +221,18 @@ export default async function InventoryLotsPage({
                     <span className="text-muted">·</span>
                   </>
                 ) : null}
-                <span className="text-muted">
-                  Recepción {lot.receipt.receiptNumber} · {formatDateTime(lot.receipt.receivedAt)}
-                </span>
+                {lot.receipt ? (
+                  <span className="text-muted">
+                    Recepción {lot.receipt.receiptNumber} · {formatDateTime(lot.receipt.receivedAt)}
+                  </span>
+                ) : lot.incomingTransferAllocation ? (
+                  <span className="text-muted">
+                    Traslado {lot.incomingTransferAllocation.transfer.transferNumber} desde{" "}
+                    {lot.incomingTransferAllocation.transfer.sourceBranchCode}
+                  </span>
+                ) : (
+                  <span className="text-muted">Origen histórico sin comprobante local</span>
+                )}
               </div>
 
               {lot.adjustments.length ? (

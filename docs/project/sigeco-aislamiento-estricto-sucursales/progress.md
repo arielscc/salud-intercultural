@@ -21,6 +21,9 @@ elimina siete defaults de El Alto y hace explícitas las principales escrituras
 operativas. Enfermería, estudios, adjuntos clínicos y paquetes de sesiones ya
 materializan la sede; la continuidad de Enfermería queda separada de la historia
 diagnóstica y los archivos usan permisos breves ligados al contexto activo.
+Compras, recepciones, lotes, movimientos y alertas ya operan contra saldos
+locales; el total global de inventario fue retirado y cada traslado conserva dos
+comprobantes conciliados, uno por sede.
 
 ## Decisiones Confirmadas Por Dirección
 
@@ -39,17 +42,17 @@ diagnóstica y los archivos usan permisos breves ligados al contexto activo.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 7 |
+| Pendiente | 6 |
 | En progreso | 2 |
 | Bloqueada | 0 |
-| Terminada | 8 |
+| Terminada | 9 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
-| B. Partición de dominios | 5-13 | En progreso (6/9 implementadas; 3 cerradas) | Maestros únicos y operaciones pertenecientes a una sede |
+| B. Partición de dominios | 5-13 | En progreso (7/9 implementadas; 3 cerradas) | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
@@ -66,7 +69,7 @@ diagnóstica y los archivos usan permisos breves ligados al contexto activo.
 | 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Implementada; validación acumulada pendiente | 7 |
 | 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Implementada; validación acumulada pendiente | 7-8 |
 | 10 | Maestros comerciales y configuración por sucursal | P0 | Implementada; validación estática aprobada | 4 |
-| 11 | Compras, stock, lotes, traslados y alertas | P0 | Pendiente | 10 |
+| 11 | Compras, stock, lotes, traslados y alertas | P0 | Implementada; validación estática aprobada | 10 |
 | 12 | Ventas, pagos, Caja y documentos | P0 | Pendiente | 5, 7, 10-11 |
 | 13 | Seguimientos, recordatorios, opiniones y reportes | P0 | Pendiente | 5-12 |
 | 14 | Módulos y auditoría operativa | P0 | Pendiente | 2-3, 13 |
@@ -140,6 +143,14 @@ diagnóstica y los archivos usan permisos breves ligados al contexto activo.
   cada grant dura dos minutos, se usa una vez y revalida usuario, rol y sede.
 - El reconciliador de claves de archivos es `dry-run` por defecto y permite
   mover archivos antiguos después de la expansión, sin imprimir datos clínicos.
+- Las compras y toda su evidencia materializan la sede; producto, proveedor,
+  Caja, recepción, lote y documento se validan contra la misma operación local.
+- `BranchInventoryBalance` es el único saldo materializado y se concilia con el
+  libro append-only de movimientos de su sucursal. Las alertas y FEFO usan esa
+  misma frontera y ya no existe un total operativo global en `InventoryItem`.
+- Cada traslado genera una salida y una entrada inmutables en una sola
+  transacción. La sede ve su comprobante local y Dirección puede contrastar
+  ambos lados y la continuidad de lotes.
 
 Estos avances no equivalen a aislamiento completo y no permiten adelantar la
 Tarea 16.
@@ -194,7 +205,25 @@ Tarea 16.
   ejecución sobre ninguna base.
 - Detalle y operación: [reporte T10](../task-reports/2026-09-10-tarea-10-maestros-comerciales-configuracion-sucursal.md).
 
+### Tarea 11 — Implementación
+
+- Compras, líneas, pagos, recepciones, documentos, lotes, ajustes, movimientos,
+  traslados y alertas exigen sucursal y usan relaciones compuestas donde existe
+  un padre operativo local.
+- El saldo global de `InventoryItem` fue eliminado. Cada escritura actualiza el
+  saldo local y registra su movimiento; constraints diferidos impiden cerrar
+  una transacción si ambos valores no reconcilian.
+- FEFO solo recorre lotes disponibles de la sede activa. Un lote creado por
+  traslado conserva la trazabilidad mediante la asignación origen/destino, sin
+  enlazarse a la compra de otra sucursal.
+- Cada traslado exige dos sedes y configuraciones activas, autorización sobre
+  ambas, stock suficiente y comprobantes de salida/entrada simétricos.
+- Migraciones de expansión y endurecimiento preparadas, sin aplicar. El nuevo
+  reconciliador es `dry-run` por defecto, no modifica movimientos y exige una
+  decisión explícita para alertas históricas ambiguas.
+- Detalle y operación: [reporte T11](../task-reports/2026-09-10-tarea-11-compras-stock-lotes-traslados-alertas.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 11: compras, stock, lotes, traslados y alertas. La integración
+Ejecutar la Tarea 12: ventas, pagos, Caja y documentos. La integración
 y el despliegue se validan en la Tarea 17.

@@ -100,52 +100,6 @@ function temporaryDebt(
 // una excepción que deja de coincidir también hace fallar el chequeo.
 export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
   ...temporaryDebt(
-    11,
-    "Inventarios",
-    "Las lecturas de inventario y compras exigirán una sucursal explícita.",
-    [
-      [
-        "src/modules/database/queries/inventory.ts",
-        "getInventoryTransfers",
-        "optional-branch-code"
-      ],
-      ["src/modules/database/queries/purchases.ts", "purchaseWhere", "optional-branch-code"],
-      ["src/modules/database/queries/purchases.ts", "getPurchases", "optional-branch-code"],
-      ["src/modules/database/queries/purchases.ts", "countPurchases", "optional-branch-code"],
-      ["src/modules/database/queries/purchases.ts", "getPurchaseById", "optional-branch-code"],
-      [
-        "src/modules/database/queries/purchases.ts",
-        "getPurchaseSummary",
-        "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/purchases.ts",
-        "getOpenPurchaseCashSessions",
-        "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/purchases.ts",
-        "getInventoryLots",
-        "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/purchases.ts",
-        "getFefoInventoryLotIds",
-        "branch-default-parameter"
-      ],
-      [
-        "src/modules/database/queries/purchases.ts",
-        "getFefoInventoryLotIds",
-        "hardcoded-branch-literal"
-      ],
-      [
-        "src/modules/database/queries/purchases.ts",
-        "countInventoryLots",
-        "optional-branch-code"
-      ]
-    ]
-  ),
-  ...temporaryDebt(
     12,
     "Caja y Administración",
     "Caja y ventas eliminarán parámetros opcionales y valores de sede heredados.",

@@ -130,8 +130,11 @@ async function main() {
       phone: "22000000",
       userId: admin.id
     }));
-  const existingProduct = await prisma.inventoryItem.findUnique({
-    where: { internalCode: `${tag}-P1` }
+  const existingProduct = await prisma.inventoryItem.findFirst({
+    where: {
+      internalCode: `${tag}-P1`,
+      branchConfigurations: { some: { branchCode } }
+    }
   });
   const product = existingProduct ?? (await createInventoryItemRecord({
     internalCode: `${tag}-P1`,
@@ -146,7 +149,10 @@ async function main() {
     userId: admin.id,
     branchCode
   }));
-  record("Producto con stock inicial", `${product.internalCode}, stock ${product.currentStock}`);
+  const initialBalance = await prisma.branchInventoryBalance.findUniqueOrThrow({
+    where: { itemId_branchCode: { itemId: product.id, branchCode } }
+  });
+  record("Producto con stock inicial", `${product.internalCode}, stock ${initialBalance.currentStock}`);
 
   // --- Caja abierta ---
   const session = await openCashSession({
@@ -191,7 +197,9 @@ async function main() {
     ]
   });
   assert(sale.visitId === null, "la venta de mostrador no debe tener visita");
-  const afterSale = await prisma.inventoryItem.findUniqueOrThrow({ where: { id: product.id } });
+  const afterSale = await prisma.branchInventoryBalance.findUniqueOrThrow({
+    where: { itemId_branchCode: { itemId: product.id, branchCode } }
+  });
   assert(afterSale.currentStock === 8, `el stock debió bajar a 8 y quedó en ${afterSale.currentStock}`);
   record("Venta creada y stock descontado", `total ${sale.totalCents / 100} Bs, stock ${afterSale.currentStock}`);
 
@@ -244,6 +252,7 @@ async function main() {
   // Caja abierta; no lleva un pago aparte.
   const confirmed = await confirmPurchaseRecord({
     purchaseId: purchase.id,
+    branchCode,
     expectedRevision: purchase.revision,
     confirmedById: admin.id,
     cashSessionId: session.id,
@@ -268,7 +277,9 @@ async function main() {
       }
     ]
   });
-  const afterReceipt = await prisma.inventoryItem.findUniqueOrThrow({ where: { id: product.id } });
+  const afterReceipt = await prisma.branchInventoryBalance.findUniqueOrThrow({
+    where: { itemId_branchCode: { itemId: product.id, branchCode } }
+  });
   assert(afterReceipt.currentStock === 13, `el stock debió subir a 13 y quedó en ${afterReceipt.currentStock}`);
   const lot = await prisma.inventoryLot.findFirst({ where: { itemId: product.id } });
   record("Compra recibida con lote", `stock ${afterReceipt.currentStock}, lote ${lot?.batchNumber ?? "sin lote"}`);

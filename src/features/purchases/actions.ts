@@ -172,9 +172,10 @@ export async function confirmPurchaseAction(formData: FormData) {
         entityType: "purchase",
         entityId: purchaseId
       },
-      async (user) => {
+      async (user, branchContext) => {
         const confirmed = await confirmPurchaseRecord({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           confirmedById: user.id
         });
         return auditedResult(confirmed, {
@@ -203,9 +204,10 @@ export async function recordPurchasePaymentAction(formData: FormData) {
         entityType: "purchase",
         entityId: purchaseId
       },
-      async (user) => {
+      async (user, branchContext) => {
         const payment = await recordPurchasePayment({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           amountCents: purchaseMoneyToCents(parsed.data.amount),
           paidAt: parsed.data.paidAt
             ? new Date(`${parsed.data.paidAt}:00-04:00`)
@@ -238,9 +240,10 @@ export async function cancelPurchaseAction(formData: FormData) {
         entityType: "purchase",
         entityId: purchaseId
       },
-      async (user) => {
+      async (user, branchContext) => {
         const cancelled = await cancelPurchaseRecord({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           cancelledById: user.id
         });
         return auditedResult(cancelled, {
@@ -345,9 +348,10 @@ export async function createInventoryLotAdjustmentAction(formData: FormData) {
         entityType: "inventory_lot",
         entityId: parsed.data.lotId
       },
-      async (user) => {
+      async (user, branchContext) => {
         const adjustment = await createInventoryLotAdjustmentRecord({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           recordedById: user.id
         });
         return auditedResult(adjustment, {

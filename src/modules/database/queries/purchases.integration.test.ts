@@ -130,6 +130,7 @@ describe("purchase, receipt, batch and stock integration", () => {
     });
     await confirmPurchaseRecord({
       purchaseId: purchase.id,
+      branchCode: "el-alto",
       expectedRevision: 1,
       confirmedById: fixture.administrator.id,
       paymentIdempotencyKey: randomUUID()
@@ -139,6 +140,7 @@ describe("purchase, receipt, batch and stock integration", () => {
 
     await recordPurchasePayment({
       purchaseId: purchase.id,
+      branchCode: "el-alto",
       cashSessionId: fixture.cashSession.id,
       method: "transfer",
       amountCents: 500,
@@ -174,8 +176,10 @@ describe("purchase, receipt, batch and stock integration", () => {
     const reused = await createPurchaseReceiptRecord(firstReceiptInput);
     expect(reused.id).toBe(first.id);
     expect(await prisma.purchaseReceipt.count()).toBe(1);
-    expect((await prisma.inventoryItem.findUniqueOrThrow({
-      where: { id: fixture.item.id }
+    expect((await prisma.branchInventoryBalance.findUniqueOrThrow({
+      where: {
+        itemId_branchCode: { itemId: fixture.item.id, branchCode: "el-alto" }
+      }
     })).currentStock).toBe(4);
     expect((await prisma.purchase.findUniqueOrThrow({
       where: { id: purchase.id }
@@ -200,8 +204,10 @@ describe("purchase, receipt, batch and stock integration", () => {
       orderBy: { createdAt: "asc" }
     });
     expect(lots.map((lot) => lot.unitCostCents)).toEqual([105, 110]);
-    expect((await prisma.inventoryItem.findUniqueOrThrow({
-      where: { id: fixture.item.id }
+    expect((await prisma.branchInventoryBalance.findUniqueOrThrow({
+      where: {
+        itemId_branchCode: { itemId: fixture.item.id, branchCode: "el-alto" }
+      }
     })).currentStock).toBe(10);
     expect((await prisma.purchase.findUniqueOrThrow({
       where: { id: purchase.id }
@@ -212,6 +218,7 @@ describe("purchase, receipt, batch and stock integration", () => {
 
     await createInventoryLotAdjustmentRecord({
       lotId: lots[0].id,
+      branchCode: "el-alto",
       kind: "damage",
       quantity: 1,
       restocked: false,
@@ -220,8 +227,10 @@ describe("purchase, receipt, batch and stock integration", () => {
       authorizedById: fixture.direction.id,
       idempotencyKey: randomUUID()
     });
-    expect((await prisma.inventoryItem.findUniqueOrThrow({
-      where: { id: fixture.item.id }
+    expect((await prisma.branchInventoryBalance.findUniqueOrThrow({
+      where: {
+        itemId_branchCode: { itemId: fixture.item.id, branchCode: "el-alto" }
+      }
     })).currentStock).toBe(9);
   });
 
@@ -264,6 +273,7 @@ describe("purchase, receipt, batch and stock integration", () => {
     });
     await confirmPurchaseRecord({
       purchaseId: purchase.id,
+      branchCode: "el-alto",
       expectedRevision: 1,
       confirmedById: fixture.administrator.id,
       paymentIdempotencyKey: randomUUID()
@@ -336,6 +346,10 @@ describe("purchase, receipt, batch and stock integration", () => {
 
   it("rejects suppliers and products that are not enabled in the purchase branch", async () => {
     const fixture = await setup();
+    await prisma.internalUser.update({
+      where: { id: fixture.administrator.id },
+      data: { platformRole: "super_admin" }
+    });
 
     let supplierFailure: unknown;
     try {
@@ -391,5 +405,59 @@ describe("purchase, receipt, batch and stock integration", () => {
     }
     expect(findPurchaseWorkflowError(itemFailure)?.code).toBe("inactive-item");
     expect(await prisma.purchase.count()).toBe(0);
+  });
+
+  it("rejects a payment when the cash session belongs to another branch", async () => {
+    const fixture = await setup();
+    await prisma.internalUser.update({
+      where: { id: fixture.administrator.id },
+      data: { platformRole: "super_admin" }
+    });
+    const purchase = await createPurchaseDraftRecord({
+      supplierId: fixture.supplier.id,
+      branchCode: "el-alto",
+      purchaseDate: businessToday,
+      currency: "BOB",
+      intendedPaymentMethod: "credit",
+      idempotencyKey: randomUUID(),
+      createdById: fixture.administrator.id,
+      lines: [
+        { itemId: fixture.item.id, orderedQuantity: 1, unitCostCents: 100 }
+      ]
+    });
+    await confirmPurchaseRecord({
+      purchaseId: purchase.id,
+      branchCode: "el-alto",
+      expectedRevision: 1,
+      confirmedById: fixture.administrator.id,
+      paymentIdempotencyKey: randomUUID()
+    });
+    const cochabambaSession = await openCashSession({
+      branchCode: "cochabamba",
+      registerName: "Caja Cochabamba",
+      businessDate: businessToday,
+      shift: "full_day",
+      responsibleId: fixture.administrator.id,
+      openedById: fixture.administrator.id,
+      openingCashCents: 0,
+      idempotencyKey: randomUUID()
+    });
+
+    let failure: unknown;
+    try {
+      await recordPurchasePayment({
+        purchaseId: purchase.id,
+        branchCode: "el-alto",
+        cashSessionId: cochabambaSession.id,
+        method: "cash",
+        amountCents: 100,
+        recordedById: fixture.administrator.id,
+        idempotencyKey: randomUUID()
+      });
+    } catch (error) {
+      failure = error;
+    }
+    expect(findPurchaseWorkflowError(failure)?.code).toBe("cash-session-not-open");
+    expect(await prisma.purchasePayment.count()).toBe(0);
   });
 });
