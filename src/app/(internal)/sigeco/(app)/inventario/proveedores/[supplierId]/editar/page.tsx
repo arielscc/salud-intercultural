@@ -6,6 +6,7 @@ import { SupplierForm } from "@/features/inventory/components/SupplierForm";
 import { InventoryCatalogError } from "@/features/inventory/components/InventoryCatalogError";
 import { getSupplierById } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export default async function EditSupplierPage({
   params,
@@ -15,9 +16,10 @@ export default async function EditSupplierPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   await requirePermission("suppliers_write");
+  const { activeBranch } = await getBranchContext();
   const { supplierId } = await params;
   const query = await searchParams;
-  const supplier = await getSupplierById(supplierId);
+  const supplier = await getSupplierById(supplierId, activeBranch.code);
   if (!supplier) notFound();
 
   return (

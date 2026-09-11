@@ -72,6 +72,7 @@ function normalizeCategory(value: string) {
 }
 
 function inventoryListWhere(input: {
+  branchCode: string;
   search?: string;
   category?: string;
   usage?: InventoryItemUsage | "all";
@@ -88,10 +89,15 @@ function inventoryListWhere(input: {
           : undefined;
 
   return {
-    active:
-      input.status === "all" || !input.status
-        ? undefined
-        : input.status === "active",
+    branchConfigurations: {
+      some: {
+        branchCode: input.branchCode,
+        available:
+          input.status === "all" || !input.status
+            ? undefined
+            : input.status === "active"
+      }
+    },
     category:
       input.category && input.category !== "all"
         ? { equals: input.category, mode: "insensitive" }
@@ -100,7 +106,14 @@ function inventoryListWhere(input: {
     OR: normalizedSearch
       ? [
           { name: { contains: normalizedSearch, mode: "insensitive" } },
-          { sku: { contains: normalizedSearch, mode: "insensitive" } },
+          {
+            branchConfigurations: {
+              some: {
+                branchCode: input.branchCode,
+                sku: { contains: normalizedSearch, mode: "insensitive" }
+              }
+            }
+          },
           { internalCode: { contains: normalizedSearch, mode: "insensitive" } },
           { category: { contains: normalizedSearch, mode: "insensitive" } }
         ]
@@ -108,9 +121,23 @@ function inventoryListWhere(input: {
   };
 }
 
-async function syncLowStockAlert(tx: Prisma.TransactionClient, itemId: string) {
-  const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: itemId } });
-  const hasLowStock = item.active && item.currentStock <= item.minimumStock;
+async function syncLowStockAlert(
+  tx: Prisma.TransactionClient,
+  itemId: string,
+  branchCode: string
+) {
+  const [item, configuration, balance] = await Promise.all([
+    tx.inventoryItem.findUniqueOrThrow({ where: { id: itemId } }),
+    tx.branchInventoryItem.findUniqueOrThrow({
+      where: { itemId_branchCode: { itemId, branchCode } }
+    }),
+    tx.branchInventoryBalance.findUnique({
+      where: { itemId_branchCode: { itemId, branchCode } }
+    })
+  ]);
+  const currentStock = balance?.currentStock ?? 0;
+  const hasLowStock =
+    configuration.available && currentStock <= configuration.minimumStock;
 
   if (hasLowStock) {
     const existing = await tx.inventoryAlert.findFirst({
@@ -122,7 +149,7 @@ async function syncLowStockAlert(tx: Prisma.TransactionClient, itemId: string) {
         data: {
           itemId,
           status: "open",
-          message: `${item.name} está en stock bajo (${item.currentStock} ${item.unit}).`
+          message: `${item.name} está en stock bajo (${currentStock} ${item.unit}) en ${branchCode}.`
         }
       });
     }
@@ -142,13 +169,7 @@ async function createItemCatalogVersion(
 ) {
   const item = await tx.inventoryItem.findUniqueOrThrow({
     where: { id: itemId },
-    include: {
-      supplierLinks: {
-        where: { active: true, supplier: { active: true } },
-        include: { supplier: true },
-        orderBy: [{ preferred: "desc" }, { supplier: { name: "asc" } }]
-      }
-    }
+    include: { supplierLinks: { include: { supplier: true } } }
   });
 
   return tx.inventoryItemCatalogVersion.create({
@@ -162,6 +183,9 @@ async function createItemCatalogVersion(
       category: item.category,
       unit: item.unit,
       usage: item.usage,
+      presentation: item.presentation,
+      manufacturer: item.manufacturer,
+      barcode: item.barcode,
       salePriceCents: item.salePriceCents,
       referenceCostCents: item.referenceCostCents,
       maxDiscountCents: item.maxDiscountCents,
@@ -170,7 +194,7 @@ async function createItemCatalogVersion(
       supplierSnapshot: item.supplierLinks.map((link) => ({
         supplierId: link.supplierId,
         name: link.supplier.name,
-        preferred: link.preferred
+        preferred: false
       })),
       changedById: input.userId,
       changeReason: input.changeReason
@@ -190,6 +214,7 @@ async function createSupplierVersion(
       supplierId,
       version: supplier.revision,
       name: supplier.name,
+      country: supplier.country,
       contactName: supplier.contactName,
       phone: supplier.phone,
       whatsapp: supplier.whatsapp,
@@ -205,7 +230,13 @@ async function createSupplierVersion(
 
 async function ensureUniqueItemCodes(
   tx: Prisma.TransactionClient,
-  input: { itemId?: string; internalCode?: string; sku?: string }
+  input: {
+    itemId?: string;
+    branchCode: string;
+    internalCode?: string;
+    sku?: string;
+    barcode?: string;
+  }
 ) {
   if (input.internalCode) {
     const duplicateCode = await tx.inventoryItem.findFirst({
@@ -219,14 +250,26 @@ async function ensureUniqueItemCodes(
   }
 
   if (input.sku) {
-    const duplicateSku = await tx.inventoryItem.findFirst({
+    const duplicateSku = await tx.branchInventoryItem.findFirst({
+      where: {
+        itemId: input.itemId ? { not: input.itemId } : undefined,
+        branchCode: input.branchCode,
+        sku: { equals: normalizeOptionalCode(input.sku), mode: "insensitive" }
+      },
+      select: { itemId: true }
+    });
+    if (duplicateSku) throw new InventoryCatalogError("duplicate-sku");
+  }
+
+  if (input.barcode) {
+    const duplicateBarcode = await tx.inventoryItem.findFirst({
       where: {
         id: input.itemId ? { not: input.itemId } : undefined,
-        sku: { equals: normalizeOptionalCode(input.sku), mode: "insensitive" }
+        barcode: { equals: normalizeOptionalCode(input.barcode), mode: "insensitive" }
       },
       select: { id: true }
     });
-    if (duplicateSku) throw new InventoryCatalogError("duplicate-sku");
+    if (duplicateBarcode) throw new InventoryCatalogError("duplicate-code");
   }
 }
 
@@ -253,7 +296,12 @@ export async function applyInventoryMovement(
 ) {
   const branchCode = input.branchCode;
   await tx.$queryRaw`SELECT "id" FROM "InventoryItem" WHERE "id" = ${input.itemId} FOR UPDATE`;
-  const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+  const [item, configuration] = await Promise.all([
+    tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } }),
+    tx.branchInventoryItem.findUnique({
+      where: { itemId_branchCode: { itemId: input.itemId, branchCode } }
+    })
+  ]);
 
   await tx.branchInventoryBalance.upsert({
     where: { itemId_branchCode: { itemId: input.itemId, branchCode } },
@@ -269,7 +317,7 @@ export async function applyInventoryMovement(
     where: { itemId_branchCode: { itemId: input.itemId, branchCode } }
   });
 
-  if (!item.active) throw new InventoryCatalogError("inactive-item");
+  if (!configuration?.available) throw new InventoryCatalogError("inactive-item");
   if (input.type === "automatic_sale_exit" && item.usage === "internal_use") {
     throw new InventoryCatalogError("not-for-sale");
   }
@@ -375,7 +423,7 @@ export async function applyInventoryMovement(
       where: { id: input.itemId },
       data: { currentStock: { increment: input.quantityDelta } }
     });
-    await syncLowStockAlert(tx, input.itemId);
+    await syncLowStockAlert(tx, input.itemId, branchCode);
     return lastMovement!;
   }
 
@@ -410,7 +458,7 @@ export async function applyInventoryMovement(
     }
   });
 
-  await syncLowStockAlert(tx, input.itemId);
+  await syncLowStockAlert(tx, input.itemId, branchCode);
   return movement;
 }
 
@@ -421,13 +469,17 @@ export type NewInventoryItemInput = {
   description?: string;
   category?: string;
   unit?: string;
+  presentation?: string;
+  manufacturer?: string;
+  barcode?: string;
+  locationCode?: string;
   usage?: InventoryItemUsage;
   salePriceCents?: number;
   referenceCostCents?: number;
   minimumStock?: number;
   initialStock?: number;
   userId?: string;
-  branchCode?: string;
+  branchCode: string;
   supplierIds?: string[];
   preferredSupplierId?: string;
 };
@@ -436,18 +488,70 @@ export async function createInventoryItemInTransaction(
   tx: Prisma.TransactionClient,
   input: NewInventoryItemInput
 ) {
-  await ensureUniqueItemCodes(tx, input);
+  const existing = await tx.inventoryItem.findUnique({
+    where: { internalCode: normalizeCode(input.internalCode) },
+    include: { branchConfigurations: { where: { branchCode: input.branchCode } } }
+  });
+  if (existing?.branchConfigurations.length) {
+    throw new InventoryCatalogError("duplicate-code");
+  }
+  await ensureUniqueItemCodes(tx, { ...input, itemId: existing?.id });
   const supplierIds = [...new Set(input.supplierIds ?? [])];
   if (input.preferredSupplierId && !supplierIds.includes(input.preferredSupplierId)) {
     throw new InventoryCatalogError("invalid-preferred");
   }
   if (supplierIds.length > 0) {
-    const activeSuppliers = await tx.supplier.count({
-      where: { id: { in: supplierIds }, active: true }
+    const activeSuppliers = await tx.supplierBranchProfile.count({
+      where: {
+        supplierId: { in: supplierIds },
+        branchCode: input.branchCode,
+        active: true
+      }
     });
     if (activeSuppliers !== supplierIds.length) {
       throw new InventoryCatalogError("inactive-supplier");
     }
+  }
+
+  if (existing) {
+    const item = await tx.inventoryItem.update({
+      where: { id: existing.id },
+      data: {
+        name: input.name.trim(),
+        description: input.description,
+        category: normalizeCategory(input.category ?? existing.category),
+        unit: input.unit ?? existing.unit,
+        usage: input.usage ?? existing.usage,
+        presentation: input.presentation,
+        manufacturer: input.manufacturer,
+        barcode: normalizeOptionalCode(input.barcode),
+        revision: { increment: 1 },
+        supplierLinks: {
+          connectOrCreate: supplierIds.map((supplierId) => ({
+            where: { itemId_supplierId: { itemId: existing.id, supplierId } },
+            create: { supplierId }
+          }))
+        },
+        branchConfigurations: {
+          create: {
+            branchCode: input.branchCode,
+            sku: normalizeOptionalCode(input.sku),
+            available: true,
+            salePriceCents: input.salePriceCents ?? 0,
+            referenceCostCents: input.referenceCostCents ?? 0,
+            minimumStock: input.minimumStock ?? 0,
+            locationCode: input.locationCode,
+            preferredSupplierId: input.preferredSupplierId
+          }
+        }
+      }
+    });
+    await createItemCatalogVersion(tx, item.id, {
+      userId: input.userId,
+      changeReason: `Producto asignado a la sucursal ${input.branchCode}`
+    });
+    await syncLowStockAlert(tx, item.id, input.branchCode);
+    return item;
   }
 
   const item = await tx.inventoryItem.create({
@@ -459,15 +563,29 @@ export async function createInventoryItemInTransaction(
       category: normalizeCategory(input.category ?? "Sin categoría"),
       unit: input.unit ?? "unidad",
       usage: input.usage ?? "both",
+      presentation: input.presentation,
+      manufacturer: input.manufacturer,
+      barcode: normalizeOptionalCode(input.barcode),
       salePriceCents: input.salePriceCents ?? 0,
       referenceCostCents: input.referenceCostCents ?? 0,
       minimumStock: input.minimumStock ?? 0,
       currentStock: 0,
       supplierLinks: {
         create: supplierIds.map((supplierId) => ({
-          supplierId,
-          preferred: supplierId === input.preferredSupplierId
+          supplierId
         }))
+      },
+      branchConfigurations: {
+        create: {
+          branchCode: input.branchCode,
+          sku: normalizeOptionalCode(input.sku),
+          available: true,
+          salePriceCents: input.salePriceCents ?? 0,
+          referenceCostCents: input.referenceCostCents ?? 0,
+          minimumStock: input.minimumStock ?? 0,
+          locationCode: input.locationCode,
+          preferredSupplierId: input.preferredSupplierId
+        }
       }
     }
   });
@@ -476,7 +594,7 @@ export async function createInventoryItemInTransaction(
     userId: input.userId,
     changeReason: "Alta inicial del producto"
   });
-  await syncLowStockAlert(tx, item.id);
+  await syncLowStockAlert(tx, item.id, input.branchCode);
   return item;
 }
 
@@ -484,6 +602,7 @@ export async function addInventoryItemSupplierLinksInTransaction(
   tx: Prisma.TransactionClient,
   input: {
     itemId: string;
+    branchCode: string;
     supplierIds: string[];
     preferredSupplierId?: string;
     userId?: string;
@@ -492,43 +611,47 @@ export async function addInventoryItemSupplierLinksInTransaction(
 ) {
   const supplierIds = [...new Set(input.supplierIds)];
   if (supplierIds.length === 0) return;
-  const activeSuppliers = await tx.supplier.count({
-    where: { id: { in: supplierIds }, active: true }
+  const activeSuppliers = await tx.supplierBranchProfile.count({
+    where: {
+      supplierId: { in: supplierIds },
+      branchCode: input.branchCode,
+      active: true
+    }
   });
   if (activeSuppliers !== supplierIds.length) {
     throw new InventoryCatalogError("inactive-supplier");
   }
   const item = await tx.inventoryItem.findUniqueOrThrow({
     where: { id: input.itemId },
-    include: { supplierLinks: { where: { active: true } } }
+    include: {
+      supplierLinks: true,
+      branchConfigurations: { where: { branchCode: input.branchCode } }
+    }
   });
   const activeIds = new Set(item.supplierLinks.map((link) => link.supplierId));
   const additions = supplierIds.filter((supplierId) => !activeIds.has(supplierId));
-  if (additions.length === 0) return;
-  const hasPreferred = item.supplierLinks.some((link) => link.preferred);
-
-  await tx.inventoryItem.update({
-    where: { id: input.itemId },
-    data: { revision: { increment: 1 } }
-  });
+  const configuration = item.branchConfigurations[0];
+  if (
+    additions.length === 0 &&
+    configuration?.preferredSupplierId === input.preferredSupplierId
+  ) {
+    return;
+  }
   for (const supplierId of additions) {
     await tx.inventoryItemSupplier.upsert({
       where: { itemId_supplierId: { itemId: input.itemId, supplierId } },
-      create: {
-        itemId: input.itemId,
-        supplierId,
-        active: true,
-        preferred: !hasPreferred && supplierId === input.preferredSupplierId
-      },
-      update: {
-        active: true,
-        preferred: !hasPreferred && supplierId === input.preferredSupplierId
-      }
+      create: { itemId: input.itemId, supplierId },
+      update: {}
     });
   }
-  await createItemCatalogVersion(tx, input.itemId, {
-    userId: input.userId,
-    changeReason: input.changeReason
+  await tx.branchInventoryItem.update({
+    where: {
+      itemId_branchCode: { itemId: input.itemId, branchCode: input.branchCode }
+    },
+    data: {
+      preferredSupplierId: input.preferredSupplierId,
+      revision: { increment: 1 }
+    }
   });
 }
 
@@ -538,7 +661,6 @@ export async function createInventoryItemRecord(input: NewInventoryItemInput) {
       const item = await createInventoryItemInTransaction(tx, input);
 
       if (input.initialStock && input.initialStock > 0) {
-        if (!input.branchCode) throw new Error("inventory-branch-required");
         await applyInventoryMovement(tx, {
           itemId: item.id,
           userId: input.userId,
@@ -548,7 +670,7 @@ export async function createInventoryItemRecord(input: NewInventoryItemInput) {
           reason: "Stock inicial"
         });
       } else {
-        await syncLowStockAlert(tx, item.id);
+        await syncLowStockAlert(tx, item.id, input.branchCode);
       }
 
       return tx.inventoryItem.findUniqueOrThrow({
@@ -561,12 +683,17 @@ export async function createInventoryItemRecord(input: NewInventoryItemInput) {
 
 export async function updateInventoryItemRecord(input: {
   itemId: string;
+  branchCode: string;
   expectedRevision: number;
   sku?: string;
   name: string;
   description?: string;
   category: string;
   unit: string;
+  presentation?: string;
+  manufacturer?: string;
+  barcode?: string;
+  locationCode?: string;
   usage: InventoryItemUsage;
   salePriceCents: number;
   referenceCostCents: number;
@@ -576,27 +703,49 @@ export async function updateInventoryItemRecord(input: {
 }) {
   return withDatabaseError("updateInventoryItemRecord", async () =>
     prisma.$transaction(async (tx) => {
-      await ensureUniqueItemCodes(tx, { itemId: input.itemId, sku: input.sku });
-      const updated = await tx.inventoryItem.updateMany({
-        where: { id: input.itemId, revision: input.expectedRevision },
+      await ensureUniqueItemCodes(tx, input);
+      const localUpdate = await tx.branchInventoryItem.updateMany({
+        where: {
+          itemId: input.itemId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
         data: {
           sku: normalizeOptionalCode(input.sku),
+          salePriceCents: input.salePriceCents,
+          referenceCostCents: input.referenceCostCents,
+          minimumStock: input.minimumStock,
+          locationCode: input.locationCode,
+          revision: { increment: 1 }
+        }
+      });
+      if (localUpdate.count !== 1) throw new InventoryCatalogError("concurrent-update");
+      await tx.inventoryItem.update({
+        where: { id: input.itemId },
+        data: {
           name: input.name.trim(),
           description: input.description,
           category: normalizeCategory(input.category),
           unit: input.unit.trim(),
           usage: input.usage,
-          salePriceCents: input.salePriceCents,
-          referenceCostCents: input.referenceCostCents,
-          minimumStock: input.minimumStock,
+          presentation: input.presentation,
+          manufacturer: input.manufacturer,
+          barcode: normalizeOptionalCode(input.barcode),
           revision: { increment: 1 }
         }
       });
-      if (updated.count !== 1) throw new InventoryCatalogError("concurrent-update");
 
-      await syncLowStockAlert(tx, input.itemId);
+      await syncLowStockAlert(tx, input.itemId, input.branchCode);
       await createItemCatalogVersion(tx, input.itemId, input);
-      return tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+      const [item, configuration] = await Promise.all([
+        tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } }),
+        tx.branchInventoryItem.findUniqueOrThrow({
+          where: {
+            itemId_branchCode: { itemId: input.itemId, branchCode: input.branchCode }
+          }
+        })
+      ]);
+      return { ...item, ...configuration, active: configuration.available };
     })
   );
 }
@@ -609,6 +758,7 @@ export async function updateInventoryItemRecord(input: {
  */
 export async function updateInventoryItemMaxDiscountRecord(input: {
   itemId: string;
+  branchCode: string;
   expectedRevision: number;
   maxDiscountCents: number;
   changeReason: string;
@@ -616,20 +766,31 @@ export async function updateInventoryItemMaxDiscountRecord(input: {
 }) {
   return withDatabaseError("updateInventoryItemMaxDiscountRecord", async () =>
     prisma.$transaction(async (tx) => {
-      const updated = await tx.inventoryItem.updateMany({
-        where: { id: input.itemId, revision: input.expectedRevision },
-        data: { maxDiscountCents: input.maxDiscountCents, revision: { increment: 1 } }
+      const updated = await tx.branchInventoryItem.updateMany({
+        where: {
+          itemId: input.itemId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
+        data: {
+          maxDiscountCents: input.maxDiscountCents,
+          revision: { increment: 1 }
+        }
       });
       if (updated.count !== 1) throw new InventoryCatalogError("concurrent-update");
-
-      await createItemCatalogVersion(tx, input.itemId, input);
-      return tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+      const configuration = await tx.branchInventoryItem.findUniqueOrThrow({
+        where: {
+          itemId_branchCode: { itemId: input.itemId, branchCode: input.branchCode }
+        }
+      });
+      return { id: input.itemId, ...configuration };
     })
   );
 }
 
 export async function setInventoryItemStatusRecord(input: {
   itemId: string;
+  branchCode: string;
   expectedRevision: number;
   active: boolean;
   changeReason: string;
@@ -637,21 +798,30 @@ export async function setInventoryItemStatusRecord(input: {
 }) {
   return withDatabaseError("setInventoryItemStatusRecord", async () =>
     prisma.$transaction(async (tx) => {
-      const updated = await tx.inventoryItem.updateMany({
-        where: { id: input.itemId, revision: input.expectedRevision },
-        data: { active: input.active, revision: { increment: 1 } }
+      const updated = await tx.branchInventoryItem.updateMany({
+        where: {
+          itemId: input.itemId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
+        data: { available: input.active, revision: { increment: 1 } }
       });
       if (updated.count !== 1) throw new InventoryCatalogError("concurrent-update");
 
-      await syncLowStockAlert(tx, input.itemId);
-      await createItemCatalogVersion(tx, input.itemId, input);
-      return tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+      await syncLowStockAlert(tx, input.itemId, input.branchCode);
+      const configuration = await tx.branchInventoryItem.findUniqueOrThrow({
+        where: {
+          itemId_branchCode: { itemId: input.itemId, branchCode: input.branchCode }
+        }
+      });
+      return { id: input.itemId, ...configuration, active: configuration.available };
     })
   );
 }
 
 export async function updateInventoryItemSuppliersRecord(input: {
   itemId: string;
+  branchCode: string;
   expectedRevision: number;
   supplierIds: string[];
   preferredSupplierId?: string;
@@ -664,94 +834,155 @@ export async function updateInventoryItemSuppliersRecord(input: {
       if (input.preferredSupplierId && !supplierIds.includes(input.preferredSupplierId)) {
         throw new InventoryCatalogError("invalid-preferred");
       }
-      const activeSuppliers = await tx.supplier.findMany({
-        where: { id: { in: supplierIds }, active: true },
-        select: { id: true }
+      const activeSuppliers = await tx.supplierBranchProfile.findMany({
+        where: {
+          supplierId: { in: supplierIds },
+          branchCode: input.branchCode,
+          active: true
+        },
+        select: { supplierId: true }
       });
       if (activeSuppliers.length !== supplierIds.length) {
         throw new InventoryCatalogError("inactive-supplier");
       }
 
-      const updated = await tx.inventoryItem.updateMany({
-        where: { id: input.itemId, revision: input.expectedRevision },
-        data: { revision: { increment: 1 } }
+      const updated = await tx.branchInventoryItem.updateMany({
+        where: {
+          itemId: input.itemId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
+        data: {
+          preferredSupplierId: input.preferredSupplierId,
+          revision: { increment: 1 }
+        }
       });
       if (updated.count !== 1) throw new InventoryCatalogError("concurrent-update");
 
-      await tx.inventoryItemSupplier.updateMany({
-        where: { itemId: input.itemId },
-        data: { active: false, preferred: false }
-      });
       for (const supplierId of supplierIds) {
         await tx.inventoryItemSupplier.upsert({
           where: { itemId_supplierId: { itemId: input.itemId, supplierId } },
-          create: {
-            itemId: input.itemId,
-            supplierId,
-            active: true,
-            preferred: supplierId === input.preferredSupplierId
-          },
-          update: {
-            active: true,
-            preferred: supplierId === input.preferredSupplierId
-          }
+          create: { itemId: input.itemId, supplierId },
+          update: {}
         });
       }
 
-      await createItemCatalogVersion(tx, input.itemId, input);
-      return tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+      const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+      return { ...item, revision: input.expectedRevision + 1 };
     })
   );
 }
 
 export async function createSupplierRecord(input: {
+  branchCode: string;
   name: string;
+  country?: string;
   contactName?: string;
   phone?: string;
   whatsapp?: string;
   email?: string;
   address?: string;
   notes?: string;
+  accountExecutiveName?: string;
+  accountExecutivePhone?: string;
+  commercialTerms?: string;
+  paymentTermDays?: number;
+  references?: string;
   userId?: string;
 }) {
   return withDatabaseError("createSupplierRecord", async () =>
     prisma.$transaction(async (tx) => {
       const duplicate = await tx.supplier.findFirst({
         where: { name: { equals: input.name.trim(), mode: "insensitive" } },
-        select: { id: true }
+        include: { branchProfiles: { where: { branchCode: input.branchCode } } }
       });
-      if (duplicate) throw new InventoryCatalogError("duplicate-supplier");
+      if (duplicate?.branchProfiles.length) {
+        throw new InventoryCatalogError("duplicate-supplier");
+      }
+
+      if (duplicate) {
+        const supplier = await tx.supplier.update({
+          where: { id: duplicate.id },
+          data: {
+            name: input.name.trim(),
+            country: input.country,
+            contactName: input.contactName,
+            phone: input.phone,
+            whatsapp: input.whatsapp,
+            email: input.email,
+            address: input.address,
+            revision: { increment: 1 },
+            branchProfiles: {
+              create: {
+                branchCode: input.branchCode,
+                active: true,
+                accountExecutiveName: input.accountExecutiveName,
+                accountExecutivePhone: input.accountExecutivePhone,
+                commercialTerms: input.commercialTerms,
+                paymentTermDays: input.paymentTermDays,
+                references: input.references,
+                notes: input.notes
+              }
+            }
+          }
+        });
+        await createSupplierVersion(tx, supplier.id, {
+          userId: input.userId,
+          changeReason: `Proveedor asignado a la sucursal ${input.branchCode}`
+        });
+        return { ...supplier, active: true };
+      }
 
       const supplier = await tx.supplier.create({
         data: {
           name: input.name.trim(),
+          country: input.country,
           contactName: input.contactName,
           phone: input.phone,
           whatsapp: input.whatsapp,
           email: input.email,
           address: input.address,
-          notes: input.notes
+          notes: input.notes,
+          branchProfiles: {
+            create: {
+              branchCode: input.branchCode,
+              active: true,
+              accountExecutiveName: input.accountExecutiveName,
+              accountExecutivePhone: input.accountExecutivePhone,
+              commercialTerms: input.commercialTerms,
+              paymentTermDays: input.paymentTermDays,
+              references: input.references,
+              notes: input.notes
+            }
+          }
         }
       });
       await createSupplierVersion(tx, supplier.id, {
         userId: input.userId,
         changeReason: "Alta inicial del proveedor"
       });
-      return supplier;
+      return { ...supplier, active: true };
     })
   );
 }
 
 export async function updateSupplierRecord(input: {
   supplierId: string;
+  branchCode: string;
   expectedRevision: number;
   name: string;
+  country?: string;
   contactName?: string;
   phone?: string;
   whatsapp?: string;
   email?: string;
   address?: string;
   notes?: string;
+  accountExecutiveName?: string;
+  accountExecutivePhone?: string;
+  commercialTerms?: string;
+  paymentTermDays?: number;
+  references?: string;
   changeReason: string;
   userId?: string;
 }) {
@@ -766,29 +997,57 @@ export async function updateSupplierRecord(input: {
       });
       if (duplicate) throw new InventoryCatalogError("duplicate-supplier");
 
-      const updated = await tx.supplier.updateMany({
-        where: { id: input.supplierId, revision: input.expectedRevision },
+      const localUpdate = await tx.supplierBranchProfile.updateMany({
+        where: {
+          supplierId: input.supplierId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
+        data: {
+          accountExecutiveName: input.accountExecutiveName,
+          accountExecutivePhone: input.accountExecutivePhone,
+          commercialTerms: input.commercialTerms,
+          paymentTermDays: input.paymentTermDays,
+          references: input.references,
+          notes: input.notes,
+          revision: { increment: 1 }
+        }
+      });
+      if (localUpdate.count !== 1) throw new InventoryCatalogError("concurrent-update");
+      await tx.supplier.update({
+        where: { id: input.supplierId },
         data: {
           name: input.name.trim(),
+          country: input.country,
           contactName: input.contactName,
           phone: input.phone,
           whatsapp: input.whatsapp,
           email: input.email,
           address: input.address,
-          notes: input.notes,
           revision: { increment: 1 }
         }
       });
-      if (updated.count !== 1) throw new InventoryCatalogError("concurrent-update");
 
       await createSupplierVersion(tx, input.supplierId, input);
-      return tx.supplier.findUniqueOrThrow({ where: { id: input.supplierId } });
+      const [supplier, profile] = await Promise.all([
+        tx.supplier.findUniqueOrThrow({ where: { id: input.supplierId } }),
+        tx.supplierBranchProfile.findUniqueOrThrow({
+          where: {
+            supplierId_branchCode: {
+              supplierId: input.supplierId,
+              branchCode: input.branchCode
+            }
+          }
+        })
+      ]);
+      return { ...supplier, ...profile };
     })
   );
 }
 
 export async function setSupplierStatusRecord(input: {
   supplierId: string;
+  branchCode: string;
   expectedRevision: number;
   active: boolean;
   changeReason: string;
@@ -796,13 +1055,24 @@ export async function setSupplierStatusRecord(input: {
 }) {
   return withDatabaseError("setSupplierStatusRecord", async () =>
     prisma.$transaction(async (tx) => {
-      const updated = await tx.supplier.updateMany({
-        where: { id: input.supplierId, revision: input.expectedRevision },
+      const updated = await tx.supplierBranchProfile.updateMany({
+        where: {
+          supplierId: input.supplierId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
         data: { active: input.active, revision: { increment: 1 } }
       });
       if (updated.count !== 1) throw new InventoryCatalogError("concurrent-update");
-      await createSupplierVersion(tx, input.supplierId, input);
-      return tx.supplier.findUniqueOrThrow({ where: { id: input.supplierId } });
+      const profile = await tx.supplierBranchProfile.findUniqueOrThrow({
+        where: {
+          supplierId_branchCode: {
+            supplierId: input.supplierId,
+            branchCode: input.branchCode
+          }
+        }
+      });
+      return { id: input.supplierId, ...profile };
     })
   );
 }
@@ -1131,23 +1401,32 @@ export type InventoryListInput = PaginationInput & {
   category?: string;
   usage?: InventoryItemUsage | "all";
   status?: "active" | "inactive" | "all";
-  branchCode?: string;
+  branchCode: string;
 };
 
-export async function getInventoryItems(input: InventoryListInput = {}) {
+export async function getInventoryItems(input: InventoryListInput) {
   const pagination = getPagination(input);
   return withDatabaseError("getInventoryItems", async () => {
     const items = await prisma.inventoryItem.findMany({
       where: inventoryListWhere(input),
       include: {
         branchBalances: {
-          where: { branchCode: input.branchCode ?? "el-alto" },
+          where: { branchCode: input.branchCode },
           select: { currentStock: true }
         },
+        branchConfigurations: {
+          where: { branchCode: input.branchCode }
+        },
         supplierLinks: {
-          where: { active: true, supplier: { active: true } },
+          where: {
+            supplier: {
+              branchProfiles: {
+                some: { branchCode: input.branchCode, active: true }
+              }
+            }
+          },
           include: { supplier: true },
-          orderBy: [{ preferred: "desc" }, { supplier: { name: "asc" } }]
+          orderBy: { supplier: { name: "asc" } }
         },
         alerts: {
           where: { status: "open" },
@@ -1155,26 +1434,39 @@ export async function getInventoryItems(input: InventoryListInput = {}) {
           take: 1
         }
       },
-      orderBy: [{ active: "desc" }, { name: "asc" }],
+      orderBy: { name: "asc" },
       skip: pagination.skip,
       take: pagination.take
     });
-    return items.map((item) => ({
-      ...item,
-      currentStock: item.branchBalances[0]?.currentStock ?? 0
-    }));
+    return items.map((item) => {
+      const configuration = item.branchConfigurations[0]!;
+      return {
+        ...item,
+        ...configuration,
+        active: configuration.available,
+        currentStock: item.branchBalances[0]?.currentStock ?? 0,
+        supplierLinks: [...item.supplierLinks].sort((left, right) =>
+          left.supplierId === configuration.preferredSupplierId
+            ? -1
+            : right.supplierId === configuration.preferredSupplierId
+              ? 1
+              : left.supplier.name.localeCompare(right.supplier.name)
+        )
+      };
+    });
   });
 }
 
-export async function countInventoryItems(input: Omit<InventoryListInput, keyof PaginationInput> = {}) {
+export async function countInventoryItems(input: Omit<InventoryListInput, keyof PaginationInput>) {
   return withDatabaseError("countInventoryItems", () =>
     prisma.inventoryItem.count({ where: inventoryListWhere(input) })
   );
 }
 
-export async function getInventoryCategories() {
+export async function getInventoryCategories(branchCode: string) {
   return withDatabaseError("getInventoryCategories", async () => {
     const items = await prisma.inventoryItem.findMany({
+      where: { branchConfigurations: { some: { branchCode } } },
       distinct: ["category"],
       select: { category: true },
       orderBy: { category: "asc" }
@@ -1183,19 +1475,22 @@ export async function getInventoryCategories() {
   });
 }
 
-export async function getInventoryItemById(id: string, branchCode = "el-alto") {
+export async function getInventoryItemById(id: string, branchCode: string) {
   return withDatabaseError("getInventoryItemById", async () => {
-    const item = await prisma.inventoryItem.findUnique({
-      where: { id },
+    const item = await prisma.inventoryItem.findFirst({
+      where: { id, branchConfigurations: { some: { branchCode } } },
       include: {
         branchBalances: {
           where: { branchCode },
           select: { currentStock: true }
         },
+        branchConfigurations: { where: { branchCode } },
         supplierLinks: {
-          where: { active: true },
+          where: {
+            supplier: { branchProfiles: { some: { branchCode, active: true } } }
+          },
           include: { supplier: true },
-          orderBy: [{ preferred: "desc" }, { supplier: { name: "asc" } }]
+          orderBy: { supplier: { name: "asc" } }
         },
         catalogVersions: {
           include: { changedBy: { select: { id: true, name: true, email: true } } },
@@ -1215,27 +1510,43 @@ export async function getInventoryItemById(id: string, branchCode = "el-alto") {
         }
       }
     });
-    return item
-      ? { ...item, currentStock: item.branchBalances[0]?.currentStock ?? 0 }
-      : null;
+    if (!item) return null;
+    const configuration = item.branchConfigurations[0]!;
+    return {
+      ...item,
+      ...configuration,
+      active: configuration.available,
+      currentStock: item.branchBalances[0]?.currentStock ?? 0,
+      supplierLinks: item.supplierLinks.map((link) => ({
+        ...link,
+        preferred: link.supplierId === configuration.preferredSupplierId,
+        active: true
+      }))
+    };
   });
 }
 
 export async function getSuppliers(
   input: PaginationInput & {
+    branchCode: string;
     search?: string;
     status?: "active" | "inactive" | "all";
-  } = {}
+  }
 ) {
   const pagination = getPagination(input);
   const search = input.search?.trim();
   return withDatabaseError("getSuppliers", () =>
     prisma.supplier.findMany({
       where: {
-        active:
-          input.status === "all" || !input.status
-            ? undefined
-            : input.status === "active",
+        branchProfiles: {
+          some: {
+            branchCode: input.branchCode,
+            active:
+              input.status === "all" || !input.status
+                ? undefined
+                : input.status === "active"
+          }
+        },
         OR: search
           ? [
               { name: { contains: search, mode: "insensitive" } },
@@ -1246,31 +1557,44 @@ export async function getSuppliers(
           : undefined
       },
       include: {
+        branchProfiles: { where: { branchCode: input.branchCode } },
         _count: {
           select: {
-            itemLinks: { where: { active: true } }
+            itemLinks: {
+              where: {
+                item: { branchConfigurations: { some: { branchCode: input.branchCode } } }
+              }
+            }
           }
         }
       },
-      orderBy: [{ active: "desc" }, { name: "asc" }],
+      orderBy: { name: "asc" },
       skip: pagination.skip,
       take: pagination.take
-    })
+    }).then((suppliers) =>
+      suppliers.map((supplier) => ({ ...supplier, ...supplier.branchProfiles[0]! }))
+    )
   );
 }
 
 export async function countSuppliers(input: {
+  branchCode: string;
   search?: string;
   status?: "active" | "inactive" | "all";
-} = {}) {
+}) {
   const search = input.search?.trim();
   return withDatabaseError("countSuppliers", () =>
     prisma.supplier.count({
       where: {
-        active:
-          input.status === "all" || !input.status
-            ? undefined
-            : input.status === "active",
+        branchProfiles: {
+          some: {
+            branchCode: input.branchCode,
+            active:
+              input.status === "all" || !input.status
+                ? undefined
+                : input.status === "active"
+          }
+        },
         OR: search
           ? [
               { name: { contains: search, mode: "insensitive" } },
@@ -1284,25 +1608,28 @@ export async function countSuppliers(input: {
   );
 }
 
-export async function getActiveSuppliers() {
+export async function getActiveSuppliers(branchCode: string) {
   return withDatabaseError("getActiveSuppliers", () =>
     prisma.supplier.findMany({
-      where: { active: true },
+      where: { branchProfiles: { some: { branchCode, active: true } } },
       select: { id: true, name: true },
       orderBy: { name: "asc" }
     })
   );
 }
 
-export async function getSupplierById(id: string) {
-  return withDatabaseError("getSupplierById", () =>
-    prisma.supplier.findUnique({
-      where: { id },
+export async function getSupplierById(id: string, branchCode: string) {
+  return withDatabaseError("getSupplierById", async () => {
+    const supplier = await prisma.supplier.findFirst({
+      where: { id, branchProfiles: { some: { branchCode } } },
       include: {
+        branchProfiles: { where: { branchCode } },
         itemLinks: {
-          where: { active: true },
-          include: { item: true },
-          orderBy: [{ preferred: "desc" }, { item: { name: "asc" } }]
+          where: { item: { branchConfigurations: { some: { branchCode } } } },
+          include: {
+            item: { include: { branchConfigurations: { where: { branchCode } } } }
+          },
+          orderBy: { item: { name: "asc" } }
         },
         versions: {
           include: { changedBy: { select: { id: true, name: true, email: true } } },
@@ -1310,35 +1637,74 @@ export async function getSupplierById(id: string) {
           take: 30
         }
       }
-    })
-  );
-}
-
-export async function getLowStockItems(branchCode = "el-alto") {
-  return withDatabaseError("getLowStockItems", async () => {
-    const balances = await prisma.branchInventoryBalance.findMany({
-      where: { branchCode, item: { active: true } },
-      include: { item: true },
-      orderBy: { currentStock: "asc" }
     });
-    return balances
-      .filter((balance) => balance.currentStock <= balance.item.minimumStock)
-      .slice(0, 50)
-      .map((balance) => ({ ...balance.item, currentStock: balance.currentStock }));
+    if (!supplier) return null;
+    const profile = supplier.branchProfiles[0]!;
+    return {
+      ...supplier,
+      ...profile,
+      itemLinks: supplier.itemLinks.map((link) => ({
+        ...link,
+        preferred:
+          link.item.branchConfigurations[0]?.preferredSupplierId === supplier.id,
+        active: true
+      }))
+    };
   });
 }
 
-export async function getInventorySummary(branchCode = "el-alto") {
+export async function getLowStockItems(branchCode: string) {
+  return withDatabaseError("getLowStockItems", async () => {
+    const balances = await prisma.branchInventoryBalance.findMany({
+      where: {
+        branchCode,
+        item: { branchConfigurations: { some: { branchCode, available: true } } }
+      },
+      include: {
+        item: { include: { branchConfigurations: { where: { branchCode } } } }
+      },
+      orderBy: { currentStock: "asc" }
+    });
+    return balances
+      .filter(
+        (balance) =>
+          balance.currentStock <= balance.item.branchConfigurations[0]!.minimumStock
+      )
+      .slice(0, 50)
+      .map((balance) => ({
+        ...balance.item,
+        ...balance.item.branchConfigurations[0]!,
+        active: balance.item.branchConfigurations[0]!.available,
+        currentStock: balance.currentStock
+      }));
+  });
+}
+
+export async function getInventorySummary(branchCode: string) {
   return withDatabaseError("getInventorySummary", async () => {
     const [totalItems, balances] = await Promise.all([
-      prisma.inventoryItem.count({ where: { active: true } }),
+      prisma.branchInventoryItem.count({ where: { branchCode, available: true } }),
       prisma.branchInventoryBalance.findMany({
-        where: { branchCode, item: { active: true } },
-        select: { currentStock: true, item: { select: { minimumStock: true } } }
+        where: {
+          branchCode,
+          item: { branchConfigurations: { some: { branchCode, available: true } } }
+        },
+        select: {
+          currentStock: true,
+          item: {
+            select: {
+              branchConfigurations: {
+                where: { branchCode },
+                select: { minimumStock: true }
+              }
+            }
+          }
+        }
       })
     ]);
     const lowStock = balances.filter(
-      (balance) => balance.currentStock <= balance.item.minimumStock
+      (balance) =>
+        balance.currentStock <= balance.item.branchConfigurations[0]!.minimumStock
     ).length;
     const openAlerts = lowStock;
     return { totalItems, lowStock, openAlerts };

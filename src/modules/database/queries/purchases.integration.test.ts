@@ -13,6 +13,7 @@ import {
   createPurchaseBatchRecord,
   createPurchaseDraftRecord,
   createPurchaseReceiptRecord,
+  findPurchaseWorkflowError,
   recordPurchasePayment
 } from "@/modules/database/queries/purchases";
 
@@ -69,7 +70,12 @@ async function setup() {
     })
   ]);
   const supplier = await prisma.supplier.create({
-    data: { name: "Proveedor de prueba" }
+    data: {
+      name: "Proveedor de prueba",
+      branchProfiles: {
+        create: { branchCode: "el-alto", active: true }
+      }
+    }
   });
   const item = await prisma.inventoryItem.create({
     data: {
@@ -79,7 +85,15 @@ async function setup() {
       unit: "unidad",
       usage: "both",
       referenceCostCents: 80,
-      minimumStock: 2
+      minimumStock: 2,
+      branchConfigurations: {
+        create: {
+          branchCode: "el-alto",
+          available: true,
+          referenceCostCents: 80,
+          minimumStock: 2
+        }
+      }
     }
   });
   const cashSession = await openCashSession({
@@ -172,8 +186,13 @@ describe("purchase, receipt, batch and stock integration", () => {
       idempotencyKey: randomUUID(),
       lines: [{ ...firstReceiptInput.lines[0], quantity: 6, unitCostCents: 110 }]
     });
-    await prisma.inventoryItem.update({
-      where: { id: fixture.item.id },
+    await prisma.branchInventoryItem.update({
+      where: {
+        itemId_branchCode: {
+          itemId: fixture.item.id,
+          branchCode: "el-alto"
+        }
+      },
       data: { referenceCostCents: 999 }
     });
     const lots = await prisma.inventoryLot.findMany({
@@ -258,7 +277,12 @@ describe("purchase, receipt, batch and stock integration", () => {
   it("creates products inline and groups one capture into purchases by supplier", async () => {
     const fixture = await setup();
     const secondSupplier = await prisma.supplier.create({
-      data: { name: "Segundo proveedor" }
+      data: {
+        name: "Segundo proveedor",
+        branchProfiles: {
+          create: { branchCode: "el-alto", active: true }
+        }
+      }
     });
     const idempotencyKey = randomUUID();
     const input = {
@@ -308,5 +332,64 @@ describe("purchase, receipt, batch and stock integration", () => {
         where: { itemId: created.createdItemIds[0], active: true }
       })
     ).toBe(2);
+  });
+
+  it("rejects suppliers and products that are not enabled in the purchase branch", async () => {
+    const fixture = await setup();
+
+    let supplierFailure: unknown;
+    try {
+      await createPurchaseDraftRecord({
+        supplierId: fixture.supplier.id,
+        branchCode: "cochabamba",
+        purchaseDate: businessToday,
+        currency: "BOB",
+        intendedPaymentMethod: "credit",
+        idempotencyKey: randomUUID(),
+        createdById: fixture.administrator.id,
+        lines: [
+          {
+            itemId: fixture.item.id,
+            orderedQuantity: 1,
+            unitCostCents: 100
+          }
+        ]
+      });
+    } catch (error) {
+      supplierFailure = error;
+    }
+    expect(findPurchaseWorkflowError(supplierFailure)?.code).toBe("inactive-supplier");
+
+    await prisma.supplierBranchProfile.create({
+      data: {
+        supplierId: fixture.supplier.id,
+        branchCode: "cochabamba",
+        active: true
+      }
+    });
+
+    let itemFailure: unknown;
+    try {
+      await createPurchaseDraftRecord({
+        supplierId: fixture.supplier.id,
+        branchCode: "cochabamba",
+        purchaseDate: businessToday,
+        currency: "BOB",
+        intendedPaymentMethod: "credit",
+        idempotencyKey: randomUUID(),
+        createdById: fixture.administrator.id,
+        lines: [
+          {
+            itemId: fixture.item.id,
+            orderedQuantity: 1,
+            unitCostCents: 100
+          }
+        ]
+      });
+    } catch (error) {
+      itemFailure = error;
+    }
+    expect(findPurchaseWorkflowError(itemFailure)?.code).toBe("inactive-item");
+    expect(await prisma.purchase.count()).toBe(0);
   });
 });

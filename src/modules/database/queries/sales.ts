@@ -18,14 +18,6 @@ import {
 import { patientSearchWhere } from "@/modules/database/queries/patient-search";
 import { updateVisitRouteStatusInTransaction } from "@/modules/database/queries/visits";
 
-const paymentMethodNames: Record<string, string> = {
-  cash: "Efectivo",
-  qr: "QR",
-  card: "Tarjeta",
-  transfer: "Transferencia",
-  other: "Otro"
-};
-
 const activeWorkItemStatuses: VisitWorkItemStatus[] = [
   "pending",
   "acknowledged",
@@ -92,17 +84,29 @@ async function activateAwaitingPaymentFollowUps(
   });
 }
 
-async function ensurePaymentMethod(tx: Prisma.TransactionClient, code: string) {
-  return tx.paymentMethod.upsert({
-    where: { code },
-    create: {
+async function ensurePaymentMethod(
+  tx: Prisma.TransactionClient,
+  code: string,
+  branchCode: string
+) {
+  const method = await tx.paymentMethod.findFirst({
+    where: {
       code,
-      name: paymentMethodNames[code] ?? paymentMethodNames.other
-    },
-    update: {
-      active: true
+      branchConfigurations: { some: { branchCode, active: true } }
     }
   });
+  if (!method) throw new CashWorkflowError("payment_method_unavailable");
+  return method;
+}
+
+export async function getActivePaymentMethods(branchCode: string) {
+  return withDatabaseError("getActivePaymentMethods", () =>
+    prisma.paymentMethod.findMany({
+      where: { branchConfigurations: { some: { branchCode, active: true } } },
+      select: { code: true, name: true },
+      orderBy: { name: "asc" }
+    })
+  );
 }
 
 async function completeDoctorOrderPaidVisit(
@@ -432,7 +436,11 @@ export async function createSaleRecord(input: {
       }
 
       if (initialPaymentCents > 0) {
-        const method = await ensurePaymentMethod(tx, input.paymentMethodCode ?? "cash");
+        const method = await ensurePaymentMethod(
+          tx,
+          input.paymentMethodCode ?? "cash",
+          branchCode
+        );
         const payment = await tx.payment.create({
           data: {
             idempotencyKey: input.idempotencyKey
@@ -735,7 +743,11 @@ export async function confirmDoctorOrderSale(input: {
       }
 
       if (initialPaymentCents > 0) {
-        const method = await ensurePaymentMethod(tx, input.paymentMethodCode ?? "cash");
+        const method = await ensurePaymentMethod(
+          tx,
+          input.paymentMethodCode ?? "cash",
+          branchCode
+        );
         const payment = await tx.payment.create({
           data: {
             idempotencyKey: `doctor-order-payment:${order.id}`,
@@ -879,7 +891,11 @@ export async function createPaymentRecord(input: {
       const cashSession = await getOpenCashSessionForOperation(tx, sale.branchCode);
       const paidCents = sale.paidCents + amountCents;
       const balanceCents = Math.max(0, sale.totalCents - paidCents);
-      const method = await ensurePaymentMethod(tx, input.paymentMethodCode);
+      const method = await ensurePaymentMethod(
+        tx,
+        input.paymentMethodCode,
+        sale.branchCode
+      );
 
       const payment = await tx.payment.create({
         data: {

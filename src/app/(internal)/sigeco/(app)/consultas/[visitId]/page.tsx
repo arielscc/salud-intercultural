@@ -253,7 +253,7 @@ export default async function ConsultationDetailPage({
       getVisitAreaTimingState(visitId, activeBranch.code),
       getDoctorOrderByVisit(visitId, activeBranch.code),
       getDoctorOrderOptions(activeBranch.code),
-      getActiveStudyCatalogItems(),
+      getActiveStudyCatalogItems(activeBranch.code),
       getMedicationOptions(activeBranch.code),
       getVisitCurrentPrescriptionItems(visitId, activeBranch.code),
       getIndicationCatalog(activeBranch.code),

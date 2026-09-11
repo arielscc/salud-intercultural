@@ -28,6 +28,7 @@ import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 type CatalogPageProps = {
   searchParams: Promise<{
@@ -46,6 +47,7 @@ const secondaryActionClassName = `${actionBaseClassName} border-border bg-surfac
 export default async function ServiceCatalogPage({ searchParams }: CatalogPageProps) {
   const user = await requirePermission("service_catalog_read", { module: "catalogo" });
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext();
   const params = await searchParams;
   const page = parsePage(params.page);
   const pageSize = 40;
@@ -68,9 +70,9 @@ export default async function ServiceCatalogPage({ searchParams }: CatalogPagePr
     status: canWrite ? selectedStatus : ("active" as const)
   };
   const [items, totalItems, categories] = await Promise.all([
-    getServiceCatalogItems({ ...filters, page, pageSize }),
-    countServiceCatalogItems(filters),
-    getServiceCatalogCategories()
+    getServiceCatalogItems({ ...filters, branchCode: activeBranch.code, page, pageSize }),
+    countServiceCatalogItems({ ...filters, branchCode: activeBranch.code }),
+    getServiceCatalogCategories(activeBranch.code)
   ]);
 
   return (

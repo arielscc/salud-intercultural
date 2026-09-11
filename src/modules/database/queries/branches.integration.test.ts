@@ -174,6 +174,12 @@ describe("multi-branch operations", () => {
       branchCode: "el-alto",
       userId: user.id
     });
+    await createInventoryItemRecord({
+      internalCode: "BRANCH-ITEM-1",
+      name: "Producto multi-sucursal",
+      branchCode: "cochabamba",
+      userId: user.id
+    });
 
     const transfer = await createInventoryTransferRecord({
       itemId: item.id,
@@ -214,12 +220,23 @@ describe("multi-branch operations", () => {
       }
     });
     const supplier = await prisma.supplier.create({
-      data: { name: "Proveedor de lotes" }
+      data: {
+        name: "Proveedor de lotes",
+        branchProfiles: {
+          create: { branchCode: "el-alto", active: true }
+        }
+      }
     });
     const item = await createInventoryItemRecord({
       internalCode: "BRANCH-LOT-1",
       name: "Producto con lote",
       branchCode: "el-alto",
+      userId: user.id
+    });
+    await createInventoryItemRecord({
+      internalCode: "BRANCH-LOT-1",
+      name: "Producto con lote",
+      branchCode: "cochabamba",
       userId: user.id
     });
     const purchase = await createPurchaseDraftRecord({

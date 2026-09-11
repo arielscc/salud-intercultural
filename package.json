@@ -26,6 +26,7 @@
     "branch:reconcile:patients": "node --import dotenv/config --import tsx scripts/reconcile-patient-branch-ownership.ts",
     "branch:reconcile:leads": "node --import dotenv/config --import tsx scripts/reconcile-lead-branch-ownership.ts",
     "branch:reconcile:payload-leads": "node --import dotenv/config --import tsx scripts/reconcile-payload-lead-ownership.ts",
+    "branch:reconcile:commercial": "node --import dotenv/config --import tsx scripts/reconcile-commercial-catalog-branches.ts",
     "attachments:reconcile-keys": "node --import dotenv/config --import tsx scripts/reconcile-clinical-attachment-storage-keys.ts",
     "typecheck": "prisma generate && payload generate:types && next typegen && tsc --noEmit && pnpm branch:tenancy:check",
     "db:generate": "prisma generate",

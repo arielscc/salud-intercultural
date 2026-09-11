@@ -47,6 +47,7 @@ import { roleHasPermission } from "@/features/internal-auth/permissions";
 import { getInventoryItems } from "@/modules/database/queries/inventory";
 import { getVisitAreaTimingState } from "@/modules/database/queries/area-times";
 import {
+  getActivePaymentMethods,
   getAdministrationWorkItemById,
   getPatientSales
 } from "@/modules/database/queries/sales";
@@ -87,14 +88,15 @@ export default async function AdministrationWorkItemPage({
   const { activeBranch } = await getBranchContext();
   const { workItemId } = await params;
   const query = await searchParams;
-  const [item, inventoryItems] = await Promise.all([
+  const [item, inventoryItems, paymentMethods] = await Promise.all([
     getAdministrationWorkItemById(workItemId, activeBranch.code),
     getInventoryItems({
       pageSize: 100,
       status: "active",
       usage: "sale",
       branchCode: activeBranch.code
-    })
+    }),
+    getActivePaymentMethods(activeBranch.code)
   ]);
 
   if (!item) notFound();
@@ -381,7 +383,7 @@ export default async function AdministrationWorkItemPage({
                     <Field label="Monto Bs">
                       <input className={internalInputClassName} name="amount" inputMode="decimal" defaultValue={(generatedSale.balanceCents / 100).toFixed(2)} required />
                     </Field>
-                    <PaymentMethodChips />
+                    <PaymentMethodChips methods={paymentMethods} />
                   </div>
                   <Field label="Referencia"><input className={internalInputClassName} name="reference" /></Field>
                   <SubmitButton>Registrar pago completo</SubmitButton>
@@ -417,6 +419,7 @@ export default async function AdministrationWorkItemPage({
               doctorName={
                 doctorOrder.doctor?.name ?? doctorOrder.doctor?.email ?? "Médico"
               }
+              paymentMethods={paymentMethods}
               indications={doctorOrder.indications}
               totalCents={doctorOrderTotalCents}
               lines={doctorOrder.lines.map((line) => ({
@@ -469,7 +472,7 @@ export default async function AdministrationWorkItemPage({
                         required
                       />
                     </Field>
-                    <PaymentMethodChips />
+                    <PaymentMethodChips methods={paymentMethods} />
                   </div>
                   <Field label="Referencia">
                     <input className={internalInputClassName} name="reference" />
@@ -561,7 +564,7 @@ export default async function AdministrationWorkItemPage({
                   placeholder="0.00"
                 />
               </Field>
-              <PaymentMethodChips />
+              <PaymentMethodChips methods={paymentMethods} />
             </div>
             <Field label="Referencia">
               <input className={internalInputClassName} name="paymentReference" />

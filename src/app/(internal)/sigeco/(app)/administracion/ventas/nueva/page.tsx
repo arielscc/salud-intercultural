@@ -164,7 +164,7 @@ export default async function NewSalePage({ searchParams }: NewSalePageProps) {
   if (!client) notFound();
 
   const [catalogItems, inventoryItems] = await Promise.all([
-    getActiveServiceCatalogItems(),
+    getActiveServiceCatalogItems(activeBranch.code),
     getInventoryItems({
       pageSize: 100,
       status: "active",

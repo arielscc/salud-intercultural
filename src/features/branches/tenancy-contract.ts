@@ -67,6 +67,8 @@ export const globalMasterModels = [
   "Supplier",
   "SupplierVersion",
   "InventoryItem",
+  "InventoryItemSupplier",
+  "InventoryItemCatalogVersion",
   "PaymentMethod",
   "IndicationCatalogItem",
   "DiagnosisCatalogItem",
@@ -94,6 +96,8 @@ const globalMasterTaskByModel: Record<
   Supplier: 10,
   SupplierVersion: 10,
   InventoryItem: 10,
+  InventoryItemSupplier: 10,
+  InventoryItemCatalogVersion: 10,
   PaymentMethod: 10,
   IndicationCatalogItem: 8,
   DiagnosisCatalogItem: 8,
@@ -177,7 +181,12 @@ export const branchModelGroups = [
   },
   {
     remediationTask: 10,
-    models: ["InventoryItemSupplier", "InventoryItemCatalogVersion"]
+    models: [
+      "SupplierBranchProfile",
+      "BranchInventoryItem",
+      "PaymentMethodBranch",
+      "ServiceCatalogItemBranch"
+    ]
   },
   {
     remediationTask: 11,
@@ -240,10 +249,6 @@ export const branchModelGroups = [
 }>;
 
 const legacyMissingBranchModelsByTask = [
-  {
-    remediationTask: 10,
-    models: ["InventoryItemSupplier", "InventoryItemCatalogVersion"]
-  },
   {
     remediationTask: 11,
     models: [

@@ -98,18 +98,21 @@ const DEMO_PRODUCTS: ProductSpec[] = [
   { internalCode: "DEMO-P030", sku: "DEMO-SKU-030", name: "Mascarilla para nebulizar", description: "Kit de mascarilla para nebulización.", category: "Descartables", unit: "unidad", usage: "sale", salePriceCents: 3500, referenceCostCents: 1900, maxDiscountCents: 300, minimumStock: 6, initialStock: 18, supplier: 1 }
 ];
 
-async function seedSuppliers(userId?: string) {
+async function seedSuppliers(branchCode: string, userId?: string) {
   const ids: string[] = [];
   for (const supplier of DEMO_SUPPLIERS) {
     const existing = await prisma.supplier.findFirst({
       where: { name: { equals: supplier.name, mode: "insensitive" } },
-      select: { id: true }
+      select: {
+        id: true,
+        branchProfiles: { where: { branchCode }, select: { supplierId: true } }
+      }
     });
-    if (existing) {
+    if (existing?.branchProfiles.length) {
       ids.push(existing.id);
       continue;
     }
-    const created = await createSupplierRecord({ ...supplier, userId });
+    const created = await createSupplierRecord({ ...supplier, branchCode, userId });
     ids.push(created.id);
   }
   return ids;
@@ -121,9 +124,12 @@ async function seedProducts(supplierIds: string[], branchCode: string, userId?: 
   for (const product of DEMO_PRODUCTS) {
     const existing = await prisma.inventoryItem.findFirst({
       where: { internalCode: { equals: product.internalCode, mode: "insensitive" } },
-      select: { id: true }
+      select: {
+        id: true,
+        branchConfigurations: { where: { branchCode }, select: { itemId: true } }
+      }
     });
-    if (existing) {
+    if (existing?.branchConfigurations.length) {
       skipped += 1;
       continue;
     }
@@ -145,8 +151,8 @@ async function seedProducts(supplierIds: string[], branchCode: string, userId?: 
     });
 
     // Umbral de descuento por producto (campo de Dirección/Super admin).
-    await prisma.inventoryItem.update({
-      where: { id: item.id },
+    await prisma.branchInventoryItem.update({
+      where: { itemId_branchCode: { itemId: item.id, branchCode } },
       data: { maxDiscountCents: product.maxDiscountCents }
     });
 
@@ -154,6 +160,7 @@ async function seedProducts(supplierIds: string[], branchCode: string, userId?: 
     if (supplierId) {
       await updateInventoryItemSuppliersRecord({
         itemId: item.id,
+        branchCode,
         expectedRevision: item.revision,
         supplierIds: [supplierId],
         preferredSupplierId: supplierId,
@@ -166,7 +173,7 @@ async function seedProducts(supplierIds: string[], branchCode: string, userId?: 
   return { created, skipped };
 }
 
-async function seedCatalog(userId?: string) {
+async function seedCatalog(branchCode: string, userId?: string) {
   const productMap = new Map<string, string>();
   const products = await prisma.inventoryItem.findMany({
     where: { internalCode: { in: DEMO_PRODUCTS.map((product) => product.internalCode) } },
@@ -207,9 +214,12 @@ async function seedCatalog(userId?: string) {
   async function ensure(code: string, make: () => Promise<unknown>) {
     const existing = await prisma.serviceCatalogItem.findFirst({
       where: { code: { equals: code, mode: "insensitive" } },
-      select: { id: true }
+      select: {
+        id: true,
+        branchConfigurations: { where: { branchCode }, select: { catalogItemId: true } }
+      }
     });
-    if (existing) {
+    if (existing?.branchConfigurations.length) {
       skipped += 1;
       return;
     }
@@ -219,17 +229,17 @@ async function seedCatalog(userId?: string) {
 
   for (const service of services) {
     await ensure(service.code, () =>
-      createServiceCatalogItemRecord({ ...service, kind: "service", userId })
+      createServiceCatalogItemRecord({ ...service, kind: "service", branchCode, userId })
     );
   }
   for (const treatment of treatments) {
     await ensure(treatment.code, () =>
-      createServiceCatalogItemRecord({ ...treatment, kind: "treatment", userId })
+      createServiceCatalogItemRecord({ ...treatment, kind: "treatment", branchCode, userId })
     );
   }
   for (const study of studies) {
     await ensure(study.code, () =>
-      createServiceCatalogItemRecord({ ...study, kind: "study", userId })
+      createServiceCatalogItemRecord({ ...study, kind: "study", branchCode, userId })
     );
   }
 
@@ -274,13 +284,13 @@ async function main() {
 
   console.log(`Sembrando catálogo ficticio en entorno "${environment}" (sucursal ${branch.code})…`);
 
-  const supplierIds = await seedSuppliers(actor?.id);
+  const supplierIds = await seedSuppliers(branch.code, actor?.id);
   console.log(`Proveedores listos: ${supplierIds.length}`);
 
   const products = await seedProducts(supplierIds, branch.code, actor?.id);
   console.log(`Productos: ${products.created} creados, ${products.skipped} ya existían.`);
 
-  const catalog = await seedCatalog(actor?.id);
+  const catalog = await seedCatalog(branch.code, actor?.id);
   console.log(`Servicios/tratamientos/estudios: ${catalog.created} creados, ${catalog.skipped} ya existían.`);
 
   console.log("Listo. Datos de demostración con prefijo DEMO-*.");

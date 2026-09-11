@@ -100,18 +100,6 @@ function temporaryDebt(
 // una excepción que deja de coincidir también hace fallar el chequeo.
 export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
   ...temporaryDebt(
-    10,
-    "Catálogo comercial",
-    "La configuración local del producto se separará de su maestro global.",
-    [
-      [
-        "src/modules/database/queries/inventory.ts",
-        "NewInventoryItemInput",
-        "optional-branch-code"
-      ]
-    ]
-  ),
-  ...temporaryDebt(
     11,
     "Inventarios",
     "Las lecturas de inventario y compras exigirán una sucursal explícita.",
@@ -120,47 +108,6 @@ export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
         "src/modules/database/queries/inventory.ts",
         "getInventoryTransfers",
         "optional-branch-code"
-      ],
-      [
-        "src/modules/database/queries/inventory.ts",
-        "InventoryListInput",
-        "optional-branch-code"
-      ],
-      ["src/modules/database/queries/inventory.ts", "items", "branch-fallback"],
-      [
-        "src/modules/database/queries/inventory.ts",
-        "items",
-        "hardcoded-branch-literal"
-      ],
-      [
-        "src/modules/database/queries/inventory.ts",
-        "getInventoryItemById",
-        "branch-default-parameter"
-      ],
-      [
-        "src/modules/database/queries/inventory.ts",
-        "getInventoryItemById",
-        "hardcoded-branch-literal"
-      ],
-      [
-        "src/modules/database/queries/inventory.ts",
-        "getLowStockItems",
-        "branch-default-parameter"
-      ],
-      [
-        "src/modules/database/queries/inventory.ts",
-        "getLowStockItems",
-        "hardcoded-branch-literal"
-      ],
-      [
-        "src/modules/database/queries/inventory.ts",
-        "getInventorySummary",
-        "branch-default-parameter"
-      ],
-      [
-        "src/modules/database/queries/inventory.ts",
-        "getInventorySummary",
-        "hardcoded-branch-literal"
       ],
       ["src/modules/database/queries/purchases.ts", "purchaseWhere", "optional-branch-code"],
       ["src/modules/database/queries/purchases.ts", "getPurchases", "optional-branch-code"],

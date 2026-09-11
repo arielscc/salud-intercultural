@@ -125,6 +125,7 @@ async function main() {
   const supplier =
     (await prisma.supplier.findFirst({ where: { name: `${tag} Proveedor` } })) ??
     (await createSupplierRecord({
+      branchCode,
       name: `${tag} Proveedor`,
       phone: "22000000",
       userId: admin.id

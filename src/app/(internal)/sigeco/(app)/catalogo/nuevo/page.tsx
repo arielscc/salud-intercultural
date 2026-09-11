@@ -5,6 +5,7 @@ import { ServiceCatalogForm } from "@/features/service-catalog/components/Servic
 import { ServiceCatalogError } from "@/features/service-catalog/components/ServiceCatalogError";
 import { getInventoryProductOptions } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export default async function NewServiceCatalogItemPage({
   searchParams
@@ -12,8 +13,9 @@ export default async function NewServiceCatalogItemPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   await requirePermission("service_catalog_write");
+  const { activeBranch } = await getBranchContext();
   const query = await searchParams;
-  const products = await getInventoryProductOptions();
+  const products = await getInventoryProductOptions(activeBranch.code);
 
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-4">

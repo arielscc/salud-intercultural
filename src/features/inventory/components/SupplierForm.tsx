@@ -1,14 +1,16 @@
 import { Field, internalInputClassName } from "@/components/internal/Field";
 import { SubmitButton } from "@/components/internal/SubmitButton";
 import { Card, CardHeader } from "@/components/internal/ui/Card";
-import type { Supplier } from "@/generated/prisma/client";
+import type { Supplier, SupplierBranchProfile } from "@/generated/prisma/client";
+
+type SupplierFormValue = Supplier & SupplierBranchProfile;
 
 export function SupplierForm({
   action,
   supplier
 }: {
   action: (formData: FormData) => void | Promise<void>;
-  supplier?: Supplier;
+  supplier?: SupplierFormValue;
 }) {
   return (
     <form action={action} className="grid gap-4">
@@ -30,6 +32,13 @@ export function SupplierForm({
               name="name"
               defaultValue={supplier?.name}
               required
+            />
+          </Field>
+          <Field label="País">
+            <input
+              className={internalInputClassName}
+              name="country"
+              defaultValue={supplier?.country ?? ""}
             />
           </Field>
           <Field label="Persona de contacto">
@@ -74,6 +83,53 @@ export function SupplierForm({
               defaultValue={supplier?.address ?? ""}
             />
           </Field>
+        </div>
+      </Card>
+      <Card>
+        <CardHeader
+          title="Configuración en esta sucursal"
+          description="Estos datos comerciales no se replican en otras sucursales."
+        />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Ejecutivo de cuenta">
+            <input
+              className={internalInputClassName}
+              name="accountExecutiveName"
+              defaultValue={supplier?.accountExecutiveName ?? ""}
+            />
+          </Field>
+          <Field label="Teléfono del ejecutivo">
+            <input
+              className={internalInputClassName}
+              name="accountExecutivePhone"
+              type="tel"
+              inputMode="tel"
+              defaultValue={supplier?.accountExecutivePhone ?? ""}
+            />
+          </Field>
+          <Field label="Plazo de pago (días)">
+            <input
+              className={internalInputClassName}
+              name="paymentTermDays"
+              type="number"
+              min={0}
+              defaultValue={supplier?.paymentTermDays ?? ""}
+            />
+          </Field>
+          <Field label="Condiciones comerciales">
+            <input
+              className={internalInputClassName}
+              name="commercialTerms"
+              defaultValue={supplier?.commercialTerms ?? ""}
+            />
+          </Field>
+          <Field label="Referencias" className="sm:col-span-2">
+            <textarea
+              className={`${internalInputClassName} min-h-20 py-3`}
+              name="references"
+              defaultValue={supplier?.references ?? ""}
+            />
+          </Field>
           <Field label="Notas" className="sm:col-span-2">
             <textarea
               className={`${internalInputClassName} min-h-24 py-3`}
@@ -91,9 +147,9 @@ export function SupplierForm({
               />
             </Field>
           ) : null}
-          <SubmitButton>{supplier ? "Guardar nueva versión" : "Crear proveedor"}</SubmitButton>
         </div>
       </Card>
+      <SubmitButton>{supplier ? "Guardar cambios" : "Crear proveedor"}</SubmitButton>
     </form>
   );
 }

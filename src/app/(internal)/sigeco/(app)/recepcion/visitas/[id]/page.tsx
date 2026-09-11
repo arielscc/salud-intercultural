@@ -92,7 +92,7 @@ export default async function VisitDetailPage({ params, searchParams }: VisitDet
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const [visit, studyCatalogItems] = await Promise.all([
     getVisitById(id, activeBranch.code),
-    getActiveStudyCatalogItems()
+    getActiveStudyCatalogItems(activeBranch.code)
   ]);
 
   if (!visit) notFound();

@@ -52,6 +52,45 @@ export function computeServiceCatalogMaxDiscountCents(item: {
   return item.ownMaxDiscountCents;
 }
 
+function mergeServiceConfiguration<
+  T extends {
+    branchConfigurations: Array<{
+      active: boolean;
+      basePriceCents: number;
+      ownMaxDiscountCents: number;
+      sessionCount: number | null;
+      packagePriceCents: number | null;
+      sessionPriceCents: number | null;
+      revision: number;
+    }>;
+    components: Array<{
+      inventoryItem: {
+        branchConfigurations: Array<{
+          available: boolean;
+          salePriceCents: number;
+          referenceCostCents: number;
+          maxDiscountCents: number;
+          minimumStock: number;
+        }>;
+      };
+    }>;
+  }
+>(item: T) {
+  const configuration = item.branchConfigurations[0]!;
+  return {
+    ...item,
+    ...configuration,
+    components: item.components.map((component) => ({
+      ...component,
+      inventoryItem: {
+        ...component.inventoryItem,
+        ...component.inventoryItem.branchConfigurations[0]!,
+        active: component.inventoryItem.branchConfigurations[0]!.available
+      }
+    }))
+  };
+}
+
 async function createServiceCatalogItemVersion(
   tx: Prisma.TransactionClient,
   catalogItemId: string,
@@ -110,7 +149,7 @@ async function ensureUniqueCode(
   if (duplicate) throw new ServiceCatalogError("duplicate-code");
 }
 
-async function syncComponents(
+async function assertComponentsAvailableInConfiguredBranches(
   tx: Prisma.TransactionClient,
   catalogItemId: string,
   components: Array<{ inventoryItemId: string; quantity: number }>
@@ -122,14 +161,39 @@ async function syncComponents(
   const inventoryItemIds = [...unique.keys()];
 
   if (inventoryItemIds.length > 0) {
-    const activeItems = await tx.inventoryItem.findMany({
-      where: { id: { in: inventoryItemIds }, active: true },
-      select: { id: true }
+    const configurations = await tx.serviceCatalogItemBranch.findMany({
+      where: { catalogItemId },
+      select: { branchCode: true }
     });
-    if (activeItems.length !== inventoryItemIds.length) {
+    const branchCodes = configurations.map((configuration) => configuration.branchCode);
+    const activeItems = await tx.branchInventoryItem.findMany({
+      where: {
+        itemId: { in: inventoryItemIds },
+        branchCode: { in: branchCodes },
+        available: true
+      },
+      select: { itemId: true, branchCode: true }
+    });
+    if (activeItems.length !== inventoryItemIds.length * branchCodes.length) {
       throw new ServiceCatalogError("inactive-component");
     }
   }
+}
+
+async function syncComponents(
+  tx: Prisma.TransactionClient,
+  catalogItemId: string,
+  components: Array<{ inventoryItemId: string; quantity: number }>
+) {
+  const unique = new Map<string, number>();
+  for (const component of components) {
+    unique.set(component.inventoryItemId, component.quantity);
+  }
+  await assertComponentsAvailableInConfiguredBranches(
+    tx,
+    catalogItemId,
+    [...unique].map(([inventoryItemId, quantity]) => ({ inventoryItemId, quantity }))
+  );
 
   await tx.serviceCatalogComponent.deleteMany({ where: { catalogItemId } });
   for (const [inventoryItemId, quantity] of unique) {
@@ -140,6 +204,7 @@ async function syncComponents(
 }
 
 export async function createServiceCatalogItemRecord(input: {
+  branchCode: string;
   code: string;
   name: string;
   description?: string;
@@ -157,10 +222,64 @@ export async function createServiceCatalogItemRecord(input: {
 }) {
   return withDatabaseError("createServiceCatalogItemRecord", async () =>
     prisma.$transaction(async (tx) => {
-      await ensureUniqueCode(tx, { code: input.code });
+      const normalizedCode = normalizeCode(input.code);
+      const existing = await tx.serviceCatalogItem.findUnique({
+        where: { code: normalizedCode },
+        include: { branchConfigurations: { where: { branchCode: input.branchCode } } }
+      });
+      if (existing?.branchConfigurations.length || (existing && existing.kind !== input.kind)) {
+        throw new ServiceCatalogError("duplicate-code");
+      }
+      await ensureUniqueCode(tx, { code: input.code, catalogItemId: existing?.id });
+
+      if (existing) {
+        const item = await tx.serviceCatalogItem.update({
+          where: { id: existing.id },
+          data: {
+            name: input.name.trim(),
+            description: input.description,
+            category: normalizeCategory(input.category ?? existing.category),
+            requiresNursing: input.kind === "study" || (input.requiresNursing ?? false),
+            supportsSessions: input.kind === "service" && (input.supportsSessions ?? false),
+            revision: { increment: 1 },
+            branchConfigurations: {
+              create: {
+                branchCode: input.branchCode,
+                active: true,
+                basePriceCents: input.basePriceCents,
+                ownMaxDiscountCents: input.ownMaxDiscountCents ?? 0,
+                sessionCount: input.sessionCount,
+                packagePriceCents: input.packagePriceCents,
+                sessionPriceCents: input.sessionPriceCents
+              }
+            }
+          }
+        });
+        if (input.kind === "treatment") {
+          if (input.components) {
+            await syncComponents(tx, item.id, input.components);
+          } else {
+            const currentComponents = await tx.serviceCatalogComponent.findMany({
+              where: { catalogItemId: item.id },
+              select: { inventoryItemId: true, quantity: true }
+            });
+            await assertComponentsAvailableInConfiguredBranches(
+              tx,
+              item.id,
+              currentComponents
+            );
+          }
+        }
+        await createServiceCatalogItemVersion(tx, item.id, {
+          userId: input.userId,
+          changeReason: `Oferta asignada a la sucursal ${input.branchCode}`
+        });
+        return item;
+      }
+
       const item = await tx.serviceCatalogItem.create({
         data: {
-          code: normalizeCode(input.code),
+          code: normalizedCode,
           name: input.name.trim(),
           description: input.description,
           category: normalizeCategory(input.category ?? "Sin categoría"),
@@ -171,7 +290,18 @@ export async function createServiceCatalogItemRecord(input: {
           supportsSessions: input.supportsSessions ?? false,
           sessionCount: input.sessionCount,
           packagePriceCents: input.packagePriceCents,
-          sessionPriceCents: input.sessionPriceCents
+          sessionPriceCents: input.sessionPriceCents,
+          branchConfigurations: {
+            create: {
+              branchCode: input.branchCode,
+              active: true,
+              basePriceCents: input.basePriceCents,
+              ownMaxDiscountCents: input.ownMaxDiscountCents ?? 0,
+              sessionCount: input.sessionCount,
+              packagePriceCents: input.packagePriceCents,
+              sessionPriceCents: input.sessionPriceCents
+            }
+          }
         }
       });
 
@@ -191,6 +321,7 @@ export async function createServiceCatalogItemRecord(input: {
 
 export async function updateServiceCatalogItemRecord(input: {
   catalogItemId: string;
+  branchCode: string;
   expectedRevision: number;
   name: string;
   description?: string;
@@ -212,35 +343,57 @@ export async function updateServiceCatalogItemRecord(input: {
         select: { kind: true }
       });
 
-      const updated = await tx.serviceCatalogItem.updateMany({
-        where: { id: input.catalogItemId, revision: input.expectedRevision },
+      const localUpdate = await tx.serviceCatalogItemBranch.updateMany({
+        where: {
+          catalogItemId: input.catalogItemId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
         data: {
-          name: input.name.trim(),
-          description: input.description,
-          category: normalizeCategory(input.category),
           basePriceCents: input.basePriceCents,
-          requiresNursing: current.kind === "study" || input.requiresNursing,
-          supportsSessions: current.kind === "service" && input.supportsSessions,
           sessionCount: current.kind === "service" ? input.sessionCount : null,
           packagePriceCents: current.kind === "service" ? input.packagePriceCents : null,
           sessionPriceCents: current.kind === "service" ? input.sessionPriceCents : null,
           revision: { increment: 1 }
         }
       });
-      if (updated.count !== 1) throw new ServiceCatalogError("concurrent-update");
+      if (localUpdate.count !== 1) throw new ServiceCatalogError("concurrent-update");
+      await tx.serviceCatalogItem.update({
+        where: { id: input.catalogItemId },
+        data: {
+          name: input.name.trim(),
+          description: input.description,
+          category: normalizeCategory(input.category),
+          requiresNursing: current.kind === "study" || input.requiresNursing,
+          supportsSessions: current.kind === "service" && input.supportsSessions,
+          revision: { increment: 1 }
+        }
+      });
 
       if (current.kind === "treatment" && input.components) {
         await syncComponents(tx, input.catalogItemId, input.components);
       }
 
       await createServiceCatalogItemVersion(tx, input.catalogItemId, input);
-      return tx.serviceCatalogItem.findUniqueOrThrow({ where: { id: input.catalogItemId } });
+      const [item, configuration] = await Promise.all([
+        tx.serviceCatalogItem.findUniqueOrThrow({ where: { id: input.catalogItemId } }),
+        tx.serviceCatalogItemBranch.findUniqueOrThrow({
+          where: {
+            catalogItemId_branchCode: {
+              catalogItemId: input.catalogItemId,
+              branchCode: input.branchCode
+            }
+          }
+        })
+      ]);
+      return { ...item, ...configuration };
     })
   );
 }
 
 export async function setServiceCatalogItemStatusRecord(input: {
   catalogItemId: string;
+  branchCode: string;
   expectedRevision: number;
   active: boolean;
   changeReason: string;
@@ -248,14 +401,25 @@ export async function setServiceCatalogItemStatusRecord(input: {
 }) {
   return withDatabaseError("setServiceCatalogItemStatusRecord", async () =>
     prisma.$transaction(async (tx) => {
-      const updated = await tx.serviceCatalogItem.updateMany({
-        where: { id: input.catalogItemId, revision: input.expectedRevision },
+      const updated = await tx.serviceCatalogItemBranch.updateMany({
+        where: {
+          catalogItemId: input.catalogItemId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
         data: { active: input.active, revision: { increment: 1 } }
       });
       if (updated.count !== 1) throw new ServiceCatalogError("concurrent-update");
 
-      await createServiceCatalogItemVersion(tx, input.catalogItemId, input);
-      return tx.serviceCatalogItem.findUniqueOrThrow({ where: { id: input.catalogItemId } });
+      const configuration = await tx.serviceCatalogItemBranch.findUniqueOrThrow({
+        where: {
+          catalogItemId_branchCode: {
+            catalogItemId: input.catalogItemId,
+            branchCode: input.branchCode
+          }
+        }
+      });
+      return { id: input.catalogItemId, ...configuration };
     })
   );
 }
@@ -268,6 +432,7 @@ export async function setServiceCatalogItemStatusRecord(input: {
  */
 export async function updateServiceCatalogOwnThresholdRecord(input: {
   catalogItemId: string;
+  branchCode: string;
   expectedRevision: number;
   ownMaxDiscountCents: number;
   changeReason: string;
@@ -275,19 +440,31 @@ export async function updateServiceCatalogOwnThresholdRecord(input: {
 }) {
   return withDatabaseError("updateServiceCatalogOwnThresholdRecord", async () =>
     prisma.$transaction(async (tx) => {
-      const updated = await tx.serviceCatalogItem.updateMany({
-        where: { id: input.catalogItemId, revision: input.expectedRevision },
+      const updated = await tx.serviceCatalogItemBranch.updateMany({
+        where: {
+          catalogItemId: input.catalogItemId,
+          branchCode: input.branchCode,
+          revision: input.expectedRevision
+        },
         data: { ownMaxDiscountCents: input.ownMaxDiscountCents, revision: { increment: 1 } }
       });
       if (updated.count !== 1) throw new ServiceCatalogError("concurrent-update");
 
-      await createServiceCatalogItemVersion(tx, input.catalogItemId, input);
-      return tx.serviceCatalogItem.findUniqueOrThrow({ where: { id: input.catalogItemId } });
+      const configuration = await tx.serviceCatalogItemBranch.findUniqueOrThrow({
+        where: {
+          catalogItemId_branchCode: {
+            catalogItemId: input.catalogItemId,
+            branchCode: input.branchCode
+          }
+        }
+      });
+      return { id: input.catalogItemId, ...configuration };
     })
   );
 }
 
 function serviceCatalogListWhere(input: {
+  branchCode: string;
   search?: string;
   category?: string;
   kind?: ServiceCatalogKind | "all";
@@ -295,8 +472,15 @@ function serviceCatalogListWhere(input: {
 }): Prisma.ServiceCatalogItemWhereInput {
   const search = input.search?.trim();
   return {
-    active:
-      input.status === "all" || !input.status ? undefined : input.status === "active",
+    branchConfigurations: {
+      some: {
+        branchCode: input.branchCode,
+        active:
+          input.status === "all" || !input.status
+            ? undefined
+            : input.status === "active"
+      }
+    },
     category:
       input.category && input.category !== "all"
         ? { equals: input.category, mode: "insensitive" }
@@ -313,38 +497,48 @@ function serviceCatalogListWhere(input: {
 }
 
 export type ServiceCatalogListInput = PaginationInput & {
+  branchCode: string;
   search?: string;
   category?: string;
   kind?: ServiceCatalogKind | "all";
   status?: "active" | "inactive" | "all";
 };
 
-export async function getServiceCatalogItems(input: ServiceCatalogListInput = {}) {
+export async function getServiceCatalogItems(input: ServiceCatalogListInput) {
   const pagination = getPagination(input);
   return withDatabaseError("getServiceCatalogItems", () =>
     prisma.serviceCatalogItem.findMany({
       where: serviceCatalogListWhere(input),
       include: {
-        components: { include: { inventoryItem: true }, orderBy: { createdAt: "asc" } }
+        branchConfigurations: { where: { branchCode: input.branchCode } },
+        components: {
+          include: {
+            inventoryItem: {
+              include: { branchConfigurations: { where: { branchCode: input.branchCode } } }
+            }
+          },
+          orderBy: { createdAt: "asc" }
+        }
       },
-      orderBy: [{ active: "desc" }, { name: "asc" }],
+      orderBy: { name: "asc" },
       skip: pagination.skip,
       take: pagination.take
-    })
+    }).then((items) => items.map((item) => mergeServiceConfiguration(item)))
   );
 }
 
 export async function countServiceCatalogItems(
-  input: Omit<ServiceCatalogListInput, keyof PaginationInput> = {}
+  input: Omit<ServiceCatalogListInput, keyof PaginationInput>
 ) {
   return withDatabaseError("countServiceCatalogItems", () =>
     prisma.serviceCatalogItem.count({ where: serviceCatalogListWhere(input) })
   );
 }
 
-export async function getServiceCatalogCategories() {
+export async function getServiceCatalogCategories(branchCode: string) {
   return withDatabaseError("getServiceCatalogCategories", async () => {
     const items = await prisma.serviceCatalogItem.findMany({
+      where: { branchConfigurations: { some: { branchCode } } },
       distinct: ["category"],
       select: { category: true },
       orderBy: { category: "asc" }
@@ -353,13 +547,18 @@ export async function getServiceCatalogCategories() {
   });
 }
 
-export async function getServiceCatalogItemById(id: string) {
-  return withDatabaseError("getServiceCatalogItemById", () =>
-    prisma.serviceCatalogItem.findUnique({
-      where: { id },
+export async function getServiceCatalogItemById(id: string, branchCode: string) {
+  return withDatabaseError("getServiceCatalogItemById", async () => {
+    const item = await prisma.serviceCatalogItem.findFirst({
+      where: { id, branchConfigurations: { some: { branchCode } } },
       include: {
+        branchConfigurations: { where: { branchCode } },
         components: {
-          include: { inventoryItem: true },
+          include: {
+            inventoryItem: {
+              include: { branchConfigurations: { where: { branchCode } } }
+            }
+          },
           orderBy: { createdAt: "asc" }
         },
         versions: {
@@ -368,41 +567,84 @@ export async function getServiceCatalogItemById(id: string) {
           take: 30
         }
       }
-    })
-  );
+    });
+    return item ? mergeServiceConfiguration(item) : null;
+  });
 }
 
 /** Productos activos para elegir componentes de un tratamiento. */
-export async function getInventoryProductOptions() {
+export async function getInventoryProductOptions(branchCode: string) {
   return withDatabaseError("getInventoryProductOptions", () =>
     prisma.inventoryItem.findMany({
-      where: { active: true },
-      select: { id: true, name: true, maxDiscountCents: true },
+      where: {
+        branchConfigurations: { some: { branchCode, available: true } }
+      },
+      select: {
+        id: true,
+        name: true,
+        branchConfigurations: {
+          where: { branchCode },
+          select: { maxDiscountCents: true }
+        }
+      },
       orderBy: { name: "asc" }
-    })
+    }).then((items) =>
+      items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        maxDiscountCents: item.branchConfigurations[0]!.maxDiscountCents
+      }))
+    )
   );
 }
 
 /** Ofertas activas para el selector del médico (Tarea 2); excluye estudios. */
-export async function getActiveServiceCatalogItems() {
+export async function getActiveServiceCatalogItems(branchCode: string) {
   return withDatabaseError("getActiveServiceCatalogItems", () =>
     prisma.serviceCatalogItem.findMany({
-      where: { active: true, kind: { in: ["service", "treatment"] } },
+      where: {
+        kind: { in: ["service", "treatment"] },
+        branchConfigurations: { some: { branchCode, active: true } }
+      },
       include: {
-        components: { include: { inventoryItem: true }, orderBy: { createdAt: "asc" } }
+        branchConfigurations: { where: { branchCode } },
+        components: {
+          include: {
+            inventoryItem: {
+              include: { branchConfigurations: { where: { branchCode } } }
+            }
+          },
+          orderBy: { createdAt: "asc" }
+        }
       },
       orderBy: [{ kind: "asc" }, { name: "asc" }]
-    })
+    }).then((items) => items.map((item) => mergeServiceConfiguration(item)))
   );
 }
 
 /** Estudios activos del catálogo administrable (Tarea 8). */
-export async function getActiveStudyCatalogItems() {
+export async function getActiveStudyCatalogItems(branchCode: string) {
   return withDatabaseError("getActiveStudyCatalogItems", () =>
     prisma.serviceCatalogItem.findMany({
-      where: { active: true, kind: "study" },
-      select: { id: true, name: true, basePriceCents: true, ownMaxDiscountCents: true },
+      where: {
+        kind: "study",
+        branchConfigurations: { some: { branchCode, active: true } }
+      },
+      select: {
+        id: true,
+        name: true,
+        branchConfigurations: {
+          where: { branchCode },
+          select: { basePriceCents: true, ownMaxDiscountCents: true }
+        }
+      },
       orderBy: { name: "asc" }
-    })
+    }).then((items) =>
+      items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        ...item.branchConfigurations[0]!
+      }))
+    )
   );
 }

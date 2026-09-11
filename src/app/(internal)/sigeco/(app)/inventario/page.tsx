@@ -92,7 +92,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     getInventoryItems({ ...filters, page, pageSize }),
     getInventorySummary(activeBranch.code),
     countInventoryItems(filters),
-    getInventoryCategories()
+    getInventoryCategories(activeBranch.code)
   ]);
 
   return (

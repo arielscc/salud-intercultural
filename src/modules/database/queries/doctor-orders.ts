@@ -84,40 +84,72 @@ export async function getDoctorOrderOptions(branchCode: string) {
   return withDatabaseError("getDoctorOrderOptions", async () => {
     const [catalog, products] = await Promise.all([
       prisma.serviceCatalogItem.findMany({
-        where: { active: true, kind: { in: ["service", "treatment"] } },
+        where: {
+          kind: { in: ["service", "treatment"] },
+          branchConfigurations: { some: { branchCode, active: true } }
+        },
         include: {
-          components: { include: { inventoryItem: true }, orderBy: { createdAt: "asc" } }
+          branchConfigurations: { where: { branchCode } },
+          components: {
+            include: {
+              inventoryItem: {
+                include: { branchConfigurations: { where: { branchCode } } }
+              }
+            },
+            orderBy: { createdAt: "asc" }
+          }
         },
         orderBy: [{ kind: "asc" }, { name: "asc" }]
       }),
       prisma.inventoryItem.findMany({
-        where: { active: true, branchBalances: { some: { branchCode } } },
-        select: { id: true, name: true, salePriceCents: true, maxDiscountCents: true },
+        where: { branchConfigurations: { some: { branchCode, available: true } } },
+        select: {
+          id: true,
+          name: true,
+          branchConfigurations: {
+            where: { branchCode },
+            select: { salePriceCents: true, maxDiscountCents: true }
+          }
+        },
         orderBy: { name: "asc" }
       })
     ]);
 
-    const catalogOptions = catalog.map((item) => ({
+    const catalogOptions = catalog.map((item) => {
+      const configuration = item.branchConfigurations[0]!;
+      const perUnitCapCents = computeServiceCatalogMaxDiscountCents({
+        kind: item.kind,
+        ownMaxDiscountCents: configuration.ownMaxDiscountCents,
+        components: item.components.map((component) => ({
+          quantity: component.quantity,
+          inventoryItem: {
+            maxDiscountCents:
+              component.inventoryItem.branchConfigurations[0]?.maxDiscountCents ?? 0
+          }
+        }))
+      });
+      return {
       source: (item.kind === "treatment" ? "treatment" : "service") as DoctorOrderLineSource,
       itemType: (item.kind === "treatment" ? "treatment" : "service") as SaleItemType,
       catalogItemId: item.id,
       label: item.name,
-      unitPriceCents: item.basePriceCents,
-      perUnitCapCents: computeServiceCatalogMaxDiscountCents(item),
+      unitPriceCents: configuration.basePriceCents,
+      perUnitCapCents,
       requiresNursing: item.requiresNursing,
       supportsSessions: item.supportsSessions,
-      sessionCount: item.sessionCount,
-      packagePriceCents: item.packagePriceCents,
-      sessionPriceCents: item.sessionPriceCents
-    }));
+      sessionCount: configuration.sessionCount,
+      packagePriceCents: configuration.packagePriceCents,
+      sessionPriceCents: configuration.sessionPriceCents
+      };
+    });
 
     const productOptions = products.map((product) => ({
       source: "product" as DoctorOrderLineSource,
       itemType: "product" as SaleItemType,
       inventoryItemId: product.id,
       label: product.name,
-      unitPriceCents: product.salePriceCents,
-      perUnitCapCents: product.maxDiscountCents,
+      unitPriceCents: product.branchConfigurations[0]!.salePriceCents,
+      perUnitCapCents: product.branchConfigurations[0]!.maxDiscountCents,
       requiresNursing: false,
       supportsSessions: false,
       sessionCount: null,
@@ -141,24 +173,56 @@ async function resolveLineMeta(
   if (line.source === "product") {
     if (!line.inventoryItemId) throw new DoctorOrderError("invalid-line");
     const product = await tx.inventoryItem.findFirst({
-      where: { id: line.inventoryItemId, branchBalances: { some: { branchCode } } },
-      select: { active: true, maxDiscountCents: true }
+      where: {
+        id: line.inventoryItemId,
+        branchConfigurations: { some: { branchCode, available: true } }
+      },
+      select: {
+        branchConfigurations: {
+          where: { branchCode },
+          select: { maxDiscountCents: true }
+        }
+      }
     });
-    if (!product || !product.active) throw new DoctorOrderError("invalid-line");
-    return { perUnitCapCents: product.maxDiscountCents, requiresNursing: false };
+    if (!product) throw new DoctorOrderError("invalid-line");
+    return {
+      perUnitCapCents: product.branchConfigurations[0]!.maxDiscountCents,
+      requiresNursing: false
+    };
   }
 
   if (line.source === "service" || line.source === "treatment") {
     if (!line.catalogItemId) throw new DoctorOrderError("invalid-line");
-    const catalogItem = await tx.serviceCatalogItem.findUnique({
-      where: { id: line.catalogItemId },
+    const catalogItem = await tx.serviceCatalogItem.findFirst({
+      where: {
+        id: line.catalogItemId,
+        branchConfigurations: { some: { branchCode, active: true } }
+      },
       include: {
-        components: { include: { inventoryItem: true } }
+        branchConfigurations: { where: { branchCode } },
+        components: {
+          include: {
+            inventoryItem: {
+              include: { branchConfigurations: { where: { branchCode } } }
+            }
+          }
+        }
       }
     });
-    if (!catalogItem || !catalogItem.active) throw new DoctorOrderError("invalid-line");
+    if (!catalogItem) throw new DoctorOrderError("invalid-line");
+    const configuration = catalogItem.branchConfigurations[0]!;
     return {
-      perUnitCapCents: computeServiceCatalogMaxDiscountCents(catalogItem),
+      perUnitCapCents: computeServiceCatalogMaxDiscountCents({
+        kind: catalogItem.kind,
+        ownMaxDiscountCents: configuration.ownMaxDiscountCents,
+        components: catalogItem.components.map((component) => ({
+          quantity: component.quantity,
+          inventoryItem: {
+            maxDiscountCents:
+              component.inventoryItem.branchConfigurations[0]?.maxDiscountCents ?? 0
+          }
+        }))
+      }),
       requiresNursing: catalogItem.requiresNursing
     };
   }

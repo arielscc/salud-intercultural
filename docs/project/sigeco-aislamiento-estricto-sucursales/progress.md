@@ -39,17 +39,17 @@ diagnóstica y los archivos usan permisos breves ligados al contexto activo.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 8 |
+| Pendiente | 7 |
 | En progreso | 2 |
 | Bloqueada | 0 |
-| Terminada | 7 |
+| Terminada | 8 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
-| B. Partición de dominios | 5-13 | En progreso (5/9 implementadas; 3 cerradas) | Maestros únicos y operaciones pertenecientes a una sede |
+| B. Partición de dominios | 5-13 | En progreso (6/9 implementadas; 3 cerradas) | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
@@ -65,7 +65,7 @@ diagnóstica y los archivos usan permisos breves ligados al contexto activo.
 | 7 | Visitas, recepción, rutas y tiempos | P0 | Terminada | 5 |
 | 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Implementada; validación acumulada pendiente | 7 |
 | 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Implementada; validación acumulada pendiente | 7-8 |
-| 10 | Maestros comerciales y configuración por sucursal | P0 | Pendiente | 4 |
+| 10 | Maestros comerciales y configuración por sucursal | P0 | Implementada; validación estática aprobada | 4 |
 | 11 | Compras, stock, lotes, traslados y alertas | P0 | Pendiente | 10 |
 | 12 | Ventas, pagos, Caja y documentos | P0 | Pendiente | 5, 7, 10-11 |
 | 13 | Seguimientos, recordatorios, opiniones y reportes | P0 | Pendiente | 5-12 |
@@ -76,10 +76,10 @@ diagnóstica y los archivos usan permisos breves ligados al contexto activo.
 
 ## Preparación Ya Disponible
 
-- Contrato canónico para los 108 modelos Prisma y chequeo automático de
+- Contrato canónico para los 112 modelos Prisma y chequeo automático de
   modelos, campos, relaciones, defaults y fallbacks de sucursal.
 - Deuda heredada registrada con coincidencia exacta, responsable y tarea de
-  retiro: 25 excepciones de modelo y 28 hallazgos de código asignados a tareas
+  retiro: 23 excepciones de modelo y 18 hallazgos de código asignados a tareas
   posteriores.
 - `BranchRequestContext` resuelve usuario, asignación, sede activa y rol
   operativo exclusivamente desde sesión y membresías activas.
@@ -179,7 +179,22 @@ Tarea 16.
   seguro antes del endurecimiento.
 - Detalle y operación: [reporte T9](../task-reports/2026-09-10-tarea-9-enfermeria-estudios-adjuntos-sesiones.md).
 
+### Tarea 10 — Implementación
+
+- Maestros comerciales globales y configuración de proveedor, producto, servicio
+  y medio de pago quedan separados por sucursal.
+- Inventario, Compras, Catálogo, Enfermería, Estudios, Órdenes y cobros leen la
+  configuración local y rechazan maestros no habilitados en la sede activa.
+- El alta inline de compras admite productos nuevos y conserva sus datos
+  canónicos/locales sin duplicar identidades globales.
+- La composición canónica de tratamientos se valida contra todas sus sedes y
+  la cobertura preparada comprueba identidad compartida, configuración local y
+  rechazo de catálogos comerciales no habilitados.
+- Migración expansiva, endurecimiento y reconciliador explícito preparados, sin
+  ejecución sobre ninguna base.
+- Detalle y operación: [reporte T10](../task-reports/2026-09-10-tarea-10-maestros-comerciales-configuracion-sucursal.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 10: maestros comerciales y configuración por sucursal. La
-integración y el despliegue se validan en la Tarea 17.
+Ejecutar la Tarea 11: compras, stock, lotes, traslados y alertas. La integración
+y el despliegue se validan en la Tarea 17.

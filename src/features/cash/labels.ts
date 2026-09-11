@@ -64,6 +64,8 @@ export const cashErrorMessages: Record<string, string> = {
     "No hay una Caja abierta. Primero abre la sesión del día.",
   "cash-session-stale-open":
     "Hay una Caja abierta de una fecha anterior. Debes cerrarla o regularizarla antes de operar hoy.",
+  "payment-method-unavailable":
+    "La forma de pago seleccionada no está habilitada en esta sucursal.",
   "cash-session-already-open":
     "Esta caja ya tiene una sesión abierta o esperando aprobación.",
   "cash-session-exceptional-required":

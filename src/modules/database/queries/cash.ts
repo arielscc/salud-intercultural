@@ -22,6 +22,7 @@ export type CashWorkflowErrorCode =
   | "purchase_total_mismatch"
   | "invalid_movement"
   | "correction_exceeds_original"
+  | "payment_method_unavailable"
   | "invalid_amount";
 
 export class CashWorkflowError extends Error {

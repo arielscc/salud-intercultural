@@ -11,6 +11,7 @@ import {
   findInsufficientStockError,
   getInventoryItemById,
   getInventorySummary,
+  getSupplierById,
   setInventoryItemStatusRecord,
   updateInventoryItemRecord,
   updateInventoryItemSuppliersRecord
@@ -107,8 +108,8 @@ describe("inventory integration", () => {
       paymentMethodCode: "cash"
     });
 
-    const detail = await getInventoryItemById(item.id);
-    const summary = await getInventorySummary();
+    const detail = await getInventoryItemById(item.id, "el-alto");
+    const summary = await getInventorySummary("el-alto");
 
     expect(detail?.currentStock).toBe(2);
     expect(detail?.movements.map((movement) => movement.type)).toContain("automatic_sale_exit");
@@ -125,6 +126,7 @@ describe("inventory integration", () => {
       }
     });
     const item = await createInventoryItemRecord({
+      branchCode: "el-alto",
       internalCode: "SI-PROD-002",
       name: "Producto Ajustable",
       minimumStock: 1,
@@ -165,7 +167,7 @@ describe("inventory integration", () => {
       reason: "Conteo físico"
     });
 
-    const detail = await getInventoryItemById(item.id);
+    const detail = await getInventoryItemById(item.id, "el-alto");
 
     expect(detail?.currentStock).toBe(3);
     expect(detail?.movements).toHaveLength(2);
@@ -228,7 +230,7 @@ describe("inventory integration", () => {
     expect(await prisma.sale.count()).toBe(0);
     expect(await prisma.payment.count()).toBe(0);
     expect(await prisma.cashMovement.count()).toBe(0);
-    expect((await getInventoryItemById(item.id))?.currentStock).toBe(2);
+    expect((await getInventoryItemById(item.id, "el-alto"))?.currentStock).toBe(2);
   });
 
   it("versions catalog changes and manages several suppliers with one preferred", async () => {
@@ -242,16 +244,19 @@ describe("inventory integration", () => {
       }
     });
     const firstSupplier = await createSupplierRecord({
+      branchCode: "el-alto",
       name: "Proveedor Uno",
       whatsapp: "70000001",
       userId: user.id
     });
     const secondSupplier = await createSupplierRecord({
+      branchCode: "el-alto",
       name: "Proveedor Dos",
       phone: "22000002",
       userId: user.id
     });
     const item = await createInventoryItemRecord({
+      branchCode: "el-alto",
       internalCode: "cat-001",
       sku: "fab-001",
       name: "Producto de catálogo",
@@ -265,6 +270,7 @@ describe("inventory integration", () => {
 
     await updateInventoryItemRecord({
       itemId: item.id,
+      branchCode: "el-alto",
       expectedRevision: 1,
       sku: "fab-001",
       name: "Producto de catálogo actualizado",
@@ -279,6 +285,7 @@ describe("inventory integration", () => {
     });
     await updateInventoryItemSuppliersRecord({
       itemId: item.id,
+      branchCode: "el-alto",
       expectedRevision: 2,
       supplierIds: [firstSupplier.id, secondSupplier.id],
       preferredSupplierId: secondSupplier.id,
@@ -286,7 +293,7 @@ describe("inventory integration", () => {
       userId: user.id
     });
 
-    const detail = await getInventoryItemById(item.id);
+    const detail = await getInventoryItemById(item.id, "el-alto");
     expect(detail).toMatchObject({
       internalCode: "CAT-001",
       revision: 3,
@@ -294,11 +301,103 @@ describe("inventory integration", () => {
     });
     expect(detail?.supplierLinks).toHaveLength(2);
     expect(detail?.supplierLinks.filter((link) => link.preferred)).toHaveLength(1);
-    expect(detail?.catalogVersions.map((version) => version.referenceCostCents)).toEqual([
-      8_500,
-      8_500,
-      8_000
-    ]);
+    expect(detail?.catalogVersions).toHaveLength(2);
+  });
+
+  it("shares master identity while keeping supplier and product configuration local", async () => {
+    const user = await prisma.internalUser.create({
+      data: {
+        email: "catalogo-multisucursal@example.com",
+        passwordHash: await hashPassword("clave-segura-123"),
+        platformRole: "super_admin"
+      }
+    });
+    const supplier = await createSupplierRecord({
+      branchCode: "el-alto",
+      name: "Proveedor Multisucursal",
+      country: "Bolivia",
+      phone: "22000001",
+      commercialTerms: "Pago a 15 días",
+      paymentTermDays: 15,
+      userId: user.id
+    });
+    await createSupplierRecord({
+      branchCode: "cochabamba",
+      name: "Proveedor Multisucursal",
+      country: "Bolivia",
+      phone: "44000002",
+      commercialTerms: "Pago a 30 días",
+      paymentTermDays: 30,
+      userId: user.id
+    });
+
+    const item = await createInventoryItemRecord({
+      branchCode: "el-alto",
+      internalCode: "MULTI-001",
+      sku: "EA-MULTI-001",
+      name: "Producto Multisucursal",
+      presentation: "Caja de 10",
+      manufacturer: "Laboratorio inicial",
+      salePriceCents: 10_000,
+      referenceCostCents: 7_000,
+      minimumStock: 2,
+      supplierIds: [supplier.id],
+      preferredSupplierId: supplier.id,
+      userId: user.id
+    });
+    await createInventoryItemRecord({
+      branchCode: "cochabamba",
+      internalCode: "MULTI-001",
+      sku: "CBBA-MULTI-001",
+      name: "Producto Multisucursal",
+      presentation: "Caja de 10",
+      manufacturer: "Laboratorio actualizado",
+      salePriceCents: 12_000,
+      referenceCostCents: 8_000,
+      minimumStock: 5,
+      supplierIds: [supplier.id],
+      preferredSupplierId: supplier.id,
+      userId: user.id
+    });
+
+    const [supplierElAlto, supplierCochabamba, itemElAlto, itemCochabamba] =
+      await Promise.all([
+        getSupplierById(supplier.id, "el-alto"),
+        getSupplierById(supplier.id, "cochabamba"),
+        getInventoryItemById(item.id, "el-alto"),
+        getInventoryItemById(item.id, "cochabamba")
+      ]);
+
+    expect(supplierElAlto).toMatchObject({
+      id: supplier.id,
+      phone: "44000002",
+      commercialTerms: "Pago a 15 días",
+      paymentTermDays: 15
+    });
+    expect(supplierCochabamba).toMatchObject({
+      id: supplier.id,
+      phone: "44000002",
+      commercialTerms: "Pago a 30 días",
+      paymentTermDays: 30
+    });
+    expect(supplierElAlto?.versions).toHaveLength(2);
+    expect(itemElAlto).toMatchObject({
+      id: item.id,
+      manufacturer: "Laboratorio actualizado",
+      sku: "EA-MULTI-001",
+      salePriceCents: 10_000,
+      referenceCostCents: 7_000,
+      minimumStock: 2
+    });
+    expect(itemCochabamba).toMatchObject({
+      id: item.id,
+      manufacturer: "Laboratorio actualizado",
+      sku: "CBBA-MULTI-001",
+      salePriceCents: 12_000,
+      referenceCostCents: 8_000,
+      minimumStock: 5
+    });
+    expect(itemElAlto?.catalogVersions).toHaveLength(2);
   });
 
   it("prevents stale edits, code changes and deletion while preserving stock history", async () => {
@@ -314,6 +413,7 @@ describe("inventory integration", () => {
     try {
       await updateInventoryItemRecord({
         itemId: item.id,
+        branchCode: "el-alto",
         expectedRevision: 99,
         name: "Cambio obsoleto",
         category: "General",
@@ -331,6 +431,7 @@ describe("inventory integration", () => {
 
     await setInventoryItemStatusRecord({
       itemId: item.id,
+      branchCode: "el-alto",
       expectedRevision: 1,
       active: false,
       changeReason: "Producto fuera de catálogo"
@@ -343,9 +444,9 @@ describe("inventory integration", () => {
     ).rejects.toThrow();
     await expect(prisma.inventoryItem.delete({ where: { id: item.id } })).rejects.toThrow();
 
-    const detail = await getInventoryItemById(item.id);
+    const detail = await getInventoryItemById(item.id, "el-alto");
     expect(detail).toMatchObject({ active: false, internalCode: "RESERVADO-001" });
     expect(detail?.movements).toHaveLength(1);
-    expect(detail?.catalogVersions).toHaveLength(2);
+    expect(detail?.catalogVersions).toHaveLength(1);
   });
 });

@@ -26,6 +26,7 @@ import {
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 const linkClassName =
   "focus-ring inline-flex min-h-10 items-center justify-center rounded-[9px] border border-border px-3 text-sm font-semibold text-text hover:text-primary-dark";
@@ -38,9 +39,10 @@ export default async function ServiceCatalogItemPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await requirePermission("service_catalog_read", { module: "catalogo" });
+  const { activeBranch } = await getBranchContext();
   const { itemId } = await params;
   const query = await searchParams;
-  const item = await getServiceCatalogItemById(itemId);
+  const item = await getServiceCatalogItemById(itemId, activeBranch.code);
   if (!item) notFound();
 
   const moduleAccess = await getModuleAccessState();
@@ -181,8 +183,8 @@ export default async function ServiceCatalogItemPage({
 
           <Card>
             <CardHeader
-              title="Historial de la oferta"
-              description="Cada versión conserva quién cambió qué y por qué."
+              title="Historial maestro de la oferta"
+              description="Estos cambios canónicos se reflejan en toda la clínica; precios y sesiones pertenecen a la sucursal activa."
             />
             <div className="grid gap-3">
               {item.versions.map((version) => (
@@ -195,8 +197,7 @@ export default async function ServiceCatalogItemPage({
                   </div>
                   <p className="mt-1">{version.changeReason}</p>
                   <p className="mt-1 text-xs text-muted">
-                    {serviceCatalogKindLabels[version.kind]} · {version.category} · Precio base{" "}
-                    {formatServiceCatalogMoney(version.basePriceCents)}
+                    {serviceCatalogKindLabels[version.kind]} · {version.category}
                   </p>
                   <p className="mt-1 text-xs text-muted">
                     {version.changedBy?.name ??

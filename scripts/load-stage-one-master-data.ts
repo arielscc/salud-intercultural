@@ -150,7 +150,7 @@ async function resolveResponsible() {
   return user;
 }
 
-async function loadSuppliers(specs: SupplierSpec[], userId: string) {
+async function loadSuppliers(specs: SupplierSpec[], userId: string, branchCode: string) {
   let created = 0;
   const byName = new Map<string, string>();
 
@@ -158,15 +158,19 @@ async function loadSuppliers(specs: SupplierSpec[], userId: string) {
     const name = requireText(spec.nombre, "el nombre del proveedor");
     const existing = await prisma.supplier.findFirst({
       where: { name: { equals: name, mode: "insensitive" } },
-      select: { id: true }
+      select: {
+        id: true,
+        branchProfiles: { where: { branchCode }, select: { supplierId: true } }
+      }
     });
 
-    if (existing) {
+    if (existing?.branchProfiles.length) {
       byName.set(name.toLowerCase(), existing.id);
       continue;
     }
 
     const supplier = await createSupplierRecord({
+      branchCode,
       name,
       contactName: spec.contacto,
       phone: spec.telefono,
@@ -203,9 +207,12 @@ async function loadProducts(
 
     const existing = await prisma.inventoryItem.findUnique({
       where: { internalCode: code },
-      select: { id: true }
+      select: {
+        id: true,
+        branchConfigurations: { where: { branchCode }, select: { itemId: true } }
+      }
     });
-    if (existing) {
+    if (existing?.branchConfigurations.length) {
       skipped += 1;
       continue;
     }
@@ -238,6 +245,7 @@ async function loadProducts(
     if (spec.descuentoMaximo) {
       await updateInventoryItemMaxDiscountRecord({
         itemId: item.id,
+        branchCode,
         expectedRevision: item.revision,
         maxDiscountCents: moneyToCents(spec.descuentoMaximo, `${code} descuento`),
         changeReason: "Umbral definido en la carga inicial de la Etapa 1",
@@ -254,6 +262,7 @@ async function loadProducts(
       });
       await updateInventoryItemSuppliersRecord({
         itemId: item.id,
+        branchCode,
         expectedRevision: current.revision,
         supplierIds: [supplierId],
         preferredSupplierId: supplierId,
@@ -278,7 +287,7 @@ async function loadProducts(
   return { created, skipped, stockEntries };
 }
 
-async function loadCatalog(specs: CatalogSpec[], userId: string) {
+async function loadCatalog(specs: CatalogSpec[], userId: string, branchCode: string) {
   let created = 0;
   let skipped = 0;
 
@@ -289,14 +298,18 @@ async function loadCatalog(specs: CatalogSpec[], userId: string) {
     );
     const existing = await prisma.serviceCatalogItem.findUnique({
       where: { code },
-      select: { id: true }
+      select: {
+        id: true,
+        branchConfigurations: { where: { branchCode }, select: { catalogItemId: true } }
+      }
     });
-    if (existing) {
+    if (existing?.branchConfigurations.length) {
       skipped += 1;
       continue;
     }
 
     await createServiceCatalogItemRecord({
+      branchCode,
       code,
       name: requireText(spec.nombre, `el nombre de ${code}`),
       description: spec.descripcion,
@@ -321,12 +334,12 @@ async function main() {
   const database = assertConfirmedDatabase();
   const data = readMasterData();
   const responsible = await resolveResponsible();
-  const branchCode = data.sucursal?.trim() || "el-alto";
+  const branchCode = requireText(data.sucursal, "la sucursal de los datos maestros");
 
   requireText(data.conteoFisico?.fecha, "la fecha del conteo físico");
   requireText(data.conteoFisico?.responsable, "el responsable del conteo físico");
 
-  const suppliers = await loadSuppliers(data.proveedores ?? [], responsible.id);
+  const suppliers = await loadSuppliers(data.proveedores ?? [], responsible.id, branchCode);
   const products = await loadProducts(
     data.productos ?? [],
     suppliers.byName,
@@ -334,7 +347,7 @@ async function main() {
     data.conteoFisico,
     branchCode
   );
-  const catalog = await loadCatalog(data.catalogo ?? [], responsible.id);
+  const catalog = await loadCatalog(data.catalogo ?? [], responsible.id, branchCode);
 
   console.log(`Datos maestros cargados en ${database} (${branchCode}).`);
   console.log(`  Proveedores nuevos: ${suppliers.created}`);

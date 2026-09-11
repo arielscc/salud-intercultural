@@ -31,7 +31,7 @@ import {
   saleStatusLabels
 } from "@/features/sales/labels";
 import { formatDateTime } from "@/lib/dates";
-import { getSaleById } from "@/modules/database/queries/sales";
+import { getActivePaymentMethods, getSaleById } from "@/modules/database/queries/sales";
 import { getSaleReceiptDocuments } from "@/modules/generated-documents/service";
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
@@ -52,7 +52,10 @@ export default async function SaleDetailPage({
   const { activeBranch } = await getBranchContext();
   const { saleId } = await params;
   const query = await searchParams;
-  const sale = await getSaleById(saleId, activeBranch.code);
+  const [sale, paymentMethods] = await Promise.all([
+    getSaleById(saleId, activeBranch.code),
+    getActivePaymentMethods(activeBranch.code)
+  ]);
 
   if (!sale) notFound();
   const receiptDocuments = await getSaleReceiptDocuments(
@@ -415,7 +418,7 @@ export default async function SaleDetailPage({
                     required
                   />
                 </Field>
-                <PaymentMethodChips />
+                <PaymentMethodChips methods={paymentMethods} />
               </div>
               <Field label="Referencia">
                 <input className={internalInputClassName} name="reference" />

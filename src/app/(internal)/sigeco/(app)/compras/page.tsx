@@ -81,7 +81,7 @@ export default async function PurchasesPage({
     getPurchases({ ...filters, page, pageSize }),
     countPurchases(filters),
     getPurchaseSummary(activeBranch.code),
-    getActiveSuppliers()
+    getActiveSuppliers(activeBranch.code)
   ]);
   const canWrite = canUse(user.role, moduleAccess, "purchases_write");
 

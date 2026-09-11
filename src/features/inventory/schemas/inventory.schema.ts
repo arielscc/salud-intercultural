@@ -18,6 +18,10 @@ const catalogFields = {
   description: optionalText,
   category: z.string().trim().min(2).max(100).default("Sin categoría"),
   unit: z.string().trim().min(1).max(40).default("unidad"),
+  presentation: optionalText,
+  manufacturer: optionalText,
+  barcode: optionalText,
+  locationCode: optionalText,
   usage: z.enum(["sale", "internal_use", "both"]).default("both"),
   salePrice: moneyText,
   referenceCost: moneyText,
@@ -67,6 +71,7 @@ export const inventoryItemSuppliersSchema = z
 
 const supplierFields = {
   name: z.string().trim().min(2).max(180),
+  country: optionalText,
   contactName: optionalText,
   phone: optionalText,
   whatsapp: optionalText,
@@ -78,6 +83,14 @@ const supplierFields = {
     .or(z.literal("").transform(() => undefined))
     .optional(),
   address: optionalText,
+  accountExecutiveName: optionalText,
+  accountExecutivePhone: optionalText,
+  commercialTerms: optionalText,
+  paymentTermDays: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    z.coerce.number().int().min(0).optional()
+  ),
+  references: optionalText,
   notes: optionalText
 } as const;
 

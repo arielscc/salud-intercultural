@@ -15,11 +15,14 @@ type ProductCatalogFormProps = {
     | "description"
     | "category"
     | "unit"
+    | "presentation"
+    | "manufacturer"
+    | "barcode"
     | "usage"
     | "salePriceCents"
     | "referenceCostCents"
     | "minimumStock"
-  >;
+  > & { locationCode?: string | null };
 };
 
 const usageOptions: Array<{ value: InventoryItemUsage; label: string }> = [
@@ -55,7 +58,7 @@ export function ProductCatalogForm({ action, item }: ProductCatalogFormProps) {
               required={!editing}
             />
           </Field>
-          <Field label="SKU o código del fabricante">
+          <Field label="SKU de esta sucursal">
             <input className={internalInputClassName} name="sku" defaultValue={item?.sku ?? ""} />
           </Field>
           <Field label="Nombre" className="sm:col-span-2">
@@ -82,6 +85,28 @@ export function ProductCatalogForm({ action, item }: ProductCatalogFormProps) {
               defaultValue={item?.unit ?? "unidad"}
               placeholder="Ej. frasco, caja, unidad"
               required
+            />
+          </Field>
+          <Field label="Presentación">
+            <input
+              className={internalInputClassName}
+              name="presentation"
+              defaultValue={item?.presentation ?? ""}
+              placeholder="Ej. caja de 20, frasco 120 ml"
+            />
+          </Field>
+          <Field label="Fabricante">
+            <input
+              className={internalInputClassName}
+              name="manufacturer"
+              defaultValue={item?.manufacturer ?? ""}
+            />
+          </Field>
+          <Field label="Código de barras" className="sm:col-span-2">
+            <input
+              className={internalInputClassName}
+              name="barcode"
+              defaultValue={item?.barcode ?? ""}
             />
           </Field>
         </div>
@@ -116,6 +141,14 @@ export function ProductCatalogForm({ action, item }: ProductCatalogFormProps) {
               step="1"
               defaultValue={item?.minimumStock ?? 0}
               required
+            />
+          </Field>
+          <Field label="Ubicación en esta sucursal">
+            <input
+              className={internalInputClassName}
+              name="locationCode"
+              defaultValue={item?.locationCode ?? ""}
+              placeholder="Ej. Depósito A, estante 3"
             />
           </Field>
           <Field label="Precio de venta (Bs)">

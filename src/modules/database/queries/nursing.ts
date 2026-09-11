@@ -147,19 +147,34 @@ export async function getNursingChargeOptions(branchCode: string) {
   return withDatabaseError("getNursingChargeOptions", async () => {
     const [catalog, products] = await Promise.all([
       prisma.serviceCatalogItem.findMany({
-        where: { active: true, OR: [{ kind: "study" }, { requiresNursing: true }] },
+        where: {
+          branchConfigurations: { some: { branchCode, active: true } },
+          OR: [{ kind: "study" }, { requiresNursing: true }]
+        },
         select: {
           id: true,
           name: true,
-          basePriceCents: true,
-          packagePriceCents: true,
-          ownMaxDiscountCents: true
+          branchConfigurations: {
+            where: { branchCode },
+            select: {
+              basePriceCents: true,
+              packagePriceCents: true,
+              ownMaxDiscountCents: true
+            }
+          }
         },
         orderBy: [{ kind: "asc" }, { name: "asc" }]
       }),
       prisma.inventoryItem.findMany({
-        where: { active: true, branchBalances: { some: { branchCode } } },
-        select: { id: true, name: true, salePriceCents: true, maxDiscountCents: true },
+        where: { branchConfigurations: { some: { branchCode, available: true } } },
+        select: {
+          id: true,
+          name: true,
+          branchConfigurations: {
+            where: { branchCode },
+            select: { salePriceCents: true, maxDiscountCents: true }
+          }
+        },
         orderBy: { name: "asc" }
       })
     ]);
@@ -167,14 +182,16 @@ export async function getNursingChargeOptions(branchCode: string) {
       catalog: catalog.map((item) => ({
         id: item.id,
         label: item.name,
-        referenceCents: item.packagePriceCents ?? item.basePriceCents,
-        capCents: item.ownMaxDiscountCents
+        referenceCents:
+          item.branchConfigurations[0]!.packagePriceCents ??
+          item.branchConfigurations[0]!.basePriceCents,
+        capCents: item.branchConfigurations[0]!.ownMaxDiscountCents
       })),
       products: products.map((product) => ({
         id: product.id,
         label: product.name,
-        referenceCents: product.salePriceCents,
-        capCents: product.maxDiscountCents
+        referenceCents: product.branchConfigurations[0]!.salePriceCents,
+        capCents: product.branchConfigurations[0]!.maxDiscountCents
       }))
     };
   });
@@ -379,7 +396,7 @@ export async function getInjectableProductOptions(branchCode: string) {
   return withDatabaseError("getInjectableProductOptions", async () => {
     const items = await prisma.inventoryItem.findMany({
       where: {
-        active: true,
+        branchConfigurations: { some: { branchCode, available: true } },
         category: { contains: "inyect", mode: "insensitive" }
       },
       select: {

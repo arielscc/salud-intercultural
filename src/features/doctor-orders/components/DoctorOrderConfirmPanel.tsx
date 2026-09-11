@@ -30,6 +30,7 @@ type DoctorOrderConfirmPanelProps = {
   totalCents: number;
   indications: string | null;
   doctorName: string;
+  paymentMethods: Array<{ code: string; name: string }>;
 };
 
 function toCents(value: string) {
@@ -57,7 +58,8 @@ export function DoctorOrderConfirmPanel({
   lines,
   totalCents,
   indications,
-  doctorName
+  doctorName,
+  paymentMethods
 }: DoctorOrderConfirmPanelProps) {
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discount, setDiscount] = useState("0.00");
@@ -166,7 +168,7 @@ export function DoctorOrderConfirmPanel({
             placeholder="0.00"
           />
         </Field>
-        <PaymentMethodChips />
+        <PaymentMethodChips methods={paymentMethods} />
       </div>
       <Field label="Referencia">
         <input className={internalInputClassName} name="paymentReference" />

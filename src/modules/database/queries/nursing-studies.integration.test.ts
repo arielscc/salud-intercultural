@@ -101,6 +101,7 @@ describe("nursing and studies integration", () => {
       note: "Consulta activa"
     });
     const catalogItem = await createServiceCatalogItemRecord({
+      branchCode: "el-alto",
       code: "TEST-STUDY-GLUCOSA",
       name: "Glucosa en sangre",
       category: "Estudios",
@@ -111,7 +112,7 @@ describe("nursing and studies integration", () => {
       userId: doctor.id
     });
 
-    expect(await getActiveStudyCatalogItems()).toEqual(
+    expect(await getActiveStudyCatalogItems("el-alto")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: catalogItem.id, name: "Glucosa en sangre" })
       ])

@@ -22,8 +22,8 @@ export default async function NewPurchasePage({
   const { activeBranch } = await getBranchContext();
   const query = await searchParams;
   const [suppliers, items, urgentExpenses] = await Promise.all([
-    getActiveSuppliers(),
-    getPurchaseFormItems(),
+    getActiveSuppliers(activeBranch.code),
+    getPurchaseFormItems(activeBranch.code),
     getPendingUrgentPurchaseExpenses()
   ]);
 

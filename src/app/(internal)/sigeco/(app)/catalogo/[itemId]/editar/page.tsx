@@ -9,6 +9,7 @@ import {
   getServiceCatalogItemById
 } from "@/modules/database/queries/service-catalog";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 export default async function EditServiceCatalogItemPage({
   params,
@@ -18,11 +19,12 @@ export default async function EditServiceCatalogItemPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   await requirePermission("service_catalog_write");
+  const { activeBranch } = await getBranchContext();
   const { itemId } = await params;
   const query = await searchParams;
   const [item, products] = await Promise.all([
-    getServiceCatalogItemById(itemId),
-    getInventoryProductOptions()
+    getServiceCatalogItemById(itemId, activeBranch.code),
+    getInventoryProductOptions(activeBranch.code)
   ]);
   if (!item) notFound();
 

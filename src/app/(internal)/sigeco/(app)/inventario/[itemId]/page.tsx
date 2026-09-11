@@ -69,7 +69,7 @@ export default async function InventoryItemPage({
   const canManageThreshold = canUse(user.role, moduleAccess, "discount_threshold_manage", "inventario");
   if (!item.active && !canWrite && !canReadCosts) notFound();
 
-  const suppliers = canWriteSuppliers ? await getActiveSuppliers() : [];
+  const suppliers = canWriteSuppliers ? await getActiveSuppliers(activeBranch.code) : [];
   const selectedSupplierIds = new Set(
     item.supplierLinks.filter((link) => link.active).map((link) => link.supplierId)
   );
@@ -118,7 +118,11 @@ export default async function InventoryItemPage({
             <CardHeader title="Ficha del producto" description={item.description ?? undefined} />
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
               <InfoRow label="SKU" value={item.sku ?? "Sin SKU"} />
+              <InfoRow label="Presentación" value={item.presentation ?? "No registrada"} />
+              <InfoRow label="Fabricante" value={item.manufacturer ?? "No registrado"} />
+              <InfoRow label="Código de barras" value={item.barcode ?? "No registrado"} />
               <InfoRow label="Unidad" value={item.unit} />
+              <InfoRow label="Ubicación" value={item.locationCode ?? "No registrada"} />
               <InfoRow label="Estado" value={item.active ? "Activo" : "Inactivo"} />
               <InfoRow
                 label="Stock actual"
@@ -267,8 +271,8 @@ export default async function InventoryItemPage({
           {(canWrite || canReadCosts) ? (
             <Card>
               <CardHeader
-                title="Historial del catálogo"
-                description="Cada versión conserva quién cambió qué y por qué."
+                title="Historial maestro del producto"
+                description="Estos cambios canónicos se reflejan en toda la clínica; precio, SKU y stock mínimo pertenecen a la sucursal activa."
               />
               <div className="grid gap-3">
                 {item.catalogVersions.map((version) => (
@@ -279,11 +283,9 @@ export default async function InventoryItemPage({
                     </div>
                     <p className="mt-1">{version.changeReason}</p>
                     <p className="mt-1 text-xs text-muted">
-                      {version.category} · {inventoryItemUsageLabels[version.usage]} · Venta{" "}
-                      {formatInventoryMoney(version.salePriceCents)}
-                      {canReadCosts
-                        ? ` · Costo ref. ${formatInventoryMoney(version.referenceCostCents)}`
-                        : ""}
+                      {version.category} · {inventoryItemUsageLabels[version.usage]}
+                      {version.presentation ? ` · ${version.presentation}` : ""}
+                      {version.manufacturer ? ` · ${version.manufacturer}` : ""}
                     </p>
                     <p className="mt-1 text-xs text-muted">
                       {version.changedBy?.name ??

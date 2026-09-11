@@ -225,7 +225,9 @@ async function checkStaff(): Promise<Check[]> {
 
 async function checkPaymentMethods(): Promise<Check[]> {
   const methods = await prisma.paymentMethod.findMany({
-    where: { active: true },
+    where: {
+      branchConfigurations: { some: { branchCode: stageOneBranchCode, active: true } }
+    },
     select: { code: true }
   });
   const codes = methods.map((method) => method.code);

@@ -18,6 +18,7 @@ import { parsePage } from "@/modules/database/pagination";
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 const buttonClassName =
   "focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-[9px] border border-primary bg-primary px-3 text-sm font-semibold text-white";
@@ -33,6 +34,7 @@ export default async function SuppliersPage({
 }) {
   const user = await requirePermission("suppliers_read", { module: "inventario" });
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext();
   const params = await searchParams;
   const page = parsePage(params.page);
   const canWrite = canUse(user.role, moduleAccess, "suppliers_write");
@@ -42,7 +44,7 @@ export default async function SuppliersPage({
     params.estado === "all"
       ? params.estado
       : "all";
-  const filters = { search: params.q, status: selectedStatus };
+  const filters = { search: params.q, status: selectedStatus, branchCode: activeBranch.code };
   const [suppliers, total] = await Promise.all([
     getSuppliers({ ...filters, page, pageSize: 40 }),
     countSuppliers(filters)

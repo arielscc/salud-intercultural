@@ -50,8 +50,7 @@ export async function createInventoryItemAction(formData: FormData) {
         action: "inventory.item.create",
         entityType: "inventory_item"
       },
-      async (user) => {
-        const { activeBranch } = await getBranchContext();
+      async (user, branchContext) => {
         const parsed = createInventoryItemSchema.safeParse(parseFormData(formData));
 
         if (!parsed.success) {
@@ -63,7 +62,7 @@ export async function createInventoryItemAction(formData: FormData) {
           salePriceCents: inventoryMoneyToCents(parsed.data.salePrice),
           referenceCostCents: inventoryMoneyToCents(parsed.data.referenceCost),
           userId: user.id,
-          branchCode: activeBranch.code
+          branchCode: branchContext.activeBranch.code
         });
         return auditedResult(created, { entityId: created.id });
       }
@@ -87,13 +86,14 @@ export async function updateInventoryItemAction(formData: FormData) {
         entityType: "inventory_item",
         entityId: itemId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = updateInventoryItemSchema.safeParse(parseFormData(formData));
         if (!parsed.success) {
           redirect(`/sigeco/inventario/${itemId}/editar?error=invalid-item`);
         }
         const updated = await updateInventoryItemRecord({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           salePriceCents: inventoryMoneyToCents(parsed.data.salePrice),
           referenceCostCents: inventoryMoneyToCents(parsed.data.referenceCost),
           userId: user.id
@@ -123,10 +123,14 @@ export async function setInventoryItemStatusAction(formData: FormData) {
         entityType: "inventory_item",
         entityId: itemId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = inventoryItemStatusSchema.safeParse(parseFormData(formData));
         if (!parsed.success) redirect(`/sigeco/inventario/${itemId}?error=invalid-status`);
-        const updated = await setInventoryItemStatusRecord({ ...parsed.data, userId: user.id });
+        const updated = await setInventoryItemStatusRecord({
+          ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
+          userId: user.id
+        });
         return auditedResult(updated, {
           entityId: updated.id,
           context: { active: updated.active, revision: updated.revision }
@@ -156,11 +160,12 @@ export async function updateInventoryItemSuppliersAction(formData: FormData) {
         entityType: "inventory_item",
         entityId: itemId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = inventoryItemSuppliersSchema.safeParse(raw);
         if (!parsed.success) redirect(`/sigeco/inventario/${itemId}?error=invalid-suppliers`);
         const updated = await updateInventoryItemSuppliersRecord({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           userId: user.id
         });
         return auditedResult(updated, {
@@ -187,10 +192,14 @@ export async function createSupplierAction(formData: FormData) {
         action: "inventory.supplier.create",
         entityType: "supplier"
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = createSupplierSchema.safeParse(parseFormData(formData));
         if (!parsed.success) redirect("/sigeco/inventario/proveedores/nuevo?error=invalid-supplier");
-        const created = await createSupplierRecord({ ...parsed.data, userId: user.id });
+        const created = await createSupplierRecord({
+          ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
+          userId: user.id
+        });
         return auditedResult(created, { entityId: created.id });
       }
     );
@@ -212,12 +221,16 @@ export async function updateSupplierAction(formData: FormData) {
         entityType: "supplier",
         entityId: supplierId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = updateSupplierSchema.safeParse(parseFormData(formData));
         if (!parsed.success) {
           redirect(`/sigeco/inventario/proveedores/${supplierId}/editar?error=invalid-supplier`);
         }
-        const updated = await updateSupplierRecord({ ...parsed.data, userId: user.id });
+        const updated = await updateSupplierRecord({
+          ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
+          userId: user.id
+        });
         return auditedResult(updated, {
           entityId: updated.id,
           context: { revision: updated.revision }
@@ -243,12 +256,16 @@ export async function setSupplierStatusAction(formData: FormData) {
         entityType: "supplier",
         entityId: supplierId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = supplierStatusSchema.safeParse(parseFormData(formData));
         if (!parsed.success) {
           redirect(`/sigeco/inventario/proveedores/${supplierId}?error=invalid-status`);
         }
-        const updated = await setSupplierStatusRecord({ ...parsed.data, userId: user.id });
+        const updated = await setSupplierStatusRecord({
+          ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
+          userId: user.id
+        });
         return auditedResult(updated, {
           entityId: updated.id,
           context: { active: updated.active, revision: updated.revision }

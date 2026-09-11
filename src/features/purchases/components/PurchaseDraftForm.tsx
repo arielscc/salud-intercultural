@@ -424,6 +424,42 @@ export function PurchaseDraftForm({
                       onChange={(event) => updateNewProduct(line.id, { unit: event.target.value })}
                     />
                   </Field>
+                  <Field label="Presentación">
+                    <input
+                      className={internalInputClassName}
+                      value={line.newProduct.presentation}
+                      onChange={(event) =>
+                        updateNewProduct(line.id, { presentation: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Fabricante">
+                    <input
+                      className={internalInputClassName}
+                      value={line.newProduct.manufacturer}
+                      onChange={(event) =>
+                        updateNewProduct(line.id, { manufacturer: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Código de barras">
+                    <input
+                      className={internalInputClassName}
+                      value={line.newProduct.barcode}
+                      onChange={(event) =>
+                        updateNewProduct(line.id, { barcode: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Ubicación en esta sucursal">
+                    <input
+                      className={internalInputClassName}
+                      value={line.newProduct.locationCode}
+                      onChange={(event) =>
+                        updateNewProduct(line.id, { locationCode: event.target.value })
+                      }
+                    />
+                  </Field>
                   <Field label="Uso">
                     <select
                       className={internalInputClassName}

@@ -238,8 +238,13 @@ export async function createPurchaseDraftRecord(input: {
       });
       if (reused) return reused;
 
-      const supplier = await tx.supplier.findUnique({ where: { id: input.supplierId } });
-      if (!supplier?.active) throw new PurchaseWorkflowError("inactive-supplier");
+      const supplier = await tx.supplier.findFirst({
+        where: {
+          id: input.supplierId,
+          branchProfiles: { some: { branchCode: input.branchCode, active: true } }
+        }
+      });
+      if (!supplier) throw new PurchaseWorkflowError("inactive-supplier");
       const validLines = input.lines.filter(
         (line) => line.itemId && line.orderedQuantity > 0 && line.unitCostCents > 0
       );
@@ -247,11 +252,15 @@ export async function createPurchaseDraftRecord(input: {
         throw new PurchaseWorkflowError("invalid-lines");
       }
       const items = await tx.inventoryItem.findMany({
-        where: { id: { in: [...new Set(validLines.map((line) => line.itemId))] } }
+        where: {
+          id: { in: [...new Set(validLines.map((line) => line.itemId))] },
+          branchConfigurations: {
+            some: { branchCode: input.branchCode, available: true }
+          }
+        }
       });
       if (
-        items.length !== new Set(validLines.map((line) => line.itemId)).size ||
-        items.some((item) => !item.active)
+        items.length !== new Set(validLines.map((line) => line.itemId)).size
       ) {
         throw new PurchaseWorkflowError("inactive-item");
       }
@@ -345,6 +354,10 @@ export type PurchaseBatchLineRecordInput = {
     description?: string;
     category: string;
     unit: string;
+    presentation?: string;
+    manufacturer?: string;
+    barcode?: string;
+    locationCode?: string;
     usage: InventoryItemUsage;
     salePriceCents: number;
     referenceCostCents: number;
@@ -400,8 +413,12 @@ export async function createPurchaseBatchRecord(input: {
           input.lines.flatMap((line) => [line.supplierId, ...line.associatedSupplierIds])
         )
       ];
-      const activeSupplierCount = await tx.supplier.count({
-        where: { id: { in: allSupplierIds }, active: true }
+      const activeSupplierCount = await tx.supplierBranchProfile.count({
+        where: {
+          supplierId: { in: allSupplierIds },
+          branchCode: input.branchCode,
+          active: true
+        }
       });
       if (activeSupplierCount !== allSupplierIds.length) {
         throw new PurchaseWorkflowError("inactive-supplier");
@@ -420,8 +437,12 @@ export async function createPurchaseBatchRecord(input: {
           input.lines.flatMap((line) => (line.existingItemId ? [line.existingItemId] : []))
         )
       ];
-      const activeExistingItems = await tx.inventoryItem.count({
-        where: { id: { in: existingItemIds }, active: true }
+      const activeExistingItems = await tx.branchInventoryItem.count({
+        where: {
+          itemId: { in: existingItemIds },
+          branchCode: input.branchCode,
+          available: true
+        }
       });
       if (activeExistingItems !== existingItemIds.length) {
         throw new PurchaseWorkflowError("inactive-item");
@@ -443,6 +464,7 @@ export async function createPurchaseBatchRecord(input: {
         if (line.newProduct) {
           const created = await createInventoryItemInTransaction(tx, {
             ...line.newProduct,
+            branchCode: input.branchCode,
             userId: input.createdById,
             supplierIds: associatedSupplierIds,
             preferredSupplierId: line.supplierId
@@ -473,6 +495,7 @@ export async function createPurchaseBatchRecord(input: {
       for (const [itemId, supplierIds] of linksByItem) {
         await addInventoryItemSupplierLinksInTransaction(tx, {
           itemId,
+          branchCode: input.branchCode,
           supplierIds: [...supplierIds],
           preferredSupplierId: preferredByItem.get(itemId),
           userId: input.createdById,
@@ -482,7 +505,12 @@ export async function createPurchaseBatchRecord(input: {
 
       const itemIds = [...new Set(resolvedLines.map((line) => line.itemId))];
       const items = await tx.inventoryItem.findMany({
-        where: { id: { in: itemIds }, active: true }
+        where: {
+          id: { in: itemIds },
+          branchConfigurations: {
+            some: { branchCode: input.branchCode, available: true }
+          }
+        }
       });
       if (items.length !== itemIds.length) {
         throw new PurchaseWorkflowError("inactive-item");
@@ -1118,27 +1146,35 @@ export async function getPendingUrgentPurchaseExpenses() {
   );
 }
 
-export async function getPurchaseFormItems() {
+export async function getPurchaseFormItems(branchCode: string) {
   return withDatabaseError("getPurchaseFormItems", () =>
     prisma.inventoryItem.findMany({
-      where: { active: true },
+      where: {
+        branchConfigurations: { some: { branchCode, available: true } }
+      },
       select: {
         id: true,
         name: true,
         internalCode: true,
         unit: true,
-        referenceCostCents: true,
+        branchConfigurations: {
+          where: { branchCode },
+          select: { referenceCostCents: true, preferredSupplierId: true }
+        },
         supplierLinks: {
-          where: { active: true, supplier: { active: true } },
-          select: { supplierId: true, preferred: true }
+          where: {
+            supplier: { branchProfiles: { some: { branchCode, active: true } } }
+          },
+          select: { supplierId: true }
         }
       },
       orderBy: [{ name: "asc" }, { internalCode: "asc" }]
     }).then((items) =>
-      items.map(({ supplierLinks, ...item }) => ({
+      items.map(({ supplierLinks, branchConfigurations, ...item }) => ({
         ...item,
+        referenceCostCents: branchConfigurations[0]!.referenceCostCents,
         supplierIds: supplierLinks.map((link) => link.supplierId),
-        preferredSupplierId: supplierLinks.find((link) => link.preferred)?.supplierId
+        preferredSupplierId: branchConfigurations[0]!.preferredSupplierId ?? undefined
       }))
     )
   );

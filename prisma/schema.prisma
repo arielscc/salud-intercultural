@@ -898,6 +898,10 @@ model ClinicBranch {
   nursingWorkItemResults    NursingWorkItemResult[]
   serviceSessionPackages    ServiceSessionPackage[]
   serviceSessionUses        ServiceSessionUse[]
+  supplierProfiles          SupplierBranchProfile[]
+  inventoryItems            BranchInventoryItem[]
+  paymentMethods            PaymentMethodBranch[]
+  serviceCatalogItems       ServiceCatalogItemBranch[]
   indicationCatalog         IndicationCatalogItemBranch[]
   diagnosisCatalog          DiagnosisCatalogItemBranch[]
   clinicalNoteCatalog       ClinicalNoteCatalogItemBranch[]
@@ -2469,12 +2473,26 @@ model SaleItem {
 }
 
 model PaymentMethod {
-  id        String    @id @default(cuid())
-  code      String    @unique
-  name      String
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  payments  Payment[]
+  id                   String                @id @default(cuid())
+  code                 String                @unique
+  name                 String
+  /// Compatibilidad histórica; la disponibilidad efectiva vive por sucursal.
+  active               Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  payments             Payment[]
+  branchConfigurations PaymentMethodBranch[]
+}
+
+model PaymentMethodBranch {
+  methodId   String
+  branchCode String
+  active     Boolean       @default(false)
+  updatedAt  DateTime      @updatedAt
+  method     PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Restrict)
+  branch     ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+
+  @@id([methodId, branchCode])
+  @@index([branchCode, active])
 }
 
 model Payment {
@@ -2991,29 +3009,54 @@ model PatientFeedbackCaseEvent {
 }
 
 model Supplier {
-  id          String                  @id @default(cuid())
-  name        String
-  contactName String?
-  phone       String?
-  whatsapp    String?
-  email       String?
-  address     String?
-  notes       String?
-  active      Boolean                 @default(true)
-  revision    Int                     @default(1)
-  createdAt   DateTime                @default(now())
-  updatedAt   DateTime                @updatedAt
-  itemLinks   InventoryItemSupplier[]
-  versions    SupplierVersion[]
-  purchases   Purchase[]
-  lots        InventoryLot[]
+  id             String                  @id @default(cuid())
+  name           String
+  country        String?
+  contactName    String?
+  phone          String?
+  whatsapp       String?
+  email          String?
+  address        String?
+  /// Compatibilidad histórica; notas y estado efectivos viven en el perfil local.
+  notes          String?
+  active         Boolean                 @default(true)
+  revision       Int                     @default(1)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  itemLinks      InventoryItemSupplier[]
+  versions       SupplierVersion[]
+  branchProfiles SupplierBranchProfile[]
+  purchases      Purchase[]
+  lots           InventoryLot[]
 
   @@index([name])
-  @@index([active])
+  @@index([country])
+}
+
+model SupplierBranchProfile {
+  supplierId             String
+  branchCode             String
+  active                 Boolean       @default(false)
+  accountExecutiveName   String?
+  accountExecutivePhone  String?
+  commercialTerms        String?
+  paymentTermDays        Int?
+  references             String?
+  notes                  String?
+  revision               Int           @default(1)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  supplier               Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  branch                 ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  preferredForItems      BranchInventoryItem[]
+
+  @@id([supplierId, branchCode])
+  @@index([branchCode, active])
 }
 
 model InventoryItem {
   id                  String                        @id @default(cuid())
+  /// Campos de compatibilidad histórica. Las operaciones usan BranchInventoryItem.
   sku                 String?                       @unique
   internalCode        String                        @unique
   name                String
@@ -3021,11 +3064,14 @@ model InventoryItem {
   category            String                        @default("Sin categoría")
   unit                String                        @default("unidad")
   usage               InventoryItemUsage            @default(both)
+  presentation        String?
+  manufacturer        String?
+  barcode             String?                       @unique
   salePriceCents      Int                           @default(0)
   referenceCostCents  Int                           @default(0)
-  /// Umbral de descuento máximo por unidad (en centavos) que solo Dirección y
-  /// Super administrador pueden editar. Acota el descuento del médico.
   maxDiscountCents    Int                           @default(0)
+  /// Total global heredado hasta la Tarea 11. Ninguna validación operativa debe
+  /// usarlo: el saldo efectivo vive en `BranchInventoryBalance`.
   currentStock        Int                           @default(0)
   minimumStock        Int                           @default(0)
   active              Boolean                       @default(true)
@@ -3047,13 +3093,38 @@ model InventoryItem {
   lots                InventoryLot[]
   lotAdjustments      InventoryLotAdjustment[]
   branchBalances      BranchInventoryBalance[]
+  branchConfigurations BranchInventoryItem[]
   transfers           InventoryTransfer[]
 
   @@index([name])
   @@index([category])
   @@index([usage])
-  @@index([active])
   @@index([currentStock])
+}
+
+model BranchInventoryItem {
+  itemId              String
+  branchCode          String
+  sku                 String?
+  available           Boolean                @default(false)
+  salePriceCents      Int                    @default(0)
+  referenceCostCents Int                    @default(0)
+  maxDiscountCents   Int                    @default(0)
+  minimumStock       Int                    @default(0)
+  locationCode       String?
+  preferredSupplierId String?
+  revision            Int                    @default(1)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  item                 InventoryItem          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branch               ClinicBranch           @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  preferredSupplier    SupplierBranchProfile? @relation(fields: [preferredSupplierId, branchCode], references: [supplierId, branchCode], onDelete: Restrict)
+
+  @@id([itemId, branchCode])
+  @@unique([branchCode, sku])
+  @@index([branchCode, available])
+  @@index([branchCode, minimumStock])
+  @@index([preferredSupplierId, branchCode])
 }
 
 /// Stock operativo separado por producto y sucursal. `InventoryItem.currentStock`
@@ -3074,6 +3145,7 @@ model InventoryItemSupplier {
   id         String        @id @default(cuid())
   itemId     String
   supplierId String
+  /// Compatibilidad histórica; preferencia y disponibilidad son locales.
   preferred  Boolean       @default(false)
   active     Boolean       @default(true)
   createdAt  DateTime      @default(now())
@@ -3082,8 +3154,8 @@ model InventoryItemSupplier {
   supplier   Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
 
   @@unique([itemId, supplierId])
-  @@index([itemId, active])
-  @@index([supplierId, active])
+  @@index([itemId])
+  @@index([supplierId])
 }
 
 model InventoryItemCatalogVersion {
@@ -3102,6 +3174,9 @@ model InventoryItemCatalogVersion {
   maxDiscountCents   Int                @default(0)
   minimumStock       Int
   active             Boolean
+  presentation       String?
+  manufacturer       String?
+  barcode            String?
   supplierSnapshot   Json?
   changedById        String?
   changeReason       String
@@ -3119,6 +3194,7 @@ model SupplierVersion {
   supplierId   String
   version      Int
   name         String
+  country      String?
   contactName  String?
   phone        String?
   whatsapp     String?
@@ -3493,9 +3569,8 @@ model ServiceCatalogItem {
   description         String?
   category            String                      @default("Sin categoría")
   kind                ServiceCatalogKind          @default(service)
+  /// Campos de compatibilidad histórica. La configuración efectiva es local.
   basePriceCents      Int                         @default(0)
-  /// Umbral de descuento propio (centavos). Aplica a servicios y estudios sin
-  /// productos componentes. Solo Dirección y Super administrador lo editan.
   ownMaxDiscountCents Int                         @default(0)
   /// Se ejecuta en Enfermería (sueroterapia, ozonoterapia o estudios): requiere
   /// pago previo antes de derivar (Tareas 4 y 8).
@@ -3513,11 +3588,30 @@ model ServiceCatalogItem {
   versions            ServiceCatalogItemVersion[]
   orderLines          DoctorOrderLine[]
   sessionPackages     ServiceSessionPackage[]
+  branchConfigurations ServiceCatalogItemBranch[]
 
   @@index([name])
   @@index([category])
   @@index([kind])
-  @@index([active])
+}
+
+model ServiceCatalogItemBranch {
+  catalogItemId       String
+  branchCode          String
+  active              Boolean            @default(false)
+  basePriceCents      Int                @default(0)
+  ownMaxDiscountCents Int                @default(0)
+  sessionCount        Int?
+  packagePriceCents   Int?
+  sessionPriceCents   Int?
+  revision            Int                @default(1)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  catalogItem         ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
+  branch              ClinicBranch       @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+
+  @@id([catalogItemId, branchCode])
+  @@index([branchCode, active])
 }
 
 /// Producto componente de un Tratamiento. El tope de descuento del tratamiento

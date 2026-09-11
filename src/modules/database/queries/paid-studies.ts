@@ -94,7 +94,9 @@ export async function createPaidStudyOrder(
           ? tx.serviceCatalogItem.findMany({
               where: {
                 id: { in: catalogIds },
-                active: true,
+                branchConfigurations: {
+                  some: { branchCode: input.branchCode, active: true }
+                },
                 OR: [{ kind: "study" }, { requiresNursing: true }]
               },
               select: {
@@ -108,7 +110,12 @@ export async function createPaidStudyOrder(
           : Promise.resolve([]),
         inventoryIds.length > 0
           ? tx.inventoryItem.findMany({
-              where: { id: { in: inventoryIds }, active: true },
+              where: {
+                id: { in: inventoryIds },
+                branchConfigurations: {
+                  some: { branchCode: input.branchCode, available: true }
+                }
+              },
               select: { id: true, name: true }
             })
           : Promise.resolve([])

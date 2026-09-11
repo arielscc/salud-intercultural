@@ -42,6 +42,7 @@ function saleCashErrorCode(error: unknown) {
   if (!cashError) return null;
   if (cashError.code === "session_not_open") return "cash-session-required";
   if (cashError.code === "session_stale_open") return "cash-session-stale-open";
+  if (cashError.code === "payment_method_unavailable") return "payment-method-unavailable";
   return null;
 }
 

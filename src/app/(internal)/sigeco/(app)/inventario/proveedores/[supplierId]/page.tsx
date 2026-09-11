@@ -16,6 +16,7 @@ import { getSupplierById } from "@/modules/database/queries/inventory";
 import { requirePermission } from "@/modules/permissions";
 import { getModuleAccessState } from "@/features/modules/request-state";
 import { canUse } from "@/features/modules/access";
+import { getBranchContext } from "@/features/branches/context";
 
 const linkClassName =
   "focus-ring inline-flex min-h-10 items-center justify-center rounded-[9px] border border-border px-3 text-sm font-semibold text-text hover:text-primary-dark";
@@ -29,9 +30,10 @@ export default async function SupplierDetailPage({
 }) {
   const user = await requirePermission("suppliers_read", { module: "inventario" });
   const moduleAccess = await getModuleAccessState();
+  const { activeBranch } = await getBranchContext();
   const { supplierId } = await params;
   const query = await searchParams;
-  const supplier = await getSupplierById(supplierId);
+  const supplier = await getSupplierById(supplierId, activeBranch.code);
   if (!supplier) notFound();
   const canWrite = canUse(user.role, moduleAccess, "suppliers_write");
 
@@ -64,11 +66,32 @@ export default async function SupplierDetailPage({
             }
           />
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <InfoRow label="País" value={supplier.country ?? "No registrado"} />
             <InfoRow label="Persona" value={supplier.contactName ?? "No registrada"} />
             <InfoRow label="Teléfono" value={supplier.phone ?? "No registrado"} />
             <InfoRow label="WhatsApp" value={supplier.whatsapp ?? "No registrado"} />
             <InfoRow label="Correo" value={supplier.email ?? "No registrado"} />
             <InfoRow label="Dirección" value={supplier.address ?? "No registrada"} />
+          </dl>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Condiciones de esta sucursal"
+            description="No se comparten con otras sucursales."
+          />
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <InfoRow label="Ejecutivo" value={supplier.accountExecutiveName ?? "No registrado"} />
+            <InfoRow
+              label="Teléfono ejecutivo"
+              value={supplier.accountExecutivePhone ?? "No registrado"}
+            />
+            <InfoRow
+              label="Plazo de pago"
+              value={supplier.paymentTermDays == null ? "No registrado" : `${supplier.paymentTermDays} días`}
+            />
+            <InfoRow label="Condiciones" value={supplier.commercialTerms ?? "Sin condiciones"} />
+            <InfoRow label="Referencias" value={supplier.references ?? "Sin referencias"} />
             <InfoRow label="Notas" value={supplier.notes ?? "Sin notas"} />
           </dl>
         </Card>
@@ -128,7 +151,7 @@ export default async function SupplierDetailPage({
       <Card>
         <CardHeader
           title="Historial"
-          description="Versiones de contacto y estado; las anteriores no se sobrescriben."
+          description="Versiones de la identidad y contacto global; las anteriores no se sobrescriben."
         />
         <div className="grid gap-3">
           {supplier.versions.map((version) => (

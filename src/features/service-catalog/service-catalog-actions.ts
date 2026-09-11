@@ -55,7 +55,7 @@ export async function createServiceCatalogItemAction(formData: FormData) {
         action: "service_catalog.item.create",
         entityType: "service_catalog_item"
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = createServiceCatalogItemSchema.safeParse(withComponents(formData));
         if (!parsed.success) redirect("/sigeco/catalogo/nuevo?error=invalid-item");
 
@@ -72,6 +72,7 @@ export async function createServiceCatalogItemAction(formData: FormData) {
           packagePriceCents: serviceCatalogMoneyToCents(parsed.data.packagePrice),
           sessionPriceCents: serviceCatalogMoneyToCents(parsed.data.sessionPrice),
           components: parsed.data.kind === "treatment" ? parsed.data.components : [],
+          branchCode: branchContext.activeBranch.code,
           userId: user.id
         });
         return auditedResult(created, { entityId: created.id });
@@ -95,7 +96,7 @@ export async function updateServiceCatalogItemAction(formData: FormData) {
         entityType: "service_catalog_item",
         entityId: catalogItemId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = updateServiceCatalogItemSchema.safeParse(withComponents(formData));
         if (!parsed.success) {
           redirect(`/sigeco/catalogo/${catalogItemId}/editar?error=invalid-item`);
@@ -114,7 +115,8 @@ export async function updateServiceCatalogItemAction(formData: FormData) {
           sessionPriceCents: serviceCatalogMoneyToCents(parsed.data.sessionPrice),
           components: parsed.data.components,
           changeReason: parsed.data.changeReason,
-          userId: user.id
+          userId: user.id,
+          branchCode: branchContext.activeBranch.code
         });
         return auditedResult(updated, {
           entityId: updated.id,
@@ -141,10 +143,14 @@ export async function setServiceCatalogItemStatusAction(formData: FormData) {
         entityType: "service_catalog_item",
         entityId: catalogItemId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = serviceCatalogItemStatusSchema.safeParse(parseFormData(formData));
         if (!parsed.success) redirect(`/sigeco/catalogo/${catalogItemId}?error=invalid-status`);
-        const updated = await setServiceCatalogItemStatusRecord({ ...parsed.data, userId: user.id });
+        const updated = await setServiceCatalogItemStatusRecord({
+          ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
+          userId: user.id
+        });
         return auditedResult(updated, {
           entityId: updated.id,
           context: { active: updated.active, revision: updated.revision }
@@ -171,7 +177,7 @@ export async function updateServiceCatalogThresholdAction(formData: FormData) {
         entityType: "service_catalog_item",
         entityId: catalogItemId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = serviceCatalogOwnThresholdSchema.safeParse(parseFormData(formData));
         if (!parsed.success) redirect(`/sigeco/catalogo/${catalogItemId}?error=invalid-threshold`);
         const updated = await updateServiceCatalogOwnThresholdRecord({
@@ -179,7 +185,8 @@ export async function updateServiceCatalogThresholdAction(formData: FormData) {
           expectedRevision: parsed.data.expectedRevision,
           ownMaxDiscountCents: serviceCatalogMoneyToCents(parsed.data.maxDiscount) ?? 0,
           changeReason: parsed.data.changeReason,
-          userId: user.id
+          userId: user.id,
+          branchCode: branchContext.activeBranch.code
         });
         return auditedResult(updated, {
           entityId: updated.id,
@@ -207,7 +214,7 @@ export async function updateInventoryItemMaxDiscountAction(formData: FormData) {
         entityType: "inventory_item",
         entityId: itemId || undefined
       },
-      async (user) => {
+      async (user, branchContext) => {
         const parsed = inventoryMaxDiscountSchema.safeParse(parseFormData(formData));
         if (!parsed.success) redirect(`/sigeco/inventario/${itemId}?error=invalid-threshold`);
         const updated = await updateInventoryItemMaxDiscountRecord({
@@ -215,7 +222,8 @@ export async function updateInventoryItemMaxDiscountAction(formData: FormData) {
           expectedRevision: parsed.data.expectedRevision,
           maxDiscountCents: serviceCatalogMoneyToCents(parsed.data.maxDiscount) ?? 0,
           changeReason: parsed.data.changeReason,
-          userId: user.id
+          userId: user.id,
+          branchCode: branchContext.activeBranch.code
         });
         return auditedResult(updated, {
           entityId: updated.id,
