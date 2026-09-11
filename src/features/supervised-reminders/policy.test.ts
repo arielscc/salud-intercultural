@@ -40,10 +40,11 @@ describe("supervised reminder policy", () => {
   it("keeps the deduplication key stable across rule versions", () => {
     expect(
       reminderDeduplicationKey({
+        branchCode: "el-alto",
         ruleKey: "control",
         sourceEvent: "visit_completed",
         sourceId: "visit-1"
       })
-    ).toBe("control:visit_completed:visit-1");
+    ).toBe("el-alto:control:visit_completed:visit-1");
   });
 });

@@ -110,9 +110,10 @@ export function scheduleSupervisedReminder(input: {
 }
 
 export function reminderDeduplicationKey(input: {
+  branchCode: string;
   ruleKey: string;
   sourceEvent: SupervisedReminderEvent;
   sourceId: string;
 }) {
-  return `${input.ruleKey}:${input.sourceEvent}:${input.sourceId}`;
+  return `${input.branchCode}:${input.ruleKey}:${input.sourceEvent}:${input.sourceId}`;
 }

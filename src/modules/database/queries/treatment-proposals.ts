@@ -90,6 +90,7 @@ async function createTreatmentDecisionFollowUp(
   await tx.followUpStatusHistory.create({
     data: {
       taskId: task.id,
+      branchCode: input.branchCode,
       userId: input.doctorId,
       toStatus: "pending",
       note: "Creado desde una propuesta que necesita tiempo."

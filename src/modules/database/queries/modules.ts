@@ -375,7 +375,7 @@ export async function getModulePendingWork(
           }
         }),
         prisma.supervisedReminderCandidate.count({
-          where: { ...ofBranchVisit, status: { in: ["pending_review", "failed"] } }
+          where: { branchCode, status: { in: ["pending_review", "failed"] } }
         })
       ]);
       results.push({
@@ -390,7 +390,7 @@ export async function getModulePendingWork(
     if (wanted.has("opiniones")) {
       const cases = await prisma.patientFeedbackCase.count({
         where: {
-          feedback: { visit: { branchCode } },
+          branchCode,
           status: { in: ["new", "reviewing", "awaiting_patient"] }
         }
       });

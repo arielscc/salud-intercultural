@@ -20,7 +20,6 @@ import {
   PatientFeedbackError,
   updatePatientFeedbackCase
 } from "@/modules/database/queries/patient-feedback";
-import { getBranchContext } from "@/features/branches/context";
 
 const feedbackPath = "/sigeco/opiniones";
 
@@ -44,7 +43,6 @@ export async function createFeedbackRequestAction(
     return { status: "error", message: "Revisa la visita, responsable y vencimiento." };
   }
 
-  const token = createFeedbackAccessToken();
   try {
     const result = await runAuditedAction(
       {
@@ -52,15 +50,15 @@ export async function createFeedbackRequestAction(
         action: "patient_feedback.request.create",
         entityType: "patient_feedback_request"
       },
-      async (user) => {
-        const { activeBranch } = await getBranchContext();
+      async (user, branchContext) => {
+        const token = createFeedbackAccessToken(branchContext.activeBranch.code);
         const created = await createPatientFeedbackRequest({
           data: parsed.data,
           createdById: user.id,
-          branchCode: activeBranch.code,
+          branchCode: branchContext.activeBranch.code,
           tokenHash: hashFeedbackAccessToken(token)
         });
-        return auditedResult(created, {
+        return auditedResult({ ...created, token }, {
           entityId: created.request.id,
           context: {
             visitId: parsed.data.visitId,
@@ -76,7 +74,7 @@ export async function createFeedbackRequestAction(
       message: result.rotated
         ? "Se reemplazó el enlace anterior. Cópialo ahora."
         : "Enlace creado. Cópialo ahora; SIGECO no guarda el token original.",
-      link: absoluteUrl(`/encuesta/${token}`),
+      link: absoluteUrl(`/encuesta/${result.token}`),
       rotated: result.rotated
     };
   } catch (error) {
@@ -105,8 +103,7 @@ export async function updateFeedbackCaseAction(formData: FormData) {
       entityType: "patient_feedback_case",
       entityId: caseId || undefined
     },
-    async (user) => {
-      const { activeBranch } = await getBranchContext();
+    async (user, branchContext) => {
       const parsed = updateFeedbackCaseSchema.safeParse(
         Object.fromEntries(formData.entries())
       );
@@ -114,7 +111,7 @@ export async function updateFeedbackCaseAction(formData: FormData) {
       const updated = await updatePatientFeedbackCase({
         data: parsed.data,
         actorId: user.id,
-        branchCode: activeBranch.code
+        branchCode: branchContext.activeBranch.code
       });
       return auditedResult(updated, {
         entityId: updated.id,
@@ -143,11 +140,10 @@ export async function cancelFeedbackRequestAction(formData: FormData) {
       entityType: "patient_feedback_request",
       entityId: parsed.data.requestId
     },
-    async (user) => {
-      const { activeBranch } = await getBranchContext();
+    async (_user, branchContext) => {
       const cancelled = await cancelPatientFeedbackRequest({
         data: parsed.data,
-        branchCode: activeBranch.code
+        branchCode: branchContext.activeBranch.code
       });
       return auditedResult(cancelled, {
         entityId: cancelled.id,

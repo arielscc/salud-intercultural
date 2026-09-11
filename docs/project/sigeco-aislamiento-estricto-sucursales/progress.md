@@ -23,7 +23,10 @@ materializan la sede; la continuidad de Enfermería queda separada de la histori
 diagnóstica y los archivos usan permisos breves ligados al contexto activo.
 Compras, recepciones, lotes, movimientos y alertas ya operan contra saldos
 locales; el total global de inventario fue retirado y cada traslado conserva dos
-comprobantes conciliados, uno por sede.
+comprobantes conciliados, uno por sede. Ventas, pagos, Caja y documentos también
+quedaron materializados por sede. Seguimientos, recordatorios supervisados y
+opiniones ya tienen tenencia directa; sus KPI usan conteos locales y los enlaces
+públicos de opinión incorporan la sucursal emisora.
 
 ## Decisiones Confirmadas Por Dirección
 
@@ -42,17 +45,17 @@ comprobantes conciliados, uno por sede.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 6 |
+| Pendiente | 4 |
 | En progreso | 2 |
 | Bloqueada | 0 |
-| Terminada | 9 |
+| Terminada | 11 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
-| B. Partición de dominios | 5-13 | En progreso (7/9 implementadas; 3 cerradas) | Maestros únicos y operaciones pertenecientes a una sede |
+| B. Partición de dominios | 5-13 | Terminada en código (9/9; 7 con validación estática aprobada) | Maestros únicos y operaciones pertenecientes a una sede |
 | C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
@@ -70,8 +73,8 @@ comprobantes conciliados, uno por sede.
 | 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Implementada; validación acumulada pendiente | 7-8 |
 | 10 | Maestros comerciales y configuración por sucursal | P0 | Implementada; validación estática aprobada | 4 |
 | 11 | Compras, stock, lotes, traslados y alertas | P0 | Implementada; validación estática aprobada | 10 |
-| 12 | Ventas, pagos, Caja y documentos | P0 | Pendiente | 5, 7, 10-11 |
-| 13 | Seguimientos, recordatorios, opiniones y reportes | P0 | Pendiente | 5-12 |
+| 12 | Ventas, pagos, Caja y documentos | P0 | Implementada; validación estática aprobada | 5, 7, 10-11 |
+| 13 | Seguimientos, recordatorios, opiniones y reportes | P0 | Implementada; validación estática aprobada | 5-12 |
 | 14 | Módulos y auditoría operativa | P0 | Pendiente | 2-3, 13 |
 | 15 | Barrido completo de aplicación y constraints | P0 | Pendiente | 5-14 |
 | 16 | PostgreSQL Row-Level Security | P0 | Pendiente | 15 |
@@ -237,7 +240,24 @@ Tarea 16.
   diagnóstico de Caja es de solo lectura y nunca reescribe evidencia financiera.
 - Detalle y operación: [reporte T12](../task-reports/2026-09-10-tarea-12-ventas-pagos-caja-documentos.md).
 
+### Tarea 13 — Implementación
+
+- Intentos e historial de seguimiento, plantillas, versiones de reglas,
+  candidatos y eventos de revisión materializan `branchCode` y se enlazan a
+  padres, expedientes y responsables mediante claves compuestas.
+- Solicitudes, respuestas, casos y eventos de opinión quedan bajo la sede de la
+  visita. Los enlaces públicos incluyen la sede en el token y la búsqueda usa
+  `(branchCode, tokenHash)`; sustituir el prefijo invalida el acceso.
+- Bandejas, resúmenes y KPI de continuidad/calidad filtran directamente la sede.
+  La comparación corporativa de `/sigeco/sucursales` sigue siendo la única vista
+  transversal explícita y conserva su autorización exclusiva para Dirección y
+  super administración.
+- Migraciones expansiva y de endurecimiento preparadas, sin aplicar. El
+  reconciliador es `dry-run`, solo admite decisiones explícitas para plantillas
+  sin padre y no modifica evidencia de seguimientos u opiniones.
+- Detalle y operación: [reporte T13](../task-reports/2026-09-10-tarea-13-seguimientos-recordatorios-opiniones-reportes.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 13: seguimientos, recordatorios, opiniones y reportes. La integración
+Ejecutar la Tarea 14: módulos y auditoría operativa. La integración
 y el despliegue se validan en la Tarea 17.

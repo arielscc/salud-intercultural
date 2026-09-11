@@ -35,6 +35,25 @@ export async function branchOwnedEntityExists(
       return Boolean(await prisma.cashMovement.findFirst({ where, select: { id: true } }));
     case "follow_up_task":
       return Boolean(await prisma.followUpTask.findFirst({ where, select: { id: true } }));
+    case "supervised_reminder_rule":
+      return Boolean(
+        await prisma.supervisedReminderRule.findFirst({ where, select: { id: true } })
+      );
+    case "supervised_reminder_candidate":
+      return Boolean(
+        await prisma.supervisedReminderCandidate.findFirst({
+          where,
+          select: { id: true }
+        })
+      );
+    case "patient_feedback_request":
+      return Boolean(
+        await prisma.patientFeedbackRequest.findFirst({ where, select: { id: true } })
+      );
+    case "patient_feedback_case":
+      return Boolean(
+        await prisma.patientFeedbackCase.findFirst({ where, select: { id: true } })
+      );
     case "inventory_lot":
       return Boolean(await prisma.inventoryLot.findFirst({ where, select: { id: true } }));
     case "inventory_transfer":

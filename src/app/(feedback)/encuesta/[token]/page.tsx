@@ -17,7 +17,7 @@ export default async function PatientFeedbackPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const form = /^[A-Za-z0-9_-]{40,100}$/.test(token)
+  const form = /^[a-z0-9-]{2,80}\.[A-Za-z0-9_-]{43}$/.test(token)
     ? await getPublicPatientFeedbackForm(token)
     : { state: "invalid" as const };
 

@@ -153,8 +153,21 @@ export async function createFollowUpTaskRecord(input: {
           input.priority === "normal")
           ? "high"
           : (input.priority ?? "normal");
-      const [visitMatches, saleMatches, orderMatches, workItemMatches] =
+      const [leadMatches, patientMatches, visitMatches, saleMatches, orderMatches, workItemMatches] =
         await Promise.all([
+          input.leadId
+            ? tx.lead.count({
+                where: { id: input.leadId, branchCode: input.branchCode }
+              })
+            : 1,
+          input.patientId
+            ? tx.patientBranchRecord.count({
+                where: {
+                  patientId: input.patientId,
+                  branchCode: input.branchCode
+                }
+              })
+            : 1,
           input.visitId
             ? tx.visit.count({
                 where: { id: input.visitId, branchCode: input.branchCode }
@@ -167,10 +180,10 @@ export async function createFollowUpTaskRecord(input: {
             : 1,
           input.clinicalOrderId
             ? tx.clinicalOrder.count({
-                where: {
-                  id: input.clinicalOrderId,
-                  visit: { branchCode: input.branchCode }
-                }
+              where: {
+                id: input.clinicalOrderId,
+                branchCode: input.branchCode
+              }
               })
             : 1,
           input.workItemId
@@ -184,7 +197,14 @@ export async function createFollowUpTaskRecord(input: {
             : 1
         ]);
       if (
-        ![visitMatches, saleMatches, orderMatches, workItemMatches].every(Boolean)
+        ![
+          leadMatches,
+          patientMatches,
+          visitMatches,
+          saleMatches,
+          orderMatches,
+          workItemMatches
+        ].every(Boolean)
       ) {
         throw new FollowUpWorkflowError("BRANCH_MISMATCH");
       }
@@ -202,6 +222,7 @@ export async function createFollowUpTaskRecord(input: {
       await tx.followUpStatusHistory.create({
         data: {
           taskId: task.id,
+          branchCode: input.branchCode,
           userId: input.createdById,
           toStatus: initialStatus,
           note: input.notes
@@ -418,6 +439,7 @@ export async function createFollowUpAttemptRecord(input: {
       const attempt = await tx.followUpAttempt.create({
         data: {
           taskId: input.taskId,
+          branchCode: input.branchCode,
           userId: input.userId,
           method: input.method,
           result: input.result,
@@ -427,7 +449,9 @@ export async function createFollowUpAttemptRecord(input: {
       });
 
       await tx.followUpTask.update({
-        where: { id: input.taskId },
+        where: {
+          id_branchCode: { id: input.taskId, branchCode: input.branchCode }
+        },
         data: {
           result: input.result,
           status: nextStatus,
@@ -439,6 +463,7 @@ export async function createFollowUpAttemptRecord(input: {
       await tx.followUpStatusHistory.create({
         data: {
           taskId: input.taskId,
+          branchCode: input.branchCode,
           userId: input.userId,
           fromStatus: task.status,
           toStatus: nextStatus,
@@ -481,6 +506,7 @@ export async function createFollowUpAttemptRecord(input: {
         await tx.followUpStatusHistory.create({
           data: {
             taskId: escalatedTask.id,
+            branchCode: input.branchCode,
             userId: input.userId,
             toStatus: "pending",
             note: "Escalado para llamada médica."

@@ -932,6 +932,16 @@ model ClinicBranch {
   patientRouteSteps          PatientRouteStep[]
   visitAreaTimeEvents        VisitAreaTimeEvent[]
   visitWorkItems             VisitWorkItem[]
+  followUpAttempts           FollowUpAttempt[]
+  followUpStatusHistory      FollowUpStatusHistory[]
+  followUpTemplates          FollowUpTemplate[]
+  reminderRuleVersions       SupervisedReminderRuleVersion[]
+  reminderCandidates         SupervisedReminderCandidate[]
+  reminderReviewEvents       SupervisedReminderReviewEvent[]
+  feedbackRequests           PatientFeedbackRequest[]
+  feedbackSubmissions        PatientFeedback[]
+  feedbackCases              PatientFeedbackCase[]
+  feedbackCaseEvents         PatientFeedbackCaseEvent[]
 
   @@index([status, name])
 }
@@ -939,19 +949,27 @@ model ClinicBranch {
 /// Una persona puede estar asignada a varias sedes. Para médicos y enfermería,
 /// isDefault identifica la única sede de trabajo; las demás son de consulta.
 model InternalUserBranch {
-  userId                    String
-  branchCode                String
-  role                      InternalRole
-  active                    Boolean                         @default(true)
-  isDefault                 Boolean                         @default(false)
-  assignedAt                DateTime                        @default(now())
-  updatedAt                 DateTime                        @updatedAt
-  user                      InternalUser                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branch                    ClinicBranch                    @relation(fields: [branchCode], references: [code], onDelete: Restrict)
-  professionalProfile       ClinicalProfessionalProfile?
-  continuityAccesses        ClinicalContinuityAccess[]
-  nursingContinuityAccesses NursingContinuityAccess[]
-  attachmentAccessGrants    ClinicalAttachmentAccessGrant[]
+  userId                     String
+  branchCode                 String
+  role                       InternalRole
+  active                     Boolean                         @default(true)
+  isDefault                  Boolean                         @default(false)
+  assignedAt                 DateTime                        @default(now())
+  updatedAt                  DateTime                        @updatedAt
+  user                       InternalUser                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch                     ClinicBranch                    @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  professionalProfile        ClinicalProfessionalProfile?
+  continuityAccesses         ClinicalContinuityAccess[]
+  nursingContinuityAccesses  NursingContinuityAccess[]
+  attachmentAccessGrants     ClinicalAttachmentAccessGrant[]
+  assignedFollowUpTasks      FollowUpTask[]                  @relation("FollowUpAssignedMembership")
+  followUpAttempts           FollowUpAttempt[]               @relation("FollowUpAttemptUserMembership")
+  reminderRuleVersions       SupervisedReminderRuleVersion[] @relation("ReminderRuleOwnerMembership")
+  reviewedReminderCandidates SupervisedReminderCandidate[]   @relation("ReminderCandidateReviewerMembership")
+  reminderReviewEvents       SupervisedReminderReviewEvent[] @relation("ReminderReviewEventUserMembership")
+  ownedFeedbackRequests      PatientFeedbackRequest[]        @relation("FeedbackRequestOwnerMembership")
+  ownedFeedbackCases         PatientFeedbackCase[]           @relation("FeedbackCaseOwnerMembership")
+  feedbackCaseEvents         PatientFeedbackCaseEvent[]      @relation("FeedbackCaseEventActorMembership")
 
   @@id([userId, branchCode])
   @@index([branchCode, userId])
@@ -1210,17 +1228,17 @@ model PatientBranchRecord {
   patientId                 String
   branchCode                String
   recordNumber              String
-  status                    PatientStatus              @default(active)
+  status                    PatientStatus                 @default(active)
   generalObservations       String?
   allergies                 String?
   relevantHistory           String?
   currentMedication         String?
   firstAttendedAt           DateTime?
   lastAttendedAt            DateTime?
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
-  patient                   Patient                    @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  branch                    ClinicBranch               @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  createdAt                 DateTime                      @default(now())
+  updatedAt                 DateTime                      @updatedAt
+  patient                   Patient                       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch                    ClinicBranch                  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   contacts                  PatientContact[]
   notes                     PatientNote[]
   consents                  PatientConsent[]
@@ -1244,6 +1262,10 @@ model PatientBranchRecord {
   deliveredProducts         DeliveredProduct[]
   cashMovements             CashMovement[]
   generatedDocuments        GeneratedDocument[]
+  followUpTasks             FollowUpTask[]
+  reminderCandidates        SupervisedReminderCandidate[]
+  feedbackRequests          PatientFeedbackRequest[]
+  feedbackSubmissions       PatientFeedback[]
 
   @@id([patientId, branchCode])
   @@unique([branchCode, recordNumber])
@@ -1475,15 +1497,16 @@ model VisitDiscontinuation {
   pendingTypes   VisitPendingType[]         @default([])
   note           String?
   recordedById   String?
-  followUpTaskId String?                    @unique
+  followUpTaskId String?
   occurredAt     DateTime                   @default(now())
   createdAt      DateTime                   @default(now())
   visit          Visit                      @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
   branch         ClinicBranch               @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   recordedBy     InternalUser?              @relation("VisitDiscontinuationRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
-  followUpTask   FollowUpTask?              @relation(fields: [followUpTaskId], references: [id], onDelete: SetNull)
+  followUpTask   FollowUpTask?              @relation(fields: [followUpTaskId, branchCode], references: [id, branchCode], onDelete: Restrict)
 
   @@unique([visitId, branchCode])
+  @@unique([followUpTaskId, branchCode])
   @@index([branchCode, occurredAt])
   @@index([branchCode, reason, occurredAt])
   @@index([reason, occurredAt])
@@ -1726,7 +1749,7 @@ model TreatmentProposalOutcome {
   note                      String?
   administrationInstruction String?
   administrationOrderId     String?                        @unique
-  followUpTaskId            String?                        @unique
+  followUpTaskId            String?
   supersedesId              String?                        @unique
   decidedAt                 DateTime                       @default(now())
   createdAt                 DateTime                       @default(now())
@@ -1735,12 +1758,13 @@ model TreatmentProposalOutcome {
   branch                    ClinicBranch                   @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   doctor                    InternalUser?                  @relation(fields: [doctorId], references: [id], onDelete: Restrict)
   administrationOrder       ClinicalOrder?                 @relation(fields: [administrationOrderId, branchCode], references: [id, branchCode], onDelete: Restrict)
-  followUpTask              FollowUpTask?                  @relation(fields: [followUpTaskId], references: [id], onDelete: Restrict)
+  followUpTask              FollowUpTask?                  @relation(fields: [followUpTaskId, branchCode], references: [id, branchCode], onDelete: Restrict)
   supersedes                TreatmentProposalOutcome?      @relation("TreatmentProposalOutcomeHistory", fields: [supersedesId, branchCode], references: [id, branchCode], onDelete: Restrict)
   supersededBy              TreatmentProposalOutcome?      @relation("TreatmentProposalOutcomeHistory")
 
   @@unique([id, branchCode])
   @@unique([administrationOrderId, branchCode])
+  @@unique([followUpTaskId, branchCode])
   @@unique([supersedesId, branchCode])
   @@index([branchCode, consultationId, decidedAt])
   @@index([branchCode, visitId, decidedAt])
@@ -2769,7 +2793,7 @@ model FollowUpTask {
   workItemId                    String?
   assignedToId                  String?
   createdById                   String?
-  escalatedFromTaskId           String?                      @unique
+  escalatedFromTaskId           String?
   type                          FollowUpType                 @default(administrative)
   domain                        FollowUpDomain               @default(administrative)
   priority                      FollowUpPriority             @default(normal)
@@ -2781,24 +2805,29 @@ model FollowUpTask {
   completedAt                   DateTime?
   createdAt                     DateTime                     @default(now())
   updatedAt                     DateTime                     @updatedAt
-  lead                          Lead?                        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead                          Lead?                        @relation(fields: [leadId, branchCode], references: [id, branchCode], onDelete: Cascade)
   branch                        ClinicBranch                 @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   patient                       Patient?                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  visit                         Visit?                       @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  sale                          Sale?                        @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  clinicalOrder                 ClinicalOrder?               @relation(fields: [clinicalOrderId], references: [id], onDelete: SetNull)
-  workItem                      VisitWorkItem?               @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  patientRecord                 PatientBranchRecord?         @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit                         Visit?                       @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  sale                          Sale?                        @relation(fields: [saleId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  clinicalOrder                 ClinicalOrder?               @relation(fields: [clinicalOrderId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  workItem                      VisitWorkItem?               @relation(fields: [workItemId, branchCode], references: [id, branchCode], onDelete: Restrict)
   assignedTo                    InternalUser?                @relation("FollowUpAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToMembership          InternalUserBranch?          @relation("FollowUpAssignedMembership", fields: [assignedToId, branchCode], references: [userId, branchCode], onDelete: Restrict)
   createdBy                     InternalUser?                @relation("FollowUpCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  escalatedFromTask             FollowUpTask?                @relation("FollowUpEscalation", fields: [escalatedFromTaskId], references: [id], onDelete: SetNull)
+  escalatedFromTask             FollowUpTask?                @relation("FollowUpEscalation", fields: [escalatedFromTaskId, branchCode], references: [id, branchCode], onDelete: Restrict)
   escalatedToTask               FollowUpTask?                @relation("FollowUpEscalation")
   attempts                      FollowUpAttempt[]
   statusHistory                 FollowUpStatusHistory[]
   treatmentProposalOutcome      TreatmentProposalOutcome?
   visitDiscontinuation          VisitDiscontinuation?
-  supervisedReminderCandidateId String?                      @unique
-  supervisedReminderCandidate   SupervisedReminderCandidate? @relation(fields: [supervisedReminderCandidateId], references: [id], onDelete: SetNull)
+  supervisedReminderCandidateId String?
+  supervisedReminderCandidate   SupervisedReminderCandidate? @relation(fields: [supervisedReminderCandidateId, branchCode], references: [id, branchCode], onDelete: Restrict)
 
+  @@unique([id, branchCode])
+  @@unique([escalatedFromTaskId, branchCode])
+  @@unique([supervisedReminderCandidateId, branchCode])
   @@index([leadId])
   @@index([branchCode, status, dueAt])
   @@index([patientId])
@@ -2817,18 +2846,22 @@ model FollowUpTask {
 }
 
 model FollowUpAttempt {
-  id          String                @id @default(cuid())
-  taskId      String
-  userId      String?
-  method      FollowUpAttemptMethod @default(call)
-  result      FollowUpResult
-  notes       String?
-  contactedAt DateTime              @default(now())
-  createdAt   DateTime              @default(now())
-  task        FollowUpTask          @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user        InternalUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id             String                @id @default(cuid())
+  taskId         String
+  branchCode     String
+  userId         String?
+  method         FollowUpAttemptMethod @default(call)
+  result         FollowUpResult
+  notes          String?
+  contactedAt    DateTime              @default(now())
+  createdAt      DateTime              @default(now())
+  task           FollowUpTask          @relation(fields: [taskId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  user           InternalUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userMembership InternalUserBranch?   @relation("FollowUpAttemptUserMembership", fields: [userId, branchCode], references: [userId, branchCode], onDelete: Restrict)
+  branch         ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([taskId])
+  @@index([taskId, branchCode])
+  @@index([branchCode, contactedAt])
   @@index([userId])
   @@index([result])
   @@index([contactedAt])
@@ -2837,27 +2870,32 @@ model FollowUpAttempt {
 model FollowUpStatusHistory {
   id         String          @id @default(cuid())
   taskId     String
+  branchCode String
   userId     String?
   fromStatus FollowUpStatus?
   toStatus   FollowUpStatus
   note       String?
   createdAt  DateTime        @default(now())
-  task       FollowUpTask    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task       FollowUpTask    @relation(fields: [taskId, branchCode], references: [id, branchCode], onDelete: Cascade)
   user       InternalUser?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch     ClinicBranch    @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([taskId])
+  @@index([taskId, branchCode])
+  @@index([branchCode, createdAt])
   @@index([userId])
   @@index([createdAt])
 }
 
 model FollowUpTemplate {
-  id        String   @id @default(cuid())
-  title     String
-  body      String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id         String       @id @default(cuid())
+  branchCode String
+  title      String
+  body       String?
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  branch     ClinicBranch @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([active])
+  @@index([branchCode, active])
 }
 
 /// Identidad estable de una regla. La configuración activa siempre apunta a
@@ -2866,14 +2904,16 @@ model SupervisedReminderRule {
   id              String                          @id @default(cuid())
   branchCode      String
   key             String
-  activeVersionId String?                         @unique
+  activeVersionId String?
   createdAt       DateTime                        @default(now())
   updatedAt       DateTime                        @updatedAt
-  activeVersion   SupervisedReminderRuleVersion?  @relation("ActiveReminderRuleVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  activeVersion   SupervisedReminderRuleVersion?  @relation("ActiveReminderRuleVersion", fields: [activeVersionId, branchCode], references: [id, branchCode], onDelete: Restrict)
   branch          ClinicBranch                    @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   versions        SupervisedReminderRuleVersion[] @relation("ReminderRuleVersions")
 
+  @@unique([id, branchCode])
   @@unique([branchCode, key])
+  @@unique([activeVersionId, branchCode])
   @@index([branchCode, createdAt])
   @@index([createdAt])
 }
@@ -2881,6 +2921,7 @@ model SupervisedReminderRule {
 model SupervisedReminderRuleVersion {
   id                String                        @id @default(cuid())
   ruleId            String
+  branchCode        String
   version           Int
   name              String
   enabled           Boolean                       @default(false)
@@ -2896,65 +2937,77 @@ model SupervisedReminderRuleVersion {
   ownerId           String
   createdById       String?
   createdAt         DateTime                      @default(now())
-  rule              SupervisedReminderRule        @relation("ReminderRuleVersions", fields: [ruleId], references: [id], onDelete: Restrict)
+  rule              SupervisedReminderRule        @relation("ReminderRuleVersions", fields: [ruleId, branchCode], references: [id, branchCode], onDelete: Restrict)
   activeForRule     SupervisedReminderRule?       @relation("ActiveReminderRuleVersion")
   owner             InternalUser                  @relation("ReminderRuleOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  ownerMembership   InternalUserBranch            @relation("ReminderRuleOwnerMembership", fields: [ownerId, branchCode], references: [userId, branchCode], onDelete: Restrict)
   createdBy         InternalUser?                 @relation("ReminderRuleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  branch            ClinicBranch                  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   candidates        SupervisedReminderCandidate[]
 
-  @@unique([ruleId, version])
-  @@index([event, enabled, createdAt])
+  @@unique([id, branchCode])
+  @@unique([ruleId, branchCode, version])
+  @@index([branchCode, event, enabled, createdAt])
   @@index([ownerId])
 }
 
 model SupervisedReminderCandidate {
-  id               String                            @id @default(cuid())
-  deduplicationKey String                            @unique
-  ruleVersionId    String
-  patientId        String
-  visitId          String?
-  sourceEvent      SupervisedReminderEvent
-  sourceId         String
-  sourceOccurredAt DateTime
-  scheduledFor     DateTime
-  channel          SupervisedReminderChannel
-  renderedBody     String
-  status           SupervisedReminderCandidateStatus @default(pending_review)
-  blockReason      String?
-  reviewedById     String?
-  reviewedAt       DateTime?
-  retryAt          DateTime?
-  lastErrorCode    String?
-  createdAt        DateTime                          @default(now())
-  updatedAt        DateTime                          @updatedAt
-  ruleVersion      SupervisedReminderRuleVersion     @relation(fields: [ruleVersionId], references: [id], onDelete: Restrict)
-  patient          Patient                           @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit            Visit?                            @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  reviewedBy       InternalUser?                     @relation("ReminderCandidateReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  task             FollowUpTask?
-  reviewEvents     SupervisedReminderReviewEvent[]
+  id                 String                            @id @default(cuid())
+  branchCode         String
+  deduplicationKey   String
+  ruleVersionId      String
+  patientId          String
+  visitId            String?
+  sourceEvent        SupervisedReminderEvent
+  sourceId           String
+  sourceOccurredAt   DateTime
+  scheduledFor       DateTime
+  channel            SupervisedReminderChannel
+  renderedBody       String
+  status             SupervisedReminderCandidateStatus @default(pending_review)
+  blockReason        String?
+  reviewedById       String?
+  reviewedAt         DateTime?
+  retryAt            DateTime?
+  lastErrorCode      String?
+  createdAt          DateTime                          @default(now())
+  updatedAt          DateTime                          @updatedAt
+  ruleVersion        SupervisedReminderRuleVersion     @relation(fields: [ruleVersionId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  patient            Patient                           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  patientRecord      PatientBranchRecord               @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit              Visit?                            @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  reviewedBy         InternalUser?                     @relation("ReminderCandidateReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewerMembership InternalUserBranch?               @relation("ReminderCandidateReviewerMembership", fields: [reviewedById, branchCode], references: [userId, branchCode], onDelete: Restrict)
+  branch             ClinicBranch                      @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  task               FollowUpTask?
+  reviewEvents       SupervisedReminderReviewEvent[]
 
-  @@index([status, scheduledFor])
-  @@index([patientId, createdAt])
-  @@index([visitId, createdAt])
-  @@index([sourceEvent, sourceOccurredAt])
-  @@index([ruleVersionId])
+  @@unique([id, branchCode])
+  @@unique([branchCode, deduplicationKey])
+  @@index([branchCode, status, scheduledFor])
+  @@index([branchCode, patientId, createdAt])
+  @@index([branchCode, visitId, createdAt])
+  @@index([branchCode, sourceEvent, sourceOccurredAt])
+  @@index([ruleVersionId, branchCode])
 }
 
 model SupervisedReminderReviewEvent {
-  id          String                         @id @default(cuid())
-  candidateId String
-  userId      String?
-  result      SupervisedReminderReviewResult
-  note        String?
-  errorCode   String?
-  retryAt     DateTime?
-  createdAt   DateTime                       @default(now())
-  candidate   SupervisedReminderCandidate    @relation(fields: [candidateId], references: [id], onDelete: Restrict)
-  user        InternalUser?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id             String                         @id @default(cuid())
+  candidateId    String
+  branchCode     String
+  userId         String?
+  result         SupervisedReminderReviewResult
+  note           String?
+  errorCode      String?
+  retryAt        DateTime?
+  createdAt      DateTime                       @default(now())
+  candidate      SupervisedReminderCandidate    @relation(fields: [candidateId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  user           InternalUser?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userMembership InternalUserBranch?            @relation("ReminderReviewEventUserMembership", fields: [userId, branchCode], references: [userId, branchCode], onDelete: Restrict)
+  branch         ClinicBranch                   @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([candidateId, createdAt])
-  @@index([result, createdAt])
+  @@index([candidateId, branchCode, createdAt])
+  @@index([branchCode, result, createdAt])
   @@index([userId, createdAt])
 }
 
@@ -2962,11 +3015,12 @@ model SupervisedReminderReviewEvent {
 /// SHA-256. Generar otro enlace para la misma visita invalida el anterior.
 model PatientFeedbackRequest {
   id                   String                  @id @default(cuid())
+  branchCode           String
   patientId            String
   visitId              String
   ownerId              String
   createdById          String?
-  tokenHash            String                  @unique
+  tokenHash            String
   status               FeedbackRequestStatus   @default(open)
   deliveryChannel      FeedbackDeliveryChannel @default(in_person)
   questionnaireVersion String                  @default("v1")
@@ -2976,67 +3030,84 @@ model PatientFeedbackRequest {
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
   patient              Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit                Visit                   @relation(fields: [visitId], references: [id], onDelete: Restrict)
+  patientRecord        PatientBranchRecord     @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit                Visit                   @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
   owner                InternalUser            @relation("FeedbackRequestOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  ownerMembership      InternalUserBranch      @relation("FeedbackRequestOwnerMembership", fields: [ownerId, branchCode], references: [userId, branchCode], onDelete: Restrict)
   createdBy            InternalUser?           @relation("FeedbackRequestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  branch               ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   feedback             PatientFeedback?
 
-  @@index([status, expiresAt])
-  @@index([patientId, createdAt])
-  @@index([visitId, status])
-  @@index([ownerId, status])
+  @@unique([id, branchCode])
+  @@unique([branchCode, tokenHash])
+  @@index([branchCode, status, expiresAt])
+  @@index([branchCode, patientId, createdAt])
+  @@index([branchCode, visitId, status])
+  @@index([branchCode, ownerId, status])
 }
 
 /// Respuesta exacta enviada por el paciente. Es append-only y no constituye
 /// autorización para publicar un testimonio.
 model PatientFeedback {
   id             String                 @id @default(cuid())
-  requestId      String                 @unique
+  branchCode     String
+  requestId      String
   patientId      String
-  visitId        String                 @unique
+  visitId        String
   rating         Int
   kind           PatientFeedbackKind
   area           PatientFeedbackArea
   comment        String?
   healthRiskFlag Boolean                @default(false)
   submittedAt    DateTime               @default(now())
-  request        PatientFeedbackRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  request        PatientFeedbackRequest @relation(fields: [requestId, branchCode], references: [id, branchCode], onDelete: Restrict)
   patient        Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit          Visit                  @relation(fields: [visitId], references: [id], onDelete: Restrict)
+  patientRecord  PatientBranchRecord    @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit          Visit                  @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch         ClinicBranch           @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   case           PatientFeedbackCase?
 
-  @@index([kind, submittedAt])
-  @@index([area, submittedAt])
-  @@index([rating, submittedAt])
-  @@index([patientId, submittedAt])
+  @@unique([id, branchCode])
+  @@unique([requestId, branchCode])
+  @@unique([visitId, branchCode])
+  @@index([branchCode, kind, submittedAt])
+  @@index([branchCode, area, submittedAt])
+  @@index([branchCode, rating, submittedAt])
+  @@index([branchCode, patientId, submittedAt])
 }
 
 /// Proyección operativa que Dirección puede mover. La respuesta del paciente
 /// permanece intacta y cada cambio interno agrega un evento separado.
 model PatientFeedbackCase {
-  id             String                     @id @default(cuid())
-  feedbackId     String                     @unique
-  ownerId        String
-  classification FeedbackClassification
-  severity       FeedbackSeverity
-  status         FeedbackCaseStatus         @default(new)
-  responseDueAt  DateTime?
-  resolvedAt     DateTime?
-  createdAt      DateTime                   @default(now())
-  updatedAt      DateTime                   @updatedAt
-  feedback       PatientFeedback            @relation(fields: [feedbackId], references: [id], onDelete: Restrict)
-  owner          InternalUser               @relation("FeedbackCaseOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  events         PatientFeedbackCaseEvent[]
+  id              String                     @id @default(cuid())
+  branchCode      String
+  feedbackId      String
+  ownerId         String
+  classification  FeedbackClassification
+  severity        FeedbackSeverity
+  status          FeedbackCaseStatus         @default(new)
+  responseDueAt   DateTime?
+  resolvedAt      DateTime?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  feedback        PatientFeedback            @relation(fields: [feedbackId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  owner           InternalUser               @relation("FeedbackCaseOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  ownerMembership InternalUserBranch         @relation("FeedbackCaseOwnerMembership", fields: [ownerId, branchCode], references: [userId, branchCode], onDelete: Restrict)
+  branch          ClinicBranch               @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  events          PatientFeedbackCaseEvent[]
 
-  @@index([status, responseDueAt])
-  @@index([severity, status, createdAt])
-  @@index([classification, createdAt])
-  @@index([ownerId, status])
+  @@unique([id, branchCode])
+  @@unique([feedbackId, branchCode])
+  @@index([branchCode, status, responseDueAt])
+  @@index([branchCode, severity, status, createdAt])
+  @@index([branchCode, classification, createdAt])
+  @@index([branchCode, ownerId, status])
 }
 
 model PatientFeedbackCaseEvent {
   id                 String                  @id @default(cuid())
   caseId             String
+  branchCode         String
   actorId            String?
   type               FeedbackCaseEventType
   fromStatus         FeedbackCaseStatus?
@@ -3050,12 +3121,14 @@ model PatientFeedbackCaseEvent {
   responseDueAt      DateTime?
   note               String?
   createdAt          DateTime                @default(now())
-  case               PatientFeedbackCase     @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  case               PatientFeedbackCase     @relation(fields: [caseId, branchCode], references: [id, branchCode], onDelete: Restrict)
   actor              InternalUser?           @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorMembership    InternalUserBranch?     @relation("FeedbackCaseEventActorMembership", fields: [actorId, branchCode], references: [userId, branchCode], onDelete: Restrict)
+  branch             ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([caseId, createdAt])
-  @@index([actorId, createdAt])
-  @@index([type, createdAt])
+  @@index([caseId, branchCode, createdAt])
+  @@index([branchCode, actorId, createdAt])
+  @@index([branchCode, type, createdAt])
 }
 
 model Supplier {

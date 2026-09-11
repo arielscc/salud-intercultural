@@ -208,6 +208,7 @@ export async function recordVisitDiscontinuation(
           await tx.followUpStatusHistory.create({
             data: {
               taskId: followUp.id,
+              branchCode: input.branchCode,
               userId: input.recordedById,
               toStatus: "pending",
               note: "Creado desde una visita que el paciente no continuó."

@@ -91,6 +91,7 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-09-09 | [Aislamiento Tarea 5: identidad global y expediente local](./2026-09-09-tarea-5-identidad-global-expediente-local-paciente.md) | Conserva una identidad corporativa, separa la ficha clínica por sede y fotografía cada visita sin permitir backfills ambiguos. |
 | 2026-09-09 | [Aislamiento Tarea 6: leads, campañas y entradas públicas](./2026-09-09-tarea-6-leads-campanas-entradas-publicas.md) | Resuelve la sede antes de guardar PII, asigna campañas explícitamente y separa leads, atribución y métricas por sucursal. |
 | 2026-09-09 | [Aislamiento Tarea 7: visitas, recepción, rutas y tiempos](./2026-09-09-tarea-7-visitas-recepcion-rutas-tiempos.md) | Materializa la sede en todo el recorrido y hace que PostgreSQL rechace hijos de una visita de otra sucursal. |
+| 2026-09-10 | [Aislamiento Tarea 13: seguimientos, recordatorios, opiniones y reportes](./2026-09-10-tarea-13-seguimientos-recordatorios-opiniones-reportes.md) | Materializa la sede en continuidad y calidad, incorpora la sucursal en tokens e idempotencia y calcula KPI operativos sobre una sola sede. |
 
 ## Relacion Con Estado V3
 

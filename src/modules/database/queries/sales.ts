@@ -63,7 +63,7 @@ async function activateAwaitingPaymentFollowUps(
   await Promise.all(
     pending.map((task) =>
       tx.followUpTask.update({
-        where: { id: task.id },
+        where: { id_branchCode: { id: task.id, branchCode } },
         data: {
           status: "pending",
           assignedToId: task.assignedToId ?? receptionAssignee?.id
@@ -74,6 +74,7 @@ async function activateAwaitingPaymentFollowUps(
   await tx.followUpStatusHistory.createMany({
     data: pending.map((task) => ({
       taskId: task.id,
+      branchCode,
       toStatus: "pending" as const,
       note: "Activado al pagar el tratamiento."
     }))

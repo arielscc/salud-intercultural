@@ -17,7 +17,7 @@ export const createFeedbackRequestSchema = z.object({
 
 export const submitPatientFeedbackSchema = z
   .object({
-    token: z.string().trim().min(40).max(100),
+    token: z.string().trim().min(46).max(124),
     rating: z.coerce.number().int().min(1).max(5),
     kind: z.nativeEnum(PatientFeedbackKind),
     area: z.nativeEnum(PatientFeedbackArea),

@@ -12,7 +12,10 @@ import {
   submitPatientFeedbackSchema,
   updateFeedbackCaseSchema
 } from "@/features/patient-feedback/schema";
-import { hashFeedbackAccessToken } from "@/features/patient-feedback/token";
+import {
+  hashFeedbackAccessToken,
+  parseFeedbackAccessToken
+} from "@/features/patient-feedback/token";
 import { resolveDeploymentEnvironment } from "@/lib/deployment-environment";
 import { prisma, withDatabaseError } from "@/modules/database";
 import type { z } from "zod";
@@ -85,6 +88,7 @@ export async function getFeedbackOwners(branchCode: string) {
     const users = await prisma.internalUser.findMany({
       where: {
         active: true,
+        branchAssignments: { some: { branchCode, active: true } },
         OR: [
           { platformRole: "super_admin" },
           { branchAssignments: { some: { branchCode, active: true, role: "direccion" } } }
@@ -131,6 +135,9 @@ export async function createPatientFeedbackRequest(input: {
             where: {
               id: input.data.ownerId,
               active: true,
+              branchAssignments: {
+                some: { branchCode: input.branchCode, active: true }
+              },
               OR: [
                 { platformRole: "super_admin" },
                 {
@@ -147,7 +154,12 @@ export async function createPatientFeedbackRequest(input: {
             select: { id: true }
           }),
           tx.visit.findUniqueOrThrow({
-            where: { id: input.data.visitId },
+            where: {
+              id_branchCode: {
+                id: input.data.visitId,
+                branchCode: input.branchCode
+              }
+            },
             select: {
               id: true,
               branchCode: true,
@@ -189,12 +201,18 @@ export async function createPatientFeedbackRequest(input: {
           now.getTime() + input.data.expiresInDays * 24 * 60 * 60 * 1000
         );
         const current = await tx.patientFeedbackRequest.findFirst({
-          where: { visitId: visit.id, status: "open" },
+          where: {
+            visitId: visit.id,
+            branchCode: input.branchCode,
+            status: "open"
+          },
           select: { id: true }
         });
         if (current) {
           const request = await tx.patientFeedbackRequest.update({
-            where: { id: current.id },
+            where: {
+              id_branchCode: { id: current.id, branchCode: input.branchCode }
+            },
             data: {
               ownerId: owner.id,
               createdById: input.createdById,
@@ -209,6 +227,7 @@ export async function createPatientFeedbackRequest(input: {
 
         const request = await tx.patientFeedbackRequest.create({
           data: {
+            branchCode: input.branchCode,
             patientId: visit.patientId,
             visitId: visit.id,
             ownerId: owner.id,
@@ -228,8 +247,15 @@ export async function createPatientFeedbackRequest(input: {
 
 export async function getPatientFeedbackForm(token: string) {
   return withDatabaseError("getPatientFeedbackForm", async () => {
+    const parsedToken = parseFeedbackAccessToken(token);
+    if (!parsedToken) return { state: "invalid" as const };
     const request = await prisma.patientFeedbackRequest.findUnique({
-      where: { tokenHash: hashFeedbackAccessToken(token) },
+      where: {
+        branchCode_tokenHash: {
+          branchCode: parsedToken.branchCode,
+          tokenHash: hashFeedbackAccessToken(token)
+        }
+      },
       select: {
         id: true,
         status: true,
@@ -256,10 +282,18 @@ export async function submitPatientFeedback(input: {
     prisma.$transaction(
       async (tx) => {
         const now = input.now ?? new Date();
+        const parsedToken = parseFeedbackAccessToken(input.data.token);
+        if (!parsedToken) throw new PatientFeedbackError("INVALID_TOKEN");
         const request = await tx.patientFeedbackRequest.findUnique({
-          where: { tokenHash: hashFeedbackAccessToken(input.data.token) },
+          where: {
+            branchCode_tokenHash: {
+              branchCode: parsedToken.branchCode,
+              tokenHash: hashFeedbackAccessToken(input.data.token)
+            }
+          },
           select: {
             id: true,
+            branchCode: true,
             patientId: true,
             visitId: true,
             ownerId: true,
@@ -284,6 +318,7 @@ export async function submitPatientFeedback(input: {
         });
         const feedback = await tx.patientFeedback.create({
           data: {
+            branchCode: request.branchCode,
             requestId: request.id,
             patientId: request.patientId,
             visitId: request.visitId,
@@ -297,6 +332,7 @@ export async function submitPatientFeedback(input: {
         });
         const feedbackCase = await tx.patientFeedbackCase.create({
           data: {
+            branchCode: request.branchCode,
             feedbackId: feedback.id,
             ownerId: request.ownerId,
             classification: triage.classification,
@@ -309,6 +345,7 @@ export async function submitPatientFeedback(input: {
         await tx.patientFeedbackCaseEvent.create({
           data: {
             caseId: feedbackCase.id,
+            branchCode: request.branchCode,
             type: "submitted",
             toStatus: triage.status,
             toClassification: triage.classification,
@@ -319,7 +356,12 @@ export async function submitPatientFeedback(input: {
           }
         });
         await tx.patientFeedbackRequest.update({
-          where: { id: request.id },
+          where: {
+            id_branchCode: {
+              id: request.id,
+              branchCode: request.branchCode
+            }
+          },
           data: { status: "submitted", submittedAt: now }
         });
         await tx.auditEvent.create({
@@ -332,6 +374,7 @@ export async function submitPatientFeedback(input: {
             context: {
               kind: feedback.kind,
               critical: triage.severity === "critical",
+              branchCode: request.branchCode,
               questionnaireVersion: feedbackQuestionnaireSnapshot.version
             } satisfies Prisma.InputJsonObject
           }
@@ -352,9 +395,9 @@ export async function getPatientFeedbackCases(input: {
   return withDatabaseError("getPatientFeedbackCases", () =>
     prisma.patientFeedbackCase.findMany({
       where: {
+        branchCode: input.branchCode,
         status: input.status,
         severity: input.severity,
-        feedback: { visit: { branchCode: input.branchCode } }
       },
       include: {
         owner: { select: { id: true, name: true, email: true } },
@@ -387,11 +430,11 @@ export async function getPatientFeedbackDashboard(branchCode: string, now = new 
     const from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     const [cases, feedback] = await Promise.all([
       prisma.patientFeedbackCase.findMany({
-        where: { feedback: { visit: { branchCode } } },
+        where: { branchCode },
         select: { status: true, severity: true, responseDueAt: true }
       }),
       prisma.patientFeedback.findMany({
-        where: { visit: { branchCode }, submittedAt: { gte: from, lte: now } },
+        where: { branchCode, submittedAt: { gte: from, lte: now } },
         select: { rating: true, kind: true, area: true }
       })
     ]);
@@ -426,7 +469,7 @@ export async function getPatientFeedbackDashboard(branchCode: string, now = new 
 export async function getRecentPatientFeedbackRequests(branchCode: string) {
   return withDatabaseError("getRecentPatientFeedbackRequests", () =>
     prisma.patientFeedbackRequest.findMany({
-      where: { visit: { branchCode } },
+      where: { branchCode },
       select: {
         id: true,
         status: true,
@@ -453,13 +496,20 @@ export async function updatePatientFeedbackCase(input: {
       async (tx) => {
         const [current, owner] = await Promise.all([
           tx.patientFeedbackCase.findUniqueOrThrow({
-            where: { id: input.data.caseId },
-            include: { feedback: { select: { visit: { select: { branchCode: true } } } } }
+            where: {
+              id_branchCode: {
+                id: input.data.caseId,
+                branchCode: input.branchCode
+              }
+            }
           }),
           tx.internalUser.findFirst({
             where: {
               id: input.data.ownerId,
               active: true,
+              branchAssignments: {
+                some: { branchCode: input.branchCode, active: true }
+              },
               OR: [
                 { platformRole: "super_admin" },
                 {
@@ -477,12 +527,11 @@ export async function updatePatientFeedbackCase(input: {
           })
         ]);
         if (!owner) throw new PatientFeedbackError("INVALID_OWNER");
-        if (current.feedback.visit.branchCode !== input.branchCode) {
-          throw new PatientFeedbackError("BRANCH_MISMATCH");
-        }
         const isResolved = ["resolved", "closed"].includes(input.data.status);
         const updated = await tx.patientFeedbackCase.update({
-          where: { id: current.id },
+          where: {
+            id_branchCode: { id: current.id, branchCode: input.branchCode }
+          },
           data: {
             ownerId: owner.id,
             classification: input.data.classification,
@@ -496,6 +545,7 @@ export async function updatePatientFeedbackCase(input: {
         if (current.ownerId !== updated.ownerId) {
           events.push({
             caseId: current.id,
+            branchCode: input.branchCode,
             actorId: input.actorId,
             type: "assigned",
             fromOwnerId: current.ownerId,
@@ -508,6 +558,7 @@ export async function updatePatientFeedbackCase(input: {
         ) {
           events.push({
             caseId: current.id,
+            branchCode: input.branchCode,
             actorId: input.actorId,
             type: "classified",
             fromClassification: current.classification,
@@ -519,6 +570,7 @@ export async function updatePatientFeedbackCase(input: {
         if (current.status !== updated.status) {
           events.push({
             caseId: current.id,
+            branchCode: input.branchCode,
             actorId: input.actorId,
             type: "status_changed",
             fromStatus: current.status,
@@ -528,6 +580,7 @@ export async function updatePatientFeedbackCase(input: {
         if (current.responseDueAt?.getTime() !== updated.responseDueAt?.getTime()) {
           events.push({
             caseId: current.id,
+            branchCode: input.branchCode,
             actorId: input.actorId,
             type: "deadline_changed",
             responseDueAt: updated.responseDueAt
@@ -535,6 +588,7 @@ export async function updatePatientFeedbackCase(input: {
         }
         events.push({
           caseId: current.id,
+          branchCode: input.branchCode,
           actorId: input.actorId,
           type: "note",
           note: input.data.note
@@ -553,15 +607,19 @@ export async function cancelPatientFeedbackRequest(input: {
 }) {
   return withDatabaseError("cancelPatientFeedbackRequest", async () => {
     const request = await prisma.patientFeedbackRequest.findUniqueOrThrow({
-      where: { id: input.data.requestId },
-      select: { id: true, status: true, visit: { select: { branchCode: true } } }
+      where: {
+        id_branchCode: {
+          id: input.data.requestId,
+          branchCode: input.branchCode
+        }
+      },
+      select: { id: true, status: true }
     });
-    if (request.visit.branchCode !== input.branchCode) {
-      throw new PatientFeedbackError("BRANCH_MISMATCH");
-    }
     if (request.status !== "open") throw new PatientFeedbackError("NOT_OPEN");
     return prisma.patientFeedbackRequest.update({
-      where: { id: request.id },
+      where: {
+        id_branchCode: { id: request.id, branchCode: input.branchCode }
+      },
       data: { status: "cancelled", cancelledAt: new Date() }
     });
   });

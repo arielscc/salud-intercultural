@@ -74,8 +74,8 @@ async function prepareVisit() {
 describe("patient feedback integration", () => {
   it("rotates a manual link and stores one immutable survey", async () => {
     const { direction, visit } = await prepareVisit();
-    const firstToken = createFeedbackAccessToken();
-    const secondToken = createFeedbackAccessToken();
+    const firstToken = createFeedbackAccessToken("el-alto");
+    const secondToken = createFeedbackAccessToken("el-alto");
     const data = {
       visitId: visit.id,
       ownerId: direction.id,
@@ -121,7 +121,7 @@ describe("patient feedback integration", () => {
 
   it("opens a critical clinical-safety case without exposing internal fields publicly", async () => {
     const { direction, visit } = await prepareVisit();
-    const token = createFeedbackAccessToken();
+    const token = createFeedbackAccessToken("el-alto");
     await createPatientFeedbackRequest({
       branchCode: "el-alto",
       data: {

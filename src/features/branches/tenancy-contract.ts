@@ -248,26 +248,10 @@ export const branchModelGroups = [
   models: readonly ModelName[];
 }>;
 
-const legacyMissingBranchModelsByTask = [
-  {
-    remediationTask: 13,
-    models: [
-      "FollowUpAttempt",
-      "FollowUpStatusHistory",
-      "FollowUpTemplate",
-      "SupervisedReminderRuleVersion",
-      "SupervisedReminderCandidate",
-      "SupervisedReminderReviewEvent",
-      "PatientFeedbackRequest",
-      "PatientFeedback",
-      "PatientFeedbackCase",
-      "PatientFeedbackCaseEvent"
-    ]
-  }
-] as const satisfies ReadonlyArray<{
+const legacyMissingBranchModelsByTask: ReadonlyArray<{
   remediationTask: BranchIsolationTask;
   models: readonly ModelName[];
-}>;
+}> = [];
 
 const legacyNullableBranchModelsByTask = [
   { remediationTask: 14, models: ["ModuleActivationEvent"] }

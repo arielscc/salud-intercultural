@@ -92,12 +92,13 @@ export async function saveReminderRuleVersion(input: {
         }
 
         const latest = await tx.supervisedReminderRuleVersion.aggregate({
-          where: { ruleId: rule.id },
+          where: { ruleId: rule.id, branchCode: input.branchCode },
           _max: { version: true }
         });
         const version = await tx.supervisedReminderRuleVersion.create({
           data: {
             ruleId: rule.id,
+            branchCode: input.branchCode,
             version: (latest._max.version ?? 0) + 1,
             name: input.data.name,
             enabled: input.data.enabled,
@@ -115,7 +116,9 @@ export async function saveReminderRuleVersion(input: {
           }
         });
         await tx.supervisedReminderRule.update({
-          where: { id: rule.id },
+          where: {
+            id_branchCode: { id: rule.id, branchCode: input.branchCode }
+          },
           data: { activeVersionId: version.id }
         });
         return { rule, version };
@@ -339,7 +342,9 @@ export async function generateSupervisedReminderCandidates(input: {
             const result = await tx.supervisedReminderCandidate.createMany({
               data: [
                 {
+                  branchCode: input.branchCode,
                   deduplicationKey: reminderDeduplicationKey({
+                    branchCode: input.branchCode,
                     ruleKey: rule.key,
                     sourceEvent: source.sourceEvent,
                     sourceId: source.sourceId
@@ -370,17 +375,22 @@ export async function generateSupervisedReminderCandidates(input: {
               const createdCandidate =
                 await tx.supervisedReminderCandidate.findUniqueOrThrow({
                   where: {
-                    deduplicationKey: reminderDeduplicationKey({
-                      ruleKey: rule.key,
-                      sourceEvent: source.sourceEvent,
-                      sourceId: source.sourceId
-                    })
+                    branchCode_deduplicationKey: {
+                      branchCode: input.branchCode,
+                      deduplicationKey: reminderDeduplicationKey({
+                        branchCode: input.branchCode,
+                        ruleKey: rule.key,
+                        sourceEvent: source.sourceEvent,
+                        sourceId: source.sourceId
+                      })
+                    }
                   },
                   select: { id: true }
                 });
               await tx.supervisedReminderReviewEvent.create({
                 data: {
                   candidateId: createdCandidate.id,
+                  branchCode: input.branchCode,
                   userId: input.generatedById,
                   result: "blocked",
                   note: blockReason
@@ -405,7 +415,12 @@ export async function reviewSupervisedReminderCandidate(input: {
     prisma.$transaction(
       async (tx) => {
         const candidate = await tx.supervisedReminderCandidate.findUniqueOrThrow({
-          where: { id: input.data.candidateId },
+          where: {
+            id_branchCode: {
+              id: input.data.candidateId,
+              branchCode: input.branchCode
+            }
+          },
           include: {
             ruleVersion: true,
             patient: {
@@ -415,7 +430,7 @@ export async function reviewSupervisedReminderCandidate(input: {
             task: true
           }
         });
-        if (candidate.visit?.branchCode !== input.branchCode) {
+        if (candidate.branchCode !== input.branchCode) {
           throw new SupervisedReminderError("BRANCH_MISMATCH");
         }
         const now = new Date();
@@ -450,7 +465,9 @@ export async function reviewSupervisedReminderCandidate(input: {
           );
           if (blockReason) {
             const updated = await tx.supervisedReminderCandidate.update({
-              where: { id: candidate.id },
+              where: {
+                id_branchCode: { id: candidate.id, branchCode: input.branchCode }
+              },
               data: {
                 status: "blocked",
                 blockReason,
@@ -461,6 +478,7 @@ export async function reviewSupervisedReminderCandidate(input: {
             await tx.supervisedReminderReviewEvent.create({
               data: {
                 candidateId: candidate.id,
+                branchCode: input.branchCode,
                 userId: input.reviewedById,
                 result: "blocked",
                 note: blockReason
@@ -492,6 +510,7 @@ export async function reviewSupervisedReminderCandidate(input: {
             await tx.followUpStatusHistory.create({
               data: {
                 taskId: task.id,
+                branchCode: input.branchCode,
                 userId: input.reviewedById,
                 toStatus: "pending",
                 note: "Aprobado desde la cola de recordatorios supervisados."
@@ -499,7 +518,9 @@ export async function reviewSupervisedReminderCandidate(input: {
             });
           }
           const updated = await tx.supervisedReminderCandidate.update({
-            where: { id: candidate.id },
+            where: {
+              id_branchCode: { id: candidate.id, branchCode: input.branchCode }
+            },
             data: {
               status: "approved",
               blockReason: null,
@@ -512,6 +533,7 @@ export async function reviewSupervisedReminderCandidate(input: {
           await tx.supervisedReminderReviewEvent.create({
             data: {
               candidateId: candidate.id,
+              branchCode: input.branchCode,
               userId: input.reviewedById,
               result: "approved",
               note: input.data.note
@@ -546,7 +568,9 @@ export async function reviewSupervisedReminderCandidate(input: {
                   result: "retry_scheduled" as const
                 };
         const updated = await tx.supervisedReminderCandidate.update({
-          where: { id: candidate.id },
+          where: {
+            id_branchCode: { id: candidate.id, branchCode: input.branchCode }
+          },
           data: {
             status: next.status,
             reviewedById: input.reviewedById,
@@ -562,6 +586,7 @@ export async function reviewSupervisedReminderCandidate(input: {
         await tx.supervisedReminderReviewEvent.create({
           data: {
             candidateId: candidate.id,
+            branchCode: input.branchCode,
             userId: input.reviewedById,
             result: next.result,
             note: input.data.note,
@@ -588,8 +613,8 @@ export async function getSupervisedReminderCandidates(input: {
   return withDatabaseError("getSupervisedReminderCandidates", async () =>
     prisma.supervisedReminderCandidate.findMany({
       where: {
+        branchCode: input.branchCode,
         status: input.status,
-        visit: { branchCode: input.branchCode }
       },
       include: {
         patient: {
@@ -619,7 +644,7 @@ export async function getSupervisedReminderSummary(branchCode: string) {
   return withDatabaseError("getSupervisedReminderSummary", async () => {
     const grouped = await prisma.supervisedReminderCandidate.groupBy({
       by: ["status"],
-      where: { visit: { branchCode } },
+      where: { branchCode },
       _count: { _all: true }
     });
     return Object.fromEntries(

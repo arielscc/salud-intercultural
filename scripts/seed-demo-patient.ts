@@ -640,6 +640,7 @@ async function main() {
       await tx.followUpAttempt.create({
         data: {
           taskId: v1FollowUp.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           method: "whatsapp",
           result: "improved",
@@ -652,6 +653,7 @@ async function main() {
       await tx.followUpStatusHistory.create({
         data: {
           taskId: v1FollowUp.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           fromStatus: "pending",
           toStatus: "improved",
@@ -852,6 +854,7 @@ async function main() {
       await tx.followUpAttempt.create({
         data: {
           taskId: v3FollowUp.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           method: "call",
           result: "wants_return",
@@ -864,6 +867,7 @@ async function main() {
       await tx.followUpStatusHistory.create({
         data: {
           taskId: v3FollowUp.id,
+          branchCode: SEED_BRANCH_CODE,
           userId,
           fromStatus: "pending",
           toStatus: "wants_return",
