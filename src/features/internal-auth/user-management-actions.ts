@@ -50,6 +50,7 @@ export async function createManagedInternalUserAction(formData: FormData) {
   const user = await runAuditedAction(
     {
       permission: "users_manage",
+      auditScope: "platform",
       action: "user.create",
       entityType: "internal_user"
     },
@@ -92,6 +93,7 @@ export async function updateManagedInternalUserAccessAction(formData: FormData) 
   await runAuditedAction(
     {
       permission: "users_manage",
+      auditScope: "platform",
       action: "user.access.update",
       entityType: "internal_user",
       entityId: targetId || undefined
@@ -137,6 +139,7 @@ export async function updateManagedInternalUserProfileAction(formData: FormData)
   await runAuditedAction(
     {
       permission: "users_manage",
+      auditScope: "platform",
       action: "user.profile.update",
       entityType: "internal_user",
       entityId: targetId || undefined
@@ -192,6 +195,7 @@ export async function updateManagedInternalUserBranchesAction(formData: FormData
   await runAuditedAction(
     {
       permission: "users_manage",
+      auditScope: "platform",
       action: "user.branches.update",
       entityType: "internal_user",
       entityId: targetId,
@@ -243,6 +247,7 @@ export async function requireInternalUserPasswordChangeAction(formData: FormData
   await runAuditedAction(
     {
       permission: "users_manage",
+      auditScope: "platform",
       action: "user.password_change.require",
       entityType: "internal_user",
       entityId: targetId || undefined
@@ -266,6 +271,7 @@ export async function unlockManagedInternalUserAction(formData: FormData) {
   await runAuditedAction(
     {
       permission: "users_manage",
+      auditScope: "platform",
       action: "user.unlock",
       entityType: "internal_user",
       entityId: targetId || undefined
@@ -286,6 +292,7 @@ export async function revokeManagedInternalUserSessionsAction(formData: FormData
   const revokedOwnSessions = await runAuditedAction(
     {
       permission: "users_manage",
+      auditScope: "platform",
       action: "user.sessions.revoke",
       entityType: "internal_user",
       entityId: targetId || undefined
@@ -313,6 +320,7 @@ export async function revokeOwnInternalSessionAction(formData: FormData) {
   const closedCurrentSession = await runAuditedAction(
     {
       permission: "internal_access",
+      auditScope: "platform",
       action: "session.revoke",
       entityType: "session",
       entityId: sessionId || undefined

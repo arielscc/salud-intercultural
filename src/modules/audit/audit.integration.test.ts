@@ -9,7 +9,8 @@ describe("append-only audit events integration", () => {
     await prisma.auditEvent.create({
       data: {
         id,
-        action: "audit.integration_test",
+        scope: "platform",
+        action: "maintenance.audit.integration_test",
         entityType: "audit_event",
         result: "success",
         requestId: randomUUID()
@@ -26,7 +27,7 @@ describe("append-only audit events integration", () => {
     await expect(prisma.auditEvent.delete({ where: { id } })).rejects.toThrow(/append-only/i);
 
     expect(await prisma.auditEvent.findUnique({ where: { id } })).toMatchObject({
-      action: "audit.integration_test",
+      action: "maintenance.audit.integration_test",
       result: "success"
     });
   });

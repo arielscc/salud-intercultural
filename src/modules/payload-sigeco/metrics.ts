@@ -27,6 +27,8 @@ export async function getApprovedPayloadCampaignMetrics(input: {
 
   await prisma.auditEvent.create({
     data: {
+      scope: "branch",
+      branchCode: input.branchCode,
       action: "integration.payload_metrics.export",
       entityType: "attribution_metrics",
       result: "success",
@@ -34,7 +36,6 @@ export async function getApprovedPayloadCampaignMetrics(input: {
       context: {
         from: input.fromLabel,
         to: input.toLabel,
-        branchCode: input.branchCode,
         suppressed,
         campaignGroups: campaigns.length
       }

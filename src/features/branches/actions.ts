@@ -39,6 +39,7 @@ async function setRequestedBranch(formData: FormData): Promise<BranchActionState
   });
   if (!parsed.success) {
     await appendAuditEvent({
+      scope: "platform",
       actor: { id: selectionContext.user.id },
       action: "branch.active.change",
       entityType: "clinic_branch",
@@ -53,6 +54,7 @@ async function setRequestedBranch(formData: FormData): Promise<BranchActionState
 
   if (!target) {
     await appendAuditEvent({
+      scope: "platform",
       actor: { id: selectionContext.user.id },
       action: "branch.active.change",
       entityType: "clinic_branch",
@@ -68,6 +70,7 @@ async function setRequestedBranch(formData: FormData): Promise<BranchActionState
     (isClinicalRotation && parsed.data.mode === "switch" && !target.isDefault)
   ) {
     await appendAuditEvent({
+      scope: "platform",
       actor: { id: selectionContext.user.id },
       action: "branch.active.change",
       entityType: "clinic_branch",
@@ -98,6 +101,7 @@ async function setRequestedBranch(formData: FormData): Promise<BranchActionState
   });
 
   await appendAuditEvent({
+    scope: "platform",
     actor: { id: selectionContext.user.id, role: target.role },
     action: "branch.active.change",
     entityType: "clinic_branch",

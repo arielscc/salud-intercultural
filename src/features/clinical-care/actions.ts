@@ -116,7 +116,8 @@ export async function requestClinicalContinuityAction(formData: FormData) {
           context: {
             visitId: parsed.data.visitId,
             continuityAccessId: created.id,
-            consultedBranchCodes: created.consultedBranchCodes
+            originBranchCodes: created.consultedBranchCodes,
+            reason: parsed.data.reason
           }
         });
       }

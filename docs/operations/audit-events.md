@@ -8,6 +8,9 @@ Esta guía explica cómo registrar y consultar acciones críticas sin convertir 
 
 Cada evento contiene:
 
+- ámbito `branch` o `platform`;
+- `branchCode` obligatorio para toda operación de negocio y nulo únicamente
+  para acciones globales definidas;
 - actor y rol al momento de la acción;
 - acción y tipo de registro;
 - identificador del registro, cuando existe;
@@ -49,6 +52,12 @@ const result = await runAuditedAction(
 redirect(`/sigeco/inventario/${result.id}`);
 ```
 
+`runAuditedAction` obtiene la sede del contexto autenticado del servidor. El
+formulario no puede elegir el `branchCode`. Identidad, sesiones y membresías
+usan `auditScope: "platform"` únicamente porque sus acciones están en la lista
+cerrada de `src/modules/audit/append.ts`; cualquier otra acción global se
+rechaza antes de insertar y también por el `CHECK` de PostgreSQL.
+
 Las páginas de detalle, listados, filtros y búsquedas validan permisos, pero no
 generan auditoría por la navegación normal.
 
@@ -70,8 +79,18 @@ No se deben enviar:
 
 La ruta `/sigeco/auditoria` requiere `audit_read`. Solo Dirección y super administrador tienen ese permiso.
 
+- La vista inicial consulta exclusivamente `scope=branch` y la sucursal activa.
+- Solo una identidad con `platformRole=super_admin` puede abrir la vista
+  separada de plataforma. Un rol operativo de Dirección no obtiene ese acceso.
+- La consulta de interfaz no selecciona `context`, por lo que un auditor local
+  no recibe metadatos técnicos de otras sedes.
 - En escritorio muestra filtros por fecha, persona, acción y tipo de registro.
 - En móvil muestra tarjetas simplificadas y paginación.
+
+La lectura transversal autorizada de médicos y enfermería genera un evento
+especial en la sede solicitante. Conserva actor, paciente, sedes de origen y el
+motivo declarado, pero nunca copia diagnósticos, tratamientos, notas ni
+adjuntos dentro de la auditoría.
 
 ## Cobertura Actual Y Módulos Futuros
 

@@ -45,6 +45,8 @@ export async function DELETE(
     const result = await softDeleteClinicalAttachment({ attachmentId, actor });
 
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: actor.branchCode,
       actor,
       action: "attachment.delete",
       entityType: "clinical_attachment",
@@ -55,6 +57,8 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (error) {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: actor.branchCode,
       actor,
       action: "attachment.delete",
       entityType: "clinical_attachment",

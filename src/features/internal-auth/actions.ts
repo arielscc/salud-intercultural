@@ -54,6 +54,7 @@ async function attemptInternalLogin(formData: FormData) {
 
   if (!email || !password) {
     await appendAuditEvent({
+      scope: "platform",
       action: "session.login",
       entityType: "session",
       result: "failure",
@@ -69,6 +70,7 @@ async function attemptInternalLogin(formData: FormData) {
 
   if (!user || !user.active) {
     await appendAuditEvent({
+      scope: "platform",
       action: "session.login",
       entityType: "session",
       result: "failure",
@@ -80,6 +82,7 @@ async function attemptInternalLogin(formData: FormData) {
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     await appendAuditEvent({
+      scope: "platform",
       actor: { id: user.id },
       action: "session.login",
       entityType: "session",
@@ -107,6 +110,7 @@ async function attemptInternalLogin(formData: FormData) {
     });
 
     await appendAuditEvent({
+      scope: "platform",
       action: "session.login",
       entityType: "session",
       entityId: user.id,
@@ -131,6 +135,7 @@ async function attemptInternalLogin(formData: FormData) {
   await setInternalSessionCookie(session.token, session.expiresAt);
   await clearLoginEmailHint();
   await appendAuditEvent({
+    scope: "platform",
     actor: { id: user.id },
     action: "session.login",
     entityType: "session",
@@ -160,6 +165,7 @@ export async function logoutInternalUser() {
 
     await clearInternalSessionCookie();
     await appendAuditEvent({
+      scope: "platform",
       actor: user ? { id: user.id } : null,
       action: "session.logout",
       entityType: "session",

@@ -122,6 +122,7 @@ async function runLostDeviceScenario(databaseUrl: string, runId: string) {
     });
     await prisma.auditEvent.create({
       data: {
+        scope: "platform",
         actorId: commander.id,
         actorRole: "super_admin",
         action: "incident.drill.detected",
@@ -144,6 +145,7 @@ async function runLostDeviceScenario(databaseUrl: string, runId: string) {
       });
       await tx.auditEvent.create({
         data: {
+          scope: "platform",
           actorId: commander.id,
           actorRole: "super_admin",
           action: "incident.drill.sessions_revoked",

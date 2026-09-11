@@ -30,6 +30,7 @@
     "branch:reconcile:inventory": "node --import dotenv/config --import tsx scripts/reconcile-inventory-ledger-branches.ts",
     "branch:reconcile:cash": "node --import dotenv/config --import tsx scripts/reconcile-sales-cash-branches.ts",
     "branch:reconcile:continuity": "node --import dotenv/config --import tsx scripts/reconcile-followups-feedback-branches.ts",
+    "branch:reconcile:audit": "node --import dotenv/config --import tsx scripts/reconcile-module-audit-scope.ts",
     "attachments:reconcile-keys": "node --import dotenv/config --import tsx scripts/reconcile-clinical-attachment-storage-keys.ts",
     "typecheck": "prisma generate && payload generate:types && next typegen && tsc --noEmit && pnpm branch:tenancy:check",
     "db:generate": "prisma generate",

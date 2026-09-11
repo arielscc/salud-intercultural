@@ -86,6 +86,7 @@ export async function syncPayloadCampaignToSigeco(rawInput: unknown) {
 
     await tx.auditEvent.create({
       data: {
+        scope: "platform",
         action: "integration.payload_campaign.sync",
         entityType: "capture_campaign",
         entityId: campaign.id,
@@ -125,6 +126,7 @@ export async function deactivatePayloadCampaignInSigeco(externalId: string) {
     });
     await tx.auditEvent.create({
       data: {
+        scope: "platform",
         action: "integration.payload_campaign.deactivate",
         entityType: "capture_campaign",
         entityId: campaign.id,

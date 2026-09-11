@@ -162,8 +162,7 @@ export async function getSuspendedModules(
 export type ModuleActivationHistoryEntry = {
   id: string;
   moduleCode: string;
-  /** Nulo en los eventos anteriores a la activación por sucursal. */
-  branchCode: string | null;
+  branchCode: string;
   previousStatus: "active" | "inactive";
   status: "active" | "inactive";
   reason: string | null;
@@ -177,9 +176,9 @@ export type ModuleActivationHistoryEntry = {
  * devuelve el historial completo de la sucursal, que es lo que revisa
  * Dirección.
  *
- * Los eventos anteriores a la activación por sucursal no tienen sede y se
- * incluyen siempre: son el pasado común de todas, y esconderlos dejaría un
- * hueco inexplicable en el historial de cada una.
+ * Los eventos heredados sin sede no se presentan como si pertenecieran a todas
+ * las sucursales. El reconciliador de Tarea 14 exige resolverlos manualmente o
+ * clasificarlos como plataforma antes del endurecimiento.
  */
 export async function getModuleActivationHistory(options: {
   branchCode: string;
@@ -191,10 +190,8 @@ export async function getModuleActivationHistory(options: {
   return withDatabaseError("getModuleActivationHistory", async () => {
     const events = await prisma.moduleActivationEvent.findMany({
       where: {
-        AND: [
-          { OR: [{ branchCode: options.branchCode }, { branchCode: null }] },
-          ...(options.code ? [{ moduleCode: options.code }] : [])
-        ]
+        branchCode: options.branchCode,
+        moduleCode: options.code
       },
       select: {
         id: true,

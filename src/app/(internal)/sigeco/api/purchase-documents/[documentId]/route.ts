@@ -28,6 +28,8 @@ export async function GET(
   const { user, activeBranch, operationalRole } = branchAccess.context;
   if (!roleHasPermission(operationalRole, "purchases_read")) {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "purchase.document.read",
       entityType: "purchase_document",
@@ -51,6 +53,8 @@ export async function GET(
       throw new Error("PURCHASE_DOCUMENT_INTEGRITY_FAILURE");
     }
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "purchase.document.read",
       entityType: "purchase_document",
@@ -69,6 +73,8 @@ export async function GET(
     });
   } catch {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "purchase.document.read",
       entityType: "purchase_document",

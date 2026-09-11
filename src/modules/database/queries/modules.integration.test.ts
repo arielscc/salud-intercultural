@@ -409,7 +409,7 @@ describe("independencia entre sucursales", () => {
     await expect(getSuspendedModules(otherBranchCode)).resolves.toEqual([]);
   });
 
-  it("separa el historial por sede y conserva el pasado común", async () => {
+  it("separa estrictamente el historial por sede", async () => {
     await setModuleActivation({ code: "inventario", branchCode, active: true });
 
     const own = await getModuleActivationHistory({ branchCode, code: "inventario" });
@@ -421,18 +421,22 @@ describe("independencia entre sucursales", () => {
     expect(own).toHaveLength(1);
     expect(other).toHaveLength(0);
 
-    // El evento sin sucursal es anterior al cambio y lo ven las dos sedes.
+    // Un evento de la otra sede solo aparece en su propio historial.
     await prisma.moduleActivationEvent.create({
       data: {
         moduleCode: "inventario",
+        branchCode: otherBranchCode,
         previousStatus: "inactive",
         status: "inactive",
-        reason: "Cambio anterior a la activación por sucursal."
+        reason: "Revisión local de Cochabamba."
       }
     });
 
     await expect(
       getModuleActivationHistory({ branchCode: otherBranchCode, code: "inventario" })
+    ).resolves.toHaveLength(1);
+    await expect(
+      getModuleActivationHistory({ branchCode, code: "inventario" })
     ).resolves.toHaveLength(1);
   });
 });

@@ -17,6 +17,8 @@ export async function GET(
   const { user, activeBranch, operationalRole } = branchAccess.context;
   if (!roleHasPermission(operationalRole, "sales_read")) {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "sale.receipt.thermal",
       entityType: "sale",
@@ -52,6 +54,8 @@ export async function GET(
       balanceCents: sale.balanceCents
     });
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "sale.receipt.thermal",
       entityType: "sale",
@@ -71,6 +75,8 @@ export async function GET(
     });
   } catch {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "sale.receipt.thermal",
       entityType: "sale",

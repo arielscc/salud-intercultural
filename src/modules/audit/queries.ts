@@ -1,4 +1,4 @@
-import type { Prisma } from "@/generated/prisma/client";
+import type { InternalPlatformRole, Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/modules/database";
 
 export type AuditEventFilters = {
@@ -24,11 +24,15 @@ function parseEndOfDay(value?: string) {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-export async function getAuditEventPage(filters: AuditEventFilters) {
+async function getScopedAuditEventPage(
+  filters: AuditEventFilters,
+  scopeWhere: Prisma.AuditEventWhereInput
+) {
   const page = Math.max(1, filters.page ?? 1);
   const from = parseStartOfDay(filters.from);
   const to = parseEndOfDay(filters.to);
   const where: Prisma.AuditEventWhereInput = {
+    ...scopeWhere,
     actorId: filters.actorId || undefined,
     action: filters.action || undefined,
     entityType: filters.entityType || undefined,
@@ -38,23 +42,35 @@ export async function getAuditEventPage(filters: AuditEventFilters) {
   const [events, total, actors, actionRows, entityRows] = await Promise.all([
     prisma.auditEvent.findMany({
       where,
-      include: { actor: { select: { name: true, email: true } } },
+      select: {
+        id: true,
+        actorRole: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        result: true,
+        requestId: true,
+        occurredAt: true,
+        actor: { select: { name: true, email: true } }
+      },
       orderBy: { occurredAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE
     }),
     prisma.auditEvent.count({ where }),
     prisma.internalUser.findMany({
-      where: { auditEvents: { some: {} } },
+      where: { auditEvents: { some: scopeWhere } },
       select: { id: true, name: true, email: true },
       orderBy: [{ name: "asc" }, { email: "asc" }]
     }),
     prisma.auditEvent.findMany({
+      where: scopeWhere,
       distinct: ["action"],
       select: { action: true },
       orderBy: { action: "asc" }
     }),
     prisma.auditEvent.findMany({
+      where: scopeWhere,
       distinct: ["entityType"],
       select: { entityType: true },
       orderBy: { entityType: "asc" }
@@ -73,3 +89,21 @@ export async function getAuditEventPage(filters: AuditEventFilters) {
   };
 }
 
+/** Vista operativa: nunca consulta ni opciones ni IDs fuera de una sede. */
+export function getBranchAuditEventPage(
+  branchCode: string,
+  filters: AuditEventFilters
+) {
+  return getScopedAuditEventPage(filters, { scope: "branch", branchCode });
+}
+
+/** Vista global separada; el llamador debe validar el permiso de plataforma. */
+export function getPlatformAuditEventPage(
+  filters: AuditEventFilters,
+  platformRole: InternalPlatformRole | null
+) {
+  if (platformRole !== "super_admin") {
+    throw new Error("PLATFORM_AUDIT_PERMISSION_REQUIRED");
+  }
+  return getScopedAuditEventPage(filters, { scope: "platform", branchCode: null });
+}

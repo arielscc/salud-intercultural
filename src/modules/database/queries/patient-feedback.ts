@@ -366,6 +366,8 @@ export async function submitPatientFeedback(input: {
         });
         await tx.auditEvent.create({
           data: {
+            scope: "branch",
+            branchCode: request.branchCode,
             action: "patient_feedback.submit",
             entityType: "patient_feedback",
             entityId: feedback.id,
@@ -374,7 +376,6 @@ export async function submitPatientFeedback(input: {
             context: {
               kind: feedback.kind,
               critical: triage.severity === "critical",
-              branchCode: request.branchCode,
               questionnaireVersion: feedbackQuestionnaireSnapshot.version
             } satisfies Prisma.InputJsonObject
           }

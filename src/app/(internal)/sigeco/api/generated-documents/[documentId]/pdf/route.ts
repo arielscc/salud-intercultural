@@ -37,6 +37,8 @@ export async function GET(
       : roleHasPermission(operationalRole, "sales_read");
   if (!canReadDocument) {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "document.pdf.access",
       entityType: "generated_document",
@@ -54,6 +56,8 @@ export async function GET(
     const bytes = await createGeneratedDocumentPdf(document.parsedSnapshot);
     if (controlledPurpose !== "preview") {
       await appendAuditEvent({
+        scope: "branch",
+        branchCode: activeBranch.code,
         actor: { id: user.id, role: operationalRole },
         action:
           controlledPurpose === "download"
@@ -87,6 +91,8 @@ export async function GET(
   } catch {
     if (controlledPurpose !== "preview") {
       await appendAuditEvent({
+        scope: "branch",
+        branchCode: activeBranch.code,
         actor: { id: user.id, role: operationalRole },
         action:
           controlledPurpose === "download"

@@ -80,6 +80,8 @@ export async function requirePermission(
 
   if (branchContext.accessMode === "consult" && !isReadPermission(permission)) {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: branchContext.activeBranch.code,
       actor,
       action: "page.denied",
       entityType: "page",
@@ -93,6 +95,8 @@ export async function requirePermission(
     // Entrar por URL a una pantalla que el rol no tiene deja rastro: el menú
     // nunca la ofrece, así que un intento es una señal, no ruido.
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: branchContext.activeBranch.code,
       actor,
       action: "page.denied",
       entityType: "page",
@@ -106,6 +110,8 @@ export async function requirePermission(
   // administrador; la escritura queda bloqueada para todos, ellos incluidos.
   if ((await moduleAccessFor(operationalRole, permission, options?.module)) === "blocked") {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: branchContext.activeBranch.code,
       actor,
       action: "module.disabled",
       entityType: "module",
@@ -130,11 +136,13 @@ export async function requirePermission(
  * un módulo pero no piden un permiso propio.
  */
 export async function requireModule(module: SigecoModuleCode) {
-  const { user, operationalRole } = await requireBranchPageContext();
+  const { user, operationalRole, activeBranch } = await requireBranchPageContext();
   const { active } = await getModuleAccessState();
 
   if (!active.includes(module) && module !== "core") {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "module.disabled",
       entityType: "module",

@@ -257,7 +257,23 @@ Tarea 16.
   sin padre y no modifica evidencia de seguimientos u opiniones.
 - Detalle y operación: [reporte T13](../task-reports/2026-09-10-tarea-13-seguimientos-recordatorios-opiniones-reportes.md).
 
+### Tarea 14 — Implementación
+
+- El historial de módulos exige una sede y dejó de mostrar los 13 eventos
+  legacy como si pertenecieran simultáneamente a todas las sucursales.
+- Auditoría distingue `platform` de `branch`; toda acción operativa materializa
+  la sede y PostgreSQL prepara un `CHECK` que rechaza combinaciones inválidas.
+- Dirección consulta solo la auditoría de la sede activa. La auditoría global de
+  autenticación, identidad, membresías y mantenimiento exige
+  `platformRole=super_admin`.
+- Las lecturas transversales de médicos y enfermería registran paciente, sede
+  solicitante, sedes de origen y motivo sin copiar contenido clínico.
+- Migraciones expansiva y de endurecimiento preparadas, sin aplicar. El
+  reconciliador es `dry-run` y exige decisión explícita y checksum para cada
+  evento histórico ambiguo.
+- Detalle y operación: [reporte T14](../task-reports/2026-09-11-tarea-14-modulos-auditoria-operativa.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 14: módulos y auditoría operativa. La integración
+Ejecutar la Tarea 15: barrido completo de aplicación y constraints. La integración
 y el despliegue se validan en la Tarea 17.

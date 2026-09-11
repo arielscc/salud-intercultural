@@ -4,6 +4,7 @@ export type TenancyScope =
   | "global-master"
   | "branch-operation"
   | "platform-event"
+  | "hybrid-event"
   | "controlled-cross-branch-read";
 
 export type BranchIsolationTask =
@@ -107,7 +108,10 @@ const globalMasterTaskByModel: Record<
   ServiceCatalogItemVersion: 10
 };
 
-export const platformEventModels = ["AuditEvent"] as const satisfies readonly ModelName[];
+export const platformEventModels = [] as const satisfies readonly ModelName[];
+
+/** Eventos con filas globales definidas y filas operativas obligatoriamente locales. */
+export const hybridEventModels = ["AuditEvent"] as const satisfies readonly ModelName[];
 
 export const controlledCrossBranchReadModels = [
   "ClinicalAttachmentAccessGrant",
@@ -253,9 +257,7 @@ const legacyMissingBranchModelsByTask: ReadonlyArray<{
   models: readonly ModelName[];
 }> = [];
 
-const legacyNullableBranchModelsByTask = [
-  { remediationTask: 14, models: ["ModuleActivationEvent"] }
-] as const satisfies ReadonlyArray<{
+const legacyNullableBranchModelsByTask = [] as const satisfies ReadonlyArray<{
   remediationTask: BranchIsolationTask;
   models: readonly ModelName[];
 }>;
@@ -315,6 +317,13 @@ function buildContract() {
   for (const model of platformEventModels) {
     addContract(contracts, model, {
       scope: "platform-event",
+      remediationTask: 14,
+      requiredBranchFields: []
+    });
+  }
+  for (const model of hybridEventModels) {
+    addContract(contracts, model, {
+      scope: "hybrid-event",
       remediationTask: 14,
       requiredBranchFields: []
     });

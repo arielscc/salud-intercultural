@@ -27,6 +27,8 @@ export async function GET(
   const { user, activeBranch, operationalRole } = branchAccess.context;
   if (!roleHasPermission(operationalRole, "cash_sessions_read")) {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "cash.receipt.read",
       entityType: "cash_expense",
@@ -60,6 +62,8 @@ export async function GET(
       throw new Error("CASH_RECEIPT_INTEGRITY_FAILURE");
     }
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "cash.receipt.read",
       entityType: "cash_expense",
@@ -81,6 +85,8 @@ export async function GET(
     });
   } catch {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor: { id: user.id, role: operationalRole },
       action: "cash.receipt.read",
       entityType: "cash_expense",

@@ -257,6 +257,32 @@ export function validateModelTenancy(input: {
     }
   }
 
+  const auditEvent = models.get("AuditEvent");
+  if (auditEvent) {
+    const scope = auditEvent.fields.get("scope");
+    const branchCode = auditEvent.fields.get("branchCode");
+    if (!scope || scope.type !== "AuditScope" || scope.optional || scope.list) {
+      violations.push({
+        code: "invalid-audit-scope",
+        message: "AuditEvent.scope debe ser AuditScope obligatorio.",
+        location: `prisma/schema.prisma:${scope?.line ?? auditEvent.line}`
+      });
+    }
+    if (!branchCode || branchCode.type !== "String" || !branchCode.optional) {
+      violations.push({
+        code: "invalid-audit-branch-field",
+        message: "AuditEvent.branchCode debe ser String?; el CHECK separa platform de branch.",
+        location: `prisma/schema.prisma:${branchCode?.line ?? auditEvent.line}`
+      });
+    } else if (!hasRestrictiveBranchRelation(auditEvent, "branchCode")) {
+      violations.push({
+        code: "missing-audit-branch-relation",
+        message: "AuditEvent.branchCode necesita FK restrictiva a ClinicBranch(code).",
+        location: `prisma/schema.prisma:${branchCode.line}`
+      });
+    }
+  }
+
   return violations;
 }
 

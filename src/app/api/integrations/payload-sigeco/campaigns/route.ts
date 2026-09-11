@@ -58,10 +58,11 @@ export async function POST(request: Request) {
     );
   } catch {
     await appendAuditEvent({
+      scope: "platform",
       action: "integration.payload_campaign.sync",
       entityType: "capture_campaign",
       result: "failure",
-      context: { reason: "sync_failed" }
+      context: { reason: "sync_failed", branchCodes: parsed.data.branchCodes }
     }).catch(() => undefined);
     return response({ ok: false, error: "sync_unavailable", retryable: true }, 503);
   }

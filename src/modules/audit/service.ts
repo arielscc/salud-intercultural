@@ -53,8 +53,15 @@ type AuditedOperationInput = {
   context?: unknown;
 };
 
-type BranchAuditedOperationInput = AuditedOperationInput & { branchless?: false };
-type PlatformAuditedOperationInput = AuditedOperationInput & { branchless: true };
+type BranchAuditedOperationInput = AuditedOperationInput & {
+  branchless?: false;
+  /** Solo para identidad/membresías globales incluidas en la lista cerrada. */
+  auditScope?: "branch" | "platform";
+};
+type PlatformAuditedOperationInput = AuditedOperationInput & {
+  branchless: true;
+  auditScope?: "platform";
+};
 type BranchAuditedOperation<T> = (
   actor: AuditActor,
   branchContext: BranchRequestContext
@@ -116,6 +123,7 @@ export async function runAuditedAction<T>(
     user = await getCurrentInternalUser();
     if (!user) {
       await appendAuditEvent({
+        scope: "platform",
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,
@@ -132,12 +140,16 @@ export async function runAuditedAction<T>(
     } catch (error) {
       if (!(error instanceof BranchContextUnavailableError)) throw error;
       await appendAuditEvent({
-        action: input.action,
-        entityType: input.entityType,
-        entityId: input.entityId,
+        scope: "platform",
+        action: "branch.context.denied",
+        entityType: "branch_context",
         result: "denied",
         requestId,
-        context: { ...sanitizeAuditContext(input.context), reason: error.reason }
+        context: {
+          attemptedAction: input.action,
+          attemptedEntityType: input.entityType,
+          reason: error.reason
+        }
       });
       if (error.reason === "unauthenticated") redirect("/sigeco/login");
       if (error.reason === "password_change_required") {
@@ -149,12 +161,16 @@ export async function runAuditedAction<T>(
 
   if (!user) {
     await appendAuditEvent({
-      action: input.action,
-      entityType: input.entityType,
-      entityId: input.entityId,
+      scope: "platform",
+      action: "branch.context.denied",
+      entityType: "branch_context",
       result: "denied",
       requestId,
-      context: { ...sanitizeAuditContext(input.context), reason: "unauthenticated" }
+      context: {
+        attemptedAction: input.action,
+        attemptedEntityType: input.entityType,
+        reason: "unauthenticated"
+      }
     });
     redirect("/sigeco/login");
   }
@@ -166,6 +182,7 @@ export async function runAuditedAction<T>(
       operationResult = await (operation as PlatformAuditedOperation<T>)(actor, null);
     } catch (error) {
       await appendAuditEvent({
+        scope: "platform",
         actor,
         action: input.action,
         entityType: input.entityType,
@@ -177,6 +194,7 @@ export async function runAuditedAction<T>(
       throw error;
     }
     await appendAuditEvent({
+      scope: "platform",
       actor,
       action: input.action,
       entityType: input.entityType,
@@ -194,13 +212,15 @@ export async function runAuditedAction<T>(
 
   const operationalRole = branchContext.operationalRole;
   const actor = { id: user.id, role: operationalRole };
-  const auditedContext = {
-    ...sanitizeAuditContext(input.context),
-    branchCode: branchContext.activeBranch.code
-  };
+  const auditLocation =
+    input.auditScope === "platform"
+      ? ({ scope: "platform" } as const)
+      : ({ scope: "branch", branchCode: branchContext.activeBranch.code } as const);
+  const auditedContext = sanitizeAuditContext(input.context);
 
   if (user.mustChangePassword && input.action !== "user.password.change") {
     await appendAuditEvent({
+      ...auditLocation,
       actor,
       action: input.action,
       entityType: input.entityType,
@@ -214,6 +234,7 @@ export async function runAuditedAction<T>(
 
   if (!roleHasPermission(operationalRole, input.permission)) {
     await appendAuditEvent({
+      ...auditLocation,
       actor,
       action: input.action,
       entityType: input.entityType,
@@ -227,6 +248,7 @@ export async function runAuditedAction<T>(
 
   if (branchContext.accessMode === "consult" && !isReadPermission(input.permission)) {
     await appendAuditEvent({
+      ...auditLocation,
       actor,
       action: input.action,
       entityType: input.entityType,
@@ -250,6 +272,7 @@ export async function runAuditedAction<T>(
 
   if (moduleAccess === "blocked") {
     await appendAuditEvent({
+      ...auditLocation,
       actor,
       action: "module.disabled",
       entityType: "module",
@@ -257,7 +280,6 @@ export async function runAuditedAction<T>(
       result: "denied",
       requestId,
       context: {
-        branchCode: branchContext.activeBranch.code,
         reason: "module_disabled",
         attemptedAction: input.action,
         attemptedEntityType: input.entityType,
@@ -277,6 +299,7 @@ export async function runAuditedAction<T>(
 
     if (belongsToActiveBranch === false) {
       await appendAuditEvent({
+        ...auditLocation,
         actor,
         action: input.action,
         entityType: input.entityType,
@@ -296,6 +319,7 @@ export async function runAuditedAction<T>(
   } catch (error) {
     if (error instanceof AuditAccessDeniedError || error instanceof BranchContextMismatchError) {
       await appendAuditEvent({
+        ...auditLocation,
         actor,
         action: input.action,
         entityType: input.entityType,
@@ -314,6 +338,7 @@ export async function runAuditedAction<T>(
     }
 
     await appendAuditEvent({
+      ...auditLocation,
       actor,
       action: input.action,
       entityType: input.entityType,
@@ -326,16 +351,14 @@ export async function runAuditedAction<T>(
   }
 
   await appendAuditEvent({
+    ...auditLocation,
     actor,
     action: input.action,
     entityType: input.entityType,
     entityId: operationResult.audit?.entityId ?? input.entityId,
     result: "success",
     requestId,
-    context: {
-      ...sanitizeAuditContext(operationResult.audit?.context ?? input.context),
-      branchCode: branchContext.activeBranch.code
-    }
+    context: sanitizeAuditContext(operationResult.audit?.context ?? input.context)
   });
   return operationResult.value;
 }

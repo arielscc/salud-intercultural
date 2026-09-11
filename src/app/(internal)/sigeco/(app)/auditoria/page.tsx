@@ -2,8 +2,13 @@ import Link from "next/link";
 import { DateRangePickerField } from "@/components/internal/ui/DatePickerField";
 import type { AuditResult } from "@/generated/prisma/client";
 import { internalRoleLabels } from "@/features/internal-auth/permissions";
-import { getAuditEventPage, type AuditEventFilters } from "@/modules/audit/queries";
+import {
+  getBranchAuditEventPage,
+  getPlatformAuditEventPage,
+  type AuditEventFilters
+} from "@/modules/audit/queries";
 import { requirePermission } from "@/modules/permissions";
+import { getBranchContext } from "@/features/branches/context";
 
 type AuditPageProps = {
   searchParams: Promise<{
@@ -13,6 +18,7 @@ type AuditPageProps = {
     accion?: string;
     entidad?: string;
     pagina?: string;
+    ambito?: string;
   }>;
 };
 
@@ -30,6 +36,8 @@ const resultStyles: Record<AuditResult, string> = {
 
 const actionLabels: Record<string, string> = {
   "audit.list": "Consultó la auditoría",
+  "branch.context.denied": "Intentó operar sin una sucursal válida",
+  "branch.active.change": "Cambió la sucursal activa",
   "session.login": "Inició sesión",
   "session.logout": "Cerró sesión",
   "patient.search": "Buscó pacientes",
@@ -43,6 +51,7 @@ const actionLabels: Record<string, string> = {
   "visit.status.update": "Cambió el estado de una visita",
   "clinical.consultation.save": "Guardó una consulta",
   "clinical.consultation.view": "Consultó una atención clínica",
+  "clinical.continuity.read": "Consultó continuidad clínica entre sucursales",
   "treatment_proposal.outcome.record":
     "Registró el resultado de una propuesta de tratamiento",
   "clinical.order.create": "Creó una orden clínica",
@@ -53,6 +62,7 @@ const actionLabels: Record<string, string> = {
   "nursing.vital_signs.create": "Registró signos vitales",
   "nursing.application.create": "Registró una aplicación",
   "nursing.note.create": "Registró una nota de enfermería",
+  "nursing.continuity.read": "Consultó continuidad de enfermería entre sucursales",
   "nursing.studies.return_to_doctor": "Devolvió estudios al médico",
   "study.create": "Registró un estudio",
   "sale.create": "Registró una venta",
@@ -82,8 +92,12 @@ const actionLabels: Record<string, string> = {
   "inventory.item.view": "Consultó un producto",
   "inventory.entry.create": "Registró una entrada de inventario",
   "inventory.adjustment.create": "Ajustó el inventario",
+  "module.activate": "Encendió un módulo",
+  "module.deactivate": "Apagó un módulo",
+  "module.activation.legacy": "Clasificó un cambio histórico de módulo",
   "user.create": "Creó un usuario",
   "user.access.update": "Cambió rol o estado de un usuario",
+  "user.branches.update": "Cambió sucursales de un usuario",
   "user.password_change.require": "Exigió cambio de contraseña",
   "user.unlock": "Desbloqueó un usuario",
   "user.sessions.revoke": "Cerró las sesiones de un usuario",
@@ -93,6 +107,9 @@ const actionLabels: Record<string, string> = {
 
 const entityLabels: Record<string, string> = {
   audit_event: "Auditoría",
+  branch_context: "Contexto de sucursal",
+  clinic_branch: "Sucursal",
+  module: "Módulo",
   session: "Sesión",
   patient: "Paciente",
   patient_duplicate_candidate: "Posible duplicado",
@@ -133,8 +150,13 @@ function formatDate(value: Date) {
 }
 
 export default async function AuditPage({ searchParams }: AuditPageProps) {
-  await requirePermission("audit_read");
+  const user = await requirePermission("audit_read");
+  const branchContext = await getBranchContext();
   const params = await searchParams;
+  const canReadPlatform = user.platformRole === "super_admin";
+  const scope = params.ambito === "plataforma" && canReadPlatform
+    ? "platform"
+    : "branch";
   const filters: AuditEventFilters = {
     from: params.desde,
     to: params.hasta,
@@ -143,7 +165,9 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
     entityType: params.entidad,
     page: Number(params.pagina) || 1
   };
-  const data = await getAuditEventPage(filters);
+  const data = scope === "platform"
+    ? await getPlatformAuditEventPage(filters, user.platformRole)
+    : await getBranchAuditEventPage(branchContext.activeBranch.code, filters);
 
   return (
     <main className="space-y-5">
@@ -153,15 +177,34 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
         </p>
         <h1 className="mt-1 text-2xl font-bold text-text">Auditoría de SIGECO</h1>
         <p className="mt-1 max-w-3xl text-sm text-muted">
-          Historial que no se puede editar ni borrar. Muestra quién realizó una acción,
-          cuándo ocurrió y si terminó correctamente.
+          {scope === "platform"
+            ? "Eventos globales de autenticación, identidad, membresías y mantenimiento."
+            : `Operaciones de ${branchContext.activeBranch.name}; ninguna fila de otra sucursal se incluye.`}
         </p>
       </header>
+
+      {canReadPlatform ? (
+        <nav className="flex gap-2" aria-label="Ámbito de auditoría">
+          <Link
+            href="/sigeco/auditoria"
+            className={`rounded-[7px] border px-3 py-2 text-sm font-semibold ${scope === "branch" ? "border-primary bg-primary text-white" : "border-border text-text"}`}
+          >
+            Sucursal activa
+          </Link>
+          <Link
+            href="/sigeco/auditoria?ambito=plataforma"
+            className={`rounded-[7px] border px-3 py-2 text-sm font-semibold ${scope === "platform" ? "border-primary bg-primary text-white" : "border-border text-text"}`}
+          >
+            Plataforma
+          </Link>
+        </nav>
+      ) : null}
 
       <form
         method="get"
         className="grid gap-3 rounded-[10px] border border-border bg-surface p-4 md:grid-cols-2 lg:grid-cols-4"
       >
+        {scope === "platform" ? <input type="hidden" name="ambito" value="plataforma" /> : null}
         <div>
           <p className="text-xs font-semibold text-muted">Período</p>
           <DateRangePickerField
@@ -227,7 +270,7 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
             Aplicar filtros
           </button>
           <Link
-            href="/sigeco/auditoria"
+            href={scope === "platform" ? "/sigeco/auditoria?ambito=plataforma" : "/sigeco/auditoria"}
             className="rounded-[7px] border border-border px-4 py-2 text-sm font-semibold text-text"
           >
             Limpiar

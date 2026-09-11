@@ -20,11 +20,15 @@ export async function requireClinicalAttachmentApiAccess(input: {
   const branchAccess = await getBranchApiContext();
   if (!branchAccess.ok) {
     await appendAuditEvent({
-      action: input.action,
-      entityType: "clinical_attachment",
-      entityId: input.attachmentId,
+      scope: "platform",
+      action: "branch.context.denied",
+      entityType: "branch_context",
       result: "denied",
-      context: { reason: branchAccess.response.status === 409 ? "active_branch_required" : "unauthenticated" }
+      context: {
+        attemptedAction: input.action,
+        attemptedEntityType: "clinical_attachment",
+        reason: branchAccess.response.status === 409 ? "active_branch_required" : "unauthenticated"
+      }
     });
     throw new ClinicalAttachmentApiAccessError(
       branchAccess.response.status === 409
@@ -56,6 +60,8 @@ export async function requireClinicalAttachmentApiAccess(input: {
 
   if (denialReason) {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: activeBranch.code,
       actor,
       action: input.action,
       entityType: "clinical_attachment",

@@ -149,6 +149,7 @@ async function seedRecoveryFixture(input: {
     });
     await prisma.auditEvent.create({
       data: {
+        scope: "platform",
         actorId: user.id,
         actorRole: "super_admin",
         action: "backup.drill.fixture",

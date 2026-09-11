@@ -76,7 +76,8 @@ export async function requestNursingContinuityAction(formData: FormData) {
             visitId: parsed.data.visitId,
             workItemId,
             continuityAccessId: created.id,
-            consultedBranchCodes: created.consultedBranchCodes
+            originBranchCodes: created.consultedBranchCodes,
+            reason: parsed.data.reason
           }
         });
       }

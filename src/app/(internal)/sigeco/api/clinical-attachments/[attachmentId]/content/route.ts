@@ -64,6 +64,8 @@ export async function POST(
     });
 
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: actor.branchCode,
       actor,
       action: "attachment.read",
       entityType: "clinical_attachment",
@@ -101,6 +103,8 @@ export async function POST(
       error instanceof ClinicalAttachmentError &&
       error.code === "invalid_grant";
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: actor.branchCode,
       actor,
       action: "attachment.read",
       entityType: "clinical_attachment",

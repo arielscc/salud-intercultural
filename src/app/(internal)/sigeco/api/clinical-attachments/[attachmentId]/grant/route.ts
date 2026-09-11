@@ -46,6 +46,8 @@ export async function POST(
     });
 
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: actor.branchCode,
       actor,
       action: "attachment.grant.create",
       entityType: "clinical_attachment",
@@ -74,17 +76,21 @@ export async function POST(
     }
     if (error instanceof ClinicalAttachmentError) {
       const branchAccess = await getBranchApiContext();
-      await appendAuditEvent({
-        actor: branchAccess.ok ? {
-          id: branchAccess.context.user.id,
-          role: branchAccess.context.operationalRole
-        } : undefined,
-        action: "attachment.grant.create",
-        entityType: "clinical_attachment",
-        entityId: attachmentId,
-        result: "denied",
-        context: { reason: error.code }
-      });
+      if (branchAccess.ok) {
+        await appendAuditEvent({
+          scope: "branch",
+          branchCode: branchAccess.context.activeBranch.code,
+          actor: {
+            id: branchAccess.context.user.id,
+            role: branchAccess.context.operationalRole
+          },
+          action: "attachment.grant.create",
+          entityType: "clinical_attachment",
+          entityId: attachmentId,
+          result: "denied",
+          context: { reason: error.code }
+        });
+      }
       return NextResponse.json(
         { error: "El archivo ya no está disponible." },
         { status: error.status }

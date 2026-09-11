@@ -54,6 +54,33 @@ pnpm exec prisma migrate deploy
 No se debe marcar como aplicada una migración que falló ni usar `resolve` antes
 de que el gate del reconciliador quede aprobado.
 
+## Módulos Y Auditoría — Tarea 14
+
+Después de `20260911180000_module_audit_scope`, los eventos cuyo ámbito no
+puede demostrarse quedan sin clasificar. Los 13 eventos históricos de módulos
+sin sede no se copian a todas las sucursales ni se atribuyen por fecha, actor o
+sede predeterminada.
+
+```bash
+pnpm branch:reconcile:audit
+pnpm branch:reconcile:audit -- --template
+pnpm branch:reconcile:audit -- --decisions ./decisiones-auditoria.json
+pnpm branch:reconcile:audit -- --decisions ./decisiones-auditoria.json \
+  --apply --checksum=<checksum-dry-run> \
+  --confirm=APPLY_MODULE_AUDIT_RECONCILIATION
+```
+
+Cada evento de módulo se decide como `branch`, con una sede existente, o como
+`platform`. La segunda opción lo conserva como `module.activation.legacy` en
+la auditoría append-only global y retira la fila sin sede del historial
+operativo. Los eventos de auditoría ambiguos también exigen una decisión exacta
+y el checksum impide aplicar un archivo sobre un estado que cambió.
+
+`20260911190000_harden_module_audit_scope` falla mientras quede cualquier
+evento sin resolver. Después fija `ModuleActivationEvent.branchCode` y
+`AuditEvent.scope` como obligatorios y valida el `CHECK` que rechaza tanto una
+operación sin sede como un evento de plataforma con sede.
+
 ## Uso Seguro
 
 El comando sin argumentos es siempre de solo lectura:

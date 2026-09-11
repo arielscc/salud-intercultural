@@ -105,6 +105,13 @@ enum AuditResult {
   denied
 }
 
+/// Separa los eventos corporativos de identidad/plataforma de las acciones
+/// operativas que pertenecen obligatoriamente a una sucursal.
+enum AuditScope {
+  platform
+  branch
+}
+
 enum ClinicalAttachmentStorageDriver {
   local
   vercel_blob
@@ -880,6 +887,8 @@ model ClinicBranch {
   outgoingTransferLots       InventoryTransferLotAllocation[] @relation("InventoryTransferLotSourceBranch")
   incomingTransferLots       InventoryTransferLotAllocation[] @relation("InventoryTransferLotDestinationBranch")
   moduleActivations          ModuleActivation[]
+  auditEvents                AuditEvent[]
+  moduleActivationEvents     ModuleActivationEvent[]
   followUpTasks              FollowUpTask[]
   supervisedReminderRules    SupervisedReminderRule[]
   patientRecords             PatientBranchRecord[]
@@ -995,6 +1004,8 @@ model InternalSession {
 /// en PostgreSQL rechaza UPDATE y DELETE incluso si se intentan con SQL directo.
 model AuditEvent {
   id         String        @id @default(cuid())
+  scope      AuditScope
+  branchCode String?
   actorId    String?
   actorRole  InternalRole?
   action     String
@@ -1005,12 +1016,14 @@ model AuditEvent {
   context    Json?
   occurredAt DateTime      @default(now())
   actor      InternalUser? @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch     ClinicBranch? @relation(fields: [branchCode], references: [code], onDelete: Restrict, onUpdate: Restrict)
 
-  @@index([occurredAt])
+  @@index([scope, branchCode, occurredAt])
+  @@index([branchCode, action, occurredAt])
   @@index([actorId, occurredAt])
-  @@index([action, occurredAt])
-  @@index([entityType, occurredAt])
-  @@index([result, occurredAt])
+  @@index([scope, action, occurredAt])
+  @@index([scope, entityType, occurredAt])
+  @@index([scope, result, occurredAt])
 }
 
 model Lead {
@@ -4008,11 +4021,9 @@ model ModuleActivation {
 model ModuleActivationEvent {
   id             String                 @id @default(cuid())
   moduleCode     String
-  /// Sucursal donde ocurrió el cambio. Es nulo solo en los eventos anteriores a
-  /// la activación por sucursal, cuando un cambio valía para todo el sistema.
-  /// Esos eventos no se reescriben: el historial es append-only y reescribirlo
-  /// para atribuirlo a una sede sería inventar dónde pasó.
-  branchCode     String?
+  /// Sucursal donde ocurrió el cambio. Los eventos globales heredados deben
+  /// resolverse manualmente o clasificarse como plataforma antes de endurecer.
+  branchCode     String
   previousStatus ModuleActivationStatus
   status         ModuleActivationStatus
   /// Obligatorio al apagar; la validación vive en la acción (Tarea 5).
@@ -4020,10 +4031,11 @@ model ModuleActivationEvent {
   actorId        String?
   actorRole      InternalRole?
   occurredAt     DateTime               @default(now())
-  module         ModuleActivation?      @relation(fields: [moduleCode, branchCode], references: [code, branchCode], onDelete: Restrict, onUpdate: Restrict)
+  module         ModuleActivation       @relation(fields: [moduleCode, branchCode], references: [code, branchCode], onDelete: Restrict, onUpdate: Restrict)
+  branch         ClinicBranch           @relation(fields: [branchCode], references: [code], onDelete: Restrict, onUpdate: Restrict)
   actor          InternalUser?          @relation("ModuleActivationEventActor", fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([moduleCode, branchCode, occurredAt])
-  @@index([occurredAt])
+  @@index([branchCode, occurredAt])
   @@index([actorId, occurredAt])
 }

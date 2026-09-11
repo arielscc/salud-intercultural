@@ -109,6 +109,8 @@ export async function POST(request: Request) {
     });
 
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: actor.branchCode,
       actor,
       action: "attachment.upload",
       entityType: "clinical_attachment",
@@ -123,6 +125,8 @@ export async function POST(request: Request) {
     return NextResponse.json(result, { status: result.reused ? 200 : 201 });
   } catch (error) {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: actor.branchCode,
       actor,
       action: "attachment.upload",
       entityType: "clinical_attachment",

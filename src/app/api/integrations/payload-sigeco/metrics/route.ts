@@ -38,11 +38,12 @@ export async function GET(request: Request) {
     return response({ ok: true, metrics }, 200);
   } catch {
     await appendAuditEvent({
+      scope: "branch",
+      branchCode: parsed.data.branchCode,
       action: "integration.payload_metrics.export",
       entityType: "attribution_metrics",
       result: "failure",
       context: {
-        branchCode: parsed.data.branchCode,
         reason: "export_failed"
       }
     }).catch(() => undefined);
