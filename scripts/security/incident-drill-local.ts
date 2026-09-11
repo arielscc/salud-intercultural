@@ -217,8 +217,11 @@ async function runLostDeviceScenario(databaseUrl: string, runId: string) {
 }
 
 async function main() {
-  const baseDatabaseUrl = process.env.DATABASE_URL;
-  if (!baseDatabaseUrl) throw new Error("DATABASE_URL is required.");
+  const baseDatabaseUrl =
+    process.env.MAINTENANCE_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (!baseDatabaseUrl) {
+    throw new Error("MAINTENANCE_DATABASE_URL or DATABASE_URL is required.");
+  }
 
   const startedAt = Date.now();
   const runId = `${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`;

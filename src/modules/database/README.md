@@ -31,10 +31,18 @@ content that is already owned by Payload.
 Create a local `.env` file with:
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=verify-full"
+DATABASE_URL="postgresql://sigeco_web:PASSWORD@HOST:PORT/DATABASE?sslmode=verify-full"
+MAINTENANCE_DATABASE_URL="postgresql://sigeco_maintenance:PASSWORD@HOST:PORT/DATABASE?sslmode=verify-full"
 ```
 
 For Neon on Vercel/serverless, prefer the pooled connection string.
+
+`DATABASE_URL` belongs only to the web runtime. Its role has no ownership,
+`BYPASSRLS`, role administration, schema creation, or `TRUNCATE`. Prisma CLI,
+reconciliation scripts, seeds, backups, and controlled maintenance use
+`MAINTENANCE_DATABASE_URL`; never expose that credential to browser code. The
+RLS migration creates both roles without passwords, so operations must
+provision and rotate their secrets outside the repository.
 
 ## Commands
 

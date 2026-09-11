@@ -14,6 +14,11 @@ const explicitBranchMigrationPath = resolve(
   projectRoot,
   "prisma/migrations/20260908120000_require_explicit_branch_code/migration.sql"
 );
+const rlsMigrationPath = resolve(
+  projectRoot,
+  "prisma/migrations/20260911210000_postgres_row_level_security/migration.sql"
+);
+const rlsClientPath = resolve(projectRoot, "src/modules/database/client.ts");
 const hardenedBranchDefaultTables = [
   "Visit",
   "Sale",
@@ -368,6 +373,87 @@ export function validateExplicitBranchMigration(migrationPath = explicitBranchMi
   );
 }
 
+export function validateRlsBoundary(input?: {
+  migrationPath?: string;
+  clientPath?: string;
+  contract?: Readonly<Record<string, ModelTenancyContract>>;
+}) {
+  const migrationFile = input?.migrationPath ?? rlsMigrationPath;
+  const clientFile = input?.clientPath ?? rlsClientPath;
+  const violations: TenancyViolation[] = [];
+  if (!existsSync(migrationFile)) {
+    return [
+      {
+        code: "missing-rls-migration",
+        message:
+          "Falta la migración 20260911210000_postgres_row_level_security/migration.sql."
+      }
+    ];
+  }
+  if (!existsSync(clientFile)) {
+    return [
+      {
+        code: "missing-rls-client-boundary",
+        message: "Falta la frontera transaccional RLS del cliente Prisma."
+      }
+    ];
+  }
+
+  const migration = readFileSync(migrationFile, "utf8");
+  const client = readFileSync(clientFile, "utf8");
+  const requiredMigrationMarkers = [
+    "CREATE ROLE sigeco_web LOGIN PASSWORD NULL",
+    "CREATE ROLE sigeco_maintenance LOGIN PASSWORD NULL",
+    "ALTER ROLE sigeco_web NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS",
+    "ALTER ROLE sigeco_maintenance NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS",
+    "REVOKE sigeco_maintenance FROM sigeco_web",
+    "ALTER TABLE %I ENABLE ROW LEVEL SECURITY",
+    "ALTER TABLE %I FORCE ROW LEVEL SECURITY",
+    "OWNER TO sigeco_maintenance",
+    "sigeco_continuity_allows"
+  ];
+  for (const marker of requiredMigrationMarkers) {
+    if (!migration.includes(marker)) {
+      violations.push({
+        code: "incomplete-rls-migration",
+        message: `La migración RLS no contiene el control obligatorio: ${marker}.`
+      });
+    }
+  }
+
+  const contract = input?.contract ?? branchTenancyContract;
+  for (const [model, tenancy] of Object.entries(contract)) {
+    if (tenancy.scope === "global-master") continue;
+    if (!migration.includes(`'${model}'`) && !migration.includes(`"${model}"`)) {
+      violations.push({
+        code: "model-without-rls-policy",
+        message: `${model} no está materializado en la migración RLS.`
+      });
+    }
+  }
+
+  for (const setting of [
+    "app.branch_code",
+    "app.user_id",
+    "app.effective_role",
+    "app.access_mode",
+    "app.continuity_access_id",
+    "app.platform_audit_write"
+  ]) {
+    const transactionLocalSetting = new RegExp(
+      `set_config\\('${setting.replaceAll(".", "\\.")}',[\\s\\S]*?, true\\)`
+    );
+    if (!transactionLocalSetting.test(client)) {
+      violations.push({
+        code: "non-transactional-rls-setting",
+        message: `${setting} debe configurarse con set_config(..., true).`
+      });
+    }
+  }
+
+  return violations;
+}
+
 function applicationFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = resolve(directory, entry.name);
@@ -617,6 +703,7 @@ export function runBranchTenancyCheck() {
   const generatedModelNames = Object.values(Prisma.ModelName);
   const modelViolations = validateModelTenancy({ schema, generatedModelNames });
   const migrationViolations = validateExplicitBranchMigration();
+  const rlsViolations = validateRlsBoundary();
   const scriptFiles = applicationFiles(resolve(projectRoot, "scripts")).filter(
     (path) => !path.endsWith("/branch-tenancy-check.ts")
   );
@@ -625,7 +712,12 @@ export function runBranchTenancyCheck() {
     ...scriptFiles
   ]);
   const codeViolations = validateCodeFindings(codeFindings);
-  const violations = [...modelViolations, ...migrationViolations, ...codeViolations];
+  const violations = [
+    ...modelViolations,
+    ...migrationViolations,
+    ...rlsViolations,
+    ...codeViolations
+  ];
 
   if (violations.length > 0) {
     console.error(`Contrato de tenencia rechazado (${violations.length} problema(s)):`);

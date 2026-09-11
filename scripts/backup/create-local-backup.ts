@@ -4,7 +4,9 @@ import { reportScriptError } from "../safe-error";
 
 async function main() {
   const databaseUrl =
-    process.env.BACKUP_DATABASE_URL ?? process.env.DATABASE_URL;
+    process.env.BACKUP_DATABASE_URL ??
+    process.env.MAINTENANCE_DATABASE_URL ??
+    process.env.DATABASE_URL;
   const clinicalFilesRoot =
     process.env.BACKUP_CLINICAL_FILES_PATH ??
     process.env.CLINICAL_FILES_LOCAL_PATH ??
@@ -14,7 +16,9 @@ async function main() {
     `.data/backups/${backupFileName()}`;
 
   if (!databaseUrl) {
-    throw new Error("BACKUP_DATABASE_URL or DATABASE_URL is required.");
+    throw new Error(
+      "BACKUP_DATABASE_URL, MAINTENANCE_DATABASE_URL or DATABASE_URL is required."
+    );
   }
 
   const result = await createLocalSigecoBackup({

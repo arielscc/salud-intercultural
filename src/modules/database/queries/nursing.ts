@@ -1,4 +1,5 @@
 import { prisma, withDatabaseError } from "@/modules/database";
+import { runWithContinuityDatabaseContext } from "@/modules/database/rls-context";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 import { applyInventoryMovement } from "@/modules/database/queries/inventory";
 
@@ -508,20 +509,12 @@ export async function createNursingContinuityAccess(input: {
         orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
         select: { decision: true }
       }),
-      prisma.visit.findMany({
+      prisma.clinicBranch.findMany({
         where: {
-          patientId: input.patientId,
-          branchCode: { not: input.branchCode },
-          OR: [
-            { vitalSigns: { some: {} } },
-            { nursingApplications: { some: {} } },
-            { nursingNotes: { some: {} } },
-            { serviceSessionUses: { some: {} } },
-            { clinicalOrders: { some: { targetArea: "enfermeria" } } }
-          ]
+          code: { not: input.branchCode },
+          status: "active"
         },
-        distinct: ["branchCode"],
-        select: { branchCode: true }
+        select: { code: true }
       })
     ]);
     if (!membership?.active || !membership.user.active || membership.role !== "enfermeria") {
@@ -533,7 +526,7 @@ export async function createNursingContinuityAccess(input: {
     if (consent?.decision !== "granted") {
       throw new NursingContinuityAccessError("CONTINUITY_CONSENT_REQUIRED");
     }
-    const consultedBranchCodes = remoteBranches.map(({ branchCode }) => branchCode);
+    const consultedBranchCodes = remoteBranches.map(({ code }) => code);
     if (consultedBranchCodes.length === 0) {
       throw new NursingContinuityAccessError("REMOTE_HISTORY_NOT_FOUND");
     }
@@ -558,8 +551,21 @@ export async function getNursingContinuityHistory(input: {
   branchCode: string;
   accessId?: string;
 }) {
+  const accessId = input.accessId;
+  if (!accessId) return { visits: [], active: false };
+  return runWithContinuityDatabaseContext(accessId, () =>
+    getNursingContinuityHistoryWithContext({ ...input, accessId })
+  );
+}
+
+async function getNursingContinuityHistoryWithContext(input: {
+  patientId: string;
+  visitId: string;
+  nurseId: string;
+  branchCode: string;
+  accessId: string;
+}) {
   return withDatabaseError("getNursingContinuityHistory", async () => {
-    if (!input.accessId) return { visits: [], active: false };
     const access = await prisma.nursingContinuityAccess.findFirst({
       where: {
         id: input.accessId,

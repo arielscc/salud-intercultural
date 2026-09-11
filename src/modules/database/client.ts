@@ -1,6 +1,11 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { assertEnvironmentIsolation } from "@/lib/deployment-environment";
+import {
+  getDatabaseRlsStore,
+  runWithTransactionRlsStore,
+  type DatabaseRlsContext
+} from "@/modules/database/rls-context";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   __saludInterculturalPrisma?: PrismaClient;
@@ -65,11 +70,104 @@ function getPrismaClient() {
   return globalForPrisma.__saludInterculturalPrisma;
 }
 
+const prismaDelegateNames = new Set(
+  Object.values(Prisma.ModelName).map(
+    (modelName) => modelName.charAt(0).toLowerCase() + modelName.slice(1)
+  )
+);
+
+async function configureRlsTransaction(
+  transaction: Prisma.TransactionClient,
+  context: DatabaseRlsContext
+) {
+  await transaction.$queryRaw`
+    SELECT
+      set_config('app.branch_code', ${context.branchCode}, true),
+      set_config('app.user_id', ${context.userId}, true),
+      set_config('app.effective_role', ${context.effectiveRole}, true),
+      set_config('app.access_mode', ${context.accessMode}, true),
+      set_config('app.continuity_access_id', ${context.continuityAccessId ?? ""}, true),
+      set_config('app.platform_audit_write', ${context.platformAuditWrite ? "true" : "false"}, true)
+  `;
+}
+
+function invokeInRlsTransaction(
+  client: PrismaClient,
+  context: DatabaseRlsContext,
+  operation: (transaction: Prisma.TransactionClient) => Promise<unknown>
+) {
+  return client.$transaction(async (transaction) => {
+    await configureRlsTransaction(transaction, context);
+    return runWithTransactionRlsStore(transaction, () => operation(transaction));
+  });
+}
+
+function delegateProxy(client: PrismaClient, delegateName: string, delegate: object) {
+  return new Proxy(delegate, {
+    get(target, property) {
+      const member = Reflect.get(target, property);
+      if (typeof member !== "function") return member;
+      return (...args: unknown[]) => {
+        const store = getDatabaseRlsStore();
+        if (store?.transaction) {
+          const transactionDelegate = Reflect.get(store.transaction, delegateName) as object;
+          return Reflect.apply(Reflect.get(transactionDelegate, property), transactionDelegate, args);
+        }
+        if (!store) return Reflect.apply(member, target, args);
+        return invokeInRlsTransaction(client, store.context, async (transaction) => {
+          const transactionDelegate = Reflect.get(transaction, delegateName) as object;
+          return Reflect.apply(Reflect.get(transactionDelegate, property), transactionDelegate, args);
+        });
+      };
+    }
+  });
+}
+
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, property) {
     const client = getPrismaClient();
     const value = Reflect.get(client, property);
 
+    if (typeof property === "string" && prismaDelegateNames.has(property)) {
+      return delegateProxy(client, property, value as object);
+    }
+    if (property === "$transaction" && typeof value === "function") {
+      return (operation: unknown, options?: unknown) => {
+        if (typeof operation !== "function") {
+          throw new Error("Las transacciones RLS deben usar callback interactivo.");
+        }
+        const store = getDatabaseRlsStore();
+        if (store?.transaction) {
+          return Reflect.apply(operation, undefined, [store.transaction]);
+        }
+        if (!store) return Reflect.apply(value, client, [operation, options]);
+        return Reflect.apply(value, client, [
+          async (transaction: Prisma.TransactionClient) => {
+            await configureRlsTransaction(transaction, store.context);
+            return runWithTransactionRlsStore(transaction, () =>
+              Reflect.apply(operation, undefined, [transaction])
+            );
+          },
+          options
+        ]);
+      };
+    }
+    if (
+      (property === "$queryRaw" || property === "$executeRaw") &&
+      typeof value === "function"
+    ) {
+      return (...args: unknown[]) => {
+        const store = getDatabaseRlsStore();
+        if (store?.transaction) {
+          const transactionMethod = Reflect.get(store.transaction, property);
+          return Reflect.apply(transactionMethod, store.transaction, args);
+        }
+        if (!store) return Reflect.apply(value, client, args);
+        return invokeInRlsTransaction(client, store.context, async (transaction) =>
+          Reflect.apply(Reflect.get(transaction, property), transaction, args)
+        );
+      };
+    }
     return typeof value === "function" ? value.bind(client) : value;
   }
 });

@@ -158,8 +158,11 @@ async function runProcess(command: string, args: string[]) {
 }
 
 async function main() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+  const databaseUrl =
+    process.env.MAINTENANCE_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("MAINTENANCE_DATABASE_URL or DATABASE_URL is required.");
+  }
   assertSafeDatabaseCommand({
     commandName: "security:gate:local",
     databaseUrl,

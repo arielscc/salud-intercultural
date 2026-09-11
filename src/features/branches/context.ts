@@ -9,6 +9,7 @@ import {
   getInternalUserBySessionToken
 } from "@/features/internal-auth/session";
 import { getBranchesForUser } from "@/modules/database/queries/branches";
+import { activateDatabaseRlsContext } from "@/modules/database/rls-context";
 
 export type BranchAssignmentSource = "membership" | "automatic-super-admin";
 export type BranchAccessMode = "work" | "consult";
@@ -83,6 +84,20 @@ function activeAssignedBranches(branches: readonly BranchContextBranch[]) {
   );
 }
 
+function withDatabaseContext(context: BranchRequestContext): BranchRequestContext {
+  return new Proxy(context, {
+    get(target, property, receiver) {
+      activateDatabaseRlsContext({
+        branchCode: target.activeBranch.code,
+        userId: target.user.id,
+        effectiveRole: target.operationalRole,
+        accessMode: target.accessMode
+      });
+      return Reflect.get(target, property, receiver);
+    }
+  });
+}
+
 export function resolveBranchAccessMode(
   branch: Pick<BranchContextBranch, "role" | "isDefault">
 ): BranchAccessMode {
@@ -146,7 +161,7 @@ export const resolveBranchContext = cache(async (): Promise<BranchContextResolut
   const operationalUser = { ...user, role: activeBranch.role };
   return {
     ok: true,
-    context: {
+    context: withDatabaseContext({
       user: operationalUser,
       activeBranch,
       assignment: {
@@ -161,7 +176,7 @@ export const resolveBranchContext = cache(async (): Promise<BranchContextResolut
       accessMode,
       branches,
       canSwitch: selectable.length > 1
-    }
+    })
   };
 });
 

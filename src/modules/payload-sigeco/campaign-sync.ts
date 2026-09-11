@@ -5,6 +5,8 @@ import {
   type PayloadCampaignContract
 } from "@/modules/payload-sigeco/contract";
 import { prisma } from "@/modules/database";
+import { appendAuditEvent } from "@/modules/audit/append";
+import { runWithDatabaseRlsContext } from "@/modules/database/rls-context";
 
 function campaignData(
   input: PayloadCampaignContract,
@@ -31,16 +33,17 @@ function campaignData(
 export async function syncPayloadCampaignToSigeco(rawInput: unknown) {
   const input = payloadCampaignContractSchema.parse(rawInput);
 
-  return prisma.$transaction(async (tx) => {
+  const { campaign, existing, branchCodes, stale } = await prisma.$transaction(async (tx) => {
     const [source, branches] = await Promise.all([
       tx.captureSource.findUnique({ where: { code: input.sourceCode } }),
       tx.clinicBranch.findMany({
-        where: { code: { in: input.branchCodes }, status: { not: "inactive" } },
+        where: { status: { not: "inactive" } },
         select: { code: true }
       })
     ]);
     if (!source) throw new Error("PAYLOAD_CAMPAIGN_SOURCE_NOT_CONFIGURED");
-    if (branches.length !== input.branchCodes.length) {
+    const configuredCodes = new Set(branches.map(({ code }) => code));
+    if (input.branchCodes.some((branchCode) => !configuredCodes.has(branchCode))) {
       throw new Error("PAYLOAD_CAMPAIGN_BRANCH_NOT_CONFIGURED");
     }
 
@@ -60,7 +63,12 @@ export async function syncPayloadCampaignToSigeco(rawInput: unknown) {
       existing?.payloadUpdatedAt &&
       existing.payloadUpdatedAt.getTime() >= revision.getTime()
     ) {
-      return { campaign: existing, outcome: "stale_ignored" as const };
+      return {
+        campaign: existing,
+        existing,
+        branchCodes: branches.map(({ code }) => code),
+        stale: true
+      };
     }
 
     const syncedAt = new Date();
@@ -69,72 +77,103 @@ export async function syncPayloadCampaignToSigeco(rawInput: unknown) {
       ? await tx.captureCampaign.update({ where: { id: existing.id }, data })
       : await tx.captureCampaign.create({ data });
 
-    await tx.captureCampaignBranch.updateMany({
-      where: {
-        campaignId: campaign.id,
-        branchCode: { notIn: input.branchCodes }
-      },
-      data: { active: false }
-    });
-    for (const branchCode of input.branchCodes) {
-      await tx.captureCampaignBranch.upsert({
-        where: { campaignId_branchCode: { campaignId: campaign.id, branchCode } },
-        create: { campaignId: campaign.id, branchCode, active: true },
-        update: { active: true }
-      });
-    }
-
-    await tx.auditEvent.create({
-      data: {
-        scope: "platform",
-        action: "integration.payload_campaign.sync",
-        entityType: "capture_campaign",
-        entityId: campaign.id,
-        result: "success",
-        requestId: randomUUID(),
-        context: {
-          code: campaign.code,
-          sourceCode: input.sourceCode,
-          branchCodes: input.branchCodes,
-          active: campaign.active,
-          outcome: existing ? "updated" : "created"
-        }
-      }
-    });
-
     return {
       campaign,
-      outcome: existing ? ("updated" as const) : ("created" as const)
+      existing,
+      branchCodes: branches.map(({ code }) => code),
+      stale: false
     };
   });
+
+  if (stale) return { campaign, outcome: "stale_ignored" as const };
+
+  for (const branchCode of branchCodes) {
+    await runWithDatabaseRlsContext(
+      {
+        branchCode,
+        userId: "payload-sigeco:campaign-sync",
+        effectiveRole: "system_job",
+        accessMode: "work"
+      },
+      async () => {
+        if (input.branchCodes.includes(branchCode)) {
+          await prisma.captureCampaignBranch.upsert({
+            where: { campaignId_branchCode: { campaignId: campaign.id, branchCode } },
+            create: { campaignId: campaign.id, branchCode, active: true },
+            update: { active: true }
+          });
+          return;
+        }
+        await prisma.captureCampaignBranch.updateMany({
+          where: { campaignId: campaign.id, branchCode },
+          data: { active: false }
+        });
+      }
+    );
+  }
+
+  const outcome = existing ? ("updated" as const) : ("created" as const);
+  await appendAuditEvent({
+    scope: "platform",
+    action: "integration.payload_campaign.sync",
+    entityType: "capture_campaign",
+    entityId: campaign.id,
+    result: "success",
+    requestId: randomUUID(),
+    context: {
+      code: campaign.code,
+      sourceCode: input.sourceCode,
+      branchCodes: input.branchCodes,
+      active: campaign.active,
+      outcome
+    }
+  });
+
+  return { campaign, outcome };
 }
 
 export async function deactivatePayloadCampaignInSigeco(externalId: string) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const existing = await tx.captureCampaign.findUnique({
       where: { payloadCampaignId: String(externalId) }
     });
-    if (!existing || !existing.active) return existing;
+    if (!existing || !existing.active) return { campaign: existing, branchCodes: [] };
 
     const campaign = await tx.captureCampaign.update({
       where: { id: existing.id },
       data: { active: false, syncedAt: new Date() }
     });
-    await tx.captureCampaignBranch.updateMany({
-      where: { campaignId: campaign.id },
-      data: { active: false }
+    const branches = await tx.clinicBranch.findMany({
+      where: { status: { not: "inactive" } },
+      select: { code: true }
     });
-    await tx.auditEvent.create({
-      data: {
-        scope: "platform",
-        action: "integration.payload_campaign.deactivate",
-        entityType: "capture_campaign",
-        entityId: campaign.id,
-        result: "success",
-        requestId: randomUUID(),
-        context: { code: campaign.code }
-      }
-    });
-    return campaign;
+    return { campaign, branchCodes: branches.map(({ code }) => code) };
   });
+
+  if (!result.campaign) return result.campaign;
+  for (const branchCode of result.branchCodes) {
+    await runWithDatabaseRlsContext(
+      {
+        branchCode,
+        userId: "payload-sigeco:campaign-sync",
+        effectiveRole: "system_job",
+        accessMode: "work"
+      },
+      () =>
+        prisma.captureCampaignBranch.updateMany({
+          where: { campaignId: result.campaign!.id, branchCode },
+          data: { active: false }
+        })
+    );
+  }
+  await appendAuditEvent({
+    scope: "platform",
+    action: "integration.payload_campaign.deactivate",
+    entityType: "capture_campaign",
+    entityId: result.campaign.id,
+    result: "success",
+    requestId: randomUUID(),
+    context: { code: result.campaign.code }
+  });
+  return result.campaign;
 }

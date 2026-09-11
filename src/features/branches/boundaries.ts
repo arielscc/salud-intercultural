@@ -9,6 +9,7 @@ import {
   type BranchRequestContext
 } from "@/features/branches/context";
 import { getBranchByCode } from "@/modules/database/queries/branches";
+import { activateDatabaseRlsContext } from "@/modules/database/rls-context";
 
 export async function requireBranchPageContext(): Promise<BranchRequestContext> {
   try {
@@ -100,8 +101,19 @@ export async function requireBranchJobContext(input: {
   if (!branch || branch.status !== "active") {
     throw new BranchContextUnavailableError("invalid_active_branch");
   }
-  return {
+  const context: BranchJobContext = {
     actor: { kind: "system-job", id: input.jobId },
     activeBranch: branch
   };
+  return new Proxy(context, {
+    get(target, property, receiver) {
+      activateDatabaseRlsContext({
+        branchCode,
+        userId: input.jobId,
+        effectiveRole: "system_job",
+        accessMode: "work"
+      });
+      return Reflect.get(target, property, receiver);
+    }
+  });
 }

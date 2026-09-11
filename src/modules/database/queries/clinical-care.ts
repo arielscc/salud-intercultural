@@ -6,6 +6,7 @@ import type {
 } from "@/generated/prisma/client";
 import type { ConsultationQueueArea } from "@/features/clinical-care/queue";
 import { prisma, withDatabaseError } from "@/modules/database";
+import { runWithContinuityDatabaseContext } from "@/modules/database/rls-context";
 import { getPagination, type PaginationInput } from "@/modules/database/pagination";
 import { dayRange } from "@/lib/dates";
 export {
@@ -767,14 +768,12 @@ export async function createClinicalContinuityAccess(input: {
         orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }],
         select: { decision: true }
       }),
-      prisma.visit.findMany({
+      prisma.clinicBranch.findMany({
         where: {
-          patientId: input.patientId,
-          branchCode: { not: input.branchCode },
-          clinicalConsultation: { isNot: null }
+          code: { not: input.branchCode },
+          status: "active"
         },
-        distinct: ["branchCode"],
-        select: { branchCode: true }
+        select: { code: true }
       })
     ]);
 
@@ -791,7 +790,7 @@ export async function createClinicalContinuityAccess(input: {
     if (consent?.decision !== "granted") {
       throw new ClinicalContinuityAccessError("CONTINUITY_CONSENT_REQUIRED");
     }
-    const consultedBranchCodes = remoteBranches.map((entry) => entry.branchCode);
+    const consultedBranchCodes = remoteBranches.map((entry) => entry.code);
     if (consultedBranchCodes.length === 0) {
       throw new ClinicalContinuityAccessError("REMOTE_HISTORY_NOT_FOUND");
     }
@@ -811,6 +810,20 @@ export async function createClinicalContinuityAccess(input: {
 }
 
 export async function getPatientConsultationHistory(input: {
+  patientId: string;
+  excludeVisitId: string;
+  branchCode: string;
+  doctorId?: string;
+  continuityAccessId?: string;
+}) {
+  return input.continuityAccessId && input.doctorId
+    ? runWithContinuityDatabaseContext(input.continuityAccessId, () =>
+        getPatientConsultationHistoryWithContext(input)
+      )
+    : getPatientConsultationHistoryWithContext(input);
+}
+
+async function getPatientConsultationHistoryWithContext(input: {
   patientId: string;
   excludeVisitId: string;
   branchCode: string;

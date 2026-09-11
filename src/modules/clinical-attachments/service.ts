@@ -6,6 +6,7 @@ import type {
 } from "@/generated/prisma/client";
 import { resolveClinicalAttachmentStorage } from "@/lib/deployment-environment";
 import { prisma } from "@/modules/database";
+import { runWithContinuityDatabaseContext } from "@/modules/database/rls-context";
 import {
   createClinicalStorageKey,
   deleteClinicalFile,
@@ -242,6 +243,19 @@ export async function createClinicalAttachmentAccessGrant(input: {
   purpose: ClinicalAttachmentAccessPurpose;
   continuityAccessId?: string;
 }) {
+  return input.continuityAccessId
+    ? runWithContinuityDatabaseContext(input.continuityAccessId, () =>
+        createClinicalAttachmentAccessGrantWithContext(input)
+      )
+    : createClinicalAttachmentAccessGrantWithContext(input);
+}
+
+async function createClinicalAttachmentAccessGrantWithContext(input: {
+  attachmentId: string;
+  actor: ClinicalAttachmentActor;
+  purpose: ClinicalAttachmentAccessPurpose;
+  continuityAccessId?: string;
+}) {
   let allowedBranchCodes = [input.actor.branchCode];
   let remotePatientId: string | undefined;
   let reason = `Acceso local: ${input.purpose}`;
@@ -438,19 +452,19 @@ export async function softDeleteClinicalAttachment(input: {
 
   try {
     await deleteClinicalFile(attachment);
-    await prisma.$transaction([
-      prisma.clinicalAttachmentAccessGrant.deleteMany({
+    await prisma.$transaction(async (tx) => {
+      await tx.clinicalAttachmentAccessGrant.deleteMany({
         where: { attachmentId: attachment.id, branchCode: input.actor.branchCode }
-      }),
-      prisma.clinicalAttachment.update({
+      });
+      await tx.clinicalAttachment.update({
         where: { id_branchCode: { id: attachment.id, branchCode: input.actor.branchCode } },
         data: {
           status: "deleted",
           deletedAt: new Date(),
           deletedById: input.actor.id
         }
-      })
-    ]);
+      });
+    });
     return { alreadyDeleted: false };
   } catch (error) {
     await prisma.clinicalAttachment

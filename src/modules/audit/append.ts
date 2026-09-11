@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import type { AuditResult, InternalRole, Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/modules/database";
+import {
+  runWithDatabaseRlsContext,
+  runWithPlatformAuditDatabaseContext
+} from "@/modules/database/rls-context";
 import { sanitizeAuditContext } from "@/modules/audit/sanitize";
 
 /*
@@ -81,18 +85,32 @@ export async function appendAuditEvent(input: AppendAuditEventInput) {
   }
   const context = sanitizeAuditContext(input.context);
 
-  return prisma.auditEvent.create({
-    data: {
-      scope: input.scope,
-      branchCode: input.scope === "branch" ? input.branchCode : null,
-      actorId: input.actor?.id ?? null,
-      actorRole: input.actor?.role ?? null,
-      action: input.action.slice(0, 120),
-      entityType: input.entityType.slice(0, 80),
-      entityId: input.entityId?.slice(0, 120) ?? null,
-      result: input.result,
-      requestId: input.requestId ?? (await getRequestId()),
-      context: context ? (context as Prisma.InputJsonValue) : undefined
-    }
-  });
+  const write = async () =>
+    prisma.auditEvent.create({
+      data: {
+        scope: input.scope,
+        branchCode: input.scope === "branch" ? input.branchCode : null,
+        actorId: input.actor?.id ?? null,
+        actorRole: input.actor?.role ?? null,
+        action: input.action.slice(0, 120),
+        entityType: input.entityType.slice(0, 80),
+        entityId: input.entityId?.slice(0, 120) ?? null,
+        result: input.result,
+        requestId: input.requestId ?? (await getRequestId()),
+        context: context ? (context as Prisma.InputJsonValue) : undefined
+      }
+    });
+
+  if (input.scope === "platform") {
+    return runWithPlatformAuditDatabaseContext(input.actor?.id ?? "anonymous", write);
+  }
+  return runWithDatabaseRlsContext(
+    {
+      branchCode: input.branchCode,
+      userId: input.actor?.id ?? "system",
+      effectiveRole: input.actor?.role ?? "system_job",
+      accessMode: "work"
+    },
+    write
+  );
 }

@@ -10,9 +10,10 @@ Plan híbrido dividido en 17 tareas consecutivas. La frontera técnica ya cuenta
 con un contrato ejecutable, un detector automático, un contexto autenticado de
 sucursal obligatorio y roles operativos resueltos desde cada membresía. La
 identidad queda global y solo conserva la capacidad de plataforma del super
-administrador. Todavía no se completó la partición general de operaciones ni se
-aplicó RLS. La identidad global del paciente y su expediente por sucursal ya
-están separados. Leads, campañas, entradas públicas y atribución ya exigen una
+administrador. La partición general de operaciones y RLS están implementados en
+código; las migraciones todavía no se aplicaron. La identidad global del
+paciente y su expediente por sucursal ya están separados. Leads, campañas,
+entradas públicas y atribución ya exigen una
 sede verificable y sus métricas se calculan localmente. El recorrido completo
 de una visita —recepción, estados, ruta, pasos, trabajos, abandonos y tiempos—
 ya materializa la sede y usa relaciones compuestas. La migración
@@ -29,7 +30,10 @@ opiniones ya tienen tenencia directa; sus KPI usan conteos locales y los enlaces
 públicos de opinión incorporan la sucursal emisora. Módulos y auditoría
 distinguen operación local de eventos de plataforma. El barrido acumulado
 cerró los últimos enlaces simples entre operaciones, particionó la idempotencia
-por sede y añadió un chequeo SQL que enumera y rechaza cruces residuales.
+por sede y añadió un chequeo SQL que enumera y rechaza cruces residuales. La
+segunda barrera ya está preparada: PostgreSQL fuerza RLS sobre los 89 modelos
+operativos, controlados y de auditoría; Prisma instala un contexto local por
+transacción y la cuenta web queda separada del rol técnico propietario.
 
 ## Decisiones Confirmadas Por Dirección
 
@@ -48,10 +52,10 @@ por sede y añadió un chequeo SQL que enumera y rechaza cruces residuales.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 2 |
+| Pendiente | 1 |
 | En progreso | 2 |
 | Bloqueada | 0 |
-| Terminada | 13 |
+| Terminada | 14 |
 
 ## Progreso Por Fase
 
@@ -59,7 +63,7 @@ por sede y añadió un chequeo SQL que enumera y rechaza cruces residuales.
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
 | B. Partición de dominios | 5-13 | Terminada en código (9/9; 7 con validación estática aprobada) | Maestros únicos y operaciones pertenecientes a una sede |
-| C. Base de datos y cierre | 14-17 | En progreso (2/4) | Auditoría local, constraints, RLS y QA acumulado |
+| C. Base de datos y cierre | 14-17 | En progreso (3/4) | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
 
@@ -80,7 +84,7 @@ por sede y añadió un chequeo SQL que enumera y rechaza cruces residuales.
 | 13 | Seguimientos, recordatorios, opiniones y reportes | P0 | Implementada; validación estática aprobada | 5-12 |
 | 14 | Módulos y auditoría operativa | P0 | Terminada | 2-3, 13 |
 | 15 | Barrido completo de aplicación y constraints | P0 | Terminada | 5-14 |
-| 16 | PostgreSQL Row-Level Security | P0 | Pendiente | 15 |
+| 16 | PostgreSQL Row-Level Security | P0 | Terminada | 15 |
 | 17 | Cierre acumulado y despliegue controlado | P0 | Pendiente | 1-16 |
 
 ## Preparación Ya Disponible
@@ -296,7 +300,40 @@ Tarea 16.
   contra las bases restauradas y de staging durante la Tarea 17.
 - Detalle y operación: [reporte T15](../task-reports/2026-09-11-tarea-15-barrido-aplicacion-constraints.md).
 
+### Tarea 16 — Implementación
+
+- La migración crea `sigeco_web` sin ownership, `BYPASSRLS`, administración de
+  roles, creación de schema ni `TRUNCATE`, y separa `sigeco_maintenance` como
+  propietario técnico. Ninguno recibe una contraseña desde el repositorio.
+- Las 86 tablas de operación, los dos accesos transversales controlados y
+  `AuditEvent` activan y fuerzan RLS. `USING` limita lecturas y `WITH CHECK`
+  rechaza escrituras cuya sede no sea la activa o cuyo modo sea consulta.
+- Cada unidad Prisma con contexto corre en una transacción interactiva y fija
+  `app.branch_code`, usuario, rol, modo y acceso temporal mediante
+  `set_config(..., true)`. Los valores mueren al cerrar la transacción y no
+  contaminan otra solicitud que reutilice la conexión.
+- Super administración y Dirección no reciben bypass: operan en la sede
+  seleccionada. La lectura remota exige médico o Enfermería activos, paciente,
+  consentimiento vigente, motivo, sede solicitante, sedes consultadas y acceso
+  no vencido; ninguna política transversal habilita escritura.
+- Enfermería queda restringida a signos, aplicaciones, notas, sesiones,
+  órdenes de su área y adjuntos derivados de estudios de Enfermería. El
+  contexto temporal se restaura al terminar la consulta y los grants de
+  archivos revalidan sede, usuario, rol y vencimiento.
+- Campañas y métricas técnicas iteran sucursales explícitamente. Prisma CLI,
+  seeds, reconciliaciones y herramientas administrativas admiten
+  `MAINTENANCE_DATABASE_URL`; staging y producción ya no pueden ejecutar el
+  wrapper técnico usando silenciosamente la credencial web.
+- El detector exige roles, ownership, `ENABLE/FORCE ROW LEVEL SECURITY`, una
+  política materializada para todo modelo no global y los seis parámetros
+  transaccionales RLS. No quedan excepciones temporales.
+- Migración preparada, sin aplicar. La matriz negativa, la reutilización real
+  del pool y las pruebas contra una restauración/staging corresponden al cierre
+  acumulado de la Tarea 17.
+- Detalle y operación: [reporte T16](../task-reports/2026-09-11-tarea-16-postgresql-row-level-security.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 16: PostgreSQL Row-Level Security. La integración, el chequeo
-SQL contra datos migrados y el despliegue se validan en la Tarea 17.
+Ejecutar la Tarea 17: cierre acumulado y despliegue controlado. Allí se aplican
+las migraciones sobre bases desechables/restauradas y staging, se ejecuta la
+matriz negativa completa y se valida el pool con los roles provisionados.
