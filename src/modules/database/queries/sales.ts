@@ -353,7 +353,12 @@ export async function createSaleRecord(input: {
     return prisma.$transaction(async (tx) => {
       if (input.idempotencyKey) {
         const reused = await tx.sale.findUnique({
-          where: { idempotencyKey: input.idempotencyKey },
+          where: {
+            branchCode_idempotencyKey: {
+              branchCode: input.branchCode,
+              idempotencyKey: input.idempotencyKey
+            }
+          },
           include: { items: true }
         });
         if (reused) {
@@ -525,7 +530,12 @@ export async function createSaleOrderRecord(input: {
     return prisma.$transaction(async (tx) => {
       if (input.idempotencyKey) {
         const reused = await tx.sale.findUnique({
-          where: { idempotencyKey: input.idempotencyKey },
+          where: {
+            branchCode_idempotencyKey: {
+              branchCode: input.branchCode,
+              idempotencyKey: input.idempotencyKey
+            }
+          },
           include: { items: true }
         });
         if (reused) {
@@ -893,7 +903,12 @@ export async function createPaymentRecord(input: {
     return prisma.$transaction(async (tx) => {
       if (input.idempotencyKey) {
         const reused = await tx.payment.findUnique({
-          where: { idempotencyKey: input.idempotencyKey },
+          where: {
+            branchCode_idempotencyKey: {
+              branchCode: input.branchCode,
+              idempotencyKey: input.idempotencyKey
+            }
+          },
           include: {
             sale: {
               select: {

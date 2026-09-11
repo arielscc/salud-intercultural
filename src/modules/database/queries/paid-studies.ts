@@ -293,7 +293,13 @@ export async function releasePaidStudiesToNursing(input: { workItemId: string; b
             description: orders.map((order) => order.title).join(", ")
           }
         }));
-      await tx.clinicalOrder.updateMany({ where: { id: { in: orders.map((order) => order.id) } }, data: { workItemId: nursing.id } });
+      await tx.clinicalOrder.updateMany({
+        where: {
+          id: { in: orders.map((order) => order.id) },
+          branchCode: input.branchCode
+        },
+        data: { workItemId: nursing.id }
+      });
       await tx.visitWorkItem.update({ where: { id_branchCode: { id: billing.id, branchCode: input.branchCode } }, data: { status: "completed", completedAt: new Date() } });
       await moveVisit(tx, { visitId: billing.visitId, branchCode: input.branchCode, userId: input.userId, status: "in_nursing", area: "enfermeria", note: "Pago confirmado; enviado a enfermería" });
       return nursing;

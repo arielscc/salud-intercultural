@@ -10,7 +10,7 @@ import { reportScriptError } from "./safe-error";
  * descubra el día del lanzamiento que quedaron productos de demostración o
  * stock sin respaldo.
  *
- * Uso: pnpm stage-one:check
+ * Uso: STAGE_ONE_BRANCH=<codigo> pnpm stage-one:check
  */
 
 type Check = {
@@ -27,13 +27,11 @@ const demoEmailFragments = ["@example.com", ".demo", "staging.invalid", "@test."
 
 const stageOneModules = sigecoLaunchStages[0]?.modules ?? [];
 
-/**
- * Sede que se revisa. El Alto es la que opera hoy y queda como omisión; se
- * parametriza porque un piloto puede arrancar en otra sede y, con el código
- * fijo, la revisión daba por buena a El Alto y nunca miraba la sucursal que se
- * iba a lanzar de verdad.
- */
-const stageOneBranchCode = process.env.STAGE_ONE_BRANCH?.trim() || "el-alto";
+const stageOneBranchCode = (() => {
+  const value = process.env.STAGE_ONE_BRANCH?.trim();
+  if (!value) throw new Error("STAGE_ONE_BRANCH es obligatorio para revisar una sucursal.");
+  return value;
+})();
 
 async function checkModules(): Promise<Check[]> {
   // Los módulos se encienden por sucursal: se revisa la sede que se va a lanzar,

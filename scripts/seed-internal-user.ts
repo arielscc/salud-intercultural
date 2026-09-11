@@ -2,16 +2,6 @@ import { prisma } from "../src/modules/database";
 import { hashPassword } from "../src/features/internal-auth/password";
 import { reportScriptError } from "./safe-error";
 
-/**
- * Sucursal predeterminada del administrador sembrado.
- *
- * El Alto es la sede que opera hoy, así que sigue siendo la omisión. Se
- * parametriza porque un entorno de piloto arranca en otra sede —Cochabamba— y
- * sin esto el administrador nacía asignado a la sucursal equivocada, que es
- * justo la que no se quiere tocar.
- */
-const defaultBranchCode = "el-alto";
-
 async function assignAllBranchesToSuperAdmin(userId: string, defaultCode: string) {
   const branches = await prisma.clinicBranch.findMany({
     where: { status: { not: "inactive" } },
@@ -46,10 +36,12 @@ async function assignAllBranchesToSuperAdmin(userId: string, defaultCode: string
 async function main() {
   const email = process.env.INTERNAL_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.INTERNAL_ADMIN_PASSWORD;
-  const branchCode = process.env.INTERNAL_ADMIN_BRANCH?.trim() || defaultBranchCode;
+  const branchCode = process.env.INTERNAL_ADMIN_BRANCH?.trim();
 
-  if (!email || !password) {
-    throw new Error("INTERNAL_ADMIN_EMAIL and INTERNAL_ADMIN_PASSWORD are required.");
+  if (!email || !password || !branchCode) {
+    throw new Error(
+      "INTERNAL_ADMIN_EMAIL, INTERNAL_ADMIN_PASSWORD e INTERNAL_ADMIN_BRANCH son obligatorios."
+    );
   }
 
   if (password.length < 10) {

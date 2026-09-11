@@ -72,7 +72,7 @@ async function allPayloadLeads(payload: Payload): Promise<PayloadLeadRow[]> {
     rows.push(
       ...result.docs.map((doc) => ({
         id: doc.id,
-        branchCode: doc.branchCode || null,
+        branchCode: typeof doc.branchCode === "string" ? doc.branchCode : null,
         phone: doc.phone,
         campaignCode: doc.campaignCode || null
       }))

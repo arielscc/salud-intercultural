@@ -11,7 +11,9 @@ async function main() {
     throw new Error("Synthetic multi-branch data is allowed only in local or test.");
   }
 
-  const branch = await prisma.clinicBranch.findUnique({ where: { code: "cochabamba" } });
+  const branchCode = process.env.SYNTHETIC_BRANCH_CODE?.trim();
+  if (!branchCode) throw new Error("SYNTHETIC_BRANCH_CODE es obligatorio.");
+  const branch = await prisma.clinicBranch.findUnique({ where: { code: branchCode } });
   if (!branch || branch.status !== "preparation") {
     throw new Error("Cochabamba must exist in preparation status.");
   }

@@ -19,7 +19,12 @@ import { recordDuplicateCandidatesForPatient } from "../src/modules/database/que
 import { reportScriptError } from "./safe-error";
 import { assertSafeStagingCommand } from "./staging-safety";
 
-const QA_BRANCH_CODE = "el-alto";
+const QA_BRANCH_CODE = (() => {
+  const value = process.env.STAGING_QA_BRANCH?.trim();
+  if (!value) throw new Error("STAGING_QA_BRANCH es obligatorio para sembrar datos QA.");
+  return value;
+})();
+const qaScopedId = (value: string) => `qa_${QA_BRANCH_CODE}_${value}`;
 
 const qaPatientFixtures = [
   {
@@ -175,12 +180,14 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       }
     });
 
-    const visitId = `qa_visit_${fixture.area}`;
-    const routeId = `qa_route_${fixture.area}`;
+    const visitId = qaScopedId(`visit_${fixture.area}`);
+    const routeId = qaScopedId(`route_${fixture.area}`);
     const checkedInAt = new Date(Date.now() - index * 15 * 60 * 1000);
 
     await prisma.visit.upsert({
-      where: { id: visitId },
+      where: {
+        id_branchCode: { id: visitId, branchCode: QA_BRANCH_CODE }
+      },
       update: {
         branchCode: QA_BRANCH_CODE,
         checkedInAt,
@@ -286,7 +293,12 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
     });
 
     const routeStep = await prisma.patientRouteStep.upsert({
-      where: { id: `qa_route_step_${fixture.area}` },
+      where: {
+        id_branchCode: {
+          id: qaScopedId(`route_step_${fixture.area}`),
+          branchCode: QA_BRANCH_CODE
+        }
+      },
       update: {
         area: fixture.area,
         note: "Paso sintético de staging",
@@ -296,14 +308,18 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       create: {
         area: fixture.area,
         branchCode: QA_BRANCH_CODE,
-        id: `qa_route_step_${fixture.area}`,
+        id: qaScopedId(`route_step_${fixture.area}`),
         note: "Paso sintético de staging",
         routeId: route.id,
         status: fixture.status
       }
     });
     const existingEnteredEvent = await prisma.visitAreaTimeEvent.findFirst({
-      where: { routeStepId: routeStep.id, type: "entered" },
+      where: {
+        routeStepId: routeStep.id,
+        branchCode: QA_BRANCH_CODE,
+        type: "entered"
+      },
       select: { id: true }
     });
     if (
@@ -327,7 +343,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
     }
 
     await prisma.visitStatusHistory.upsert({
-      where: { id: `qa_status_${fixture.area}` },
+      where: { id: qaScopedId(`status_${fixture.area}`) },
       update: {
         note: "Estado sintético de staging",
         toStatus: fixture.status,
@@ -335,7 +351,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         visitId
       },
       create: {
-        id: `qa_status_${fixture.area}`,
+        id: qaScopedId(`status_${fixture.area}`),
         branchCode: QA_BRANCH_CODE,
         note: "Estado sintético de staging",
         toStatus: fixture.status,
@@ -366,7 +382,12 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
     }
 
     await prisma.visitWorkItem.upsert({
-      where: { id: `qa_work_item_${fixture.area}` },
+      where: {
+        id_branchCode: {
+          id: qaScopedId(`work_item_${fixture.area}`),
+          branchCode: QA_BRANCH_CODE
+        }
+      },
       update: {
         area: fixture.area,
         createdById: receptionUserId,
@@ -380,7 +401,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
         branchCode: QA_BRANCH_CODE,
         createdById: receptionUserId,
         description: fixture.reason,
-        id: `qa_work_item_${fixture.area}`,
+        id: qaScopedId(`work_item_${fixture.area}`),
         status: "pending",
         title: `[QA] Trabajo de ${fixture.area}`,
         visitId
@@ -479,7 +500,12 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
   await recordDuplicateCandidatesForPatient(duplicateQaPatient.id);
 
   await prisma.followUpTask.upsert({
-    where: { id: "qa_follow_up_pending" },
+    where: {
+      id_branchCode: {
+        id: qaScopedId("follow_up_pending"),
+        branchCode: QA_BRANCH_CODE
+      }
+    },
     update: {
       branchCode: QA_BRANCH_CODE,
       assignedToId: receptionUserId,
@@ -500,7 +526,7 @@ async function seedQaQueues(users: Map<InternalRole, string>) {
       assignedToId: receptionUserId,
       createdById: receptionUserId,
       dueAt: new Date(),
-      id: "qa_follow_up_pending",
+      id: qaScopedId("follow_up_pending"),
       notes: "Seguimiento sintético. Los enlaces de contacto deben permanecer bloqueados.",
       patientId: followUpPatient.id,
       type: "evolution",

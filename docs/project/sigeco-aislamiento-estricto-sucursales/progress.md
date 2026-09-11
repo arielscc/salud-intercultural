@@ -1,6 +1,6 @@
 # Progress — Aislamiento Operativo Y Continuidad Clínica Por Sucursal
 
-Última actualización: 2026-09-10.
+Última actualización: 2026-09-11.
 
 Plan: [tasks.md](./tasks.md)
 
@@ -26,7 +26,10 @@ locales; el total global de inventario fue retirado y cada traslado conserva dos
 comprobantes conciliados, uno por sede. Ventas, pagos, Caja y documentos también
 quedaron materializados por sede. Seguimientos, recordatorios supervisados y
 opiniones ya tienen tenencia directa; sus KPI usan conteos locales y los enlaces
-públicos de opinión incorporan la sucursal emisora.
+públicos de opinión incorporan la sucursal emisora. Módulos y auditoría
+distinguen operación local de eventos de plataforma. El barrido acumulado
+cerró los últimos enlaces simples entre operaciones, particionó la idempotencia
+por sede y añadió un chequeo SQL que enumera y rechaza cruces residuales.
 
 ## Decisiones Confirmadas Por Dirección
 
@@ -45,10 +48,10 @@ públicos de opinión incorporan la sucursal emisora.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 4 |
+| Pendiente | 2 |
 | En progreso | 2 |
 | Bloqueada | 0 |
-| Terminada | 11 |
+| Terminada | 13 |
 
 ## Progreso Por Fase
 
@@ -56,7 +59,7 @@ públicos de opinión incorporan la sucursal emisora.
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
 | B. Partición de dominios | 5-13 | Terminada en código (9/9; 7 con validación estática aprobada) | Maestros únicos y operaciones pertenecientes a una sede |
-| C. Base de datos y cierre | 14-17 | Pendiente | Auditoría local, constraints, RLS y QA acumulado |
+| C. Base de datos y cierre | 14-17 | En progreso (2/4) | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
 
@@ -75,8 +78,8 @@ públicos de opinión incorporan la sucursal emisora.
 | 11 | Compras, stock, lotes, traslados y alertas | P0 | Implementada; validación estática aprobada | 10 |
 | 12 | Ventas, pagos, Caja y documentos | P0 | Implementada; validación estática aprobada | 5, 7, 10-11 |
 | 13 | Seguimientos, recordatorios, opiniones y reportes | P0 | Implementada; validación estática aprobada | 5-12 |
-| 14 | Módulos y auditoría operativa | P0 | Pendiente | 2-3, 13 |
-| 15 | Barrido completo de aplicación y constraints | P0 | Pendiente | 5-14 |
+| 14 | Módulos y auditoría operativa | P0 | Terminada | 2-3, 13 |
+| 15 | Barrido completo de aplicación y constraints | P0 | Terminada | 5-14 |
 | 16 | PostgreSQL Row-Level Security | P0 | Pendiente | 15 |
 | 17 | Cierre acumulado y despliegue controlado | P0 | Pendiente | 1-16 |
 
@@ -273,7 +276,27 @@ Tarea 16.
   evento histórico ambiguo.
 - Detalle y operación: [reporte T14](../task-reports/2026-09-11-tarea-14-modulos-auditoria-operativa.md).
 
+### Tarea 15 — Implementación
+
+- El detector recorre código productivo y scripts, rechaza sucursales
+  predeterminadas y exige idempotencia compuesta en cada modelo operativo.
+- Las relaciones de historial de consentimientos, movimiento/venta,
+  movimiento/renglón y paquete/venta incluyen la sede en la FK; un ID global
+  ya no basta para formar esos enlaces.
+- Venta, pago, Caja, compra, recepción, ajustes y movimientos usan claves de
+  idempotencia locales. El traslado las particiona por su sede de origen.
+- Los accesos residuales por ID de compras, lotes, estudios pagados y el ensayo
+  de lanzamiento fueron reforzados con el mismo ámbito de sucursal.
+- `pnpm branch:isolation:sql` enumera filas sin sede y cruces redundantes entre
+  paciente/visita, venta/pago, Caja, compra/recepción/lote y documento/fuente;
+  falla si cualquier conteo no es cero.
+- Los seeds, ensayos, verificaciones y simulacros ya no eligen El Alto ni
+  Cochabamba por omisión: exigen una variable de sede explícita.
+- Migración de constraints preparada, sin aplicar. El chequeo SQL se ejecutará
+  contra las bases restauradas y de staging durante la Tarea 17.
+- Detalle y operación: [reporte T15](../task-reports/2026-09-11-tarea-15-barrido-aplicacion-constraints.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 15: barrido completo de aplicación y constraints. La integración
-y el despliegue se validan en la Tarea 17.
+Ejecutar la Tarea 16: PostgreSQL Row-Level Security. La integración, el chequeo
+SQL contra datos migrados y el despliegue se validan en la Tarea 17.

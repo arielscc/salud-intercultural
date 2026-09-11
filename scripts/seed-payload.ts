@@ -164,7 +164,9 @@ function seoData(seo: { title?: string; description?: string }) {
   };
 }
 
-const marketingCampaigns = [
+function marketingCampaigns(branchCodes: readonly string[]) {
+  const branchAssignments = branchCodes.map((branchCode) => ({ branchCode }));
+  return [
   {
     code: "TIKTOK-DR",
     name: "Contenido orgánico del Dr. Franco",
@@ -173,7 +175,7 @@ const marketingCampaigns = [
     accountHandle: "@clinicademedicinanatural",
     trafficType: "organic" as const,
     active: true,
-    branchAssignments: [{ branchCode: "el-alto" }, { branchCode: "cochabamba" }]
+    branchAssignments
   },
   {
     code: "TIKTOK-DRA",
@@ -183,7 +185,7 @@ const marketingCampaigns = [
     accountHandle: "@clinica_medicina_natural",
     trafficType: "organic" as const,
     active: true,
-    branchAssignments: [{ branchCode: "el-alto" }, { branchCode: "cochabamba" }]
+    branchAssignments
   },
   {
     code: "FACEBOOK-CLINICA",
@@ -193,7 +195,7 @@ const marketingCampaigns = [
     accountHandle: "ClinicaDeMedicinaNaturalYTradicional",
     trafficType: "organic" as const,
     active: true,
-    branchAssignments: [{ branchCode: "el-alto" }, { branchCode: "cochabamba" }]
+    branchAssignments
   },
   {
     code: "WEB-FORM",
@@ -202,12 +204,16 @@ const marketingCampaigns = [
     accountLabel: "Sitio web de la clínica",
     trafficType: "organic" as const,
     active: true,
-    branchAssignments: [{ branchCode: "el-alto" }, { branchCode: "cochabamba" }]
+    branchAssignments
   }
-];
+  ];
+}
 
-async function seedMarketingCampaigns(payload: PayloadClient) {
-  for (const campaign of marketingCampaigns) {
+async function seedMarketingCampaigns(
+  payload: PayloadClient,
+  branchCodes: readonly string[]
+) {
+  for (const campaign of marketingCampaigns(branchCodes)) {
     const existing = await payload.find({
       collection: "marketing-campaigns",
       limit: 1,
@@ -528,10 +534,19 @@ async function seedGlobals(payload: PayloadClient, serviceDocs: SeededServiceDoc
 }
 
 async function main() {
+  const branchCodes = [...new Set(
+    (process.env.PAYLOAD_SEED_BRANCH_CODES ?? "")
+      .split(",")
+      .map((branchCode) => branchCode.trim())
+      .filter(Boolean)
+  )];
+  if (branchCodes.length === 0) {
+    throw new Error("PAYLOAD_SEED_BRANCH_CODES es obligatorio (lista separada por comas).");
+  }
   const payload = await getPayload({ config });
 
   await seedAdmin(payload);
-  await seedMarketingCampaigns(payload);
+  await seedMarketingCampaigns(payload, branchCodes);
   const serviceDocs = await seedServices(payload);
   await seedTeamMembers(payload);
   await seedTestimonials(payload);

@@ -1367,15 +1367,17 @@ model PatientConsent {
   textSnapshot    String
   decidedAt       DateTime                    @default(now())
   recordedById    String?
-  supersedesId    String?                     @unique
+  supersedesId    String?
   createdAt       DateTime                    @default(now())
   patient         Patient                     @relation(fields: [patientId], references: [id], onDelete: Restrict)
   branch          ClinicBranch                @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   branchRecord    PatientBranchRecord         @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
   recordedBy      InternalUser?               @relation("PatientConsentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
-  supersedes      PatientConsent?             @relation("PatientConsentHistory", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersedes      PatientConsent?             @relation("PatientConsentHistory", fields: [supersedesId, branchCode], references: [id, branchCode], onDelete: Restrict)
   supersededBy    PatientConsent?             @relation("PatientConsentHistory")
 
+  @@unique([id, branchCode])
+  @@unique([supersedesId, branchCode])
   @@index([patientId, purpose, decidedAt])
   @@index([branchCode, patientId, purpose, decidedAt])
   @@index([patientId, decidedAt])
@@ -2350,7 +2352,7 @@ model NursingWorkItemResult {
 
 model Sale {
   id                 String                  @id @default(cuid())
-  idempotencyKey     String?                 @unique
+  idempotencyKey     String?
   patientId          String
   visitId            String?
   workItemId         String?
@@ -2383,6 +2385,7 @@ model Sale {
   sessionPackages    ServiceSessionPackage[]
 
   @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@unique([doctorOrderId, branchCode])
   @@index([patientId, branchCode])
   @@index([visitId])
@@ -2566,7 +2569,7 @@ model PaymentMethodBranch {
 
 model Payment {
   id             String              @id @default(cuid())
-  idempotencyKey String?             @unique
+  idempotencyKey String?
   saleId         String
   patientId      String
   visitId        String?
@@ -2589,6 +2592,7 @@ model Payment {
   cashMovements  CashMovement[]
 
   @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([saleId, branchCode])
   @@index([patientId])
   @@index([visitId])
@@ -2633,7 +2637,7 @@ model CashMovement {
   authorizedById     String?
   branchCode         String
   originalMovementId String?
-  idempotencyKey     String?              @unique
+  idempotencyKey     String?
   type               CashMovementType     @default(income)
   channel            CashChannel          @default(cash)
   amountCents        Int
@@ -2657,6 +2661,7 @@ model CashMovement {
   purchasePayments   PurchasePayment[]
 
   @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([cashSessionId, branchCode, occurredAt])
   @@index([saleId])
   @@index([paymentId])
@@ -2680,7 +2685,7 @@ model CashSession {
   closeRequestedById String?
   approvedById       String?
   closedById         String?
-  idempotencyKey     String                      @unique
+  idempotencyKey     String
   status             CashSessionStatus           @default(open)
   exceptional        Boolean                     @default(false)
   exceptionalReason  String?
@@ -2707,6 +2712,7 @@ model CashSession {
   reconciliations    CashSessionReconciliation[]
 
   @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([status, openedAt])
   @@index([branchCode, registerName, businessDate])
   @@index([responsibleId])
@@ -2739,7 +2745,7 @@ model CashExpense {
   authorizedById         String
   requestedById          String?
   receivedById           String?
-  idempotencyKey         String                           @unique
+  idempotencyKey         String
   kind                   CashExpenseKind
   category               CashExpenseCategory
   totalCents             Int
@@ -2773,6 +2779,7 @@ model CashExpense {
 
   @@unique([id, branchCode])
   @@unique([movementId, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([cashSessionId, branchCode, occurredAt])
   @@index([kind, category, occurredAt])
   @@index([registeredById])
@@ -3375,7 +3382,7 @@ model Purchase {
   totalCents            Int
   notes                 String?
   revision              Int                   @default(1)
-  idempotencyKey        String                @unique
+  idempotencyKey        String
   confirmedAt           DateTime?
   cancelledAt           DateTime?
   createdAt             DateTime              @default(now())
@@ -3396,6 +3403,7 @@ model Purchase {
 
   @@unique([id, branchCode])
   @@unique([sourceCashExpenseId, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([supplierId, purchaseDate])
   @@index([status, purchaseDate])
   @@index([branchCode, purchaseDate])
@@ -3438,7 +3446,7 @@ model PurchasePayment {
   method         PurchasePaymentMethod
   amountCents    Int
   reference      String?
-  idempotencyKey String                @unique
+  idempotencyKey String
   paidAt         DateTime              @default(now())
   createdAt      DateTime              @default(now())
   purchase       Purchase              @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
@@ -3447,6 +3455,8 @@ model PurchasePayment {
   recordedBy     InternalUser          @relation("PurchasePaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
   branch         ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
+  @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([purchaseId, branchCode, paidAt])
   @@index([cashSessionId])
   @@index([recordedById])
@@ -3464,7 +3474,7 @@ model PurchaseReceipt {
   documentNumber String?
   receivedAt     DateTime
   notes          String?
-  idempotencyKey String                @unique
+  idempotencyKey String
   createdAt      DateTime              @default(now())
   purchase       Purchase              @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
   recordedBy     InternalUser          @relation("PurchaseReceiptRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
@@ -3476,6 +3486,7 @@ model PurchaseReceipt {
   documents      PurchaseDocument[]
 
   @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([purchaseId, branchCode, receivedAt])
   @@index([branchCode, locationCode, receivedAt])
   @@index([recordedById])
@@ -3560,7 +3571,7 @@ model InventoryLotAdjustment {
   stockDelta     Int
   restocked      Boolean                    @default(false)
   reason         String
-  idempotencyKey String                     @unique
+  idempotencyKey String
   createdAt      DateTime                   @default(now())
   item           InventoryItem              @relation(fields: [itemId], references: [id], onDelete: Restrict)
   branchItem     BranchInventoryItem        @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
@@ -3571,6 +3582,7 @@ model InventoryLotAdjustment {
   movement       InventoryMovement?
 
   @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@index([itemId, branchCode, createdAt])
   @@index([lotId, branchCode, createdAt])
   @@index([recordedById])
@@ -3604,7 +3616,7 @@ model PurchaseDocument {
 
 model InventoryMovement {
   id               String                  @id @default(cuid())
-  idempotencyKey   String?                 @unique
+  idempotencyKey   String?
   itemId           String
   saleId           String?
   saleItemId       String?
@@ -3624,8 +3636,8 @@ model InventoryMovement {
   createdAt        DateTime                @default(now())
   item             InventoryItem           @relation(fields: [itemId], references: [id], onDelete: Restrict)
   branchItem       BranchInventoryItem     @relation(fields: [itemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
-  sale             Sale?                   @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  saleItem         SaleItem?               @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+  sale             Sale?                   @relation(fields: [saleId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  saleItem         SaleItem?               @relation(fields: [saleItemId, branchCode], references: [id, branchCode], onDelete: Restrict)
   purchase         Purchase?               @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
   purchaseLine     PurchaseLine?           @relation(fields: [purchaseLineId, branchCode], references: [id, branchCode], onDelete: Restrict)
   receipt          PurchaseReceipt?        @relation(fields: [receiptId, branchCode], references: [id, branchCode], onDelete: Restrict)
@@ -3638,11 +3650,12 @@ model InventoryMovement {
   incomingTransfer InventoryTransfer?      @relation("InventoryTransferInMovement")
 
   @@unique([id, branchCode])
+  @@unique([branchCode, idempotencyKey])
   @@unique([receiptLineId, branchCode])
   @@unique([lotAdjustmentId, branchCode])
   @@index([itemId, branchCode])
-  @@index([saleId])
-  @@index([saleItemId])
+  @@index([saleId, branchCode])
+  @@index([saleItemId, branchCode])
   @@index([purchaseId])
   @@index([purchaseLineId])
   @@index([receiptId])
@@ -3684,7 +3697,7 @@ model InventoryTransfer {
   createdById           String
   sourceMovementId      String                           @unique
   destinationMovementId String                           @unique
-  idempotencyKey        String                           @unique
+  idempotencyKey        String
   createdAt             DateTime                         @default(now())
   item                  InventoryItem                    @relation(fields: [itemId], references: [id], onDelete: Restrict)
   sourceItem            BranchInventoryItem              @relation("InventoryTransferSourceItem", fields: [itemId, sourceBranchCode], references: [itemId, branchCode], onDelete: Restrict)
@@ -3697,6 +3710,7 @@ model InventoryTransfer {
   lotAllocations        InventoryTransferLotAllocation[]
 
   @@unique([id, sourceBranchCode, destinationBranchCode])
+  @@unique([sourceBranchCode, idempotencyKey])
   @@unique([sourceMovementId, sourceBranchCode])
   @@unique([destinationMovementId, destinationBranchCode])
   @@index([sourceBranchCode, createdAt])
@@ -3952,10 +3966,11 @@ model ServiceSessionPackage {
   catalogItem       ServiceCatalogItem?         @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
   originVisit       Visit?                      @relation("ServiceSessionPackageOriginVisit", fields: [originVisitId, branchCode], references: [id, branchCode], onDelete: Restrict)
   doctorOrder       DoctorOrder?                @relation(fields: [doctorOrderId, branchCode], references: [id, branchCode], onDelete: Restrict)
-  sale              Sale?                       @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  sale              Sale?                       @relation(fields: [saleId, branchCode], references: [id, branchCode], onDelete: Restrict)
   uses              ServiceSessionUse[]
 
   @@unique([id, branchCode])
+  @@index([saleId, branchCode])
   @@index([branchCode, patientId, status])
   @@index([catalogItemId])
   @@index([doctorOrderId])

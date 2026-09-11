@@ -26,7 +26,11 @@ async function seedRecoveryFixture(input: {
     errorFormat: "minimal",
     log: ["error"]
   });
-  const branchCode = "el-alto";
+  const branchCode = (() => {
+    const value = process.env.BACKUP_DRILL_BRANCH?.trim();
+    if (!value) throw new Error("BACKUP_DRILL_BRANCH es obligatorio.");
+    return value;
+  })();
 
   try {
     const user = await prisma.internalUser.create({

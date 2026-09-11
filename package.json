@@ -22,6 +22,7 @@
     "audit:high": "pnpm audit --audit-level high --ignore GHSA-mh99-v99m-4gvg",
     "deps:check": "pnpm peers check && pnpm audit:prod && pnpm audit:high",
     "branch:tenancy:check": "node --import tsx scripts/branch-tenancy-check.ts",
+    "branch:isolation:sql": "node --import dotenv/config --import tsx scripts/check-branch-isolation.ts",
     "branch:reconcile": "node --import dotenv/config --import tsx scripts/reconcile-branch-ownership.ts",
     "branch:reconcile:patients": "node --import dotenv/config --import tsx scripts/reconcile-patient-branch-ownership.ts",
     "branch:reconcile:leads": "node --import dotenv/config --import tsx scripts/reconcile-lead-branch-ownership.ts",

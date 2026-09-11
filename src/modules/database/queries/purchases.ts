@@ -187,7 +187,12 @@ async function createPaidPurchasePayment(
   }
 ) {
   const reused = await tx.purchasePayment.findUnique({
-    where: { idempotencyKey: input.idempotencyKey }
+    where: {
+      branchCode_idempotencyKey: {
+        branchCode: input.branchCode,
+        idempotencyKey: input.idempotencyKey
+      }
+    }
   });
   if (reused) {
     if (reused.branchCode !== input.branchCode) {
@@ -254,7 +259,12 @@ export async function createPurchaseDraftRecord(input: {
   return withDatabaseError("createPurchaseDraftRecord", async () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.purchase.findUnique({
-        where: { idempotencyKey: input.idempotencyKey }
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        }
       });
       if (reused) {
         if (reused.branchCode !== input.branchCode) {
@@ -301,7 +311,12 @@ export async function createPurchaseDraftRecord(input: {
 
       if (input.sourceCashExpenseId) {
         const expense = await tx.cashExpense.findUnique({
-          where: { id: input.sourceCashExpenseId },
+          where: {
+            id_branchCode: {
+              id: input.sourceCashExpenseId,
+              branchCode: input.branchCode
+            }
+          },
           include: { purchase: true, cashSession: { select: { branchCode: true } } }
         });
         if (
@@ -416,7 +431,10 @@ export async function createPurchaseBatchRecord(input: {
     prisma.$transaction(async (tx) => {
       const idempotencyPrefix = `${input.idempotencyKey}:`;
       const reused = await tx.purchase.findMany({
-        where: { idempotencyKey: { startsWith: idempotencyPrefix } },
+        where: {
+          branchCode: input.branchCode,
+          idempotencyKey: { startsWith: idempotencyPrefix }
+        },
         orderBy: { createdAt: "asc" }
       });
       if (reused.length > 0) {
@@ -569,7 +587,12 @@ export async function createPurchaseBatchRecord(input: {
 
         if (input.sourceCashExpenseId) {
           const expense = await tx.cashExpense.findUnique({
-            where: { id: input.sourceCashExpenseId },
+            where: {
+              id_branchCode: {
+                id: input.sourceCashExpenseId,
+                branchCode: input.branchCode
+              }
+            },
             include: { purchase: true, cashSession: { select: { branchCode: true } } }
           });
           if (
@@ -698,7 +721,9 @@ export async function confirmPurchaseRecord(input: {
       }
 
       return tx.purchase.update({
-        where: { id: purchase.id },
+        where: {
+          id_branchCode: { id: purchase.id, branchCode: input.branchCode }
+        },
         data: {
           status: "confirmed",
           confirmedById: input.confirmedById,
@@ -724,7 +749,12 @@ export async function recordPurchasePayment(input: {
   return withDatabaseError("recordPurchasePayment", async () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.purchasePayment.findUnique({
-        where: { idempotencyKey: input.idempotencyKey }
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        }
       });
       if (reused) {
         if (reused.branchCode !== input.branchCode) {
@@ -775,7 +805,9 @@ export async function cancelPurchaseRecord(input: {
         throw new PurchaseWorkflowError("concurrent-update");
       }
       return tx.purchase.update({
-        where: { id: purchase.id },
+        where: {
+          id_branchCode: { id: purchase.id, branchCode: input.branchCode }
+        },
         data: {
           status: "cancelled",
           cancelledById: input.cancelledById,
@@ -812,7 +844,12 @@ export async function createPurchaseReceiptRecord(input: {
   return withDatabaseError("createPurchaseReceiptRecord", async () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.purchaseReceipt.findUnique({
-        where: { idempotencyKey: input.idempotencyKey }
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        }
       });
       if (reused) {
         if (reused.branchCode !== input.branchCode) {
@@ -822,7 +859,12 @@ export async function createPurchaseReceiptRecord(input: {
       }
       const purchase = await lockPurchase(tx, input.purchaseId, input.branchCode);
       const reusedAfterLock = await tx.purchaseReceipt.findUnique({
-        where: { idempotencyKey: input.idempotencyKey }
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        }
       });
       if (reusedAfterLock) {
         if (reusedAfterLock.branchCode !== input.branchCode) {
@@ -928,7 +970,9 @@ export async function createPurchaseReceiptRecord(input: {
         (line) => line.receivedQuantity < line.orderedQuantity
       );
       await tx.purchase.update({
-        where: { id: purchase.id },
+        where: {
+          id_branchCode: { id: purchase.id, branchCode: input.branchCode }
+        },
         data: {
           status: hasPending ? "partially_received" : "received",
           revision: { increment: 1 }
@@ -970,7 +1014,12 @@ export async function createInventoryLotAdjustmentRecord(input: {
   return withDatabaseError("createInventoryLotAdjustmentRecord", async () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.inventoryLotAdjustment.findUnique({
-        where: { idempotencyKey: input.idempotencyKey }
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        }
       });
       if (reused) {
         if (reused.branchCode !== input.branchCode) {
@@ -984,7 +1033,12 @@ export async function createInventoryLotAdjustmentRecord(input: {
         FOR UPDATE
       `;
       const reusedAfterLock = await tx.inventoryLotAdjustment.findUnique({
-        where: { idempotencyKey: input.idempotencyKey }
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        }
       });
       if (reusedAfterLock) {
         if (reusedAfterLock.branchCode !== input.branchCode) {
@@ -1009,7 +1063,7 @@ export async function createInventoryLotAdjustmentRecord(input: {
       }
       const currentQuantity = lot.currentQuantity + stockDelta;
       await tx.inventoryLot.update({
-        where: { id: lot.id },
+        where: { id_branchCode: { id: lot.id, branchCode: input.branchCode } },
         data: {
           currentQuantity,
           active: currentQuantity > 0

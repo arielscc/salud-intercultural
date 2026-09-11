@@ -154,6 +154,27 @@ function hasRestrictiveBranchRelation(model: SchemaModel, fieldName: string) {
   return false;
 }
 
+function parseRelationArrays(field: SchemaField) {
+  const relation = field.attributes.match(/@relation\((.*)\)/)?.[1];
+  if (!relation) return null;
+  const fields = relation.match(/fields:\s*\[([^\]]+)]/)?.[1]
+    .split(",")
+    .map((value) => value.trim());
+  const references = relation.match(/references:\s*\[([^\]]+)]/)?.[1]
+    .split(",")
+    .map((value) => value.trim());
+  return fields && references ? { fields, references } : null;
+}
+
+function hasBranchScopedIdempotency(model: SchemaModel, branchFields: readonly string[]) {
+  return branchFields.some((branchField) => {
+    const compound = new RegExp(
+      `@@unique\\(\\[\\s*${branchField}\\s*,\\s*idempotencyKey\\s*]\\)`
+    );
+    return compound.test(model.body);
+  });
+}
+
 export function validateModelTenancy(input: {
   schema: string;
   generatedModelNames: readonly string[];
@@ -254,6 +275,43 @@ export function validateModelTenancy(input: {
         code: "stale-model-exception",
         message: `La excepción temporal de ${name} ya no corresponde al schema y debe retirarse.`
       });
+    }
+  }
+
+  for (const [name, model] of models) {
+    const sourceContract = contract[name];
+    if (sourceContract?.scope !== "branch-operation") continue;
+
+    const idempotencyField = model.fields.get("idempotencyKey");
+    if (
+      idempotencyField &&
+      !hasBranchScopedIdempotency(model, sourceContract.requiredBranchFields)
+    ) {
+      violations.push({
+        code: "global-operational-idempotency",
+        message: `${name}.idempotencyKey debe ser único junto a la sucursal propietaria.`,
+        location: `prisma/schema.prisma:${idempotencyField.line}`
+      });
+    }
+
+    for (const field of model.fields.values()) {
+      const targetContract = contract[field.type];
+      if (targetContract?.scope !== "branch-operation") continue;
+      const relation = parseRelationArrays(field);
+      if (!relation) continue;
+      const carriesSourceBranch = relation.fields.some((relationField) =>
+        sourceContract.requiredBranchFields.includes(relationField)
+      );
+      const referencesTargetBranch = relation.references.some((reference) =>
+        targetContract.requiredBranchFields.includes(reference)
+      );
+      if (!carriesSourceBranch || !referencesTargetBranch) {
+        violations.push({
+          code: "non-composite-operational-relation",
+          message: `${name}.${field.name} debe enlazar ${field.type} mediante ID y sucursal.`,
+          location: `prisma/schema.prisma:${field.line}`
+        });
+      }
     }
   }
 
@@ -435,7 +493,10 @@ export function scanCodeTenancy(files: readonly string[]): CodeTenancyFinding[] 
       absolutePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
     );
     const visit = (node: ts.Node) => {
-      if (ts.isStringLiteral(node) && node.text === "el-alto") {
+      if (
+        ts.isStringLiteral(node) &&
+        (node.text === "el-alto" || node.text === "cochabamba")
+      ) {
         findings.push(
           finding(
             sourceFile,
@@ -556,7 +617,13 @@ export function runBranchTenancyCheck() {
   const generatedModelNames = Object.values(Prisma.ModelName);
   const modelViolations = validateModelTenancy({ schema, generatedModelNames });
   const migrationViolations = validateExplicitBranchMigration();
-  const codeFindings = scanCodeTenancy(applicationFiles(resolve(projectRoot, "src")));
+  const scriptFiles = applicationFiles(resolve(projectRoot, "scripts")).filter(
+    (path) => !path.endsWith("/branch-tenancy-check.ts")
+  );
+  const codeFindings = scanCodeTenancy([
+    ...applicationFiles(resolve(projectRoot, "src")),
+    ...scriptFiles
+  ]);
   const codeViolations = validateCodeFindings(codeFindings);
   const violations = [...modelViolations, ...migrationViolations, ...codeViolations];
 

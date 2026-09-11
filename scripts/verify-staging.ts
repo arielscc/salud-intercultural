@@ -5,6 +5,8 @@ import { assertSafeStagingCommand } from "./staging-safety";
 
 async function main() {
   const summary = assertSafeStagingCommand("staging:verify");
+  const branchCode = process.env.STAGING_QA_BRANCH?.trim();
+  if (!branchCode) throw new Error("STAGING_QA_BRANCH es obligatorio.");
   const domain = process.env.STAGING_QA_EMAIL_DOMAIN?.trim().toLowerCase() || "staging.invalid";
   const expectedEmails = assignableInternalRoles.map((role) => `qa.${role}@${domain}`);
 
@@ -16,7 +18,7 @@ async function main() {
         email: true,
         platformRole: true,
         branchAssignments: {
-          where: { branchCode: "el-alto", active: true },
+          where: { branchCode, active: true },
           select: { role: true },
           take: 1
         }

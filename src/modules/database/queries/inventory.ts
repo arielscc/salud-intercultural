@@ -377,7 +377,7 @@ export async function applyInventoryMovement(
       if (remaining === 0) break;
       const quantity = Math.min(lot.currentQuantity, remaining);
       await tx.inventoryLot.update({
-        where: { id: lot.id },
+        where: { id_branchCode: { id: lot.id, branchCode } },
         data: {
           currentQuantity: { decrement: quantity },
           active: lot.currentQuantity - quantity > 0
@@ -1096,7 +1096,12 @@ export async function addInventoryEntryRecord(input: {
     prisma.$transaction(async (tx) => {
       if (input.idempotencyKey) {
         const reused = await tx.inventoryMovement.findUnique({
-          where: { idempotencyKey: input.idempotencyKey }
+          where: {
+            branchCode_idempotencyKey: {
+              branchCode: input.branchCode,
+              idempotencyKey: input.idempotencyKey
+            }
+          }
         });
         if (reused) {
           if (reused.branchCode !== input.branchCode || reused.itemId !== input.itemId) {
@@ -1130,7 +1135,12 @@ export async function createInventoryAdjustmentRecord(input: {
     prisma.$transaction(async (tx) => {
       if (input.idempotencyKey) {
         const reused = await tx.inventoryMovement.findUnique({
-          where: { idempotencyKey: input.idempotencyKey }
+          where: {
+            branchCode_idempotencyKey: {
+              branchCode: input.branchCode,
+              idempotencyKey: input.idempotencyKey
+            }
+          }
         });
         if (reused) {
           if (reused.branchCode !== input.branchCode || reused.itemId !== input.itemId) {
@@ -1190,7 +1200,12 @@ export async function createInventoryTransferRecord(input: {
   return withDatabaseError("createInventoryTransferRecord", () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.inventoryTransfer.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+        where: {
+          sourceBranchCode_idempotencyKey: {
+            sourceBranchCode: input.sourceBranchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        },
         include: {
           sourceMovement: true,
           destinationMovement: true,
@@ -1283,7 +1298,12 @@ export async function createInventoryTransferRecord(input: {
       `;
 
       const reusedAfterLock = await tx.inventoryTransfer.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+        where: {
+          sourceBranchCode_idempotencyKey: {
+            sourceBranchCode: input.sourceBranchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        },
         include: {
           sourceMovement: true,
           destinationMovement: true,
@@ -1364,7 +1384,12 @@ export async function createInventoryTransferRecord(input: {
         if (remaining === 0) break;
         const quantity = Math.min(sourceLot.currentQuantity, remaining);
         await tx.inventoryLot.update({
-          where: { id: sourceLot.id },
+          where: {
+            id_branchCode: {
+              id: sourceLot.id,
+              branchCode: input.sourceBranchCode
+            }
+          },
           data: {
             currentQuantity: { decrement: quantity },
             active: sourceLot.currentQuantity - quantity > 0
@@ -1462,7 +1487,13 @@ export async function createInventoryTransferRecord(input: {
       }
 
       return tx.inventoryTransfer.findUniqueOrThrow({
-        where: { id: transfer.id },
+        where: {
+          id_sourceBranchCode_destinationBranchCode: {
+            id: transfer.id,
+            sourceBranchCode: input.sourceBranchCode,
+            destinationBranchCode: input.destinationBranchCode
+          }
+        },
         include: {
           sourceMovement: true,
           destinationMovement: true,

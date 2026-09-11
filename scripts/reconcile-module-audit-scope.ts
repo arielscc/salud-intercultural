@@ -13,17 +13,13 @@ type Finding = {
   issue: string;
 };
 
-type ModuleDecision = {
-  eventId: string;
-  resolution: "branch" | "platform";
-  branchCode?: string;
-};
+type ModuleDecision =
+  | { eventId: string; resolution: "branch"; branchCode: string }
+  | { eventId: string; resolution: "platform" };
 
-type AuditDecision = {
-  eventId: string;
-  scope: "branch" | "platform";
-  branchCode?: string;
-};
+type AuditDecision =
+  | { eventId: string; scope: "branch"; branchCode: string }
+  | { eventId: string; scope: "platform" };
 
 type DecisionFile = {
   version: 1;
@@ -73,11 +69,13 @@ function parseDecisions(path?: string): DecisionFile {
     if (item.resolution === "platform" && item.branchCode !== undefined) {
       throw new Error(`El evento de plataforma ${item.eventId} no admite branchCode.`);
     }
-    return {
-      eventId: item.eventId as string,
-      resolution: item.resolution,
-      ...(item.resolution === "branch" ? { branchCode: item.branchCode as string } : {})
-    };
+    return item.resolution === "branch"
+      ? {
+          eventId: item.eventId as string,
+          resolution: "branch",
+          branchCode: item.branchCode as string
+        }
+      : { eventId: item.eventId as string, resolution: "platform" };
   });
 
   const auditEvents = input.auditEvents.map((entry): AuditDecision => {
@@ -92,11 +90,13 @@ function parseDecisions(path?: string): DecisionFile {
     if (item.scope === "platform" && item.branchCode !== undefined) {
       throw new Error(`La auditoría de plataforma ${item.eventId} no admite branchCode.`);
     }
-    return {
-      eventId: item.eventId as string,
-      scope: item.scope,
-      ...(item.scope === "branch" ? { branchCode: item.branchCode as string } : {})
-    };
+    return item.scope === "branch"
+      ? {
+          eventId: item.eventId as string,
+          scope: "branch",
+          branchCode: item.branchCode as string
+        }
+      : { eventId: item.eventId as string, scope: "platform" };
   });
 
   const keys = [
@@ -169,7 +169,7 @@ async function applyDecisions(client: PoolClient, decisions: DecisionFile) {
 
   for (const decision of decisions.moduleEvents) {
     if (decision.resolution === "branch") {
-      await assertBranchExists(client, decision.branchCode as string);
+      await assertBranchExists(client, decision.branchCode);
       const result = await client.query(
         `UPDATE "ModuleActivationEvent" event
             SET "branchCode" = $2
@@ -213,13 +213,17 @@ async function applyDecisions(client: PoolClient, decisions: DecisionFile) {
 
   for (const decision of decisions.auditEvents) {
     if (decision.scope === "branch") {
-      await assertBranchExists(client, decision.branchCode as string);
+      await assertBranchExists(client, decision.branchCode);
     }
     const result = await client.query(
       `UPDATE "AuditEvent"
           SET "scope" = $2::"AuditScope", "branchCode" = $3
         WHERE "id" = $1`,
-      [decision.eventId, decision.scope, decision.branchCode ?? null]
+      [
+        decision.eventId,
+        decision.scope,
+        decision.scope === "branch" ? decision.branchCode : null
+      ]
     );
     if (result.rowCount !== 1) throw new Error(`No se pudo clasificar ${decision.eventId}.`);
   }

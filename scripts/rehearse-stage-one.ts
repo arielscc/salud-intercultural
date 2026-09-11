@@ -35,10 +35,14 @@ import { reportScriptError } from "./safe-error";
  * Escribe datos reales, así que solo corre contra una base de ensayo. Todo lo
  * que crea lleva el prefijo ENSAYO para poder reconocerlo después.
  *
- *   REHEARSAL_CONFIRM=<nombre de la base> pnpm stage-one:rehearse
+ *   STAGE_ONE_BRANCH=<codigo> REHEARSAL_CONFIRM=<base> pnpm stage-one:rehearse
  */
 
-const branchCode = "el-alto";
+const branchCode = (() => {
+  const value = process.env.STAGE_ONE_BRANCH?.trim();
+  if (!value) throw new Error("STAGE_ONE_BRANCH es obligatorio para el ensayo.");
+  return value;
+})();
 const tag = `ENSAYO-${new Date().toISOString().slice(0, 10)}`;
 const steps: Array<{ paso: string; resultado: string }> = [];
 
@@ -212,8 +216,12 @@ async function main() {
     paymentMethodCode: "cash",
     receivedById: admin.id
   });
-  const paid = await prisma.sale.findUniqueOrThrow({ where: { id: sale.id } });
-  const movement = await prisma.cashMovement.findFirst({ where: { saleId: sale.id } });
+  const paid = await prisma.sale.findUniqueOrThrow({
+    where: { id_branchCode: { id: sale.id, branchCode } }
+  });
+  const movement = await prisma.cashMovement.findFirst({
+    where: { saleId: sale.id, branchCode }
+  });
   assert(paid.status === "paid" && paid.balanceCents === 0, "la venta debió quedar pagada");
   assert(movement !== null, "el cobro debió dejar movimiento de Caja");
   record("Cobro registrado en Caja", `${(movement?.amountCents ?? 0) / 100} Bs, saldo ${paid.balanceCents}`);

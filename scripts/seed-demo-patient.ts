@@ -18,7 +18,11 @@ import { reportScriptError } from "./safe-error";
 const PATIENT_NAME = "Ariel Socrates Chura Choque";
 const PATIENT_PHONE = "72514890";
 const SEED_USER_EMAIL = "test@test.si";
-const SEED_BRANCH_CODE = "el-alto";
+const SEED_BRANCH_CODE = (() => {
+  const value = process.env.DEMO_PATIENT_BRANCH?.trim();
+  if (!value) throw new Error("DEMO_PATIENT_BRANCH es obligatorio.");
+  return value;
+})();
 
 function at(daysAgo: number, hour: number, minute = 0) {
   const date = new Date();
@@ -619,7 +623,7 @@ async function main() {
 
       const v1FollowUp = await tx.followUpTask.create({
         data: {
-          branchCode: "el-alto",
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v1.visit.id,
           assignedToId: userId,
@@ -833,7 +837,7 @@ async function main() {
 
       const v3FollowUp = await tx.followUpTask.create({
         data: {
-          branchCode: "el-alto",
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v3.visit.id,
           assignedToId: userId,
@@ -1271,7 +1275,7 @@ async function main() {
 
       await tx.followUpTask.create({
         data: {
-          branchCode: "el-alto",
+          branchCode: SEED_BRANCH_CODE,
           patientId: patient.id,
           visitId: v5.visit.id,
           assignedToId: userId,

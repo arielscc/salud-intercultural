@@ -582,7 +582,12 @@ export async function openCashSession(input: {
     }
 
     const existing = await prisma.cashSession.findUnique({
-      where: { idempotencyKey: input.idempotencyKey }
+      where: {
+        branchCode_idempotencyKey: {
+          branchCode: input.branchCode,
+          idempotencyKey: input.idempotencyKey
+        }
+      }
     });
     if (existing) {
       if (existing.branchCode !== input.branchCode) {
@@ -675,7 +680,12 @@ export async function createStaffCashExpense(input: {
   return withDatabaseError("createStaffCashExpense", async () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.cashExpense.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        },
         include: { movement: true, beneficiaries: true }
       });
       if (reused) {
@@ -685,7 +695,12 @@ export async function createStaffCashExpense(input: {
 
       const session = await lockCashSession(tx, input.cashSessionId, input.branchCode);
       const reusedAfterLock = await tx.cashExpense.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        },
         include: { movement: true, beneficiaries: true }
       });
       if (reusedAfterLock) {
@@ -817,7 +832,12 @@ export async function createUrgentPurchaseExpense(input: {
   return withDatabaseError("createUrgentPurchaseExpense", async () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.cashExpense.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        },
         include: { movement: true }
       });
       if (reused) {
@@ -827,7 +847,12 @@ export async function createUrgentPurchaseExpense(input: {
 
       const session = await lockCashSession(tx, input.cashSessionId, input.branchCode);
       const reusedAfterLock = await tx.cashExpense.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        },
         include: { movement: true }
       });
       if (reusedAfterLock) {
@@ -925,7 +950,12 @@ export async function createOtherCashExpense(input: {
   return withDatabaseError("createOtherCashExpense", async () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.cashExpense.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        },
         include: { movement: true }
       });
       if (reused) {
@@ -938,7 +968,12 @@ export async function createOtherCashExpense(input: {
       }
       const session = await lockCashSession(tx, input.cashSessionId, input.branchCode);
       const reusedAfterLock = await tx.cashExpense.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        },
         include: { movement: true }
       });
       if (reusedAfterLock) {
@@ -1107,7 +1142,12 @@ export async function reverseCashMovement(input: {
   return withDatabaseError("reverseCashMovement", async () =>
     prisma.$transaction(async (tx) => {
       const reused = await tx.cashMovement.findUnique({
-        where: { idempotencyKey: input.idempotencyKey }
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        }
       });
       if (reused) {
         if (reused.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
@@ -1115,7 +1155,12 @@ export async function reverseCashMovement(input: {
       }
 
       const reusedAfterLock = await tx.cashMovement.findUnique({
-        where: { idempotencyKey: input.idempotencyKey }
+        where: {
+          branchCode_idempotencyKey: {
+            branchCode: input.branchCode,
+            idempotencyKey: input.idempotencyKey
+          }
+        }
       });
       if (reusedAfterLock) {
         if (reusedAfterLock.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
