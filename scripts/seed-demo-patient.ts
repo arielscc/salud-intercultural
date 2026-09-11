@@ -555,6 +555,7 @@ async function main() {
         data: [
           {
             saleId: v1Sale.id,
+            branchCode: SEED_BRANCH_CODE,
             type: "service",
             description: "Consulta médica general",
             quantity: 1,
@@ -564,6 +565,7 @@ async function main() {
           },
           {
             saleId: v1Sale.id,
+            branchCode: SEED_BRANCH_CODE,
             type: "serum",
             description: "Aplicación de inyectable (Diclofenaco 75 mg)",
             quantity: 1,
@@ -573,6 +575,7 @@ async function main() {
           },
           {
             saleId: v1Sale.id,
+            branchCode: SEED_BRANCH_CODE,
             type: "medication",
             description: "Diclofenaco 50 mg x10 + Ciclobenzaprina 5 mg x5",
             quantity: 1,
@@ -754,6 +757,7 @@ async function main() {
       await tx.saleItem.create({
         data: {
           saleId: v2Sale.id,
+          branchCode: SEED_BRANCH_CODE,
           type: "service",
           description: "Consulta de control",
           quantity: 1,
@@ -1044,6 +1048,7 @@ async function main() {
         data: [
           {
             saleId: v4Sale.id,
+            branchCode: SEED_BRANCH_CODE,
             type: "service",
             description: "Consulta médica (revisión de resultados)",
             quantity: 1,
@@ -1053,6 +1058,7 @@ async function main() {
           },
           {
             saleId: v4Sale.id,
+            branchCode: SEED_BRANCH_CODE,
             type: "study",
             description: "Ecografía abdominal completa",
             quantity: 1,

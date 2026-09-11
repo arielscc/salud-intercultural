@@ -99,24 +99,6 @@ function temporaryDebt(
 // nuevo ni para escrituras con fallback. Cada grupo desaparece en su tarea y
 // una excepción que deja de coincidir también hace fallar el chequeo.
 export const temporaryCodeExceptions: readonly TemporaryCodeException[] = [
-  ...temporaryDebt(
-    12,
-    "Caja y Administración",
-    "Caja y ventas eliminarán parámetros opcionales y valores de sede heredados.",
-    [
-      ["src/features/cash/policy.ts", "defaultCashBranch", "hardcoded-branch-literal"],
-      ["src/modules/database/queries/cash.ts", "getCashDashboard", "optional-branch-code"],
-      [
-        "src/modules/database/queries/cash.ts",
-        "getCashSessionCloseReport",
-        "optional-branch-code"
-      ],
-      ["src/modules/database/queries/sales.ts", "createPaymentRecord", "optional-branch-code"],
-      ["src/modules/database/queries/sales.ts", "getTodayCollections", "optional-branch-code"],
-      ["src/modules/database/queries/sales.ts", "SaleListInput", "optional-branch-code"],
-      ["src/modules/database/queries/sales.ts", "getSalesSummary", "optional-branch-code"]
-    ]
-  )
 ];
 
 function lineNumber(source: string, offset: number) {

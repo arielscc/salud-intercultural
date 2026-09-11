@@ -83,6 +83,7 @@ describe("cash integration", () => {
     });
     const input = {
       cashSessionId: session.id,
+      branchCode: "el-alto",
       category: "lunch" as const,
       beneficiaries: [
         { employeeId: admin.id, amountCents: 2_000 },
@@ -96,6 +97,13 @@ describe("cash integration", () => {
     };
 
     const first = await createStaffCashExpense(input);
+    await expect(
+      createStaffCashExpense({
+        ...input,
+        branchCode: "cochabamba",
+        idempotencyKey: "cross-branch-expense"
+      })
+    ).rejects.toThrow();
     const retry = await createStaffCashExpense(input);
     expect(retry.id).toBe(first.id);
     expect(first.totalCents).toBe(5_000);
@@ -105,6 +113,7 @@ describe("cash integration", () => {
 
     const close = await requestCashSessionClose({
       cashSessionId: session.id,
+      branchCode: "el-alto",
       requestedById: admin.id,
       reportedByChannel: {
         cash: 5_000,
@@ -144,6 +153,7 @@ describe("cash integration", () => {
     });
     const expense = await createStaffCashExpense({
       cashSessionId: firstSession.id,
+      branchCode: "el-alto",
       category: "transport",
       beneficiaries: [{ employeeId: nurse.id, amountCents: 5_000 }],
       receivedById: nurse.id,
@@ -154,6 +164,7 @@ describe("cash integration", () => {
     });
     await requestCashSessionClose({
       cashSessionId: firstSession.id,
+      branchCode: "el-alto",
       requestedById: admin.id,
       reportedByChannel: {
         cash: 5_000,
@@ -173,6 +184,7 @@ describe("cash integration", () => {
     });
     const correction = await reverseCashMovement({
       originalMovementId: expense.movement.id,
+      branchCode: "el-alto",
       amountCents: 4_000,
       actorId: direction.id,
       reason: "El empleado devolvió el dinero no utilizado",
@@ -188,6 +200,7 @@ describe("cash integration", () => {
     try {
       await reverseCashMovement({
         originalMovementId: expense.movement.id,
+        branchCode: "el-alto",
         amountCents: 1_000,
         actorId: direction.id,
         reason: "Intento duplicado",
@@ -202,6 +215,7 @@ describe("cash integration", () => {
 
     const close = await requestCashSessionClose({
       cashSessionId: secondSession.id,
+      branchCode: "el-alto",
       requestedById: admin.id,
       reportedByChannel: {
         cash: 0,
@@ -214,6 +228,7 @@ describe("cash integration", () => {
 
     const approved = await approveCashSessionClose({
       cashSessionId: secondSession.id,
+      branchCode: "el-alto",
       approvedById: direction.id,
       observation: "Diferencia revisada con Administración."
     });
@@ -223,7 +238,10 @@ describe("cash integration", () => {
       closedById: direction.id
     });
 
-    const dashboard = await getCashDashboard({ sessionId: secondSession.id });
+    const dashboard = await getCashDashboard({
+      branchCode: "el-alto",
+      sessionId: secondSession.id
+    });
     expect(dashboard.expected?.cash).toBe(4_000);
   });
 });

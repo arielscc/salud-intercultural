@@ -6,7 +6,8 @@ import {
   configureClinicalProfessionalProfile,
   correctPrescription,
   generateInternalReceiptDocument,
-  generatePrescriptionDocument
+  generatePrescriptionDocument,
+  getGeneratedDocument
 } from "@/modules/generated-documents/service";
 
 async function cleanDocuments() {
@@ -139,6 +140,7 @@ describe("versioned generated documents integration", () => {
       visitId: fixture.visit.id,
       generatedById: fixture.doctor.id
     });
+    expect(await getGeneratedDocument(first.id, "cochabamba")).toBeNull();
     const reprintSource = await generatePrescriptionDocument({
       branchCode: "el-alto",
       visitId: fixture.visit.id,
@@ -182,19 +184,27 @@ describe("versioned generated documents integration", () => {
     const fixture = await setup();
     const first = await generateInternalReceiptDocument({
       saleId: fixture.sale.id,
+      branchCode: "el-alto",
       generatedById: fixture.administrator.id
     });
     expect(
       (
         await generateInternalReceiptDocument({
           saleId: fixture.sale.id,
+          branchCode: "el-alto",
           generatedById: fixture.administrator.id
         })
       ).id
     ).toBe(first.id);
 
     const method = await prisma.paymentMethod.create({
-      data: { code: `cash-${randomUUID()}`, name: "Efectivo" }
+      data: {
+        code: `cash-${randomUUID()}`,
+        name: "Efectivo",
+        branchConfigurations: {
+          create: { branchCode: "el-alto", active: true }
+        }
+      }
     });
     await prisma.$transaction([
       prisma.payment.create({
@@ -219,6 +229,7 @@ describe("versioned generated documents integration", () => {
     ]);
     const second = await generateInternalReceiptDocument({
       saleId: fixture.sale.id,
+      branchCode: "el-alto",
       generatedById: fixture.administrator.id
     });
     expect(second.version).toBe(2);

@@ -207,6 +207,7 @@ async function main() {
   await createPaymentRecord({
     idempotencyKey: `${tag}-pago`,
     saleId: sale.id,
+    branchCode,
     amountCents: sale.totalCents,
     paymentMethodCode: "cash",
     receivedById: admin.id
@@ -220,6 +221,7 @@ async function main() {
   // --- Recibo ---
   const receipt = await generateInternalReceiptDocument({
     saleId: sale.id,
+    branchCode,
     generatedById: admin.id
   });
   record("Recibo emitido", `${receipt.documentNumber} v${receipt.version}`);
@@ -227,6 +229,7 @@ async function main() {
   // --- Egreso ---
   const expense = await createStaffCashExpense({
     cashSessionId: session.id,
+    branchCode,
     category: "transport",
     beneficiaries: [{ employeeId: admin.id, amountCents: 3_000 }],
     receivedById: admin.id,
@@ -319,6 +322,7 @@ async function main() {
   const expected = calculateCashExpected(report!);
   const requested = await requestCashSessionClose({
     cashSessionId: session.id,
+    branchCode,
     requestedById: admin.id,
     reportedByChannel: { cash: expected.cash, qr: expected.qr }
   });
@@ -328,6 +332,7 @@ async function main() {
   const closed = requested.requiresApproval
     ? await approveCashSessionClose({
         cashSessionId: session.id,
+        branchCode,
         approvedById: direction.id,
         observation: "Cierre del ensayo de la Etapa 1"
       })

@@ -55,7 +55,7 @@ export async function attendAdministrationWorkItemAction(formData: FormData) {
       entityType: "work_item",
       entityId: workItemId || undefined
     },
-    async (user) => {
+    async (user, branchContext) => {
       if (!workItemId) redirect("/sigeco/administracion?error=invalid-work-item");
       const { activeBranch } = await getBranchContext();
       const updated = await assignAdministrationWorkItem({
@@ -329,12 +329,13 @@ export async function applySaleDiscountAction(formData: FormData) {
       entityId: saleId || undefined,
       context: { workItemId: workItemId || undefined }
     },
-    async (user) => {
+    async (user, branchContext) => {
       const parsed = applySaleDiscountSchema.safeParse(parseFormData(formData));
       if (!parsed.success) redirect(`${target}?error=invalid-sale`);
 
       const updated = await applyAdminDiscountToSale({
         saleId: parsed.data.saleId,
+        branchCode: branchContext.activeBranch.code,
         discountCents: moneyToCents(parsed.data.discount),
         userId: user.id
       });

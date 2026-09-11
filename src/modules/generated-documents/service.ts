@@ -86,9 +86,15 @@ function patientSnapshot(patient: {
   };
 }
 
-function documentNumber(prefix: "REC" | "CINT", now: Date, version: number) {
+function documentNumber(
+  prefix: "REC" | "CINT",
+  branchCode: string,
+  now: Date,
+  version: number
+) {
   const date = now.toISOString().slice(0, 10).replaceAll("-", "");
-  return `${prefix}-${date}-${randomUUID().slice(0, 8).toUpperCase()}-V${version}`;
+  const branch = branchCode.replace(/[^a-z0-9]/gi, "").toUpperCase();
+  return `${prefix}-${branch}-${date}-${randomUUID().slice(0, 8).toUpperCase()}-V${version}`;
 }
 
 function prismaCode(error: unknown) {
@@ -188,7 +194,8 @@ export async function generatePrescriptionDocument(input: {
       const fingerprint = sourceFingerprint(source);
       const existing = await tx.generatedDocument.findUnique({
         where: {
-          seriesKey_sourceFingerprint: {
+          branchCode_seriesKey_sourceFingerprint: {
+            branchCode: input.branchCode,
             seriesKey,
             sourceFingerprint: fingerprint
           }
@@ -204,12 +211,12 @@ export async function generatePrescriptionDocument(input: {
       }
 
       const latest = await tx.generatedDocument.findFirst({
-        where: { seriesKey },
+        where: { branchCode: input.branchCode, seriesKey },
         orderBy: { version: "desc" }
       });
       const version = (latest?.version ?? 0) + 1;
       const now = new Date();
-      const number = documentNumber("REC", now, version);
+      const number = documentNumber("REC", input.branchCode, now, version);
       const snapshot: PrescriptionDocumentSnapshot = {
         schemaVersion: 1,
         kind: "prescription",
@@ -240,6 +247,7 @@ export async function generatePrescriptionDocument(input: {
           seriesKey,
           version,
           patientId: visit.patientId,
+          branchCode: input.branchCode,
           visitId: visit.id,
           prescriptionId: prescription.id,
           generatedById: input.generatedById,
@@ -255,12 +263,15 @@ export async function generatePrescriptionDocument(input: {
 
 export async function generateInternalReceiptDocument(input: {
   saleId: string;
+  branchCode: string;
   generatedById: string;
 }) {
   return withDatabaseError("generateInternalReceiptDocument", async () => {
     return serializableDocumentTransaction(async (tx) => {
       const sale = await tx.sale.findUnique({
-        where: { id: input.saleId },
+        where: {
+          id_branchCode: { id: input.saleId, branchCode: input.branchCode }
+        },
         include: {
           patient: true,
           items: { orderBy: { createdAt: "asc" } },
@@ -348,7 +359,8 @@ export async function generateInternalReceiptDocument(input: {
       const fingerprint = sourceFingerprint(source);
       const existing = await tx.generatedDocument.findUnique({
         where: {
-          seriesKey_sourceFingerprint: {
+          branchCode_seriesKey_sourceFingerprint: {
+            branchCode: input.branchCode,
             seriesKey,
             sourceFingerprint: fingerprint
           }
@@ -358,7 +370,7 @@ export async function generateInternalReceiptDocument(input: {
 
       const [latest, generatedBy] = await Promise.all([
         tx.generatedDocument.findFirst({
-          where: { seriesKey },
+          where: { branchCode: input.branchCode, seriesKey },
           orderBy: { version: "desc" }
         }),
         tx.internalUser.findUniqueOrThrow({
@@ -368,7 +380,7 @@ export async function generateInternalReceiptDocument(input: {
       ]);
       const version = (latest?.version ?? 0) + 1;
       const now = new Date();
-      const number = documentNumber("CINT", now, version);
+      const number = documentNumber("CINT", input.branchCode, now, version);
       const snapshot: InternalReceiptDocumentSnapshot = {
         schemaVersion: 1,
         kind: "internal_sale_receipt",
@@ -403,6 +415,7 @@ export async function generateInternalReceiptDocument(input: {
           seriesKey,
           version,
           patientId: sale.patientId,
+          branchCode: input.branchCode,
           visitId: sale.visitId,
           saleId: sale.id,
           generatedById: input.generatedById,
@@ -421,7 +434,7 @@ export async function getGeneratedDocument(id: string, branchCode: string) {
     const document = await prisma.generatedDocument.findFirst({
       where: {
         id,
-        OR: [{ visit: { branchCode } }, { sale: { branchCode } }]
+        branchCode
       },
       include: {
         generatedBy: { select: { id: true, name: true, email: true } }
@@ -438,7 +451,7 @@ export async function getGeneratedDocument(id: string, branchCode: string) {
 export async function getPrescriptionDocuments(visitId: string, branchCode: string) {
   return withDatabaseError("getPrescriptionDocuments", () =>
     prisma.generatedDocument.findMany({
-      where: { kind: "prescription", visitId, visit: { branchCode } },
+      where: { kind: "prescription", visitId, branchCode },
       orderBy: { version: "desc" }
     })
   );
@@ -448,12 +461,15 @@ export async function getPrescriptionDocuments(visitId: string, branchCode: stri
 // los campos annulled*. El trigger de BD permite exactamente esta transición.
 export async function annulGeneratedDocument(input: {
   documentId: string;
+  branchCode: string;
   annulledById: string;
   reason?: string;
 }) {
   return withDatabaseError("annulGeneratedDocument", async () => {
     const existing = await prisma.generatedDocument.findUnique({
-      where: { id: input.documentId },
+      where: {
+        id_branchCode: { id: input.documentId, branchCode: input.branchCode }
+      },
       select: { id: true, annulledAt: true }
     });
     if (!existing) {
@@ -461,7 +477,9 @@ export async function annulGeneratedDocument(input: {
     }
     if (existing.annulledAt) return existing; // Ya anulado: idempotente.
     return prisma.generatedDocument.update({
-      where: { id: input.documentId },
+      where: {
+        id_branchCode: { id: input.documentId, branchCode: input.branchCode }
+      },
       data: {
         annulledAt: new Date(),
         annulledById: input.annulledById,
@@ -473,10 +491,15 @@ export async function annulGeneratedDocument(input: {
 
 // Vuelve a habilitar una versión anulada: limpia los campos annulled* y la versión
 // puede imprimirse otra vez. El trigger permite este cambio controlado.
-export async function restoreGeneratedDocument(input: { documentId: string }) {
+export async function restoreGeneratedDocument(input: {
+  documentId: string;
+  branchCode: string;
+}) {
   return withDatabaseError("restoreGeneratedDocument", async () => {
     const existing = await prisma.generatedDocument.findUnique({
-      where: { id: input.documentId },
+      where: {
+        id_branchCode: { id: input.documentId, branchCode: input.branchCode }
+      },
       select: { id: true, annulledAt: true }
     });
     if (!existing) {
@@ -484,7 +507,9 @@ export async function restoreGeneratedDocument(input: { documentId: string }) {
     }
     if (!existing.annulledAt) return existing; // Ya activo: idempotente.
     return prisma.generatedDocument.update({
-      where: { id: input.documentId },
+      where: {
+        id_branchCode: { id: input.documentId, branchCode: input.branchCode }
+      },
       data: {
         annulledAt: null,
         annulledById: null,
@@ -500,7 +525,7 @@ export async function getSaleReceiptDocuments(saleId: string, branchCode: string
       where: {
         kind: "internal_sale_receipt",
         saleId,
-        sale: { branchCode }
+        branchCode
       },
       orderBy: { version: "desc" }
     })

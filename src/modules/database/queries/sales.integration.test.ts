@@ -154,14 +154,26 @@ describe("sales integration", () => {
     await createPaymentRecord({
       idempotencyKey: "payment-mobile-retry",
       saleId: sale.id,
+      branchCode: "el-alto",
       receivedById: admin.id,
       amountCents: 13000,
       paymentMethodCode: "qr",
       reference: "QR-001"
     });
+    await expect(
+      createPaymentRecord({
+        idempotencyKey: "payment-cross-branch",
+        saleId: sale.id,
+        branchCode: "cochabamba",
+        receivedById: admin.id,
+        amountCents: 100,
+        paymentMethodCode: "cash"
+      })
+    ).rejects.toThrow();
     await createPaymentRecord({
       idempotencyKey: "payment-mobile-retry",
       saleId: sale.id,
+      branchCode: "el-alto",
       receivedById: admin.id,
       amountCents: 13000,
       paymentMethodCode: "qr",
@@ -169,7 +181,7 @@ describe("sales integration", () => {
     });
 
     const detail = await getSaleById(sale.id, "el-alto");
-    const summary = await getSalesSummary();
+    const summary = await getSalesSummary(new Date(), "el-alto");
     const patientDetail = await getPatientById(patient.id, "el-alto");
 
     expect(detail).toMatchObject({
@@ -277,6 +289,7 @@ describe("venta de mostrador sin visita", () => {
     await createPaymentRecord({
       idempotencyKey: "counter-payment-1",
       saleId: sale.id,
+      branchCode: "el-alto",
       amountCents: 10000,
       paymentMethodCode: "cash",
       receivedById: admin.id
@@ -351,6 +364,7 @@ describe("listado de ventas", () => {
     await createPaymentRecord({
       idempotencyKey: "list-payment-luis",
       saleId: luisSale.id,
+      branchCode: "el-alto",
       amountCents: 5000,
       paymentMethodCode: "cash",
       receivedById: admin.id
@@ -362,17 +376,17 @@ describe("listado de ventas", () => {
   it("encuentra la venta por el nombre del cliente", async () => {
     const { ana } = await salesFixture();
 
-    const results = await getSalesPage({ search: "Ana" });
+    const results = await getSalesPage({ branchCode: "el-alto", search: "Ana" });
 
     expect(results).toHaveLength(1);
     expect(results[0]?.patient.id).toBe(ana.id);
-    expect(await countSales({ search: "Ana" })).toBe(1);
+    expect(await countSales({ branchCode: "el-alto", search: "Ana" })).toBe(1);
   });
 
   it("encuentra la venta por el teléfono del cliente", async () => {
     await salesFixture();
 
-    const results = await getSalesPage({ search: "70000062" });
+    const results = await getSalesPage({ branchCode: "el-alto", search: "70000062" });
 
     expect(results.map((sale) => sale.patient.fullName)).toEqual(["Luis Torrez"]);
   });
@@ -380,8 +394,8 @@ describe("listado de ventas", () => {
   it("separa lo que falta cobrar de lo ya pagado", async () => {
     await salesFixture();
 
-    const pending = await getSalesPage({ status: "pending" });
-    const paid = await getSalesPage({ status: "paid" });
+    const pending = await getSalesPage({ branchCode: "el-alto", status: "pending" });
+    const paid = await getSalesPage({ branchCode: "el-alto", status: "paid" });
 
     expect(pending.map((sale) => sale.patient.fullName)).toEqual(["Ana Quispe"]);
     expect(paid.map((sale) => sale.patient.fullName)).toEqual(["Luis Torrez"]);
@@ -390,7 +404,7 @@ describe("listado de ventas", () => {
   it("suma los totales del conjunto filtrado, no de la página", async () => {
     await salesFixture();
 
-    const totals = await getSalesPageTotals({});
+    const totals = await getSalesPageTotals({ branchCode: "el-alto" });
 
     expect(totals.totalCents).toBe(25000);
     expect(totals.paidCents).toBe(5000);
@@ -400,7 +414,7 @@ describe("listado de ventas", () => {
   it("coincide con lo que muestra el detalle de cada venta", async () => {
     const { anaSale } = await salesFixture();
 
-    const listed = (await getSalesPage({ search: "Ana" }))[0];
+    const listed = (await getSalesPage({ branchCode: "el-alto", search: "Ana" }))[0];
     const detail = await getSaleById(anaSale.id, "el-alto");
 
     expect(listed?.totalCents).toBe(detail?.totalCents);
@@ -425,7 +439,7 @@ describe("listado de ventas", () => {
       ]
     });
 
-    const listed = (await getSalesPage({ search: "Ana", pageSize: 1 }))[0];
+    const listed = (await getSalesPage({ branchCode: "el-alto", search: "Ana", pageSize: 1 }))[0];
 
     expect(listed?.items).toHaveLength(3);
     expect(listed?._count.items).toBe(4);
@@ -434,8 +448,8 @@ describe("listado de ventas", () => {
   it("pagina de la más reciente a la más antigua", async () => {
     await salesFixture();
 
-    const first = await getSalesPage({ page: 1, pageSize: 1 });
-    const second = await getSalesPage({ page: 2, pageSize: 1 });
+    const first = await getSalesPage({ branchCode: "el-alto", page: 1, pageSize: 1 });
+    const second = await getSalesPage({ branchCode: "el-alto", page: 2, pageSize: 1 });
 
     expect(first).toHaveLength(1);
     expect(second).toHaveLength(1);

@@ -223,7 +223,21 @@ Tarea 16.
   decisión explícita para alertas históricas ambiguas.
 - Detalle y operación: [reporte T11](../task-reports/2026-09-10-tarea-11-compras-stock-lotes-traslados-alertas.md).
 
+### Tarea 12 — Implementación
+
+- Ventas, líneas, pagos, entregas, sesiones, movimientos, conciliaciones,
+  egresos y beneficiarios quedan sujetos a relaciones compuestas por sucursal.
+- Los cobros, descuentos, correcciones y cierres bloquean y consultan sus
+  registros dentro de la sede activa; no existen listados ni agregaciones
+  monetarias con sucursal opcional.
+- Los documentos generados materializan la sede. Sus números, versiones y
+  huellas se particionan por sucursal, y lectura, impresión, descarga, anulación
+  o restauración tratan un ID de otra sede como inexistente.
+- Migraciones de expansión y endurecimiento preparadas, sin aplicar. El
+  diagnóstico de Caja es de solo lectura y nunca reescribe evidencia financiera.
+- Detalle y operación: [reporte T12](../task-reports/2026-09-10-tarea-12-ventas-pagos-caja-documentos.md).
+
 ## Próximo Paso
 
-Ejecutar la Tarea 12: ventas, pagos, Caja y documentos. La integración
+Ejecutar la Tarea 13: seguimientos, recordatorios, opiniones y reportes. La integración
 y el despliegue se validan en la Tarea 17.

@@ -1,10 +1,5 @@
 import { resolveCashCloseApprovalThresholdCents } from "@/lib/deployment-environment";
 
-export const defaultCashBranch = {
-  code: "el-alto",
-  name: "El Alto"
-} as const;
-
 export const defaultCashRegisterName = "Caja principal";
 
 /**

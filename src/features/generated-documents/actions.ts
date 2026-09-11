@@ -178,9 +178,10 @@ export async function generateInternalReceiptDocumentAction(
         entityType: "generated_document",
         context: { saleId }
       },
-      async (user) => {
+      async (user, branchContext) => {
         const generated = await generateInternalReceiptDocument({
           saleId,
+          branchCode: branchContext.activeBranch.code,
           generatedById: user.id
         });
         return auditedResult(generated, {
@@ -222,9 +223,10 @@ export async function annulPrescriptionDocumentAction(formData: FormData) {
         entityId: documentId,
         context: { visitId }
       },
-      async (user) => {
+      async (user, branchContext) => {
         const annulled = await annulGeneratedDocument({
           documentId,
+          branchCode: branchContext.activeBranch.code,
           annulledById: user.id
         });
         return auditedResult(annulled, {
@@ -261,8 +263,11 @@ export async function restorePrescriptionDocumentAction(formData: FormData) {
         entityId: documentId,
         context: { visitId }
       },
-      async () => {
-        const restored = await restoreGeneratedDocument({ documentId });
+      async (_user, branchContext) => {
+        const restored = await restoreGeneratedDocument({
+          documentId,
+          branchCode: branchContext.activeBranch.code
+        });
         return auditedResult(restored, {
           entityId: documentId,
           context: { visitId }

@@ -250,17 +250,6 @@ export const branchModelGroups = [
 
 const legacyMissingBranchModelsByTask = [
   {
-    remediationTask: 12,
-    models: [
-      "GeneratedDocument",
-      "SaleItem",
-      "DeliveredProduct",
-      "CashSessionReconciliation",
-      "CashExpense",
-      "CashExpenseBeneficiary"
-    ]
-  },
-  {
     remediationTask: 13,
     models: [
       "FollowUpAttempt",

@@ -34,20 +34,16 @@ function getSaleStatus(totalCents: number, paidCents: number) {
 // médico dejó en espera de pago: pasan a `pending` y recién ahí los ve Recepción.
 async function activateAwaitingPaymentFollowUps(
   tx: Prisma.TransactionClient,
-  visitId: string | null | undefined
+  visitId: string | null | undefined,
+  branchCode: string
 ) {
   if (!visitId) return;
-  const visit = await tx.visit.findUnique({
-    where: { id: visitId },
-    select: { branchCode: true }
-  });
-  if (!visit) return;
   const receptionAssignee = await tx.internalUser.findFirst({
     where: {
       active: true,
       branchAssignments: {
         some: {
-          branchCode: visit.branchCode,
+          branchCode,
           active: true,
           role: "recepcion"
         }
@@ -60,7 +56,7 @@ async function activateAwaitingPaymentFollowUps(
     select: { id: true }
   });
   const pending = await tx.followUpTask.findMany({
-    where: { visitId, status: "awaiting_payment" },
+    where: { visitId, branchCode, status: "awaiting_payment" },
     select: { id: true, assignedToId: true }
   });
   if (pending.length === 0) return;
@@ -359,7 +355,10 @@ export async function createSaleRecord(input: {
           where: { idempotencyKey: input.idempotencyKey },
           include: { items: true }
         });
-        if (reused) return reused;
+        if (reused) {
+          if (reused.branchCode !== input.branchCode) throw new Error("BRANCH_MISMATCH");
+          return reused;
+        }
       }
 
       const subtotalCents = input.quantity * input.unitPriceCents;
@@ -369,12 +368,14 @@ export async function createSaleRecord(input: {
       const status = getSaleStatus(totalCents, initialPaymentCents);
       const visitBranch = input.visitId
         ? await tx.visit.findUnique({
-            where: { id: input.visitId },
+            where: {
+              id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+            },
             select: { branchCode: true }
           })
         : null;
       const branchCode = input.branchCode;
-      if (visitBranch && visitBranch.branchCode !== branchCode) {
+      if (input.visitId && !visitBranch) {
         throw new Error("BRANCH_MISMATCH");
       }
       const cashSession =
@@ -426,6 +427,7 @@ export async function createSaleRecord(input: {
         await tx.deliveredProduct.create({
           data: {
             saleId: sale.id,
+            branchCode,
             saleItemId: sale.items[0]?.id,
             patientId: input.patientId,
             visitId: input.visitId,
@@ -480,7 +482,7 @@ export async function createSaleRecord(input: {
       }
 
       if (status === "paid") {
-        await activateAwaitingPaymentFollowUps(tx, input.visitId);
+        await activateAwaitingPaymentFollowUps(tx, input.visitId, branchCode);
       }
 
       if (input.workItemId && status === "paid") {
@@ -525,19 +527,24 @@ export async function createSaleOrderRecord(input: {
           where: { idempotencyKey: input.idempotencyKey },
           include: { items: true }
         });
-        if (reused) return reused;
+        if (reused) {
+          if (reused.branchCode !== input.branchCode) throw new Error("BRANCH_MISMATCH");
+          return reused;
+        }
       }
 
       if (input.lines.length === 0) throw new Error("EMPTY_SALE_LINES");
 
       const visitBranch = input.visitId
         ? await tx.visit.findUnique({
-            where: { id: input.visitId },
+            where: {
+              id_branchCode: { id: input.visitId, branchCode: input.branchCode }
+            },
             select: { branchCode: true }
           })
         : null;
       const branchCode = input.branchCode;
-      if (visitBranch && visitBranch.branchCode !== branchCode) {
+      if (input.visitId && !visitBranch) {
         throw new Error("BRANCH_MISMATCH");
       }
 
@@ -596,6 +603,7 @@ export async function createSaleOrderRecord(input: {
         await tx.deliveredProduct.create({
           data: {
             saleId: sale.id,
+            branchCode,
             saleItemId: saleItem?.id,
             patientId: input.patientId,
             visitId: input.visitId,
@@ -646,13 +654,23 @@ export async function confirmDoctorOrderSale(input: {
   return withDatabaseError("confirmDoctorOrderSale", async () => {
     return prisma.$transaction(async (tx) => {
       const order = await tx.doctorOrder.findUniqueOrThrow({
-        where: { id: input.doctorOrderId },
+        where: {
+          id_branchCode: {
+            id: input.doctorOrderId,
+            branchCode: input.branchCode
+          }
+        },
         include: { lines: { orderBy: { position: "asc" } }, visit: { select: { branchCode: true } } }
       });
       const requiresNursing = order.lines.some((line) => line.requiresNursing);
 
       const existing = await tx.sale.findUnique({
-        where: { doctorOrderId: input.doctorOrderId },
+        where: {
+          doctorOrderId_branchCode: {
+            doctorOrderId: input.doctorOrderId,
+            branchCode: input.branchCode
+          }
+        },
         include: { items: true }
       });
       if (existing) return { sale: existing, requiresNursing };
@@ -733,6 +751,7 @@ export async function confirmDoctorOrderSale(input: {
         await tx.deliveredProduct.create({
           data: {
             saleId: sale.id,
+            branchCode,
             saleItemId: saleItem?.id,
             patientId: order.patientId,
             visitId: order.visitId,
@@ -780,7 +799,7 @@ export async function confirmDoctorOrderSale(input: {
       }
 
       await tx.doctorOrder.update({
-        where: { id: order.id },
+        where: { id_branchCode: { id: order.id, branchCode } },
         data: {
           status: "confirmed",
           confirmedAt: new Date(),
@@ -791,7 +810,7 @@ export async function confirmDoctorOrderSale(input: {
       });
 
       if (status === "paid") {
-        await activateAwaitingPaymentFollowUps(tx, order.visitId);
+        await activateAwaitingPaymentFollowUps(tx, order.visitId, branchCode);
       }
 
       if (input.workItemId && status === "paid") {
@@ -824,12 +843,22 @@ export async function confirmDoctorOrderSale(input: {
  */
 export async function applyAdminDiscountToSale(input: {
   saleId: string;
+  branchCode: string;
   discountCents: number;
   userId?: string;
 }) {
   return withDatabaseError("applyAdminDiscountToSale", async () => {
     return prisma.$transaction(async (tx) => {
-      const sale = await tx.sale.findUniqueOrThrow({ where: { id: input.saleId } });
+      await tx.$queryRaw`
+        SELECT "id" FROM "Sale"
+        WHERE "id" = ${input.saleId} AND "branchCode" = ${input.branchCode}
+        FOR UPDATE
+      `;
+      const sale = await tx.sale.findUniqueOrThrow({
+        where: {
+          id_branchCode: { id: input.saleId, branchCode: input.branchCode }
+        }
+      });
       const add = Math.min(Math.max(0, input.discountCents), sale.balanceCents);
       if (add === 0) return sale;
 
@@ -839,7 +868,9 @@ export async function applyAdminDiscountToSale(input: {
       const status = totalCents === 0 ? "paid" : getSaleStatus(totalCents, sale.paidCents);
 
       return tx.sale.update({
-        where: { id: sale.id },
+        where: {
+          id_branchCode: { id: sale.id, branchCode: input.branchCode }
+        },
         data: { discountCents, totalCents, balanceCents, status }
       });
     });
@@ -855,7 +886,7 @@ export async function createPaymentRecord(input: {
   reference?: string;
   notes?: string;
   paidAt?: Date;
-  branchCode?: string;
+  branchCode: string;
 }) {
   return withDatabaseError("createPaymentRecord", async () => {
     return prisma.$transaction(async (tx) => {
@@ -875,15 +906,22 @@ export async function createPaymentRecord(input: {
             }
           }
         });
-        if (reused) return reused;
+        if (reused) {
+          if (reused.branchCode !== input.branchCode) throw new Error("BRANCH_MISMATCH");
+          return reused;
+        }
       }
 
+      await tx.$queryRaw`
+        SELECT "id" FROM "Sale"
+        WHERE "id" = ${input.saleId} AND "branchCode" = ${input.branchCode}
+        FOR UPDATE
+      `;
       const sale = await tx.sale.findUniqueOrThrow({
-        where: { id: input.saleId }
+        where: {
+          id_branchCode: { id: input.saleId, branchCode: input.branchCode }
+        }
       });
-      if (input.branchCode && sale.branchCode !== input.branchCode) {
-        throw new Error("BRANCH_MISMATCH");
-      }
       const amountCents = Math.min(input.amountCents, sale.balanceCents);
       if (amountCents <= 0) {
         throw new CashWorkflowError("invalid_amount");
@@ -914,7 +952,9 @@ export async function createPaymentRecord(input: {
       });
 
       const updatedSale = await tx.sale.update({
-        where: { id: sale.id },
+        where: {
+          id_branchCode: { id: sale.id, branchCode: input.branchCode }
+        },
         data: {
           paidCents,
           balanceCents,
@@ -962,7 +1002,11 @@ export async function createPaymentRecord(input: {
       }
 
       if (balanceCents === 0) {
-        await activateAwaitingPaymentFollowUps(tx, sale.visitId);
+        await activateAwaitingPaymentFollowUps(
+          tx,
+          sale.visitId,
+          sale.branchCode
+        );
       }
 
       if (balanceCents === 0 && sale.doctorOrderId && sale.visitId) {
@@ -1021,10 +1065,10 @@ export async function getSaleById(id: string, branchCode: string) {
  * ¿La visita tiene una venta registrada? (Tarea 7: el médico solo puede agendar
  * seguimiento si hubo compra). Devuelve la venta más reciente o null.
  */
-export async function getVisitLatestSale(visitId: string) {
+export async function getVisitLatestSale(visitId: string, branchCode: string) {
   return withDatabaseError("getVisitLatestSale", () =>
     prisma.sale.findFirst({
-      where: { visitId },
+      where: { visitId, branchCode },
       orderBy: { createdAt: "desc" },
       select: { id: true, totalCents: true, status: true }
     })
@@ -1069,7 +1113,7 @@ export type TodayCollection = {
  * o el paciente ya haya seguido a otra area.
  */
 export async function getTodayCollections(
-  branchCode?: string,
+  branchCode: string,
   date = new Date()
 ) {
   const today = dayRange(date);
@@ -1157,13 +1201,13 @@ export type SaleListInput = PaginationInput & {
   status?: SaleStatus;
   from?: Date;
   to?: Date;
-  branchCode?: string;
+  branchCode: string;
 };
 
 function saleListWhere(input: SaleListInput): Prisma.SaleWhereInput {
   return {
     AND: [
-      input.branchCode ? { branchCode: input.branchCode } : {},
+      { branchCode: input.branchCode },
       input.status ? { status: input.status } : {},
       input.from || input.to
         ? { createdAt: { gte: input.from, lt: input.to } }
@@ -1181,7 +1225,7 @@ function saleListWhere(input: SaleListInput): Prisma.SaleWhereInput {
  * alcanza para reconocerla en la fila y evita cargar el detalle completo de
  * cada una.
  */
-export async function getSalesPage(input: SaleListInput = {}) {
+export async function getSalesPage(input: SaleListInput) {
   const pagination = getPagination(input);
 
   return withDatabaseError("getSalesPage", async () => {
@@ -1213,7 +1257,7 @@ export async function getSalesPage(input: SaleListInput = {}) {
   });
 }
 
-export async function countSales(input: SaleListInput = {}) {
+export async function countSales(input: SaleListInput) {
   return withDatabaseError("countSales", async () => {
     return prisma.sale.count({ where: saleListWhere(input) });
   });
@@ -1224,7 +1268,7 @@ export async function countSales(input: SaleListInput = {}) {
  * condición del listado, para que lo que suma la pantalla coincida con lo que
  * muestran el detalle y la Caja.
  */
-export async function getSalesPageTotals(input: SaleListInput = {}) {
+export async function getSalesPageTotals(input: SaleListInput) {
   return withDatabaseError("getSalesPageTotals", async () => {
     const totals = await prisma.sale.aggregate({
       where: saleListWhere(input),
@@ -1239,7 +1283,7 @@ export async function getSalesPageTotals(input: SaleListInput = {}) {
   });
 }
 
-export async function getSalesSummary(date = new Date(), branchCode?: string) {
+export async function getSalesSummary(date: Date, branchCode: string) {
   return withDatabaseError("getSalesSummary", async () => {
     const today = dayRange(date);
     const month = monthRange(date);

@@ -843,89 +843,95 @@ model InternalUser {
 /// Sede física de la clínica. `preparation` permite configurar una nueva sede
 /// sin habilitar todavía operaciones reales ni mostrarla como seleccionable.
 model ClinicBranch {
-  code                      String                           @id
-  name                      String
-  city                      String
-  department                String
-  status                    ClinicBranchStatus               @default(preparation)
-  openedAt                  DateTime?
-  createdAt                 DateTime                         @default(now())
-  updatedAt                 DateTime                         @updatedAt
-  userAssignments           InternalUserBranch[]
-  visits                    Visit[]
-  sales                     Sale[]
-  payments                  Payment[]
-  cashMovements             CashMovement[]
-  cashSessions              CashSession[]
-  purchases                 Purchase[]
-  purchaseLines             PurchaseLine[]
-  purchasePayments          PurchasePayment[]
-  purchaseReceipts          PurchaseReceipt[]
-  purchaseReceiptLines      PurchaseReceiptLine[]
-  purchaseDocuments         PurchaseDocument[]
-  inventoryLots             InventoryLot[]
-  inventoryLotAdjustments   InventoryLotAdjustment[]
-  inventoryMovements        InventoryMovement[]
-  inventoryAdjustments      InventoryAdjustment[]
-  inventoryAlerts           InventoryAlert[]
-  inventoryBalances         BranchInventoryBalance[]
-  outgoingTransfers         InventoryTransfer[]              @relation("InventoryTransferSourceBranch")
-  incomingTransfers         InventoryTransfer[]              @relation("InventoryTransferDestinationBranch")
-  outgoingTransferLots      InventoryTransferLotAllocation[] @relation("InventoryTransferLotSourceBranch")
-  incomingTransferLots      InventoryTransferLotAllocation[] @relation("InventoryTransferLotDestinationBranch")
-  moduleActivations         ModuleActivation[]
-  followUpTasks             FollowUpTask[]
-  supervisedReminderRules   SupervisedReminderRule[]
-  patientRecords            PatientBranchRecord[]
-  patientConsents           PatientConsent[]
-  patientContacts           PatientContact[]
-  patientNotes              PatientNote[]
-  clinicalConsultations     ClinicalConsultation[]
-  clinicalVersions          ClinicalConsultationVersion[]
-  diagnoses                 Diagnosis[]
-  treatmentPlans            TreatmentPlan[]
-  treatmentOutcomes         TreatmentProposalOutcome[]
-  prescriptions             Prescription[]
-  prescriptionItems         PrescriptionItem[]
-  clinicalEvolutions        ClinicalEvolution[]
-  clinicalNotes             ClinicalNote[]
-  clinicalOrders            ClinicalOrder[]
-  professionalProfiles      ClinicalProfessionalProfile[]
-  doctorOrders              DoctorOrder[]
-  doctorOrderLines          DoctorOrderLine[]
-  continuityAccesses        ClinicalContinuityAccess[]
-  nursingContinuityAccesses NursingContinuityAccess[]
-  studies                   Study[]
-  vitalSigns                VitalSigns[]
-  nursingApplications       NursingApplication[]
-  nursingNotes              NursingNote[]
-  clinicalAttachments       ClinicalAttachment[]             @relation("ClinicalAttachmentOriginBranch")
-  attachmentOriginGrants    ClinicalAttachmentAccessGrant[]  @relation("ClinicalAttachmentGrantOriginBranch")
-  attachmentRequestGrants   ClinicalAttachmentAccessGrant[]  @relation("ClinicalAttachmentGrantRequestBranch")
-  nursingWorkItemResults    NursingWorkItemResult[]
-  serviceSessionPackages    ServiceSessionPackage[]
-  serviceSessionUses        ServiceSessionUse[]
-  supplierProfiles          SupplierBranchProfile[]
-  inventoryItems            BranchInventoryItem[]
-  paymentMethods            PaymentMethodBranch[]
-  serviceCatalogItems       ServiceCatalogItemBranch[]
-  indicationCatalog         IndicationCatalogItemBranch[]
-  diagnosisCatalog          DiagnosisCatalogItemBranch[]
-  clinicalNoteCatalog       ClinicalNoteCatalogItemBranch[]
-  leads                     Lead[]
-  leadContactAttempts       LeadContactAttempt[]
-  leadReminders             LeadReminder[]
-  leadStatusHistory         LeadStatusHistory[]
-  campaignAssignments       CaptureCampaignBranch[]
-  visitAttributions         VisitAttribution[]
-  attributionTouches        VisitAttributionTouch[]
-  visitDiscontinuations     VisitDiscontinuation[]
-  visitStatusHistory        VisitStatusHistory[]
-  receptionCheckIns         ReceptionCheckIn[]
-  patientRoutes             PatientRoute[]
-  patientRouteSteps         PatientRouteStep[]
-  visitAreaTimeEvents       VisitAreaTimeEvent[]
-  visitWorkItems            VisitWorkItem[]
+  code                       String                           @id
+  name                       String
+  city                       String
+  department                 String
+  status                     ClinicBranchStatus               @default(preparation)
+  openedAt                   DateTime?
+  createdAt                  DateTime                         @default(now())
+  updatedAt                  DateTime                         @updatedAt
+  userAssignments            InternalUserBranch[]
+  visits                     Visit[]
+  sales                      Sale[]
+  saleItems                  SaleItem[]
+  payments                   Payment[]
+  deliveredProducts          DeliveredProduct[]
+  cashMovements              CashMovement[]
+  cashSessions               CashSession[]
+  cashSessionReconciliations CashSessionReconciliation[]
+  cashExpenses               CashExpense[]
+  cashExpenseBeneficiaries   CashExpenseBeneficiary[]
+  generatedDocuments         GeneratedDocument[]
+  purchases                  Purchase[]
+  purchaseLines              PurchaseLine[]
+  purchasePayments           PurchasePayment[]
+  purchaseReceipts           PurchaseReceipt[]
+  purchaseReceiptLines       PurchaseReceiptLine[]
+  purchaseDocuments          PurchaseDocument[]
+  inventoryLots              InventoryLot[]
+  inventoryLotAdjustments    InventoryLotAdjustment[]
+  inventoryMovements         InventoryMovement[]
+  inventoryAdjustments       InventoryAdjustment[]
+  inventoryAlerts            InventoryAlert[]
+  inventoryBalances          BranchInventoryBalance[]
+  outgoingTransfers          InventoryTransfer[]              @relation("InventoryTransferSourceBranch")
+  incomingTransfers          InventoryTransfer[]              @relation("InventoryTransferDestinationBranch")
+  outgoingTransferLots       InventoryTransferLotAllocation[] @relation("InventoryTransferLotSourceBranch")
+  incomingTransferLots       InventoryTransferLotAllocation[] @relation("InventoryTransferLotDestinationBranch")
+  moduleActivations          ModuleActivation[]
+  followUpTasks              FollowUpTask[]
+  supervisedReminderRules    SupervisedReminderRule[]
+  patientRecords             PatientBranchRecord[]
+  patientConsents            PatientConsent[]
+  patientContacts            PatientContact[]
+  patientNotes               PatientNote[]
+  clinicalConsultations      ClinicalConsultation[]
+  clinicalVersions           ClinicalConsultationVersion[]
+  diagnoses                  Diagnosis[]
+  treatmentPlans             TreatmentPlan[]
+  treatmentOutcomes          TreatmentProposalOutcome[]
+  prescriptions              Prescription[]
+  prescriptionItems          PrescriptionItem[]
+  clinicalEvolutions         ClinicalEvolution[]
+  clinicalNotes              ClinicalNote[]
+  clinicalOrders             ClinicalOrder[]
+  professionalProfiles       ClinicalProfessionalProfile[]
+  doctorOrders               DoctorOrder[]
+  doctorOrderLines           DoctorOrderLine[]
+  continuityAccesses         ClinicalContinuityAccess[]
+  nursingContinuityAccesses  NursingContinuityAccess[]
+  studies                    Study[]
+  vitalSigns                 VitalSigns[]
+  nursingApplications        NursingApplication[]
+  nursingNotes               NursingNote[]
+  clinicalAttachments        ClinicalAttachment[]             @relation("ClinicalAttachmentOriginBranch")
+  attachmentOriginGrants     ClinicalAttachmentAccessGrant[]  @relation("ClinicalAttachmentGrantOriginBranch")
+  attachmentRequestGrants    ClinicalAttachmentAccessGrant[]  @relation("ClinicalAttachmentGrantRequestBranch")
+  nursingWorkItemResults     NursingWorkItemResult[]
+  serviceSessionPackages     ServiceSessionPackage[]
+  serviceSessionUses         ServiceSessionUse[]
+  supplierProfiles           SupplierBranchProfile[]
+  inventoryItems             BranchInventoryItem[]
+  paymentMethods             PaymentMethodBranch[]
+  serviceCatalogItems        ServiceCatalogItemBranch[]
+  indicationCatalog          IndicationCatalogItemBranch[]
+  diagnosisCatalog           DiagnosisCatalogItemBranch[]
+  clinicalNoteCatalog        ClinicalNoteCatalogItemBranch[]
+  leads                      Lead[]
+  leadContactAttempts        LeadContactAttempt[]
+  leadReminders              LeadReminder[]
+  leadStatusHistory          LeadStatusHistory[]
+  campaignAssignments        CaptureCampaignBranch[]
+  visitAttributions          VisitAttribution[]
+  attributionTouches         VisitAttributionTouch[]
+  visitDiscontinuations      VisitDiscontinuation[]
+  visitStatusHistory         VisitStatusHistory[]
+  receptionCheckIns          ReceptionCheckIn[]
+  patientRoutes              PatientRoute[]
+  patientRouteSteps          PatientRouteStep[]
+  visitAreaTimeEvents        VisitAreaTimeEvent[]
+  visitWorkItems             VisitWorkItem[]
 
   @@index([status, name])
 }
@@ -1233,6 +1239,11 @@ model PatientBranchRecord {
   nursingNotes              NursingNote[]
   clinicalAttachments       ClinicalAttachment[]
   serviceSessionPackages    ServiceSessionPackage[]
+  sales                     Sale[]
+  payments                  Payment[]
+  deliveredProducts         DeliveredProduct[]
+  cashMovements             CashMovement[]
+  generatedDocuments        GeneratedDocument[]
 
   @@id([patientId, branchCode])
   @@unique([branchCode, recordNumber])
@@ -2319,9 +2330,10 @@ model Sale {
   createdAt          DateTime                @default(now())
   updatedAt          DateTime                @updatedAt
   patient            Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit              Visit?                  @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  workItem           VisitWorkItem?          @relation(fields: [workItemId], references: [id], onDelete: SetNull)
-  doctorOrder        DoctorOrder?            @relation(fields: [doctorOrderId], references: [id], onDelete: SetNull)
+  patientRecord      PatientBranchRecord     @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit              Visit?                  @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  workItem           VisitWorkItem?          @relation(fields: [workItemId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  doctorOrder        DoctorOrder?            @relation(fields: [doctorOrderId, branchCode], references: [id, branchCode], onDelete: Restrict)
   createdBy          InternalUser?           @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   branch             ClinicBranch            @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   items              SaleItem[]
@@ -2333,7 +2345,9 @@ model Sale {
   generatedDocuments GeneratedDocument[]
   sessionPackages    ServiceSessionPackage[]
 
-  @@index([patientId])
+  @@unique([id, branchCode])
+  @@unique([doctorOrderId, branchCode])
+  @@index([patientId, branchCode])
   @@index([visitId])
   @@index([workItemId])
   @@index([createdById])
@@ -2422,16 +2436,17 @@ model NursingContinuityAccess {
 model GeneratedDocument {
   id                String                @id @default(cuid())
   kind              GeneratedDocumentKind
-  documentNumber    String                @unique
+  documentNumber    String
   seriesKey         String
   version           Int
   schemaVersion     Int                   @default(1)
   patientId         String
+  branchCode        String
   visitId           String?
   prescriptionId    String?
   saleId            String?
   generatedById     String
-  supersedesId      String?               @unique
+  supersedesId      String?
   sourceFingerprint String
   snapshot          Json
   generatedAt       DateTime              @default(now())
@@ -2441,15 +2456,20 @@ model GeneratedDocument {
   annulledById      String?
   annulmentReason   String?
   patient           Patient               @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit             Visit?                @relation(fields: [visitId], references: [id], onDelete: Restrict)
-  prescription      Prescription?         @relation(fields: [prescriptionId], references: [id], onDelete: Restrict)
-  sale              Sale?                 @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  patientRecord     PatientBranchRecord   @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit             Visit?                @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  prescription      Prescription?         @relation(fields: [prescriptionId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  sale              Sale?                 @relation(fields: [saleId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch            ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   generatedBy       InternalUser          @relation("GeneratedDocumentGeneratedBy", fields: [generatedById], references: [id], onDelete: Restrict)
-  supersedes        GeneratedDocument?    @relation("GeneratedDocumentHistory", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersedes        GeneratedDocument?    @relation("GeneratedDocumentHistory", fields: [supersedesId, branchCode], references: [id, branchCode], onDelete: Restrict)
   supersededBy      GeneratedDocument?    @relation("GeneratedDocumentHistory")
 
-  @@unique([seriesKey, version])
-  @@unique([seriesKey, sourceFingerprint])
+  @@unique([id, branchCode])
+  @@unique([branchCode, documentNumber])
+  @@unique([branchCode, seriesKey, version])
+  @@unique([branchCode, seriesKey, sourceFingerprint])
+  @@unique([supersedesId, branchCode])
   @@index([kind, generatedAt])
   @@index([patientId, generatedAt])
   @@index([visitId])
@@ -2459,22 +2479,26 @@ model GeneratedDocument {
 }
 
 model SaleItem {
-  id                 String              @id @default(cuid())
-  saleId             String
-  inventoryItemId    String?
-  type               SaleItemType        @default(other)
-  description        String
-  quantity           Int                 @default(1)
-  unitPriceCents     Int
-  totalCents         Int
-  delivered          Boolean             @default(false)
-  createdAt          DateTime            @default(now())
-  sale               Sale                @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  inventoryItem      InventoryItem?      @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  deliveredProducts  DeliveredProduct[]
-  inventoryMovements InventoryMovement[]
+  id                  String               @id @default(cuid())
+  saleId              String
+  branchCode          String
+  inventoryItemId     String?
+  type                SaleItemType         @default(other)
+  description         String
+  quantity            Int                  @default(1)
+  unitPriceCents      Int
+  totalCents          Int
+  delivered           Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  sale                Sale                 @relation(fields: [saleId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  inventoryItem       InventoryItem?       @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  branchInventoryItem BranchInventoryItem? @relation(fields: [inventoryItemId, branchCode], references: [itemId, branchCode], onDelete: Restrict)
+  branch              ClinicBranch         @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  deliveredProducts   DeliveredProduct[]
+  inventoryMovements  InventoryMovement[]
 
-  @@index([saleId])
+  @@unique([id, branchCode])
+  @@index([saleId, branchCode])
   @@index([inventoryItemId])
   @@index([type])
 }
@@ -2497,14 +2521,15 @@ model PaymentMethodBranch {
   updatedAt  DateTime      @updatedAt
   method     PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Restrict)
   branch     ClinicBranch  @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  payments   Payment[]
 
   @@id([methodId, branchCode])
   @@index([branchCode, active])
 }
 
 model Payment {
-  id             String         @id @default(cuid())
-  idempotencyKey String?        @unique
+  id             String              @id @default(cuid())
+  idempotencyKey String?             @unique
   saleId         String
   patientId      String
   visitId        String?
@@ -2514,17 +2539,20 @@ model Payment {
   amountCents    Int
   reference      String?
   notes          String?
-  paidAt         DateTime       @default(now())
-  createdAt      DateTime       @default(now())
-  sale           Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  patient        Patient        @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit          Visit?         @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  method         PaymentMethod  @relation(fields: [methodId], references: [id], onDelete: Restrict)
-  receivedBy     InternalUser?  @relation(fields: [receivedById], references: [id], onDelete: SetNull)
-  branch         ClinicBranch   @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  paidAt         DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  sale           Sale                @relation(fields: [saleId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  patient        Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  patientRecord  PatientBranchRecord @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit          Visit?              @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  method         PaymentMethod       @relation(fields: [methodId], references: [id], onDelete: Restrict)
+  methodBranch   PaymentMethodBranch @relation(fields: [methodId, branchCode], references: [methodId, branchCode], onDelete: Restrict)
+  receivedBy     InternalUser?       @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  branch         ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   cashMovements  CashMovement[]
 
-  @@index([saleId])
+  @@unique([id, branchCode])
+  @@index([saleId, branchCode])
   @@index([patientId])
   @@index([visitId])
   @@index([methodId])
@@ -2534,20 +2562,23 @@ model Payment {
 }
 
 model DeliveredProduct {
-  id          String    @id @default(cuid())
-  saleId      String
-  saleItemId  String?
-  patientId   String
-  visitId     String?
-  description String
-  quantity    Int       @default(1)
-  deliveredAt DateTime  @default(now())
-  sale        Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  saleItem    SaleItem? @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
-  patient     Patient   @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visit       Visit?    @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  id            String              @id @default(cuid())
+  saleId        String
+  branchCode    String
+  saleItemId    String?
+  patientId     String
+  visitId       String?
+  description   String
+  quantity      Int                 @default(1)
+  deliveredAt   DateTime            @default(now())
+  sale          Sale                @relation(fields: [saleId, branchCode], references: [id, branchCode], onDelete: Cascade)
+  saleItem      SaleItem?           @relation(fields: [saleItemId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  patient       Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  patientRecord PatientBranchRecord @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit         Visit?              @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch        ClinicBranch        @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([saleId])
+  @@index([saleId, branchCode])
   @@index([saleItemId])
   @@index([patientId])
   @@index([visitId])
@@ -2555,7 +2586,7 @@ model DeliveredProduct {
 }
 
 model CashMovement {
-  id                 String            @id @default(cuid())
+  id                 String               @id @default(cuid())
   cashSessionId      String?
   saleId             String?
   paymentId          String?
@@ -2565,29 +2596,31 @@ model CashMovement {
   authorizedById     String?
   branchCode         String
   originalMovementId String?
-  idempotencyKey     String?           @unique
-  type               CashMovementType  @default(income)
-  channel            CashChannel       @default(cash)
+  idempotencyKey     String?              @unique
+  type               CashMovementType     @default(income)
+  channel            CashChannel          @default(cash)
   amountCents        Int
   description        String
   reason             String?
   note               String?
-  occurredAt         DateTime          @default(now())
-  createdAt          DateTime          @default(now())
-  cashSession        CashSession?      @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
-  sale               Sale?             @relation(fields: [saleId], references: [id], onDelete: SetNull)
-  payment            Payment?          @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  patient            Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  visit              Visit?            @relation(fields: [visitId], references: [id], onDelete: SetNull)
-  user               InternalUser?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  authorizedBy       InternalUser?     @relation("CashMovementAuthorizedBy", fields: [authorizedById], references: [id], onDelete: SetNull)
-  branch             ClinicBranch      @relation(fields: [branchCode], references: [code], onDelete: Restrict)
-  originalMovement   CashMovement?     @relation("CashMovementCorrections", fields: [originalMovementId], references: [id], onDelete: Restrict)
-  corrections        CashMovement[]    @relation("CashMovementCorrections")
+  occurredAt         DateTime             @default(now())
+  createdAt          DateTime             @default(now())
+  cashSession        CashSession?         @relation(fields: [cashSessionId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  sale               Sale?                @relation(fields: [saleId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  payment            Payment?             @relation(fields: [paymentId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  patient            Patient?             @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  patientRecord      PatientBranchRecord? @relation(fields: [patientId, branchCode], references: [patientId, branchCode], onDelete: Restrict)
+  visit              Visit?               @relation(fields: [visitId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  user               InternalUser?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  authorizedBy       InternalUser?        @relation("CashMovementAuthorizedBy", fields: [authorizedById], references: [id], onDelete: SetNull)
+  branch             ClinicBranch         @relation(fields: [branchCode], references: [code], onDelete: Restrict)
+  originalMovement   CashMovement?        @relation("CashMovementCorrections", fields: [originalMovementId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  corrections        CashMovement[]       @relation("CashMovementCorrections")
   expense            CashExpense?
   purchasePayments   PurchasePayment[]
 
-  @@index([cashSessionId, occurredAt])
+  @@unique([id, branchCode])
+  @@index([cashSessionId, branchCode, occurredAt])
   @@index([saleId])
   @@index([paymentId])
   @@index([patientId])
@@ -2643,22 +2676,26 @@ model CashSession {
 }
 
 model CashSessionReconciliation {
-  id              String      @id @default(cuid())
+  id              String       @id @default(cuid())
   cashSessionId   String
+  branchCode      String
   channel         CashChannel
   expectedCents   Int
   reportedCents   Int
   differenceCents Int
-  createdAt       DateTime    @default(now())
-  cashSession     CashSession @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+  createdAt       DateTime     @default(now())
+  cashSession     CashSession  @relation(fields: [cashSessionId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch          ClinicBranch @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@unique([cashSessionId, channel])
+  @@unique([cashSessionId, branchCode, channel])
+  @@index([branchCode, createdAt])
   @@index([channel, createdAt])
 }
 
 model CashExpense {
   id                     String                           @id @default(cuid())
   cashSessionId          String
+  branchCode             String
   movementId             String                           @unique
   registeredById         String
   deliveredById          String
@@ -2686,8 +2723,9 @@ model CashExpense {
   receiptUploadedAt      DateTime?
   occurredAt             DateTime                         @default(now())
   createdAt              DateTime                         @default(now())
-  cashSession            CashSession                      @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
-  movement               CashMovement                     @relation(fields: [movementId], references: [id], onDelete: Restrict)
+  cashSession            CashSession                      @relation(fields: [cashSessionId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  movement               CashMovement                     @relation(fields: [movementId, branchCode], references: [id, branchCode], onDelete: Restrict)
+  branch                 ClinicBranch                     @relation(fields: [branchCode], references: [code], onDelete: Restrict)
   registeredBy           InternalUser                     @relation("CashExpenseRegisteredBy", fields: [registeredById], references: [id], onDelete: Restrict)
   deliveredBy            InternalUser                     @relation("CashExpenseDeliveredBy", fields: [deliveredById], references: [id], onDelete: Restrict)
   authorizedBy           InternalUser                     @relation("CashExpenseAuthorizedBy", fields: [authorizedById], references: [id], onDelete: Restrict)
@@ -2696,7 +2734,9 @@ model CashExpense {
   beneficiaries          CashExpenseBeneficiary[]
   purchase               Purchase?
 
-  @@index([cashSessionId, occurredAt])
+  @@unique([id, branchCode])
+  @@unique([movementId, branchCode])
+  @@index([cashSessionId, branchCode, occurredAt])
   @@index([kind, category, occurredAt])
   @@index([registeredById])
   @@index([authorizedById])
@@ -2705,14 +2745,16 @@ model CashExpense {
 model CashExpenseBeneficiary {
   id            String       @id @default(cuid())
   cashExpenseId String
+  branchCode    String
   employeeId    String
   amountCents   Int
   note          String?
   createdAt     DateTime     @default(now())
-  cashExpense   CashExpense  @relation(fields: [cashExpenseId], references: [id], onDelete: Restrict)
+  cashExpense   CashExpense  @relation(fields: [cashExpenseId, branchCode], references: [id, branchCode], onDelete: Restrict)
   employee      InternalUser @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  branch        ClinicBranch @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 
-  @@index([cashExpenseId])
+  @@index([cashExpenseId, branchCode])
   @@index([employeeId, createdAt])
 }
 
@@ -3134,6 +3176,7 @@ model BranchInventoryItem {
   alerts              InventoryAlert[]
   outgoingTransfers   InventoryTransfer[]      @relation("InventoryTransferSourceItem")
   incomingTransfers   InventoryTransfer[]      @relation("InventoryTransferDestinationItem")
+  saleItems           SaleItem[]
 
   @@id([itemId, branchCode])
   @@unique([branchCode, sku])
@@ -3253,7 +3296,7 @@ model Purchase {
   updatedAt             DateTime              @updatedAt
   supplier              Supplier              @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   supplierProfile       SupplierBranchProfile @relation(fields: [supplierId, branchCode], references: [supplierId, branchCode], onDelete: Restrict)
-  sourceCashExpense     CashExpense?          @relation(fields: [sourceCashExpenseId], references: [id], onDelete: Restrict)
+  sourceCashExpense     CashExpense?          @relation(fields: [sourceCashExpenseId, branchCode], references: [id, branchCode], onDelete: Restrict)
   createdBy             InternalUser          @relation("PurchaseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   confirmedBy           InternalUser?         @relation("PurchaseConfirmedBy", fields: [confirmedById], references: [id], onDelete: Restrict)
   cancelledBy           InternalUser?         @relation("PurchaseCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
@@ -3266,6 +3309,7 @@ model Purchase {
   documents             PurchaseDocument[]
 
   @@unique([id, branchCode])
+  @@unique([sourceCashExpenseId, branchCode])
   @@index([supplierId, purchaseDate])
   @@index([status, purchaseDate])
   @@index([branchCode, purchaseDate])
@@ -3313,7 +3357,7 @@ model PurchasePayment {
   createdAt      DateTime              @default(now())
   purchase       Purchase              @relation(fields: [purchaseId, branchCode], references: [id, branchCode], onDelete: Restrict)
   cashSession    CashSession?          @relation(fields: [cashSessionId, branchCode], references: [id, branchCode], onDelete: Restrict)
-  cashMovement   CashMovement?         @relation(fields: [cashMovementId], references: [id], onDelete: Restrict)
+  cashMovement   CashMovement?         @relation(fields: [cashMovementId, branchCode], references: [id, branchCode], onDelete: Restrict)
   recordedBy     InternalUser          @relation("PurchasePaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
   branch         ClinicBranch          @relation(fields: [branchCode], references: [code], onDelete: Restrict)
 

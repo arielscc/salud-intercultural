@@ -107,10 +107,16 @@ async function lockPurchase(
   });
 }
 
-async function lockOpenCashSession(tx: Prisma.TransactionClient, cashSessionId?: string) {
+async function lockOpenCashSession(
+  tx: Prisma.TransactionClient,
+  cashSessionId: string | undefined,
+  branchCode: string
+) {
   if (!cashSessionId) throw new PurchaseWorkflowError("cash-session-required");
-  await tx.$queryRaw`SELECT "id" FROM "CashSession" WHERE "id" = ${cashSessionId} FOR UPDATE`;
-  const session = await tx.cashSession.findUnique({ where: { id: cashSessionId } });
+  await tx.$queryRaw`SELECT "id" FROM "CashSession" WHERE "id" = ${cashSessionId} AND "branchCode" = ${branchCode} FOR UPDATE`;
+  const session = await tx.cashSession.findUnique({
+    where: { id_branchCode: { id: cashSessionId, branchCode } }
+  });
   if (!session || session.status !== "open") {
     throw new PurchaseWorkflowError("cash-session-not-open");
   }
@@ -190,10 +196,11 @@ async function createPaidPurchasePayment(
     return reused;
   }
 
-  const session = await lockOpenCashSession(tx, input.cashSessionId);
-  if (session.branchCode !== input.branchCode) {
-    throw new PurchaseWorkflowError("cash-session-not-open");
-  }
+  const session = await lockOpenCashSession(
+    tx,
+    input.cashSessionId,
+    input.branchCode
+  );
   const movement = await tx.cashMovement.create({
     data: {
       branchCode: input.branchCode,

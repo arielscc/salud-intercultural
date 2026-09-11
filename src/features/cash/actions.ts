@@ -31,7 +31,10 @@ import {
   storeCashReceipt
 } from "@/modules/cash-receipts/storage";
 import { validateClinicalFile } from "@/modules/clinical-attachments/validation";
-import { assertBranchMatchesContext } from "@/features/branches/context";
+import {
+  assertBranchMatchesContext,
+  getBranchContext
+} from "@/features/branches/context";
 
 function fields(formData: FormData) {
   return Object.fromEntries(
@@ -171,9 +174,10 @@ export async function createStaffCashExpenseAction(formData: FormData) {
           beneficiaryCount: beneficiaries.length
         }
       },
-      async (user) => {
+      async (user, branchContext) => {
         const expense = await createStaffCashExpense({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           beneficiaries,
           registeredById: user.id
         });
@@ -202,6 +206,7 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
   const fallback = cashExpenseTarget(formData);
   const parsed = urgentPurchaseSchema.safeParse(fields(formData));
   if (!parsed.success) redirect(`${fallback}?error=cash-invalid-purchase`);
+  const branchContext = await getBranchContext();
 
   let storedReceipt:
     | {
@@ -216,7 +221,8 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
     | undefined;
 
   const existing = await getCashExpenseByIdempotencyKey(
-    parsed.data.idempotencyKey
+    parsed.data.idempotencyKey,
+    branchContext.activeBranch.code
   );
   const file = formData.get("receipt");
 
@@ -264,9 +270,10 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
           hasReceipt: Boolean(storedReceipt)
         }
       },
-      async (user) => {
+      async (user, actionBranchContext) => {
         const expense = await createUrgentPurchaseExpense({
           ...parsed.data,
+          branchCode: actionBranchContext.activeBranch.code,
           deliveredAmountCents: cashMoneyToCents(parsed.data.deliveredAmount),
           returnedChangeCents: cashMoneyToCents(parsed.data.returnedChange),
           registeredById: user.id,
@@ -287,7 +294,10 @@ export async function createUrgentPurchaseExpenseAction(formData: FormData) {
       let persistedExpense = true;
       try {
         persistedExpense = Boolean(
-          await getCashExpenseByIdempotencyKey(parsed.data.idempotencyKey)
+          await getCashExpenseByIdempotencyKey(
+            parsed.data.idempotencyKey,
+            branchContext.activeBranch.code
+          )
         );
       } catch {
         // Si no se puede comprobar la BD, se conserva el archivo privado para
@@ -320,9 +330,10 @@ export async function createOtherCashExpenseAction(formData: FormData) {
         entityType: "cash_expense",
         context: { cashSessionId: parsed.data.cashSessionId }
       },
-      async (user) => {
+      async (user, branchContext) => {
         const expense = await createOtherCashExpense({
           ...parsed.data,
+          branchCode: branchContext.activeBranch.code,
           amountCents: cashMoneyToCents(parsed.data.amount),
           registeredById: user.id
         });
@@ -359,9 +370,10 @@ export async function requestCashSessionCloseAction(formData: FormData) {
         entityType: "cash_session",
         entityId: parsed.data.cashSessionId
       },
-      async (user) => {
+      async (user, branchContext) => {
         const closed = await requestCashSessionClose({
           cashSessionId: parsed.data.cashSessionId,
+          branchCode: branchContext.activeBranch.code,
           requestedById: user.id,
           reportedByChannel: {
             cash: cashMoneyToCents(parsed.data.cash),
@@ -405,9 +417,10 @@ export async function approveCashSessionCloseAction(formData: FormData) {
         entityType: "cash_session",
         entityId: parsed.data.cashSessionId
       },
-      async (user) => {
+      async (user, branchContext) => {
         const session = await approveCashSessionClose({
           cashSessionId: parsed.data.cashSessionId,
+          branchCode: branchContext.activeBranch.code,
           approvedById: user.id,
           observation: parsed.data.observation
         });
@@ -436,9 +449,10 @@ export async function reverseCashMovementAction(formData: FormData) {
         entityType: "cash_movement",
         entityId: parsed.data.originalMovementId
       },
-      async (user) => {
+      async (user, branchContext) => {
         const correction = await reverseCashMovement({
           originalMovementId: parsed.data.originalMovementId,
+          branchCode: branchContext.activeBranch.code,
           amountCents: cashMoneyToCents(parsed.data.amount),
           actorId: user.id,
           reason: parsed.data.reason,

@@ -70,13 +70,7 @@ export async function branchOwnedEntityExists(
     case "generated_document":
       return Boolean(
         await prisma.generatedDocument.findFirst({
-          where: {
-            id: input.entityId,
-            OR: [
-              { visit: { branchCode: input.branchCode } },
-              { sale: { branchCode: input.branchCode } }
-            ]
-          },
+          where,
           select: { id: true }
         })
       );

@@ -238,6 +238,7 @@ describe("purchase, receipt, batch and stock integration", () => {
     const fixture = await setup();
     const expense = await createUrgentPurchaseExpense({
       cashSessionId: fixture.cashSession.id,
+      branchCode: "el-alto",
       category: "clinical_material",
       itemDescription: "Producto comprado",
       deliveredAmountCents: 500,

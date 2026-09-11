@@ -158,17 +158,18 @@ export function calculateCashBreakdown(session: CashSessionForSummary) {
 
 async function lockCashSession(
   tx: Prisma.TransactionClient,
-  cashSessionId: string
+  cashSessionId: string,
+  branchCode: string
 ) {
   await tx.$queryRaw`
     SELECT "id"
     FROM "CashSession"
-    WHERE "id" = ${cashSessionId}
+    WHERE "id" = ${cashSessionId} AND "branchCode" = ${branchCode}
     FOR UPDATE
   `;
 
   const session = await tx.cashSession.findUnique({
-    where: { id: cashSessionId },
+    where: { id_branchCode: { id: cashSessionId, branchCode } },
     include: { movements: true }
   });
 
@@ -198,7 +199,7 @@ export async function getOpenCashSessionForOperation(
   }
 
   const session = await tx.cashSession.findUniqueOrThrow({
-    where: { id: sessions[0].id }
+    where: { id_branchCode: { id: sessions[0].id, branchCode } }
   });
   if (session.businessDate.getTime() !== businessDate.getTime()) {
     throw new CashWorkflowError("session_stale_open");
@@ -377,16 +378,16 @@ export async function getCashOpenState(branchCode: string) {
   });
 }
 
-export async function getCashDashboard(input?: {
+export async function getCashDashboard(input: {
+  branchCode: string;
   sessionId?: string;
   type?: CashMovementType;
   channel?: CashChannel;
-  branchCode?: string;
 }) {
   return withDatabaseError("getCashDashboard", async () => {
     const activeSession = await prisma.cashSession.findFirst({
       where: {
-        branchCode: input?.branchCode,
+        branchCode: input.branchCode,
         status: { in: ["open", "pending_approval"] }
       },
       select: { id: true, status: true },
@@ -395,7 +396,7 @@ export async function getCashDashboard(input?: {
     const today = todayDatabaseDate();
     const staleOpenSession = await prisma.cashSession.findFirst({
       where: {
-        branchCode: input?.branchCode,
+        branchCode: input.branchCode,
         status: "open",
         businessDate: { not: today }
       },
@@ -409,7 +410,7 @@ export async function getCashDashboard(input?: {
     });
     const closedTodaySessions = await prisma.cashSession.findMany({
       where: {
-        branchCode: input?.branchCode,
+        branchCode: input.branchCode,
         businessDate: today,
         status: "closed"
       },
@@ -422,19 +423,21 @@ export async function getCashDashboard(input?: {
       orderBy: { closedAt: "desc" }
     });
     const selectedSession =
-      input?.sessionId
+      input.sessionId
         ? await prisma.cashSession.findFirst({
             where: { id: input.sessionId, branchCode: input.branchCode },
             include: cashSessionInclude
           })
         : await prisma.cashSession.findFirst({
-            where: activeSession ? { id: activeSession.id } : { id: "__none__" },
+            where: activeSession
+              ? { id: activeSession.id, branchCode: input.branchCode }
+              : { id: "__none__", branchCode: input.branchCode },
             include: cashSessionInclude,
             orderBy: { openedAt: "desc" }
           });
 
     const sessions = await prisma.cashSession.findMany({
-      where: { branchCode: input?.branchCode },
+      where: { branchCode: input.branchCode },
       select: {
         id: true,
         branchCode: true,
@@ -467,8 +470,8 @@ export async function getCashDashboard(input?: {
 
     const filteredMovements = selectedSession.movements.filter(
       (movement) =>
-        (!input?.type || movement.type === input.type) &&
-        (!input?.channel || movement.channel === input.channel)
+        (!input.type || movement.type === input.type) &&
+        (!input.channel || movement.channel === input.channel)
     );
 
     const businessDateSessions = await prisma.cashSession.findMany({
@@ -523,7 +526,7 @@ export async function getCashDashboard(input?: {
   });
 }
 
-export async function getCashSessionCloseReport(cashSessionId: string, branchCode?: string) {
+export async function getCashSessionCloseReport(cashSessionId: string, branchCode: string) {
   return withDatabaseError("getCashSessionCloseReport", async () =>
     prisma.cashSession.findFirst({
       where: { id: cashSessionId, branchCode },
@@ -533,10 +536,11 @@ export async function getCashSessionCloseReport(cashSessionId: string, branchCod
 }
 
 export async function getCashExpenseByIdempotencyKey(
-  idempotencyKey: string
+  idempotencyKey: string,
+  branchCode: string
 ) {
   return withDatabaseError("getCashExpenseByIdempotencyKey", async () =>
-    prisma.cashExpense.findUnique({ where: { idempotencyKey } })
+    prisma.cashExpense.findFirst({ where: { idempotencyKey, branchCode } })
   );
 }
 
@@ -546,7 +550,7 @@ export async function getCashExpenseReceipt(
 ) {
   return withDatabaseError("getCashExpenseReceipt", async () =>
     prisma.cashExpense.findFirst({
-      where: { id: expenseId, cashSession: { branchCode } },
+      where: { id: expenseId, branchCode },
       select: {
         id: true,
         receiptStorageKey: true,
@@ -580,7 +584,12 @@ export async function openCashSession(input: {
     const existing = await prisma.cashSession.findUnique({
       where: { idempotencyKey: input.idempotencyKey }
     });
-    if (existing) return existing;
+    if (existing) {
+      if (existing.branchCode !== input.branchCode) {
+        throw new CashWorkflowError("invalid_movement");
+      }
+      return existing;
+    }
 
     await assertActivePerson(prisma, input.responsibleId, input.branchCode);
     const activeSession = await prisma.cashSession.findFirst({
@@ -649,6 +658,7 @@ export async function openCashSession(input: {
 
 export async function createStaffCashExpense(input: {
   cashSessionId: string;
+  branchCode: string;
   category: "lunch" | "transport" | "staff_other";
   beneficiaries: Array<{
     employeeId: string;
@@ -668,14 +678,20 @@ export async function createStaffCashExpense(input: {
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true, beneficiaries: true }
       });
-      if (reused) return reused;
+      if (reused) {
+        if (reused.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
+        return reused;
+      }
 
-      const session = await lockCashSession(tx, input.cashSessionId);
+      const session = await lockCashSession(tx, input.cashSessionId, input.branchCode);
       const reusedAfterLock = await tx.cashExpense.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true, beneficiaries: true }
       });
-      if (reusedAfterLock) return reusedAfterLock;
+      if (reusedAfterLock) {
+        if (reusedAfterLock.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
+        return reusedAfterLock;
+      }
       await Promise.all([
         assertActivePerson(tx, input.receivedById, session.branchCode),
         assertActivePerson(tx, input.deliveredById, session.branchCode),
@@ -732,6 +748,7 @@ export async function createStaffCashExpense(input: {
       return tx.cashExpense.create({
         data: {
           cashSessionId: input.cashSessionId,
+          branchCode: input.branchCode,
           movementId: movement.id,
           registeredById: input.registeredById,
           deliveredById: input.deliveredById,
@@ -745,6 +762,7 @@ export async function createStaffCashExpense(input: {
           note: input.note,
           beneficiaries: {
             create: validLines.map((line) => ({
+              branchCode: input.branchCode,
               employeeId: line.employeeId,
               amountCents: line.amountCents,
               note: line.note
@@ -769,6 +787,7 @@ type ReceiptMetadata = {
 
 export async function createUrgentPurchaseExpense(input: {
   cashSessionId: string;
+  branchCode: string;
   category: Exclude<
     CashExpenseCategory,
     "lunch" | "transport" | "staff_other"
@@ -801,14 +820,20 @@ export async function createUrgentPurchaseExpense(input: {
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true }
       });
-      if (reused) return reused;
+      if (reused) {
+        if (reused.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
+        return reused;
+      }
 
-      const session = await lockCashSession(tx, input.cashSessionId);
+      const session = await lockCashSession(tx, input.cashSessionId, input.branchCode);
       const reusedAfterLock = await tx.cashExpense.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true }
       });
-      if (reusedAfterLock) return reusedAfterLock;
+      if (reusedAfterLock) {
+        if (reusedAfterLock.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
+        return reusedAfterLock;
+      }
       await Promise.all([
         assertActivePerson(tx, input.requestedById, session.branchCode),
         assertActivePerson(tx, input.receivedById, session.branchCode),
@@ -852,6 +877,7 @@ export async function createUrgentPurchaseExpense(input: {
       return tx.cashExpense.create({
         data: {
           cashSessionId: input.cashSessionId,
+          branchCode: input.branchCode,
           movementId: movement.id,
           registeredById: input.registeredById,
           deliveredById: input.deliveredById,
@@ -886,6 +912,7 @@ export async function createUrgentPurchaseExpense(input: {
 
 export async function createOtherCashExpense(input: {
   cashSessionId: string;
+  branchCode: string;
   amountCents: number;
   receivedById: string;
   deliveredById: string;
@@ -901,17 +928,23 @@ export async function createOtherCashExpense(input: {
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true }
       });
-      if (reused) return reused;
+      if (reused) {
+        if (reused.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
+        return reused;
+      }
 
       if (input.amountCents <= 0) {
         throw new CashWorkflowError("invalid_amount");
       }
-      const session = await lockCashSession(tx, input.cashSessionId);
+      const session = await lockCashSession(tx, input.cashSessionId, input.branchCode);
       const reusedAfterLock = await tx.cashExpense.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
         include: { movement: true }
       });
-      if (reusedAfterLock) return reusedAfterLock;
+      if (reusedAfterLock) {
+        if (reusedAfterLock.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
+        return reusedAfterLock;
+      }
       await Promise.all([
         assertActivePerson(tx, input.receivedById, session.branchCode),
         assertActivePerson(tx, input.deliveredById, session.branchCode),
@@ -937,6 +970,7 @@ export async function createOtherCashExpense(input: {
       return tx.cashExpense.create({
         data: {
           cashSessionId: input.cashSessionId,
+          branchCode: input.branchCode,
           movementId: movement.id,
           registeredById: input.registeredById,
           deliveredById: input.deliveredById,
@@ -957,13 +991,14 @@ export async function createOtherCashExpense(input: {
 
 export async function requestCashSessionClose(input: {
   cashSessionId: string;
+  branchCode: string;
   requestedById: string;
   reportedByChannel: Record<(typeof activePaymentCashChannels)[number], number>;
   observation?: string;
 }) {
   return withDatabaseError("requestCashSessionClose", async () =>
     prisma.$transaction(async (tx) => {
-      const session = await lockCashSession(tx, input.cashSessionId);
+      const session = await lockCashSession(tx, input.cashSessionId, input.branchCode);
       const expected = calculateCashExpected(session);
       const reconciliations = activePaymentCashChannels.map((channel) => {
         const reportedCents = input.reportedByChannel[channel];
@@ -989,12 +1024,15 @@ export async function requestCashSessionClose(input: {
       await tx.cashSessionReconciliation.createMany({
         data: reconciliations.map((item) => ({
           cashSessionId: session.id,
+          branchCode: input.branchCode,
           ...item
         }))
       });
 
       const updated = await tx.cashSession.update({
-        where: { id: session.id },
+        where: {
+          id_branchCode: { id: session.id, branchCode: input.branchCode }
+        },
         data: {
           expectedCashCents: expected.cash,
           countedCashCents: input.reportedByChannel.cash,
@@ -1016,6 +1054,7 @@ export async function requestCashSessionClose(input: {
 
 export async function approveCashSessionClose(input: {
   cashSessionId: string;
+  branchCode: string;
   approvedById: string;
   observation: string;
 }) {
@@ -1024,11 +1063,13 @@ export async function approveCashSessionClose(input: {
       await tx.$queryRaw`
         SELECT "id"
         FROM "CashSession"
-        WHERE "id" = ${input.cashSessionId}
+        WHERE "id" = ${input.cashSessionId} AND "branchCode" = ${input.branchCode}
         FOR UPDATE
       `;
       const session = await tx.cashSession.findUnique({
-        where: { id: input.cashSessionId }
+        where: {
+          id_branchCode: { id: input.cashSessionId, branchCode: input.branchCode }
+        }
       });
       if (!session || session.status !== "pending_approval") {
         throw new CashWorkflowError("session_not_pending_approval");
@@ -1036,7 +1077,9 @@ export async function approveCashSessionClose(input: {
       await assertAuthorizer(tx, input.approvedById, session.branchCode);
       const now = new Date();
       return tx.cashSession.update({
-        where: { id: session.id },
+        where: {
+          id_branchCode: { id: session.id, branchCode: input.branchCode }
+        },
         data: {
           status: "closed",
           approvedById: input.approvedById,
@@ -1054,6 +1097,7 @@ export async function approveCashSessionClose(input: {
 
 export async function reverseCashMovement(input: {
   originalMovementId: string;
+  branchCode: string;
   amountCents: number;
   actorId: string;
   reason: string;
@@ -1065,14 +1109,25 @@ export async function reverseCashMovement(input: {
       const reused = await tx.cashMovement.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
-      if (reused) return reused;
+      if (reused) {
+        if (reused.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
+        return reused;
+      }
 
       const reusedAfterLock = await tx.cashMovement.findUnique({
         where: { idempotencyKey: input.idempotencyKey }
       });
-      if (reusedAfterLock) return reusedAfterLock;
+      if (reusedAfterLock) {
+        if (reusedAfterLock.branchCode !== input.branchCode) throw new CashWorkflowError("invalid_movement");
+        return reusedAfterLock;
+      }
       const original = await tx.cashMovement.findUnique({
-        where: { id: input.originalMovementId },
+        where: {
+          id_branchCode: {
+            id: input.originalMovementId,
+            branchCode: input.branchCode
+          }
+        },
         include: { corrections: true, sale: true }
       });
       if (original) {
@@ -1132,7 +1187,12 @@ export async function reverseCashMovement(input: {
           original.sale.totalCents - paidCents
         );
         await tx.sale.update({
-          where: { id: original.sale.id },
+          where: {
+            id_branchCode: {
+              id: original.sale.id,
+              branchCode: input.branchCode
+            }
+          },
           data: {
             paidCents,
             balanceCents,
