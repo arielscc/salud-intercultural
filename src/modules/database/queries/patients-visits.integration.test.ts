@@ -28,8 +28,7 @@ async function cleanPatientsVisits() {
   await prisma.clinicalAttachment.deleteMany();
   await prisma.study.deleteMany();
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
-  await prisma.visit.deleteMany();
-  await prisma.patient.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "Patient" CASCADE');
   await prisma.lead.deleteMany();
   await prisma.internalSession.deleteMany();
   await prisma.internalUser.deleteMany();

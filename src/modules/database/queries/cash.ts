@@ -777,7 +777,6 @@ export async function createStaffCashExpense(input: {
           note: input.note,
           beneficiaries: {
             create: validLines.map((line) => ({
-              branchCode: input.branchCode,
               employeeId: line.employeeId,
               amountCents: line.amountCents,
               note: line.note

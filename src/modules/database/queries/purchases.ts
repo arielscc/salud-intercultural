@@ -352,7 +352,6 @@ export async function createPurchaseDraftRecord(input: {
               const item = itemById.get(line.itemId)!;
               return {
                 itemId: line.itemId,
-                branchCode: input.branchCode,
                 description: item.name,
                 unit: item.unit,
                 orderedQuantity: line.orderedQuantity,
@@ -628,7 +627,6 @@ export async function createPurchaseBatchRecord(input: {
                 const item = itemById.get(line.itemId)!;
                 return {
                   itemId: line.itemId,
-                  branchCode: input.branchCode,
                   description: item.name,
                   unit: item.unit,
                   orderedQuantity: line.orderedQuantity,

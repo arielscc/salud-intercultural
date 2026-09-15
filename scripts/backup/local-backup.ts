@@ -26,7 +26,7 @@ import {
 
 const backupFormatVersion = 1;
 const safeClinicalStorageKey =
-  /^clinical\/(?:local|test)\/[a-zA-Z0-9-]{20,80}\.(?:pdf|jpg|png|webp)$/;
+  /^clinical\/(?:local|test)\/[a-z0-9-]{2,80}\/[a-zA-Z0-9-]{20,80}\.(?:pdf|jpg|png|webp)$/;
 const safeSourceDatabaseName =
   /^salud_intercultural_(?:dev|test|backup_source_[a-z0-9_]+)$/;
 const safeRestoreDatabaseName =
@@ -650,9 +650,11 @@ export async function createLocalSigecoBackup(input: {
   const databaseDumpPath = join(workspace, "database.dump");
   const clinicalArchiveRoot = join(workspace, "clinical-files");
   const tarPath = join(tmpdir(), `sigeco-backup-${randomUUID()}.tar`);
+  let safeStage = "initialize-workspace";
 
   try {
     await mkdir(clinicalArchiveRoot, { recursive: true, mode: 0o700 });
+    safeStage = "connect-snapshot";
     const snapshotClient = await connect(database.url);
     let summary: DomainSummary;
     let migrationCount: number;
@@ -669,9 +671,13 @@ export async function createLocalSigecoBackup(input: {
         throw new Error("PostgreSQL did not provide a consistent snapshot.");
       }
 
+      safeStage = "create-database-dump";
       await createDatabaseDump(database, databaseDumpPath, snapshotId);
+      safeStage = "collect-domain-summary";
       summary = await collectDomainSummaryFromClient(snapshotClient);
+      safeStage = "collect-migration-count";
       migrationCount = await collectMigrationCountFromClient(snapshotClient);
+      safeStage = "copy-clinical-files";
       clinicalFiles = await copyClinicalFiles({
         client: snapshotClient,
         sourceRoot: clinicalFilesRoot,
@@ -691,6 +697,7 @@ export async function createLocalSigecoBackup(input: {
     } finally {
       await snapshotClient.end();
     }
+    safeStage = "write-manifest";
     const dumpStat = await stat(databaseDumpPath);
     const manifest: SigecoBackupManifest = {
       formatVersion: backupFormatVersion,
@@ -728,7 +735,9 @@ export async function createLocalSigecoBackup(input: {
       `${JSON.stringify(manifest, null, 2)}\n`,
       { mode: 0o600 }
     );
+    safeStage = "create-tar-archive";
     await createTarArchive(workspace, tarPath);
+    safeStage = "encrypt-archive";
     await encryptBackupFile({
       sourcePath: tarPath,
       targetPath: outputPath,
@@ -741,6 +750,9 @@ export async function createLocalSigecoBackup(input: {
       encryptedSizeBytes: (await stat(outputPath)).size,
       manifest
     };
+  } catch (error) {
+    console.error(`Local backup stopped at safeStage=${safeStage}.`);
+    throw error;
   } finally {
     await rm(workspace, { recursive: true, force: true });
     await rm(tarPath, { force: true });

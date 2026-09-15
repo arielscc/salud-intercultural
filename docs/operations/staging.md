@@ -70,6 +70,21 @@ escribir el nombre a mano. Todo lo que crea lleva el prefijo `ENSAYO-<fecha>`.
 
 Crear una base exclusiva, por ejemplo `salud_intercultural_staging`. Su usuario solo debe tener permisos sobre esa base. No reutilizar credenciales productivas.
 
+Después de aplicar `20260911210000_postgres_row_level_security`, separar las
+conexiones:
+
+- `DATABASE_URL` debe autenticar como `sigeco_web`; nunca como el propietario
+  del proveedor ni como `sigeco_maintenance`.
+- `MAINTENANCE_DATABASE_URL` debe autenticar como `sigeco_maintenance` y se usa
+  solo en migraciones, reconciliaciones, verificaciones y backups autorizados.
+- Las contraseñas se crean y rotan en el gestor de secretos. La migración deja
+  ambos roles sin contraseña utilizable deliberadamente.
+
+En Neon, el propietario administrado puede tener `BYPASSRLS`. Conservar esa URL
+como `DATABASE_URL` anula la segunda defensa aunque la aplicación mantenga sus
+filtros Prisma. No desplegar hasta que la URL web haya sido sustituida y una
+prueba directa confirme que sin contexto devuelve cero filas operativas.
+
 ### Vercel Blob
 
 Crear un Blob Store exclusivo con el prefijo personalizado `STAGING_BLOB`.
@@ -97,6 +112,8 @@ Generar valores nuevos para:
 - PostgreSQL;
 - Vercel Blob.
 - Vercel Blob privado para adjuntos clínicos.
+- contraseña y URL de `sigeco_web`;
+- contraseña y URL de `sigeco_maintenance`.
 
 No usar datos o contraseñas de empleados y pacientes.
 

@@ -42,21 +42,42 @@ BEGIN
   ) THEN RAISE EXCEPTION 'SERVICE_COMPONENT_BRANCH_RECONCILIATION_REQUIRED'; END IF;
 END $$;
 
-CREATE OR REPLACE FUNCTION reject_legacy_commercial_configuration_update()
+CREATE OR REPLACE FUNCTION reject_legacy_supplier_configuration_update()
 RETURNS trigger AS $$
 BEGIN
-  IF TG_TABLE_NAME = 'Supplier' AND
-     (NEW."notes", NEW."active") IS DISTINCT FROM (OLD."notes", OLD."active") THEN
+  IF (NEW."notes", NEW."active") IS DISTINCT FROM (OLD."notes", OLD."active") THEN
     RAISE EXCEPTION 'SUPPLIER_CONFIGURATION_IS_BRANCH_SCOPED';
-  ELSIF TG_TABLE_NAME = 'InventoryItem' AND
-     (NEW."sku", NEW."salePriceCents", NEW."referenceCostCents", NEW."maxDiscountCents", NEW."minimumStock", NEW."active")
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION reject_legacy_inventory_configuration_update()
+RETURNS trigger AS $$
+BEGIN
+  IF (NEW."sku", NEW."salePriceCents", NEW."referenceCostCents", NEW."maxDiscountCents", NEW."minimumStock", NEW."active")
        IS DISTINCT FROM
      (OLD."sku", OLD."salePriceCents", OLD."referenceCostCents", OLD."maxDiscountCents", OLD."minimumStock", OLD."active") THEN
     RAISE EXCEPTION 'INVENTORY_CONFIGURATION_IS_BRANCH_SCOPED';
-  ELSIF TG_TABLE_NAME = 'PaymentMethod' AND NEW."active" IS DISTINCT FROM OLD."active" THEN
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION reject_legacy_payment_method_configuration_update()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW."active" IS DISTINCT FROM OLD."active" THEN
     RAISE EXCEPTION 'PAYMENT_METHOD_CONFIGURATION_IS_BRANCH_SCOPED';
-  ELSIF TG_TABLE_NAME = 'ServiceCatalogItem' AND
-     (NEW."basePriceCents", NEW."ownMaxDiscountCents", NEW."sessionCount", NEW."packagePriceCents", NEW."sessionPriceCents", NEW."active")
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION reject_legacy_service_configuration_update()
+RETURNS trigger AS $$
+BEGIN
+  IF (NEW."basePriceCents", NEW."ownMaxDiscountCents", NEW."sessionCount", NEW."packagePriceCents", NEW."sessionPriceCents", NEW."active")
        IS DISTINCT FROM
      (OLD."basePriceCents", OLD."ownMaxDiscountCents", OLD."sessionCount", OLD."packagePriceCents", OLD."sessionPriceCents", OLD."active") THEN
     RAISE EXCEPTION 'SERVICE_CATALOG_CONFIGURATION_IS_BRANCH_SCOPED';
@@ -66,12 +87,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER "Supplier_reject_legacy_configuration_update"
-BEFORE UPDATE ON "Supplier" FOR EACH ROW EXECUTE FUNCTION reject_legacy_commercial_configuration_update();
+BEFORE UPDATE ON "Supplier" FOR EACH ROW EXECUTE FUNCTION reject_legacy_supplier_configuration_update();
 CREATE TRIGGER "InventoryItem_reject_legacy_configuration_update"
-BEFORE UPDATE ON "InventoryItem" FOR EACH ROW EXECUTE FUNCTION reject_legacy_commercial_configuration_update();
+BEFORE UPDATE ON "InventoryItem" FOR EACH ROW EXECUTE FUNCTION reject_legacy_inventory_configuration_update();
 CREATE TRIGGER "PaymentMethod_reject_legacy_configuration_update"
-BEFORE UPDATE ON "PaymentMethod" FOR EACH ROW EXECUTE FUNCTION reject_legacy_commercial_configuration_update();
+BEFORE UPDATE ON "PaymentMethod" FOR EACH ROW EXECUTE FUNCTION reject_legacy_payment_method_configuration_update();
 CREATE TRIGGER "ServiceCatalogItem_reject_legacy_configuration_update"
-BEFORE UPDATE ON "ServiceCatalogItem" FOR EACH ROW EXECUTE FUNCTION reject_legacy_commercial_configuration_update();
+BEFORE UPDATE ON "ServiceCatalogItem" FOR EACH ROW EXECUTE FUNCTION reject_legacy_service_configuration_update();
 
 COMMIT;

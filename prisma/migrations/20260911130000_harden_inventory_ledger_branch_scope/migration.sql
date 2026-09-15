@@ -189,8 +189,4 @@ AFTER INSERT OR UPDATE ON "InventoryTransfer"
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION assert_inventory_transfer_vouchers();
 
-CREATE TRIGGER "InventoryTransfer_append_only"
-BEFORE UPDATE OR DELETE ON "InventoryTransfer"
-FOR EACH ROW EXECUTE FUNCTION "prevent_purchase_evidence_mutation"();
-
 COMMIT;

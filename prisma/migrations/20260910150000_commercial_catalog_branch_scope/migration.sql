@@ -185,6 +185,29 @@ FROM (
 JOIN "ServiceCatalogItem" item ON item."id" = evidence."catalogItemId"
 ON CONFLICT ("catalogItemId", "branchCode") DO NOTHING;
 
+-- Los cuatro estudios canónicos fueron sembrados antes de que existieran
+-- sucursales. En ese momento El Alto era la única operación activa; esta lista
+-- cerrada reconcilia solo esos IDs históricos y no actúa como fallback para
+-- catálogos creados posteriormente.
+INSERT INTO "ServiceCatalogItemBranch" (
+  "catalogItemId", "branchCode", "active", "basePriceCents",
+  "ownMaxDiscountCents", "sessionCount", "packagePriceCents",
+  "sessionPriceCents", "createdAt", "updatedAt"
+)
+SELECT item."id", branch."code", item."active", item."basePriceCents",
+       item."ownMaxDiscountCents", item."sessionCount", item."packagePriceCents",
+       item."sessionPriceCents", item."createdAt", item."updatedAt"
+FROM "ServiceCatalogItem" item
+JOIN "ClinicBranch" branch
+  ON branch."code" = 'el-alto' AND branch."status"::text = 'active'
+WHERE item."code" IN (
+  'EST-HEMOGRAMA',
+  'EST-HEMOGRAMA-RESONANCIA',
+  'EST-RESONANCIA',
+  'EST-ORINA'
+)
+ON CONFLICT ("catalogItemId", "branchCode") DO NOTHING;
+
 -- La composición es canónica: usar una oferta en una sede demuestra que sus
 -- productos componentes pertenecen allí, aunque todavía no tengan saldo.
 INSERT INTO "BranchInventoryItem" (

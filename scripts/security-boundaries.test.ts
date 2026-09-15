@@ -186,8 +186,10 @@ const legacyRedirectPages = [
 
 const actionPermissions: Record<string, InternalPermission | null> = {
   assignConsultationVisitAction: "clinical_write",
+  requestClinicalContinuityAction: "clinical_read",
   deleteIndicationCatalogItemAction: "clinical_write",
   assignNursingWorkItemAction: "nursing_write",
+  requestNursingContinuityAction: "nursing_read",
   updateVitalSignsAction: "nursing_write",
   deleteNursingNoteAction: "nursing_write",
   deriveNursingToDoctorAction: "nursing_write",
@@ -204,6 +206,7 @@ const actionPermissions: Record<string, InternalPermission | null> = {
   applyVisitFlowAction: "visits_update",
   approveCashSessionCloseAction: "cash_sessions_approve",
   changeActiveBranchAction: "internal_access",
+  selectRequiredBranchAction: "internal_access",
   changeOwnInternalPasswordAction: "internal_access",
   configureProfessionalProfileAction: "documents_configure",
   confirmDoctorOrderSaleAction: "sales_write",
@@ -368,10 +371,10 @@ describe("SIGECO permission and privacy boundaries", () => {
 
     expect(
       source("src/app/(internal)/sigeco/(app)/layout.tsx")
-    ).toContain("requireInternalUser()");
+    ).toContain("requireBranchPageContext()");
     expect(
       source("src/app/(internal)/sigeco/(app)/page.tsx")
-    ).toContain("requireInternalUser()");
+    ).toContain("getBranchContext()");
     expect(
       source("src/app/(internal)/sigeco/(app)/mi-cuenta/page.tsx")
     ).toContain("requireInternalSession()");
@@ -424,6 +427,13 @@ describe("SIGECO permission and privacy boundaries", () => {
     for (const action of actions) {
       const permission = actionPermissions[action.name];
       if (permission) {
+        if (
+          action.name === "changeActiveBranchAction" ||
+          action.name === "selectRequiredBranchAction"
+        ) {
+          expect(action.source).toContain("setRequestedBranch");
+          continue;
+        }
         expect(
           action.source,
           `${action.name} must enforce ${permission}`
@@ -507,10 +517,10 @@ describe("SIGECO permission and privacy boundaries", () => {
     for (const [file, permission] of Object.entries(cashReceiptRoutePermissions)) {
       const contents = source(file);
       expect(contents, `${file} must authenticate`).toContain(
-        "getCurrentInternalUser()"
+        "getBranchExportContext()"
       );
       expect(contents, `${file} must enforce ${permission}`).toContain(
-        `roleHasPermission(user.role, "${permission}")`
+        `roleHasPermission(operationalRole, "${permission}")`
       );
     }
 
@@ -519,10 +529,10 @@ describe("SIGECO permission and privacy boundaries", () => {
     )) {
       const contents = source(file);
       expect(contents, `${file} must authenticate`).toContain(
-        "getCurrentInternalUser()"
+        "getBranchExportContext()"
       );
       expect(contents, `${file} must enforce ${permission}`).toContain(
-        `roleHasPermission(user.role, "${permission}")`
+        `roleHasPermission(operationalRole, "${permission}")`
       );
     }
 
@@ -531,11 +541,11 @@ describe("SIGECO permission and privacy boundaries", () => {
     )) {
       const contents = source(file);
       expect(contents, `${file} must authenticate`).toContain(
-        "getCurrentInternalUser()"
+        "getBranchExportContext()"
       );
       for (const permission of permissions) {
         expect(contents, `${file} must enforce ${permission}`).toContain(
-          `roleHasPermission(user.role, "${permission}")`
+          `roleHasPermission(operationalRole, "${permission}")`
         );
       }
       expect(contents).toContain('"Cache-Control": "private, no-store');
@@ -630,7 +640,7 @@ describe("SIGECO permission and privacy boundaries", () => {
 
     for (const file of routeFiles) {
       expect(readFileSync(file, "utf8"), `${file} needs a server guard`).toMatch(
-        /(?:requirePermission\("[a-z_]+"\)|requireClinicalAttachmentApiAccess|roleHasPermission\(user\.role,\s*"[a-z_]+"\))/
+        /(?:requirePermission\("[a-z_]+"\)|requireClinicalAttachmentApiAccess|getBranchExportContext\(\)|roleHasPermission\(operationalRole,\s*"[a-z_]+"\))/
       );
     }
   });

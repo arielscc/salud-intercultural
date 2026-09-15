@@ -192,25 +192,31 @@ async function main() {
   let sourceDatabaseUrl: string | undefined;
   let restoreDatabaseUrl: string | undefined;
   let succeeded = false;
+  let stage = "initialization";
   const drillStartedAt = Date.now();
 
   try {
     await mkdir(drillRoot, { recursive: true, mode: 0o700 });
+    stage = "create-source-database";
     sourceDatabaseUrl = await createIsolatedLocalDatabase(
       baseDatabaseUrl,
       sourceDatabaseName
     );
+    stage = "create-restore-database";
     restoreDatabaseUrl = await createIsolatedLocalDatabase(
       baseDatabaseUrl,
       restoreDatabaseName
     );
+    stage = "migrate-source-database";
     await runPrismaMigrations(sourceDatabaseUrl);
+    stage = "seed-recovery-fixture";
     await seedRecoveryFixture({
       databaseUrl: sourceDatabaseUrl,
       clinicalFilesRoot: sourceClinicalRoot,
       runId
     });
 
+    stage = "create-encrypted-backup";
     const backup = await createLocalSigecoBackup({
       databaseUrl: sourceDatabaseUrl,
       clinicalFilesRoot: sourceClinicalRoot,
@@ -218,6 +224,7 @@ async function main() {
       encryptionKey,
       responsible: "Equipo técnico — simulacro automatizado"
     });
+    stage = "restore-and-verify-backup";
     const restore = await restoreLocalSigecoBackup({
       backupPath,
       databaseUrl: restoreDatabaseUrl,
@@ -226,6 +233,7 @@ async function main() {
       confirmation: `RESTORE_${restoreDatabaseName}`
     });
 
+    stage = "verify-recovered-domains";
     const summary = restore.manifest.database.summary;
     if (
       summary.patients < 1 ||
@@ -280,6 +288,9 @@ async function main() {
         `evidence=${evidencePath}`
       ].join(" | ")
     );
+  } catch (error) {
+    console.error(`Backup drill stopped at safeStage=${stage}.`);
+    throw error;
   } finally {
     const cleanupFailures: string[] = [];
     if (sourceDatabaseUrl) {

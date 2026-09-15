@@ -12,7 +12,7 @@ import {
 
 async function cleanDocuments() {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "GeneratedDocument", "ClinicalProfessionalProfile", "PrescriptionItem", "Prescription", "ClinicalConsultationVersion", "Diagnosis", "TreatmentPlan", "ClinicalConsultation", "SaleItem", "Payment", "Sale", "PaymentMethod", "Visit", "Patient", "InternalSession", "InternalUser" CASCADE'
+    'TRUNCATE TABLE "GeneratedDocument", "ClinicalProfessionalProfile", "PrescriptionItem", "Prescription", "ClinicalConsultationVersion", "Diagnosis", "TreatmentPlan", "ClinicalConsultation", "SaleItem", "Payment", "Sale", "Visit", "Patient", "InternalSession", "InternalUser" CASCADE'
   );
 }
 

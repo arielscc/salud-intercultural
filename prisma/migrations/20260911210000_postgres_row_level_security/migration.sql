@@ -1,20 +1,51 @@
 -- Tarea 16: roles de conexión y segunda barrera de aislamiento en PostgreSQL.
 -- Las contraseñas se provisionan fuera del repositorio. Ambos roles nacen sin
 -- contraseña utilizable para que la migración nunca invente un secreto.
+BEGIN;
+
 DO $$
+DECLARE
+  executor_is_superuser BOOLEAN;
 BEGIN
+  SELECT "rolsuper" INTO executor_is_superuser
+  FROM "pg_roles"
+  WHERE "rolname" = current_user;
+
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sigeco_web') THEN
-    CREATE ROLE sigeco_web LOGIN PASSWORD NULL
-      NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+    CREATE ROLE sigeco_web LOGIN PASSWORD NULL NOINHERIT;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sigeco_maintenance') THEN
-    CREATE ROLE sigeco_maintenance LOGIN PASSWORD NULL
-      NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS;
+    IF executor_is_superuser THEN
+      CREATE ROLE sigeco_maintenance LOGIN PASSWORD NULL NOINHERIT BYPASSRLS;
+    ELSE
+      -- PostgreSQL administrado (por ejemplo Neon) no permite conceder
+      -- BYPASSRLS. En ese caso el mantenimiento será el propietario y las
+      -- tablas usarán ENABLE sin FORCE; el rol web sigue sujeto a las políticas.
+      CREATE ROLE sigeco_maintenance LOGIN PASSWORD NULL NOINHERIT;
+    END IF;
+  END IF;
+
+  IF executor_is_superuser THEN
+    ALTER ROLE sigeco_web NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+    ALTER ROLE sigeco_maintenance NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_roles
+    WHERE rolname = 'sigeco_web'
+      AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolinherit OR rolbypassrls)
+  ) THEN
+    RAISE EXCEPTION 'sigeco_web has unsafe role attributes';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_roles
+    WHERE rolname = 'sigeco_maintenance'
+      AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolinherit)
+  ) THEN
+    RAISE EXCEPTION 'sigeco_maintenance has unsafe role attributes';
   END IF;
 END $$;
 
-ALTER ROLE sigeco_web NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
-ALTER ROLE sigeco_maintenance NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS;
 REVOKE sigeco_maintenance FROM sigeco_web;
 DO $$
 BEGIN
@@ -192,7 +223,11 @@ BEGIN
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', table_name);
-    EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', table_name);
+    IF (SELECT rolbypassrls FROM pg_roles WHERE rolname = 'sigeco_maintenance') THEN
+      EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', table_name);
+    ELSE
+      EXECUTE format('ALTER TABLE %I NO FORCE ROW LEVEL SECURITY', table_name);
+    END IF;
     EXECUTE format(
       'CREATE POLICY branch_select ON %I FOR SELECT TO sigeco_web USING (sigeco_is_local_branch("branchCode"))',
       table_name
@@ -221,7 +256,11 @@ BEGIN
   FOREACH table_name IN ARRAY ARRAY['InventoryTransfer','InventoryTransferLotAllocation']
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', table_name);
-    EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', table_name);
+    IF (SELECT rolbypassrls FROM pg_roles WHERE rolname = 'sigeco_maintenance') THEN
+      EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', table_name);
+    ELSE
+      EXECUTE format('ALTER TABLE %I NO FORCE ROW LEVEL SECURITY', table_name);
+    END IF;
     EXECUTE format(
       'CREATE POLICY transfer_select ON %I FOR SELECT TO sigeco_web USING (sigeco_is_local_branch("sourceBranchCode") OR sigeco_is_local_branch("destinationBranchCode"))',
       table_name
@@ -242,7 +281,14 @@ BEGIN
 END $$;
 
 ALTER TABLE "ClinicalAttachmentAccessGrant" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "ClinicalAttachmentAccessGrant" FORCE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF (SELECT rolbypassrls FROM pg_roles WHERE rolname = 'sigeco_maintenance') THEN
+    ALTER TABLE "ClinicalAttachmentAccessGrant" FORCE ROW LEVEL SECURITY;
+  ELSE
+    ALTER TABLE "ClinicalAttachmentAccessGrant" NO FORCE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 CREATE POLICY attachment_grant_select ON "ClinicalAttachmentAccessGrant"
   FOR SELECT TO sigeco_web
   USING (
@@ -290,7 +336,14 @@ CREATE POLICY attachment_grant_delete ON "ClinicalAttachmentAccessGrant"
   USING ("userId" = sigeco_setting('app.user_id') AND sigeco_can_write_branch("requestingBranchCode"));
 
 ALTER TABLE "AuditEvent" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "AuditEvent" FORCE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF (SELECT rolbypassrls FROM pg_roles WHERE rolname = 'sigeco_maintenance') THEN
+    ALTER TABLE "AuditEvent" FORCE ROW LEVEL SECURITY;
+  ELSE
+    ALTER TABLE "AuditEvent" NO FORCE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 CREATE POLICY audit_select ON "AuditEvent"
   FOR SELECT TO sigeco_web
   USING (
@@ -472,3 +525,4 @@ ALTER FUNCTION sigeco_continuity_allows(TEXT, TEXT, BOOLEAN) OWNER TO sigeco_mai
 
 -- La cuenta web no recibe ownership, BYPASSRLS, CREATE, TRUNCATE ni capacidad
 -- de administrar roles. El rol técnico no se concede al rol web.
+COMMIT;

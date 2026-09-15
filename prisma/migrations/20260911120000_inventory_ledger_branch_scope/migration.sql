@@ -140,8 +140,6 @@ CREATE INDEX "InventoryAlert_branchCode_status_createdAt_idx"
   ON "InventoryAlert"("branchCode", "status", "createdAt");
 CREATE INDEX "InventoryTransferLotAllocation_sourceLotId_sourceBranchCode_createdAt_idx"
   ON "InventoryTransferLotAllocation"("sourceLotId", "sourceBranchCode", "createdAt");
-CREATE INDEX "InventoryTransferLotAllocation_destinationLotId_destinationBranchCode_idx"
-  ON "InventoryTransferLotAllocation"("destinationLotId", "destinationBranchCode");
 CREATE INDEX "InventoryTransferLotAllocation_transferId_sourceBranchCode_destinationBranchCode_idx"
   ON "InventoryTransferLotAllocation"("transferId", "sourceBranchCode", "destinationBranchCode");
 

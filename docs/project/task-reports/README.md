@@ -93,6 +93,9 @@ Ver la guia operativa en [Reportes de cambios por tarea](../../operations/task-c
 | 2026-09-09 | [Aislamiento Tarea 7: visitas, recepción, rutas y tiempos](./2026-09-09-tarea-7-visitas-recepcion-rutas-tiempos.md) | Materializa la sede en todo el recorrido y hace que PostgreSQL rechace hijos de una visita de otra sucursal. |
 | 2026-09-10 | [Aislamiento Tarea 13: seguimientos, recordatorios, opiniones y reportes](./2026-09-10-tarea-13-seguimientos-recordatorios-opiniones-reportes.md) | Materializa la sede en continuidad y calidad, incorpora la sucursal en tokens e idempotencia y calcula KPI operativos sobre una sola sede. |
 | 2026-09-11 | [Aislamiento Tarea 14: módulos y auditoría operativa](./2026-09-11-tarea-14-modulos-auditoria-operativa.md) | Hace local el historial de módulos, separa auditoría operativa y global y exige sede para todo evento de negocio. |
+| 2026-09-11 | [Aislamiento Tarea 15: barrido y constraints](./2026-09-11-tarea-15-barrido-aplicacion-constraints.md) | Cierra relaciones e idempotencia residuales y agrega 127 controles SQL de tenencia y cruces. |
+| 2026-09-11 | [Aislamiento Tarea 16: PostgreSQL RLS](./2026-09-11-tarea-16-postgresql-row-level-security.md) | Agrega roles separados, contexto transaccional y políticas por fila con continuidad clínica controlada. |
+| 2026-09-11 | [Aislamiento Tarea 17: cierre acumulado](./2026-09-11-tarea-17-cierre-acumulado-despliegue-controlado.md) | Aprueba local y la base de staging; deja runtime, firma de Dirección y producción bloqueados hasta separar credenciales. |
 
 ## Relacion Con Estado V3
 

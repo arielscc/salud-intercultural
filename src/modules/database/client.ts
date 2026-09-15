@@ -133,14 +133,14 @@ export const prisma = new Proxy({} as PrismaClient, {
     }
     if (property === "$transaction" && typeof value === "function") {
       return (operation: unknown, options?: unknown) => {
+        const store = getDatabaseRlsStore();
+        if (!store) return Reflect.apply(value, client, [operation, options]);
         if (typeof operation !== "function") {
           throw new Error("Las transacciones RLS deben usar callback interactivo.");
         }
-        const store = getDatabaseRlsStore();
         if (store?.transaction) {
           return Reflect.apply(operation, undefined, [store.transaction]);
         }
-        if (!store) return Reflect.apply(value, client, [operation, options]);
         return Reflect.apply(value, client, [
           async (transaction: Prisma.TransactionClient) => {
             await configureRlsTransaction(transaction, store.context);

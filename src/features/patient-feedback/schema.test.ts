@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { submitPatientFeedbackSchema } from "@/features/patient-feedback/schema";
 
 const base = {
-  token: "a".repeat(43),
+  token: `ea.${"a".repeat(43)}`,
   rating: 3,
   kind: "survey",
   area: "reception",
@@ -35,4 +35,3 @@ describe("patient feedback schema", () => {
     ).toBe(false);
   });
 });
-

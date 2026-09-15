@@ -23,7 +23,20 @@ function trackedFiles() {
 function repositoryFiles(directory = process.cwd()): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     if (
-      [".git", ".next", ".gstack", "node_modules"].includes(entry.name) ||
+      [
+        ".data",
+        ".git",
+        ".gstack",
+        ".next",
+        ".pnpm-store",
+        ".vercel",
+        "build",
+        "dist",
+        "generated",
+        "node_modules",
+        "out"
+      ].includes(entry.name) ||
+      entry.name.startsWith(".next-") ||
       entry.name.startsWith(".env")
     ) {
       return [];

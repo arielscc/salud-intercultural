@@ -512,7 +512,8 @@ export async function createNursingContinuityAccess(input: {
       prisma.clinicBranch.findMany({
         where: {
           code: { not: input.branchCode },
-          status: "active"
+          status: "active",
+          visits: { some: { patientId: input.patientId } }
         },
         select: { code: true }
       })

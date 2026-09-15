@@ -3738,7 +3738,6 @@ model InventoryTransferLotAllocation {
   @@unique([transferId, sourceLotId])
   @@unique([destinationLotId, destinationBranchCode])
   @@index([sourceLotId, sourceBranchCode, createdAt])
-  @@index([destinationLotId, destinationBranchCode])
   @@index([transferId, sourceBranchCode, destinationBranchCode])
 }
 

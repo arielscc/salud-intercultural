@@ -14,6 +14,11 @@ const nonCriticalReadActions = new Set([
   "validateAttributionEvidenceCodeAction"
 ]);
 
+const delegatedAuditedActions = new Set([
+  "changeActiveBranchAction",
+  "selectRequiredBranchAction"
+]);
+
 function exportedActionSegments(source: string) {
   const starts = [...source.matchAll(/export async function \w+\b/g)].map(
     (match) => match.index
@@ -46,6 +51,15 @@ describe("SIGECO audit coverage", () => {
       expect(actions.length, `${file} has no exported actions`).toBeGreaterThan(0);
       for (const action of actions) {
         const actionName = action.match(/function (\w+)/)?.[1];
+        if (actionName && delegatedAuditedActions.has(actionName)) {
+          expect(action, `${file}: ${actionName} must use the audited branch helper`).toContain(
+            "setRequestedBranch"
+          );
+          expect(source, `${file}: branch helper must append an audit event`).toContain(
+            "appendAuditEvent"
+          );
+          continue;
+        }
         if (actionName && nonCriticalReadActions.has(actionName)) {
           expect(action, `${file}: ${actionName} must still validate permission`).toContain(
             "requirePermission"

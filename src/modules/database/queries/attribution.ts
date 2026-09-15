@@ -231,10 +231,9 @@ export async function createVisitAttributionInTransaction(
       evidenceKind,
       externalEvidenceCode: input.externalEvidenceCode,
       touches: {
-        create: Array.from(touchBySourceId.values()).map((touch) => ({
-          ...touch,
-          branchCode: input.branchCode
-        }))
+        // La relacion anidada compuesta propaga attributionId y branchCode
+        // desde VisitAttribution; Prisma no admite repetirlos en este nivel.
+        create: Array.from(touchBySourceId.values())
       }
     },
     include: {

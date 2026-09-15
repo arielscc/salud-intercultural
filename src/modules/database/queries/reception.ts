@@ -130,6 +130,8 @@ export async function createReceptionIntake(input: ReceptionIntakeRecordInput) {
             normalizedSecondaryPhone: patientProfile.secondaryPhone
               ? normalizePatientPhone(patientProfile.secondaryPhone)
               : "",
+            followUpPreference:
+              input.patient.followUpPreference ?? existing.followUpPreference,
             revision: { increment: 1 }
           }
         });

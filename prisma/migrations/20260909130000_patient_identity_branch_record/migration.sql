@@ -1,20 +1,22 @@
 -- La identidad del paciente permanece global. Su expediente operativo y las
 -- fotografías históricas pertenecen a la sucursal que produjo la atención.
+BEGIN;
+
 ALTER TYPE "PatientConsentPurpose" ADD VALUE IF NOT EXISTS 'clinical_continuity';
 
 ALTER TABLE "Patient"
-  ADD COLUMN "documentNumber" TEXT,
-  ADD COLUMN "normalizedDocumentNumber" TEXT NOT NULL DEFAULT '',
-  ADD COLUMN "revision" INTEGER NOT NULL DEFAULT 1;
+  ADD COLUMN IF NOT EXISTS "documentNumber" TEXT,
+  ADD COLUMN IF NOT EXISTS "normalizedDocumentNumber" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "revision" INTEGER NOT NULL DEFAULT 1;
 
 ALTER TABLE "PatientDuplicateCandidate"
-  ADD COLUMN "documentMatch" BOOLEAN NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS "documentMatch" BOOLEAN NOT NULL DEFAULT false;
 
 ALTER TABLE "PatientAlias"
-  ADD COLUMN "documentNumber" TEXT,
-  ADD COLUMN "normalizedDocumentNumber" TEXT NOT NULL DEFAULT '';
+  ADD COLUMN IF NOT EXISTS "documentNumber" TEXT,
+  ADD COLUMN IF NOT EXISTS "normalizedDocumentNumber" TEXT NOT NULL DEFAULT '';
 
-CREATE TABLE "PatientIdentityVersion" (
+CREATE TABLE IF NOT EXISTS "PatientIdentityVersion" (
   "id" TEXT NOT NULL,
   "patientId" TEXT NOT NULL,
   "revision" INTEGER NOT NULL,
@@ -36,7 +38,7 @@ CREATE TABLE "PatientIdentityVersion" (
   CONSTRAINT "PatientIdentityVersion_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "PatientBranchRecord" (
+CREATE TABLE IF NOT EXISTS "PatientBranchRecord" (
   "patientId" TEXT NOT NULL,
   "branchCode" TEXT NOT NULL,
   "recordNumber" TEXT NOT NULL,
@@ -52,18 +54,18 @@ CREATE TABLE "PatientBranchRecord" (
   CONSTRAINT "PatientBranchRecord_pkey" PRIMARY KEY ("patientId", "branchCode")
 );
 
-ALTER TABLE "PatientConsent" ADD COLUMN "branchCode" TEXT;
-ALTER TABLE "PatientContact" ADD COLUMN "branchCode" TEXT;
-ALTER TABLE "PatientNote" ADD COLUMN "branchCode" TEXT;
+ALTER TABLE "PatientConsent" ADD COLUMN IF NOT EXISTS "branchCode" TEXT;
+ALTER TABLE "PatientContact" ADD COLUMN IF NOT EXISTS "branchCode" TEXT;
+ALTER TABLE "PatientNote" ADD COLUMN IF NOT EXISTS "branchCode" TEXT;
 
 ALTER TABLE "Visit"
-  ADD COLUMN "patientNameSnapshot" TEXT,
-  ADD COLUMN "patientDocumentSnapshot" TEXT,
-  ADD COLUMN "patientPhoneSnapshot" TEXT,
-  ADD COLUMN "patientAddressSnapshot" TEXT;
+  ADD COLUMN IF NOT EXISTS "patientNameSnapshot" TEXT,
+  ADD COLUMN IF NOT EXISTS "patientDocumentSnapshot" TEXT,
+  ADD COLUMN IF NOT EXISTS "patientPhoneSnapshot" TEXT,
+  ADD COLUMN IF NOT EXISTS "patientAddressSnapshot" TEXT;
 
 -- Solo relaciones operativas que ya poseen sucursal son evidencia válida.
-CREATE TEMPORARY TABLE "_PatientBranchEvidence" ON COMMIT DROP AS
+CREATE TEMPORARY TABLE "_PatientBranchEvidence" AS
 SELECT DISTINCT evidence."patientId", evidence."branchCode"
 FROM (
   SELECT "patientId", "branchCode" FROM "Visit"
@@ -78,7 +80,7 @@ FROM (
 ) AS evidence
 WHERE evidence."patientId" IS NOT NULL;
 
-CREATE TEMPORARY TABLE "_PatientBranchEvidenceCount" ON COMMIT DROP AS
+CREATE TEMPORARY TABLE "_PatientBranchEvidenceCount" AS
 SELECT "patientId", COUNT(*)::INTEGER AS "branchCount"
 FROM "_PatientBranchEvidence"
 GROUP BY "patientId";
@@ -124,7 +126,8 @@ LEFT JOIN (
   GROUP BY "patientId", "branchCode"
 ) AS visits
   ON visits."patientId" = evidence."patientId"
- AND visits."branchCode" = evidence."branchCode";
+ AND visits."branchCode" = evidence."branchCode"
+ON CONFLICT ("patientId", "branchCode") DO NOTHING;
 
 -- Cuando existe una sola sede verificable, el perfil local queda transferido
 -- y los NULL en Patient funcionan como marca técnica de reconciliación.
@@ -163,7 +166,8 @@ SELECT
   NULL,
   'Migración inicial de identidad global',
   patient."createdAt"
-FROM "Patient" AS patient;
+FROM "Patient" AS patient
+ON CONFLICT ("id") DO NOTHING;
 
 UPDATE "Visit" AS visit
 SET
@@ -173,6 +177,12 @@ SET
   "patientAddressSnapshot" = patient."address"
 FROM "Patient" AS patient
 WHERE patient."id" = visit."patientId";
+
+-- El trigger append-only protege la operación normal, pero este backfill
+-- versionado debe materializar una sola vez la sede demostrada. PostgreSQL
+-- revierte también este cambio de trigger si la migración falla.
+ALTER TABLE "PatientConsent"
+  DISABLE TRIGGER "PatientConsent_prevent_update_delete";
 
 WITH unique_evidence AS (
   SELECT evidence."patientId", MIN(evidence."branchCode") AS "branchCode"
@@ -186,6 +196,9 @@ UPDATE "PatientConsent" AS child
 SET "branchCode" = evidence."branchCode"
 FROM unique_evidence AS evidence
 WHERE evidence."patientId" = child."patientId";
+
+ALTER TABLE "PatientConsent"
+  ENABLE TRIGGER "PatientConsent_prevent_update_delete";
 
 WITH unique_evidence AS (
   SELECT evidence."patientId", MIN(evidence."branchCode") AS "branchCode"
@@ -212,6 +225,9 @@ UPDATE "PatientNote" AS child
 SET "branchCode" = evidence."branchCode"
 FROM unique_evidence AS evidence
 WHERE evidence."patientId" = child."patientId";
+
+DROP TABLE "_PatientBranchEvidenceCount";
+DROP TABLE "_PatientBranchEvidence";
 
 CREATE UNIQUE INDEX "PatientIdentityVersion_patientId_revision_key"
   ON "PatientIdentityVersion"("patientId", "revision");
@@ -254,3 +270,5 @@ ALTER TABLE "PatientBranchRecord"
   ADD CONSTRAINT "PatientBranchRecord_branchCode_fkey"
   FOREIGN KEY ("branchCode") REFERENCES "ClinicBranch"("code")
   ON DELETE RESTRICT ON UPDATE CASCADE;
+
+COMMIT;

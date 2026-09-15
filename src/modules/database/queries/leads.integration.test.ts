@@ -1,7 +1,8 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import { createLeadRecord, getLeads, updateLeadStatus } from "@/modules/database/queries/leads";
+import { prisma } from "@/modules/database";
 
 async function deleteLeadSubmissions() {
   const payload = await getPayload({ config });
@@ -18,7 +19,19 @@ async function deleteLeadSubmissions() {
 }
 
 beforeEach(deleteLeadSubmissions);
-afterAll(deleteLeadSubmissions);
+beforeAll(async () => {
+  await prisma.clinicBranch.update({
+    where: { code: "cochabamba" },
+    data: { status: "active" }
+  });
+});
+afterAll(async () => {
+  await deleteLeadSubmissions();
+  await prisma.clinicBranch.update({
+    where: { code: "cochabamba" },
+    data: { status: "preparation" }
+  });
+});
 
 describe("lead queries integration", () => {
   it("creates, lists, filters and updates leads in the test database", async () => {

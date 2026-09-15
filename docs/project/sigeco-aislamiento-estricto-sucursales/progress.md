@@ -10,8 +10,9 @@ Plan híbrido dividido en 17 tareas consecutivas. La frontera técnica ya cuenta
 con un contrato ejecutable, un detector automático, un contexto autenticado de
 sucursal obligatorio y roles operativos resueltos desde cada membresía. La
 identidad queda global y solo conserva la capacidad de plataforma del super
-administrador. La partición general de operaciones y RLS están implementados en
-código; las migraciones todavía no se aplicaron. La identidad global del
+administrador. La partición general de operaciones y RLS están implementados y
+validados; las 94 migraciones se aplicaron desde cero en local y sobre la base
+aislada de staging. La identidad global del
 paciente y su expediente por sucursal ya están separados. Leads, campañas,
 entradas públicas y atribución ya exigen una
 sede verificable y sus métricas se calculan localmente. El recorrido completo
@@ -31,9 +32,12 @@ públicos de opinión incorporan la sucursal emisora. Módulos y auditoría
 distinguen operación local de eventos de plataforma. El barrido acumulado
 cerró los últimos enlaces simples entre operaciones, particionó la idempotencia
 por sede y añadió un chequeo SQL que enumera y rechaza cruces residuales. La
-segunda barrera ya está preparada: PostgreSQL fuerza RLS sobre los 89 modelos
+segunda barrera ya fue probada: PostgreSQL activa RLS sobre los 89 modelos
 operativos, controlados y de auditoría; Prisma instala un contexto local por
-transacción y la cuenta web queda separada del rol técnico propietario.
+transacción y la cuenta web queda separada del rol técnico propietario. El
+cierre automatizado está en verde y el ensayo sintético de staging terminó sus
+once pasos sin defectos. El despliegue del runtime permanece detenido hasta
+separar las credenciales web/mantenimiento y recibir la firma de Dirección.
 
 ## Decisiones Confirmadas Por Dirección
 
@@ -52,18 +56,18 @@ transacción y la cuenta web queda separada del rol técnico propietario.
 
 | Estado | Cantidad |
 | --- | ---: |
-| Pendiente | 1 |
-| En progreso | 2 |
+| Pendiente | 0 |
+| En progreso | 1 |
 | Bloqueada | 0 |
-| Terminada | 14 |
+| Terminada | 16 |
 
 ## Progreso Por Fase
 
 | Fase | Tareas | Estado | Resultado esperado |
 | --- | --- | --- | --- |
 | A. Frontera técnica | 1-4 | Terminada (4/4) | Contrato, contexto, roles y backfill seguro |
-| B. Partición de dominios | 5-13 | Terminada en código (9/9; 7 con validación estática aprobada) | Maestros únicos y operaciones pertenecientes a una sede |
-| C. Base de datos y cierre | 14-17 | En progreso (3/4) | Auditoría local, constraints, RLS y QA acumulado |
+| B. Partición de dominios | 5-13 | Terminada y validada (9/9) | Maestros únicos y operaciones pertenecientes a una sede |
+| C. Base de datos y cierre | 14-17 | Cierre técnico aprobado; promoción pendiente | Auditoría local, constraints, RLS y QA acumulado |
 
 ## Estado Por Tarea
 
@@ -76,16 +80,16 @@ transacción y la cuenta web queda separada del rol técnico propietario.
 | 5 | Identidad global y expediente local del paciente | P0 | Terminada | 4 |
 | 6 | Leads, campañas y entradas públicas | P0 | Terminada | 2, 4-5 |
 | 7 | Visitas, recepción, rutas y tiempos | P0 | Terminada | 5 |
-| 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Implementada; validación acumulada pendiente | 7 |
-| 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Implementada; validación acumulada pendiente | 7-8 |
-| 10 | Maestros comerciales y configuración por sucursal | P0 | Implementada; validación estática aprobada | 4 |
-| 11 | Compras, stock, lotes, traslados y alertas | P0 | Implementada; validación estática aprobada | 10 |
-| 12 | Ventas, pagos, Caja y documentos | P0 | Implementada; validación estática aprobada | 5, 7, 10-11 |
-| 13 | Seguimientos, recordatorios, opiniones y reportes | P0 | Implementada; validación estática aprobada | 5-12 |
+| 8 | Consulta, recetas, órdenes y catálogos clínicos | P0 | Terminada | 7 |
+| 9 | Enfermería, estudios, adjuntos y sesiones | P0 | Terminada | 7-8 |
+| 10 | Maestros comerciales y configuración por sucursal | P0 | Terminada | 4 |
+| 11 | Compras, stock, lotes, traslados y alertas | P0 | Terminada | 10 |
+| 12 | Ventas, pagos, Caja y documentos | P0 | Terminada | 5, 7, 10-11 |
+| 13 | Seguimientos, recordatorios, opiniones y reportes | P0 | Terminada | 5-12 |
 | 14 | Módulos y auditoría operativa | P0 | Terminada | 2-3, 13 |
 | 15 | Barrido completo de aplicación y constraints | P0 | Terminada | 5-14 |
 | 16 | PostgreSQL Row-Level Security | P0 | Terminada | 15 |
-| 17 | Cierre acumulado y despliegue controlado | P0 | Pendiente | 1-16 |
+| 17 | Cierre acumulado y despliegue controlado | P0 | Cierre técnico aprobado; promoción pendiente | 1-16 |
 
 ## Preparación Ya Disponible
 
@@ -296,8 +300,8 @@ Tarea 16.
   falla si cualquier conteo no es cero.
 - Los seeds, ensayos, verificaciones y simulacros ya no eligen El Alto ni
   Cochabamba por omisión: exigen una variable de sede explícita.
-- Migración de constraints preparada, sin aplicar. El chequeo SQL se ejecutará
-  contra las bases restauradas y de staging durante la Tarea 17.
+- Migración de constraints aplicada desde cero en local y sobre staging. El
+  chequeo SQL aprobó 127/127 controles en ambos entornos.
 - Detalle y operación: [reporte T15](../task-reports/2026-09-11-tarea-15-barrido-aplicacion-constraints.md).
 
 ### Tarea 16 — Implementación
@@ -306,7 +310,9 @@ Tarea 16.
   roles, creación de schema ni `TRUNCATE`, y separa `sigeco_maintenance` como
   propietario técnico. Ninguno recibe una contraseña desde el repositorio.
 - Las 86 tablas de operación, los dos accesos transversales controlados y
-  `AuditEvent` activan y fuerzan RLS. `USING` limita lecturas y `WITH CHECK`
+  `AuditEvent` activan RLS. Cuando mantenimiento dispone de `BYPASSRLS` también
+  se usa `FORCE`; en Neon el propietario técnico usa el bypass implícito y la
+  cuenta web sigue sujeta a las políticas. `USING` limita lecturas y `WITH CHECK`
   rechaza escrituras cuya sede no sea la activa o cuyo modo sea consulta.
 - Cada unidad Prisma con contexto corre en una transacción interactiva y fija
   `app.branch_code`, usuario, rol, modo y acceso temporal mediante
@@ -327,13 +333,33 @@ Tarea 16.
 - El detector exige roles, ownership, `ENABLE/FORCE ROW LEVEL SECURITY`, una
   política materializada para todo modelo no global y los seis parámetros
   transaccionales RLS. No quedan excepciones temporales.
-- Migración preparada, sin aplicar. La matriz negativa, la reutilización real
-  del pool y las pruebas contra una restauración/staging corresponden al cierre
-  acumulado de la Tarea 17.
+- Migración aplicada y probada en PostgreSQL local y Neon staging. La matriz
+  negativa, la reutilización del pool y el rol web real fueron aprobados.
 - Detalle y operación: [reporte T16](../task-reports/2026-09-11-tarea-16-postgresql-row-level-security.md).
+
+### Tarea 17 — Cierre técnico
+
+- Lint, tipos, 516 pruebas unitarias, 121 pruebas de integración, reconstrucción
+  de 94 migraciones y build de Next.js quedaron aprobados.
+- El simulacro de backup/restauración y el gate de seguridad aprobaron; no hay
+  vulnerabilidades críticas ni altas no aceptadas.
+- Staging quedó reconciliado sin borrar evidencia: 8/8 accesos, 12/12 registros
+  de paciente, libro de inventario en cero y 159/159 eventos clasificados.
+- El ensayo operativo completó sus once pasos con Caja conciliada, stock/lote,
+  venta, pago, documentos y módulos sin defectos. Los 127 controles SQL
+  permanecieron en cero después del ensayo.
+- RLS directo en Neon devolvió cero filas sin contexto, separó El Alto de
+  Cochabamba, rechazó una escritura cruzada con `42501` y confirmó la
+  revocación de la credencial efímera de `sigeco_web` con `28P01`.
+- Producción permanece sin cambios. Staging no se promoverá mientras
+  `DATABASE_URL` siga usando el propietario con `BYPASSRLS`; faltan las
+  credenciales permanentes de `sigeco_web`/`sigeco_maintenance`, QA visual y
+  firma de Dirección.
+- Detalle y evidencia: [reporte T17](../task-reports/2026-09-11-tarea-17-cierre-acumulado-despliegue-controlado.md).
 
 ## Próximo Paso
 
-Ejecutar la Tarea 17: cierre acumulado y despliegue controlado. Allí se aplican
-las migraciones sobre bases desechables/restauradas y staging, se ejecuta la
-matriz negativa completa y se valida el pool con los roles provisionados.
+Provisionar fuera del repositorio las credenciales permanentes de
+`sigeco_web` y `sigeco_maintenance`, sustituir las variables de staging,
+desplegar el runtime y completar QA visual/multiventana con firma de Dirección.
+Solo después corresponde solicitar una autorización separada para producción.

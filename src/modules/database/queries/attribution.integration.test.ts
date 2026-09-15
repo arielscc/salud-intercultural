@@ -11,8 +11,7 @@ async function cleanAttributionFixtures() {
   );
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "PatientConsent" CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
-  await prisma.visit.deleteMany();
-  await prisma.patient.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "Patient" CASCADE');
   await prisma.captureCampaignBranch.deleteMany({
     where: { campaign: { code: "TEST-PAYLOAD-SYNC" } }
   });

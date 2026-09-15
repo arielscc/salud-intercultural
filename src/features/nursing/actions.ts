@@ -56,6 +56,7 @@ export async function requestNursingContinuityAction(formData: FormData) {
     const access = await runAuditedAction(
       {
         permission: "nursing_read",
+        module: "enfermeria",
         action: "nursing.continuity.read",
         entityType: "patient",
         context: { workItemId: workItemId || undefined }

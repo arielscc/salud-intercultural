@@ -724,5 +724,7 @@ dominios estén materialmente particionados y todas las rutas establezcan el
 contexto de sesión. Tampoco se debe aplicar `NOT NULL` si el reporte de
 reconciliación conserva filas ambiguas.
 
-La próxima tarea ejecutable es la **Tarea 1 — Contrato de tenencia y detector
-automático**.
+Las tareas 1–16 y el cierre técnico de la Tarea 17 están ejecutados. La
+promoción permanece fuera del plan hasta provisionar las credenciales separadas
+de staging, completar el QA humano con firma de Dirección y recibir una
+autorización explícita independiente para producción.

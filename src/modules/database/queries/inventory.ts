@@ -548,7 +548,9 @@ export async function createInventoryItemInTransaction(
       userId: input.userId,
       changeReason: `Producto asignado a la sucursal ${input.branchCode}`
     });
-    await syncLowStockAlert(tx, item.id, input.branchCode);
+    if (!input.initialStock || input.initialStock <= 0) {
+      await syncLowStockAlert(tx, item.id, input.branchCode);
+    }
     return item;
   }
 
@@ -591,7 +593,9 @@ export async function createInventoryItemInTransaction(
     userId: input.userId,
     changeReason: "Alta inicial del producto"
   });
-  await syncLowStockAlert(tx, item.id, input.branchCode);
+  if (!input.initialStock || input.initialStock <= 0) {
+    await syncLowStockAlert(tx, item.id, input.branchCode);
+  }
   return item;
 }
 

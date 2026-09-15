@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/modules/database";
+import { runWithDatabaseRlsContext } from "@/modules/database/rls-context";
 import {
   createClinicalContinuityAccess,
   getClinicalVisitById,
@@ -50,13 +51,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.clinicalContinuityAccess.deleteMany({ where: { patientId } });
-  await prisma.clinicalOrder.deleteMany({ where: { patientId } });
-  await prisma.clinicalConsultation.deleteMany({ where: { patientId } });
-  await prisma.visit.deleteMany({ where: { patientId } });
-  await prisma.patientConsent.deleteMany({ where: { patientId } });
-  await prisma.patientBranchRecord.deleteMany({ where: { patientId } });
-  await prisma.patient.deleteMany({ where: { id: patientId } });
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "Patient" CASCADE');
   await prisma.internalUserBranch.deleteMany({ where: { userId: { in: [doctorId, adminId] } } });
   await prisma.internalUser.deleteMany({ where: { id: { in: [doctorId, adminId] } } });
   await prisma.clinicBranch.deleteMany({ where: { code: { in: [local, remote] } } });
@@ -77,19 +72,31 @@ describe("Tarea 8: expediente local y continuidad médica", () => {
 
   it("limita la continuidad al médico, al paciente y a la sede del acceso registrado", async () => {
     const input = { patientId, excludeVisitId: localVisitId, branchCode: local };
-    expect((await getPatientConsultationHistory(input)).visits).toHaveLength(0);
+    expect((await runWithDatabaseRlsContext({
+      branchCode: local, userId: doctorId, effectiveRole: "medico", accessMode: "work"
+    }, () => getPatientConsultationHistory(input))).visits).toHaveLength(0);
     const request = { patientId, visitId: localVisitId, branchCode: local, reason: "Revisar tratamiento previo del paciente" };
-    await expect(createClinicalContinuityAccess({ ...request, doctorId: adminId })).rejects.toThrow();
-    const access = await createClinicalContinuityAccess({ ...request, doctorId });
+    await expect(runWithDatabaseRlsContext({
+      branchCode: local, userId: adminId, effectiveRole: "administracion", accessMode: "work"
+    }, () => createClinicalContinuityAccess({ ...request, doctorId: adminId }))).rejects.toThrow();
+    const access = await runWithDatabaseRlsContext({
+      branchCode: local, userId: doctorId, effectiveRole: "medico", accessMode: "work"
+    }, () => createClinicalContinuityAccess({ ...request, doctorId }));
     expect(access.consultedBranchCodes).toEqual([remote]);
     expect(access.reason).toBe(request.reason);
-    const history = await getPatientConsultationHistory({ ...input, doctorId, continuityAccessId: access.id });
+    const history = await runWithDatabaseRlsContext({
+      branchCode: local, userId: doctorId, effectiveRole: "medico", accessMode: "work"
+    }, () => getPatientConsultationHistory({ ...input, doctorId, continuityAccessId: access.id }));
     expect(history.crossBranch).toBe(true);
     expect(history.visits.map((visit) => visit.branch.code)).toEqual([remote]);
-    expect((await getPatientConsultationHistory({ ...input, doctorId: adminId, continuityAccessId: access.id })).crossBranch).toBe(false);
+    expect((await runWithDatabaseRlsContext({
+      branchCode: local, userId: adminId, effectiveRole: "administracion", accessMode: "work"
+    }, () => getPatientConsultationHistory({ ...input, doctorId: adminId, continuityAccessId: access.id }))).crossBranch).toBe(false);
     await prisma.internalUserBranch.update({
       where: { userId_branchCode: { userId: doctorId, branchCode: local } }, data: { active: false }
     });
-    expect((await getPatientConsultationHistory({ ...input, doctorId, continuityAccessId: access.id })).crossBranch).toBe(false);
+    expect((await runWithDatabaseRlsContext({
+      branchCode: local, userId: doctorId, effectiveRole: "medico", accessMode: "work"
+    }, () => getPatientConsultationHistory({ ...input, doctorId, continuityAccessId: access.id }))).crossBranch).toBe(false);
   });
 });

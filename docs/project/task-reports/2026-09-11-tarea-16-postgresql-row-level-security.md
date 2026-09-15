@@ -1,8 +1,8 @@
 # Tarea 16 — PostgreSQL Row-Level Security
 
 Fecha: 2026-09-11  
-Estado: implementada; migración y pruebas sobre PostgreSQL real pendientes de
-la Tarea 17.
+Estado: implementada y validada en PostgreSQL local y Neon staging durante la
+Tarea 17; credenciales permanentes de runtime pendientes de provisionar.
 
 ## Resultado
 
@@ -12,12 +12,16 @@ sucursal. La migración `20260911210000_postgres_row_level_security`:
 
 - crea `sigeco_web` sin ownership, `BYPASSRLS`, creación de schema,
   administración de roles ni `TRUNCATE`;
-- crea `sigeco_maintenance` como rol técnico propietario y con bypass reservado
-  a migraciones, reconciliaciones, copias y mantenimiento controlado;
+- crea `sigeco_maintenance` como rol técnico propietario. En PostgreSQL donde
+  el ejecutor puede conceder `BYPASSRLS`, fuerza RLS también al propietario; en
+  servicios administrados como Neon, donde esa capacidad está prohibida, usa
+  `ENABLE` sin `FORCE` y el propietario conserva el bypass implícito reservado
+  al mantenimiento;
 - no establece contraseñas: los secretos se provisionan y rotan fuera del
   repositorio;
-- activa y fuerza RLS en las 86 tablas de operación, los dos modelos de acceso
-  transversal controlado y la auditoría híbrida;
+- activa RLS en las 86 tablas de operación, los dos modelos de acceso
+  transversal controlado y la auditoría híbrida; `FORCE` se aplica cuando el
+  rol técnico dispone de `BYPASSRLS`;
 - conserva como globales los 23 maestros definidos en el contrato —identidad,
   sedes, pacientes, proveedores y catálogos—, sin convertirlos artificialmente
   en datos de una sucursal. Sus permisos funcionales continúan en las guardas
@@ -86,20 +90,24 @@ la conexión técnica o su URL específica.
 
 - existan los dos roles con capacidades opuestas;
 - la cuenta web no pueda asumir el rol técnico;
-- haya ownership técnico y `ENABLE/FORCE ROW LEVEL SECURITY`;
+- haya ownership técnico y `ENABLE/FORCE ROW LEVEL SECURITY`, con la variante
+  administrada explícita que mantiene al rol web bajo políticas;
 - los 89 modelos no globales aparezcan en la migración;
 - los seis parámetros se configuren de forma local a la transacción.
 
-## Validación
+## Validación acumulada de la Tarea 17
 
-- `pnpm lint` ✅
-- `pnpm typecheck` ✅
-- Detector: 112 modelos clasificados, 0 excepciones de modelo y 0 excepciones
-  de código.
-- Node local: advertencia por versión 24; el proyecto declara Node 22.
-
-Por las reglas del repositorio no se aplicó la migración, no se ejecutaron
-pruebas de integración ni se conectó una base durante esta tarea. La Tarea 17
-debe provisionar contraseñas fuera del repositorio, aplicar todas las
-migraciones sobre una restauración aislada y staging, y demostrar la matriz
-negativa, el vencimiento de accesos y la ausencia de fuga al reutilizar el pool.
+- La migración se aplicó desde cero en PostgreSQL local y sobre Neon staging.
+- La integración aprobó 121/121 casos, incluidos aislamiento sin filtro Prisma,
+  escritura cruzada, continuidad médica/Enfermería y reutilización del pool.
+- En staging, `sigeco_web` devolvió cero filas sin contexto, cuatro visitas
+  exclusivamente de El Alto con esa sede activa, cero en Cochabamba y rechazó
+  un `UPDATE` cruzado con SQLSTATE `42501`.
+- Los 127 controles SQL quedaron en cero antes y después del ensayo operativo.
+- `sigeco_web` y `sigeco_maintenance` quedaron sin superusuario, creación de
+  base, creación de roles, herencia ni bypass. Neon conserva el bypass solo en
+  su cuenta propietaria, que no debe utilizarse como `DATABASE_URL` de la
+  aplicación.
+- Falta provisionar fuera del repositorio una contraseña permanente para
+  `sigeco_web`, separar `MAINTENANCE_DATABASE_URL` y sustituir la URL propietaria
+  de staging antes de desplegar el runtime.

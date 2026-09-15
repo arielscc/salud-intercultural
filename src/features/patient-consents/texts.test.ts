@@ -6,8 +6,8 @@ import {
 } from "@/features/patient-consents/texts";
 
 describe("patient consent text approval gate", () => {
-  it("keeps the six development texts versioned", () => {
-    expect(Object.keys(patientConsentTexts)).toHaveLength(6);
+  it("keeps the seven development texts versioned", () => {
+    expect(Object.keys(patientConsentTexts)).toHaveLength(7);
     expect(PATIENT_CONSENT_TEXT_VERSION).toBe("v2");
   });
 

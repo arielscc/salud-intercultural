@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { hashPassword } from "@/features/internal-auth/password";
 import { prisma } from "@/modules/database";
+import { runWithDatabaseRlsContext } from "@/modules/database/rls-context";
 import { createClinicalOrderRecord } from "@/modules/database/queries/clinical-care";
 import { appendPatientConsentRecord } from "@/modules/database/queries/patient-consents";
 import {
@@ -52,11 +53,13 @@ async function cleanNursingStudies() {
   await prisma.nursingContinuityAccess.deleteMany();
   await prisma.clinicalContinuityAccess.deleteMany();
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "VisitAreaTimeEvent" CASCADE');
-  await prisma.visit.deleteMany();
-  await prisma.patient.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "Patient" CASCADE');
   await prisma.lead.deleteMany();
   await prisma.internalSession.deleteMany();
   await prisma.internalUser.deleteMany();
+  await prisma.serviceCatalogItemBranch.deleteMany({
+    where: { catalogItem: { code: { startsWith: "TEST-STUDY-" } } }
+  });
   await prisma.serviceCatalogItemVersion.deleteMany({
     where: { catalogItem: { code: { startsWith: "TEST-STUDY-" } } }
   });
@@ -65,8 +68,20 @@ async function cleanNursingStudies() {
   });
 }
 
-beforeEach(cleanNursingStudies);
-afterEach(cleanNursingStudies);
+beforeEach(async () => {
+  await cleanNursingStudies();
+  await prisma.clinicBranch.update({
+    where: { code: "cochabamba" },
+    data: { status: "active" }
+  });
+});
+afterEach(async () => {
+  await cleanNursingStudies();
+  await prisma.clinicBranch.update({
+    where: { code: "cochabamba" },
+    data: { status: "preparation" }
+  });
+});
 
 describe("nursing and studies integration", () => {
   it("orders an administrable study, requires payment and releases it to nursing", async () => {
@@ -358,20 +373,24 @@ describe("nursing and studies integration", () => {
       title: "Orden necesaria"
     });
 
-    const access = await createNursingContinuityAccess({
-      patientId: patient.id,
-      visitId: currentVisit.id,
-      nurseId: nurse.id,
-      branchCode: "el-alto",
-      reason: "Necesito verificar la atención previa"
-    });
-    const history = await getNursingContinuityHistory({
-      patientId: patient.id,
-      visitId: currentVisit.id,
-      nurseId: nurse.id,
-      branchCode: "el-alto",
-      accessId: access.id
-    });
+    const access = await runWithDatabaseRlsContext({
+      branchCode: "el-alto", userId: nurse.id, effectiveRole: "enfermeria", accessMode: "work"
+    }, () => createNursingContinuityAccess({
+        patientId: patient.id,
+        visitId: currentVisit.id,
+        nurseId: nurse.id,
+        branchCode: "el-alto",
+        reason: "Necesito verificar la atención previa"
+      }));
+    const history = await runWithDatabaseRlsContext({
+      branchCode: "el-alto", userId: nurse.id, effectiveRole: "enfermeria", accessMode: "work"
+    }, () => getNursingContinuityHistory({
+        patientId: patient.id,
+        visitId: currentVisit.id,
+        nurseId: nurse.id,
+        branchCode: "el-alto",
+        accessId: access.id
+      }));
 
     expect(history.active).toBe(true);
     expect(history.visits).toHaveLength(1);
@@ -380,13 +399,15 @@ describe("nursing and studies integration", () => {
     expect(history.visits[0]?.clinicalOrders).toHaveLength(1);
     expect(history.visits[0]).not.toHaveProperty("clinicalConsultation");
     await expect(
-      getNursingContinuityHistory({
-        patientId: patient.id,
-        visitId: currentVisit.id,
-        nurseId: nurse.id,
-        branchCode: "cochabamba",
-        accessId: access.id
-      })
+      runWithDatabaseRlsContext({
+        branchCode: "cochabamba", userId: nurse.id, effectiveRole: "enfermeria", accessMode: "work"
+      }, () => getNursingContinuityHistory({
+          patientId: patient.id,
+          visitId: currentVisit.id,
+          nurseId: nurse.id,
+          branchCode: "cochabamba",
+          accessId: access.id
+        }))
     ).resolves.toEqual({ visits: [], active: false });
     await expect(
       createVitalSignsRecord({

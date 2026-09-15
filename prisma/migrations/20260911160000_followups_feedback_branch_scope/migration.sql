@@ -76,6 +76,25 @@ SET "branchCode" = parent."branchCode"
 FROM "PatientFeedbackCase" parent
 WHERE parent."id" = child."caseId";
 
+-- Estas tres plantillas son el conjunto cerrado insertado por la migracion
+-- 20260530005000, cuando El Alto era la unica sede operativa. No se aplica un
+-- valor por defecto ni se atribuyen plantillas creadas posteriormente: toda
+-- plantilla ajena a estos IDs queda nula para que el endurecimiento se detenga
+-- y el reconciliador exija una decision humana.
+UPDATE "FollowUpTemplate"
+SET "branchCode" = 'el-alto'
+WHERE "branchCode" IS NULL
+  AND "id" IN (
+    'fut_post_consultation',
+    'fut_post_sale',
+    'fut_no_answer'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM "ClinicBranch"
+    WHERE "code" = 'el-alto'
+  );
+
 CREATE TRIGGER "SupervisedReminderRuleVersion_prevent_update_delete"
 BEFORE UPDATE OR DELETE ON "SupervisedReminderRuleVersion"
 FOR EACH ROW EXECUTE FUNCTION "reject_supervised_reminder_version_mutation"();

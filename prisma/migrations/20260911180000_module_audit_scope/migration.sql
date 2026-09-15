@@ -11,6 +11,8 @@ ALTER TABLE "AuditEvent"
 -- evidencia que ya contiene una sede técnica verificable o una acción global
 -- incluida en la lista cerrada; los demás eventos quedan para reconciliación.
 DROP TRIGGER IF EXISTS "AuditEvent_prevent_update_delete" ON "AuditEvent";
+DROP TRIGGER IF EXISTS "ModuleActivationEvent_prevent_update_delete"
+  ON "ModuleActivationEvent";
 
 UPDATE "AuditEvent"
 SET "scope" = 'platform', "branchCode" = NULL
@@ -45,9 +47,50 @@ WHERE event."scope" IS NULL
     WHERE branch."code" = event."context"->>'branchCode'
   );
 
+-- La instalacion inicial de `core` fue una operacion global realizada por la
+-- migracion 20260824210000, antes de que el historial de modulos tuviera sede.
+-- Se conserva como evidencia de plataforma, igual que haria el reconciliador.
+-- El predicado cerrado evita clasificar automaticamente cualquier otro evento
+-- legacy, que debe seguir requiriendo una decision humana.
+INSERT INTO "AuditEvent" (
+  "id", "scope", "branchCode", "actorId", "actorRole", "action",
+  "entityType", "entityId", "result", "requestId", "context", "occurredAt"
+)
+SELECT
+  'legacy-module:' || event."id", 'platform', NULL, event."actorId",
+  event."actorRole", 'module.activation.legacy', 'module', event."moduleCode",
+  'success', 'legacy-module:' || event."id",
+  jsonb_strip_nulls(jsonb_build_object(
+    'legacyModuleActivationEventId', event."id",
+    'previousStatus', event."previousStatus",
+    'status', event."status",
+    'reason', event."reason"
+  )), event."occurredAt"
+FROM "ModuleActivationEvent" event
+WHERE event."branchCode" IS NULL
+  AND event."moduleCode" = 'core'
+  AND event."previousStatus" = 'inactive'
+  AND event."status" = 'active'
+  AND event."actorId" IS NULL
+  AND event."actorRole" IS NULL
+  AND event."reason" = 'Instalación inicial del lanzamiento por etapas.';
+
+DELETE FROM "ModuleActivationEvent" event
+WHERE event."branchCode" IS NULL
+  AND event."moduleCode" = 'core'
+  AND event."previousStatus" = 'inactive'
+  AND event."status" = 'active'
+  AND event."actorId" IS NULL
+  AND event."actorRole" IS NULL
+  AND event."reason" = 'Instalación inicial del lanzamiento por etapas.';
+
 CREATE TRIGGER "AuditEvent_prevent_update_delete"
 BEFORE UPDATE OR DELETE ON "AuditEvent"
 FOR EACH ROW EXECUTE FUNCTION "reject_audit_event_mutation"();
+
+CREATE TRIGGER "ModuleActivationEvent_prevent_update_delete"
+BEFORE UPDATE OR DELETE ON "ModuleActivationEvent"
+FOR EACH ROW EXECUTE FUNCTION "reject_module_activation_event_mutation"();
 
 DROP INDEX IF EXISTS "AuditEvent_occurredAt_idx";
 DROP INDEX IF EXISTS "AuditEvent_action_occurredAt_idx";
@@ -109,4 +152,3 @@ ALTER TABLE "AuditEvent"
       )
     )
   ) NOT VALID;
-

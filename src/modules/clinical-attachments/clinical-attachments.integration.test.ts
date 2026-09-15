@@ -20,8 +20,7 @@ async function cleanClinicalAttachments() {
   await prisma.study.deleteMany();
   await prisma.nursingContinuityAccess.deleteMany();
   await prisma.clinicalContinuityAccess.deleteMany();
-  await prisma.visit.deleteMany();
-  await prisma.patient.deleteMany();
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "Patient" CASCADE');
   await prisma.internalSession.deleteMany();
   await prisma.internalUser.deleteMany();
   await rm(resolve(process.cwd(), integrationStorageRoot), {
@@ -283,6 +282,7 @@ describe("secure clinical attachments integration", () => {
       patientId: patient.id,
       visitId: visit.id,
       uploadRequestId: randomUUID(),
+      label: "Resultado",
       file: new File(["%PDF-1.7\n%%EOF"], "resultado.pdf", {
         type: "application/pdf"
       })

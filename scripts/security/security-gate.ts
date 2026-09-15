@@ -158,6 +158,7 @@ async function runProcess(command: string, args: string[]) {
 }
 
 async function main() {
+  let safeStage = "validate-local-database";
   const databaseUrl =
     process.env.MAINTENANCE_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -171,40 +172,49 @@ async function main() {
     requireLocalHost: true
   });
 
-  for (const artifact of requiredSecurityArtifacts) {
-    const artifactStat = await stat(resolve(process.cwd(), artifact));
-    if (!artifactStat.isFile()) {
-      throw new Error("A required security artifact is missing.");
+  try {
+    safeStage = "validate-required-artifacts";
+    for (const artifact of requiredSecurityArtifacts) {
+      const artifactStat = await stat(resolve(process.cwd(), artifact));
+      if (!artifactStat.isFile()) {
+        throw new Error("A required security artifact is missing.");
+      }
     }
-  }
-  const latest = await findLatestIncidentEvidence();
-  const approval = validateSecurityGateApproval(
-    JSON.parse(
-      await readFile(resolve(process.cwd(), securityGateApprovalPath), "utf8")
-    ) as SecurityGateApproval,
-    latest.evidence
-  );
-  await runProcess("pnpm", ["deps:check"]);
-  await runProcess("pnpm", [
-    "exec",
-    "vitest",
-    "run",
-    "scripts/security-boundaries.test.ts",
-    "scripts/privacy-controls.test.ts",
-    "scripts/secret-policy.test.ts",
-    "scripts/security/security-gate.test.ts"
-  ]);
+    safeStage = "validate-incident-evidence";
+    const latest = await findLatestIncidentEvidence();
+    const approval = validateSecurityGateApproval(
+      JSON.parse(
+        await readFile(resolve(process.cwd(), securityGateApprovalPath), "utf8")
+      ) as SecurityGateApproval,
+      latest.evidence
+    );
+    safeStage = "audit-dependencies";
+    await runProcess("pnpm", ["deps:check"]);
+    safeStage = "verify-security-boundaries";
+    await runProcess("pnpm", [
+      "exec",
+      "vitest",
+      "run",
+      "scripts/security-boundaries.test.ts",
+      "scripts/privacy-controls.test.ts",
+      "scripts/secret-policy.test.ts",
+      "scripts/security/security-gate.test.ts"
+    ]);
 
-  console.log(
-    [
-      "Local security gate passed.",
-      `criticalOrHighFindings=${approval.openCriticalOrHighFindings}`,
-      `incidentEvidence=${latest.file}`,
-      "taskImplementationApproval=true",
-      `productionApproval=${approval.productionAuthorized}`,
-      `remoteBlockers=${productionSecurityBlockers.length}`
-    ].join(" | ")
-  );
+    console.log(
+      [
+        "Local security gate passed.",
+        `criticalOrHighFindings=${approval.openCriticalOrHighFindings}`,
+        `incidentEvidence=${latest.file}`,
+        "taskImplementationApproval=true",
+        `productionApproval=${approval.productionAuthorized}`,
+        `remoteBlockers=${productionSecurityBlockers.length}`
+      ].join(" | ")
+    );
+  } catch (error) {
+    console.error(`Local security gate stopped at safeStage=${safeStage}.`);
+    throw error;
+  }
 }
 
 const isMain =

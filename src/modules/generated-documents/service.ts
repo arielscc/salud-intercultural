@@ -625,7 +625,7 @@ export async function correctPrescription(input: {
           supersedesId: latest.id,
           correctionReason: input.reason.trim(),
           notes: null,
-          items: { create: mergedItems.map((item) => ({ ...item, branchCode: input.branchCode })) }
+          items: { create: mergedItems }
         },
         include: { items: true }
       });
